@@ -2,7 +2,7 @@
 
 - **Status**: Draft
 - **Baseline Version**: Unreleased
-- **Released Git Commit**: None（仓库当前尚无提交）
+- **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
 - **Released Git Tag**: None
 - **Last Updated**: 2026-11-09
 
@@ -75,3 +75,7 @@
 ## 发布与变更规则
 
 基线更新必须遵循根目录 [AGENTS.md](../../AGENTS.md) 中的 `Baseline Change Protocol`。获得明确确认后，才可将具体领域文档或 ADR 纳入本清单；正式发布时记录对应 Git Commit，并仅在获得授权后创建 Git Tag。
+
+## 阶段 3 候选评审登记
+
+[阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md) 已整理责任 A/B/C、三套聚合图、B01—B12 与八项裁定。均为 Draft / Candidate，不属于 Accepted 基线。状态继续 Draft / Unreleased；无实际 ADR、已接受模型或正式验收标准。

@@ -48,3 +48,7 @@ flowchart LR
 - Reference 与 Association 是否属于同一上下文仍待关系类型和生命周期证据。
 - Provisioning 当前只表示应用流程角色，不自动成为领域聚合或微服务。
 - Privilege、Workflow、Class Hierarchy 与 Working Set 的精确合同尚未确认；同属 Shared Kernel 不等于共享同一对象模型或事务。
+
+## 阶段 3 分类复核
+
+上述框当前按内部模型区域解释，未形成九个独立 BC。Composition/Lineage/Variant 暂为模块，Merge 是独立模型区域候选，History 是支撑端口，Provisioning 是应用流程。事实流箭头不代表代码依赖或同步递归，内容事实由 BC 提供；详见 [阶段 3 分类](../domain/context-map.md) 与 [评审](../reviews/2026-11-09-stage-3-architecture-review.md)。

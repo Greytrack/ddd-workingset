@@ -51,3 +51,5 @@ ADR 使用：`Proposed`、`Accepted`、`Rejected`、`Superseded`。
 5. 必要时再查阅 `proposals/`、`pre-design/`、外部分析和对话等候选或历史输入。
 
 只读取当前任务需要的材料。若文档状态、确认依据或替代关系不清楚，先记录为开放问题，不自行提升状态。
+
+阶段 3 决策包入口：[正式架构评审与八项待裁定问题](reviews/2026-11-09-stage-3-architecture-review.md)。候选建议尚未接受。

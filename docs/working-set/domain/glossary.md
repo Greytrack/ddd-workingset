@@ -20,7 +20,7 @@
 | `CONCEPT-012` | **Baseline／基线**：用于固定比较、派生或发布依据的一组不可变、可回读证据。 | 与仓库的 Design Baseline、业务 Snapshot、Merge Base 三者必须分开命名。 | 本文建议：治理基线称 Design Baseline；合并共同依据称 Merge Base。 | Candidate；`EXT-ARCH §2/10` |
 | `CONCEPT-013` | **Difference／差异**：在固定有向比较上下文和双侧证据上得到的记录存在性或字段内容差异。 | LocalId 不同、物化状态不同不自动构成业务差异。 | 相等规则由具体字段／业务上下文提供。 | Reported；`MERGE §4.1`、`EXT-ARCH §10.1` |
 | `CONCEPT-014` | **Merge／合并**：把明确决定通过目标业务能力应用，并记录结果与处理事实的有向过程。 | 不是整行覆盖；不自动承诺整轮原子。 | Compare & Merge 负责决定，业务对象上下文负责目标合法性。 | Reported；`EXT-ARCH §10` |
-| `CONCEPT-015` | **Merge Decision／合并决定**：对存在性或字段差异作出的 `ACCEPT / KEEP_TARGET / DEFER` 选择。 | 数据决定与 `markAsMerged` 处理确认分离。 | 决定的有效期受冻结证据变化约束。 | Reported；`MERGE §2/4.2` |
+| `CONCEPT-015` | **Merge Decision／合并决定**：对存在性或字段差异作出的 `ACCEPT / KEEP_TARGET / DEFER` 选择。 | 数据决定与 `markAsMerged` 处理确认分离。 | [B09](../scenarios/shared-kernel-boundary-scenarios.md#b09-接受字段时取源端最新值) 已确认 ACCEPT 字段使用执行读取的源最新值。目标同一 ACCEPT 字段在提交前的编辑不阻断覆盖。 | Reported；`MERGE §2/4.2` |
 | `CONCEPT-016` | **Merge Base／合并基准**：比较两条演进线时双方共同认可的历史依据。 | 不能伪造为直接父子关系；V4 首期尚未正式建模。 | 兄弟／跨代合并需要此概念。 | Candidate；`EXT-ARCH §11.20/12 P2` |
 | `CONCEPT-017` | **Reference／引用**：由引用方持有、指向逻辑目标且可选择钉住目标版次的关系。 | 不等同 Association；物理端点为空不表示无逻辑目标。 | Reference 上下文拥有身份、有效性和修复。 | Reported；`REFERENCE CONTEXT §关系与方向` |
 | `CONCEPT-018` | **Association／关联**：表达两个业务对象之间业务联系的独立关系。 | 不应把引用属性与一般关联强行统一。 | 缺端点时是否落库与 Reference 不同。 | Reported；`REFERENCE CONTEXT §关系与方向` |

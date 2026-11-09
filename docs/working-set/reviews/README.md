@@ -10,3 +10,5 @@
 
 - [2026-11-09-stage-2-domain-discovery-review.md](2026-11-09-stage-2-domain-discovery-review.md)：阶段 2 证据审查、冲突与风险。
 - [2026-11-09-stage-3-0-shared-kernel-boundary-review.md](2026-11-09-stage-3-0-shared-kernel-boundary-review.md)：Shared Kernel 组织约束、四个业务 BC 外框及待确认合同。
+
+- [阶段 3 正式架构评审](2026-11-09-stage-3-architecture-review.md)：边界、三方案、风险、验证与八项裁定。

@@ -11,7 +11,7 @@
 | P0 `QUESTION-003` | **共享语义、权限与 SLA 到底是什么？Sharing Mode 能否变化？** | A 同一权威内容且模式永久；B 可迁移模式；C 共享只读快照。 | 决定 `INV-001`、权限边界、迁移能力和是否需要 Merge。 | 跨工作集并发写、权限不同、列表延迟的业务验收。 | SHARED 契约 |
 | P0 `QUESTION-004` | **跨分支 Item 身份如何定义，CommonId 的作用域是什么？** | A Working Set 全局；B ProductSpace/type/namespace 内；C 独立 FamilyId。 | 决定 ItemFamilyKey、唯一约束、引用与对齐算法。 | 抽样 Requirement/Bug/多空间真实编号及合法重号。 | 身份模型、Merge、Reference |
 | P0 `QUESTION-006` | **什么历史必须按 Source Cut 回读，保留多久？** | A 仅内容；B 内容+成员+生命周期+关系+附件；C 不保证完整历史。 | 若 C，当前 COW、Snapshot 和 Merge 候选模型可能不可行。 | 对现有历史接口做 worked example/spike，覆盖单版次对象和 delete2。 | COW、Snapshot、Compare |
-| P0 `QUESTION-008` | **字段级 Merge Decision 的有效期和整体合法性由谁判定？** | A token 到任一侧变化即失效；B 仅目标变化失效；C 部分字段可继续。 | 决定比较证据、目标业务命令、部分成功和 Checkpoint。 | 用交叉字段不变量、并发编辑、KEEP_TARGET/DEFER 组合验证。 | Merge 契约 |
+| P0 `QUESTION-008` | **字段级 Merge Decision 遇到执行中竞态时如何处理？** | B09 已确认提交前的字段变化规则，以及单字段不可读时本条未完成、继续下一条。待细化执行中版本控制和重试。 | 决定比较证据、目标业务命令、部分成功和 Checkpoint。 | 用交叉字段不变量、并发编辑、KEEP_TARGET/DEFER 组合验证。 | Merge 契约 |
 | P1 `QUESTION-005` | **子 Working Set 能否原生创建 Item？其家族身份如何产生？** | A 禁止；B 允许且成为新家族；C 仅特定类型允许。 | 决定来源可空、回并语义、唯一性和生命周期归属。 | 访谈新增 Requirement/Bug 的实际流程。 | Item 创建规则 |
 | P1 `QUESTION-007` | **允许哪些 Compare/Merge 关系，Merge Base 如何确定？** | A 仅直接父子；B 任意祖先后代；C 兄弟／跨代显式共同基线。 | 决定是否需要 MergeBase、谱系查询和策略版本。 | 收集真实回并、兄弟协作和跨代修复案例。 | Merge 范围、`POL-004` |
 | P1 `QUESTION-009` | **解绑、归档、软删、彻底删除、恢复分别意味着什么？** | 对 SHARED/UNSHARED 分别制定状态机和治理入口。 | 决定 Tracker/Binding/Item 的生命周期与保留守卫。 | 逐对象回答“用户看不见”和“权威不存在”的区别。 | 生命周期与删除 |
@@ -24,3 +24,7 @@
 ## 建议确认顺序
 
 先以 `AC-001` 为固定外部边界完成 `QUESTION-013`，再确认 `QUESTION-001 → 002 → 003/004 → 006 → 008`。它们决定共享能力边界、身份、历史和合法性；在这些问题未闭合前，不宜确认最终内部模型边界或聚合方案。
+
+## 阶段 3 决策入口
+
+QUESTION-013/014 仍 Open，责任 C 是推荐而非裁定；八项可裁定问题及证据/影响/阻塞见 [决策清单](../reviews/2026-11-09-stage-3-architecture-review.md)。新增细化：GateFlow/DQA 的具体对象与真实不变量；Part 受管范围；执行中并发与源字段删除的业务含义；业务回执保留期限。后两项细化 QUESTION-008/014，不伪造新确认。

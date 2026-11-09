@@ -53,3 +53,11 @@
 | 关键放弃条件 | 范围巨大 | Branch 无业务身份 | 历史/双事实无法兑现 |
 
 任何选择都必须先回答 `QUESTION-001/002/004/006/012`，并用 [核心场景](../scenarios/core-scenarios.md) 反驳验证。
+
+## 阶段 3 正式比较补充
+
+责任模式 A/B/C 与 AP-001/002/003 是正交维度：前者决定谁能提交业务内容，后者决定工作范围与谱系如何保持一致。推荐责任 C 不意味着推荐 AP-003。
+
+当前建议以 AP-001 作为最简单的范围配置基准；若收集到巨大 Binding 规模和原子切换要求，再选 AP-003；若领域专家证明 Branch 是被独立管理的演进对象，AP-002 优先。三者均保持业务 BC 内容提交边界，保留历史/权限/删除的显式失败。迁移从 AP-001 到 AP-003 需冻结原选择为首个 Manifest、校验成员身份映射、双读核对并 CAS 切换，不能重分配 LocalId；AP-002 的 Branch 身份迁移则需映射原 Tracker 与派生节点，不能只改术语。
+
+图表：[三套类图与聚合边界](../diagrams/aggregate-candidates.md)。逐概念规则：[聚合审查](../domain/aggregate-model.md)。判别场景：[边界场景](../scenarios/shared-kernel-boundary-scenarios.md)。决策状态与反例：[正式评审](../reviews/2026-11-09-stage-3-architecture-review.md)。
