@@ -34,7 +34,7 @@ sequenceDiagram
     end
 ```
 
-KEEP_TARGET 可不执行内容提交；仍需证据校验后才能确认。DEFER 保留未处理状态。部分对象失败不改变其他对象的成功事实。
+KEEP_TARGET 已确认可通过 markAsMerged 记录处理决定而保留目标内容，决定写入 MergeCheckpoint。双侧业务版次未变时下次比对不再显示该差异，普通编辑只增加乐观锁版本也继续隐藏。该无内容变更路径直接记录决定与确认，图中业务内容提交分支适用于存在数据变更的情况。DEFER 保留未处理状态。部分对象失败不改变其他对象的成功事实。
 
 ```mermaid
 flowchart TB
@@ -52,3 +52,33 @@ flowchart TB
 ```
 
 派生箭头表示业务动作而非复制同步。源后续变/删不改变目标固定切点；若保留能力不可用，必须阻止依赖该切点的成功发布或写入。异步标记滞后时本地提交与墓碑优先，不能读取旧来源覆盖目标。
+
+B08 已确认批次允许部分成功。重试只进入未完成项的执行流程，已成功项保留结果并跳过，即使其源端再次变化。结果未知项先查回原提交结果的恢复协议仍为候选。
+
+## 用户主动比对与 Checkpoint 适用性
+
+以下分支表达 SCN-009 已确认的业务规则。图表文件的整体候选状态仍用于其余执行协议，Checkpoint 存储结构待设计。
+
+```mermaid
+flowchart TD
+    Start["用户主动发起比对"] --> Match{"存在适用的已处理 Checkpoint<br/>且双侧业务版次均相同"}
+    Match -->|"是"| Hide["抑制对应已处理差异<br/>普通编辑增加乐观锁版本也不改变此结果"]
+    Match -->|"任一侧业务版次已升级"| Expired["旧 Checkpoint 对新版本组合过时"]
+    Expired --> Compare["重新比较所有适用字段<br/>包含曾合并与未合并的字段"]
+    Match -->|"无适用 Checkpoint"| Compare
+    Compare --> Result["显示实际仍存在的差异"]
+```
+
+## GateFlow 草稿内容整体切换
+
+**业务结果已由用户确认，内部协议为 Candidate。** 目的为表达 V3 的可见内容与准备内容的区别。依据 [GateFlow 场景](../scenarios/shared-kernel-boundary-scenarios.md#gateflow-草稿版次内容替换) 和 [职责边界](../domain/shared-kernel-boundary.md#gateflow-process-与版次用户已确认)。此图不规定数据库事务或聚合组成。准备期间已确认允许编辑，切换时可覆盖期间编辑。内容范围已固定为过程元素业务对象、裁剪问题、裁剪答案、合规映射四类，不纳入共享 Tracker。内部业务细节属于 GateFlow 专项。切换瞬间的并发提交、重试和取消协议待设计。
+
+```mermaid
+flowchart TD
+    Start["GateFlow 请求以 V1 内容替换 V3 草稿"] --> Prepare["准备完整替换内容<br/>V3 使用当前完整内容并允许编辑"]
+    Prepare --> Ready{"是否全部准备成功"}
+    Ready -->|"否或准备失败"| Old["V3 保留当前内容及期间已保存编辑"]
+    Ready -->|"是"| Switch["整体切换 V3 当前内容<br/>期间编辑可被覆盖"]
+    Switch --> New["V3 内容完整对应 V1<br/>V3 独有流程元素退出当前内容"]
+    New --> Identity["V3 版次身份和工作集 ID 保留<br/>父级仍为 V2"]
+```

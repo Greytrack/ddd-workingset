@@ -12,9 +12,9 @@
 | `CONCEPT-004` | **Non-shared Tracker**：纳入目标 Working Set 后可独立演进的 Tracker 派生节点。 | `UNSHARED` 不自动说明何时复制内容，也不证明必须存在 `TrackerBranch` 类型。 | 与来源的关系需要固定切点和合并方向。 | Reported；`EXT-ARCH §2.1`、`V4-DOMAIN:408-415` |
 | `CONCEPT-005` | **Tracker Branch**：用于讨论 Tracker 独立演进线的候选术语。 | V4 明确取消独立 BranchId；其他资料仍使用“分支”。不能在确认前当成独立实体。 | 若采用，可作为 Tracker 谱系中的角色，而非必然新对象。 | Pending Confirmation；`V4-UL:12`、`EXT-ARCH §0` |
 | `CONCEPT-006` | **Item**：由具体业务上下文拥有内容和业务生命周期的受管业务对象。 | 不等同索引行、LightTrackerItem 或任意属性 Map。 | Requirement、Bug 等上下文可有不同规则。 | Reported；`EXT-ARCH §4/5` |
-| `CONCEPT-007` | **Item Family／Item Identity**：跨派生变体识别同一逻辑业务对象家族的身份。 | `CommonId` 的唯一作用域未确认；不能与具体变体身份混用。 | 可能需要 `namespace/type + commonId` 复合键。 | Candidate；`EXT-ARCH §1/2.1/12` |
+| `CONCEPT-007` | **Item Family／Item Identity**：以 CommonId 识别跨派生变体的同一逻辑对象家族。 | 无关 Item 跨类型、跨 Tracker 也不能共享 CommonId。 | 同一家族各变体共享 CommonId、拥有不同 LocalId。 | 本对话用户已确认身份关系与唯一性 |
 | `CONCEPT-008` | **Item Variant／Branch-local Item**：某个非共享 Tracker 上具有稳定 LocalId 的具体变体。 | 不等于业务 revision；无本地内容行仍可能存在。 | V4 名称为 LightTrackerItem；报告建议用 ItemVariant 避免技术索引含义。 | Candidate；`EXT-ARCH §1/2.1`、`V4-DOMAIN:214` |
-| `CONCEPT-009` | **Item Revision**：业务内容的已发布版次或业务修订身份。 | 不等同 LocalId、并发 version、事件序号或内容时间点。 | 各业务对象上下文拥有具体规则。 | Reported；`EXT-ARCH §2.2` |
+| `CONCEPT-009` | **Item Revision／业务版次**：由显式升级版次操作推进的业务版本标识。 | 普通编辑增加乐观锁 version，业务版次保持不变。 | 用户已确认只有显式升级版次才产生版次历史数据，版次号向前推进 +1。MergeCheckpoint 的双侧版次使用此标识。 | 用户在本对话明确确认；数值与显示编码的映射待具体设计 |
 | `CONCEPT-010` | **Source Cut／来源切点**：派生变体读取初始内容、生命周期及必要从属事实的固定历史依据。 | 不等同父对象当前值、捕获时间字符串或直接父变体。 | 需要历史能力保证可回读。 | Reported；`V4-DOMAIN:438/463`、`EXT-ARCH §2.1` |
 | `CONCEPT-011` | **Copy-on-Write／写时复制**：既有 VIRTUAL 变体首次本地写入时建立本地权威内容、但保持逻辑身份稳定的转换。 | 不是首次创建 Item 身份；不等同整 Tracker 预复制。 | Item Variant 与业务对象上下文共同参与，事务边界待定。 | Reported；`V4-DOMAIN:545-548` |
 | `CONCEPT-012` | **Baseline／基线**：用于固定比较、派生或发布依据的一组不可变、可回读证据。 | 与仓库的 Design Baseline、业务 Snapshot、Merge Base 三者必须分开命名。 | 本文建议：治理基线称 Design Baseline；合并共同依据称 Merge Base。 | Candidate；`EXT-ARCH §2/10` |
@@ -27,13 +27,26 @@
 | `CONCEPT-019` | **Shared Kernel／共享内核**：本项目企业架构中由四个业务 BC 共同依赖的共享能力集合，包含 Working Set、Privilege、Workflow、Class Hierarchy。 | 不自动等同 DDD 书中协同维护少量共享模型的集成模式；也不等同单一聚合、模块或微服务。 | 企业归属由 `AC-001` 固定；内部治理和模型边界仍待设计。 | Confirmed constraint；`USER-ARCH-2026-11-09` |
 | `CONCEPT-020` | **Business Bounded Context／业务限界上下文**：拥有自身业务对象语言、状态机和不变量的 GateFlow、ALM、DQA 或 PLM 上下文。 | 不应因共同调用 Working Set API 而把四个 BC 的专有规则合并进 Shared Kernel。 | 业务 BC 消费共享能力，并保留对自身内容变化的最终合法性裁决。 | Confirmed landscape / boundary candidate；`AC-001` |
 
+## Item 身份规则（用户已确认）
+
+确认来源为本对话中用户对 Item 派生和回并身份的明确说明。
+
+- Item 借助工作集沿链路派生，各个变体拥有相同 CommonId，各自 LocalId 不同。
+- 子工作集原生新建 Item 回并后，父侧与子侧对应 Item 保持相同 CommonId、不同 LocalId。
+- 默认工作集中的 Item 满足 CommonId = LocalId。
+- 非默认工作集中的 Item 满足 CommonId != LocalId。
+
+用户已确认默认/非默认按 Item 的实际归属判断。子工作集纳入共享 Tracker 后，查看的仍是归属默认工作集的同一个 Item，因此 CommonId=LocalId，查看入口变化不分配新身份。用户进一步确认，两个无派生关系的 Item 即使属于不同类型或不同 Tracker，也不允许拥有相同 CommonId。CommonId 在逻辑对象家族层面全局唯一，同族变体复用该值。CommonId 与 LocalId 均采用雪花 ID。标识生成协调、去重与子侧原生新建后回并默认工作集时的标识分配协议继续设计。
+
+例如非共享派生链可表达为默认节点 (CommonId=100, LocalId=100)、子节点 (100,201)、孙节点 (100,302)。数值仅说明等值关系。
+
 ## 重点歧义
 
 1. **Baseline** 至少有三义：仓库设计基线、工作范围 Snapshot／历史切点、Merge Base。后续文档必须使用限定词。
 2. **Tracker Branch** 是否存在独立业务身份未确认；当前统一使用“Tracker 派生节点”，仅在比较方案时保留该术语。
 3. **Item**、**Item Family**、**Item Variant**、**Item Revision** 分别表达业务对象、家族、变体和内容版次，不得互换。
 4. **共享**表达权威内容复用，不表达访问权限，也不承诺所有投影零延迟。
-5. **已处理**不等于内容相等；`KEEP_TARGET + markAsMerged=true` 可保留真实差异但停止重复提示。
+5. **已处理**与内容相等分别表达。用户已确认 `KEEP_TARGET + markAsMerged=true` 可保留真实差异，决定写入 MergeCheckpoint，双侧版次均不变时停止重复提示。详见 [确认场景](../scenarios/core-scenarios.md#keep_target-的已处理确认)，这里的版次已确认为显式升级的业务 revision。普通编辑使乐观锁版本增加但业务版次不变时，已处理差异继续隐藏。任一侧显式升级业务版次后，用户再次主动比对时旧 MergeCheckpoint 对新版本组合过时，所有适用字段重新比较并显示实际差异。
 6. **Shared Kernel** 在本项目首先是已确认的企业架构归属；是否采用经典 DDD Shared Kernel 的共同代码／模型治理方式仍需另行说明。
 
 ## 候选对话检验

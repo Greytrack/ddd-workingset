@@ -16,7 +16,7 @@
 
 无。
 
-[domain/](domain/README.md) 已有阶段 2 的 `Draft` 候选知识和候选模型文档，但没有已确认的业务事实、业务不变量、统一领域语言或领域模型。`diagrams/` 中的候选图表同样未被接受。
+[domain/](domain/README.md) 保留 Draft 候选模型。阶段 3 已有用户逐项确认的场景规则及版次定义，确认范围与依据见 [裁定进度](reviews/2026-11-09-stage-3-architecture-review.md#裁定进度)。这些逐项记录等待汇总评审和基线纳入，正式发布状态为 Unreleased。
 
 ## 已确认的组织架构约束
 

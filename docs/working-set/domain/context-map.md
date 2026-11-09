@@ -53,7 +53,17 @@
 - `SKCAP-002 ↔ CTX-004`：共享工作流与业务专有状态机的边界尚未确认，Working Set 不应代替业务 BC 判断专有状态转换。
 - `GateFlow/ALM/DQA/PLM → Working Set`：四个 BC 消费公共工作集能力；统一入口不代表统一业务校验。
 
+## GateFlow 的上下文语言（已确认）
+
+GateFlow 的 Process 聚合具有多个版次，每个版次对应一个 Working Set，父子工作集链表达版次链。GateFlow 定义叶子草稿的资格及历史内容替换业务含义，Working Set 提供相应范围协作机制。替换的业务可见性已确认为准备期间显示当前完整内容并允许编辑，全部准备成功后整体切换，期间编辑允许被覆盖。工作集内容固定为过程元素业务对象、裁剪问题、裁剪答案、合规映射四类，不纳入共享 Tracker。其内部业务细节由 GateFlow 自身设计，当前聚焦工作集协作契约。详见 [GateFlow 边界](shared-kernel-boundary.md#gateflow-process-与版次用户已确认)。
+
+## DQA 的上下文边界（已确认）
+
+DQA 拥有其质量业务对象的模型及业务逻辑。Working Set 仅纳入其共享 Tracker 供查看，DQA 不消费工作集比对、合并及非共享派生能力。八类对象见 [DQA 共享查看范围](shared-kernel-boundary.md#dqa-共享查看范围用户已确认)。
+
 ## 软件与部署边界
+
+用户已确认四个业务 BC 的合并职责统一采用各自校验整个对象并决定提交的方式，专有校验规则由各 BC 保有。Working Set 管理合并选择、执行协调及结果记录。确认依据见 [职责边界](shared-kernel-boundary.md)。具体对象接入范围、适配端口与内部模型边界继续设计。
 
 限界上下文不自动等于 Java 模块或微服务。企业 Shared Kernel 也不自动等于一个聚合或一个部署单元。`CTX-001/002/003` 可以先在 Working Set 能力内部保持模型边界；`CTX-009` 是应用编排角色。是否拆服务需要团队、可用性、吞吐和发布耦合证据，本阶段不决定。
 

@@ -41,7 +41,7 @@
 | Tracker 根 | TrackerId；谱系治理 | 模式、归属、直接来源候选 | 全谱系无环不能只靠单节点检查：来源冻结/祖先证据+并发限制待选；热门 SHARED 写不能锁全谱系 |
 | Tracker Lineage | 谱系关系/查询视角，暂不另立根 | 边创建合法性归 Tracker 或 Branch | 若允许任意重挂，单节点边界不足，需独立谱系协调；不能以查询索引充当守卫 |
 | Tracker Branch 根（AP-002） | BranchId；独立演进线管理者 | 来源切点、模式与生命周期 | AP-001/003 由 Tracker 承担此角色；若业务不跟踪 Branch，新增身份无依据 |
-| Item Family | namespace/type/CommonId 候选值键 | 跨变体对齐键不可漂移 | 不是自动的全集合聚合；若家族有独立归档/合并则需重评；全 WS 裸 CommonId 唯一仍未确认 |
+| Item Family | 用户已确认 CommonId 全局标识逻辑家族 | 跨变体对齐键保持一致，无关 Item 不共用 CommonId | 是否具有独立生命周期仍需证据；同族多个变体是否可同时进入一个工作集待确认 |
 | Item Variant 根（AP-003） | LocalId；SK 身份/来源管理 | 身份、归属、固定来源、物化确认不复活删除 | BC 内容提交与 SK 确认分离，须查回本地权威；若只是派生索引则不应建根，跨 BC 同事务不默认要求 |
 | Source Cut 值 | 历史证据定位值；历史提供者保留 | 不可变内容/成员/生命周期等证据标识 | 不是时间戳实体；保留义务需显式凭据。历史不可读直接反驳懒 COW 可行性 |
 | Snapshot/业务 Baseline 根候选 | SnapshotId；用户命名/保留能力所有者待定 | 冻结清单、保留凭据完整才发布 | 若仅技术历史读结果则是值/端口；不可与仓库 Design Baseline 混用 |

@@ -10,4 +10,4 @@
 
 - [core-scenarios.md](core-scenarios.md)：创建、共享／非共享、COW、引用、Compare／Merge 与并发的 10 个候选场景。
 
-- [Shared Kernel 边界场景](shared-kernel-boundary-scenarios.md)：B01—B12，含四类对象适用条件与非受管 Part 对照。
+- [Shared Kernel 边界场景](shared-kernel-boundary-scenarios.md)：B01—B12，含四类对象适用条件与 Part 共享查看场景。
