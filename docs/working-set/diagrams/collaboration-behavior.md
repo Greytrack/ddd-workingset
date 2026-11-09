@@ -2,7 +2,9 @@
 
 **状态：Draft / Candidate**
 
-目的：验证提交、结果和确认的区分。依据 [责任与契约](../domain/shared-kernel-boundary.md)、[B01—B12](../scenarios/shared-kernel-boundary-scenarios.md)、[评审](../reviews/2026-11-09-stage-3-architecture-review.md)。假设 BC 支持提交去重和结果回读；不表示整轮事务、传输协议或最终接口。预校验不是提交许可；B09 已确认接受字段在执行时读取源最新值。目标同一接受字段在提交前被修改时，合法提交会覆盖该字段。若极端情况下某个已选源字段不可读，则本条 Requirement 保持未完成，批次继续下一条。图中展示源字段可读的执行路径，执行中竞态处理待定。
+目的：验证提交、结果和确认的区分。依据 [责任与契约](../domain/shared-kernel-boundary.md)、[B01—B12](../scenarios/shared-kernel-boundary-scenarios.md)、[评审](../reviews/2026-11-09-stage-3-architecture-review.md)。假设 BC 支持提交去重和结果回读；不表示整轮事务、传输协议或最终接口。预校验不是提交许可；B09 已确认接受字段在执行时读取源最新值。目标同一接受字段在提交前被修改时，合法提交会覆盖该字段。用户进一步确认接收方各种变动均不能推翻用户合并决策或引发合并冲突提示，删除覆盖目标新修改同样适用；业务 BC 合法性校验仍保留。若极端情况下某个已选源字段不可读，则本条 Requirement 保持未完成，批次继续下一条。图中展示源字段可读的执行路径，执行中竞态处理待定。
+
+已确认适用方向为直接父子双向，source/target 随本轮选择确定；存在性决定可产生目标新增或删除，字段决定可产生目标修改，见 [六种接收场景](../scenarios/core-scenarios.md#直接父子双向合并新增删除修改)。下图读取源字段的步骤展示修改路径，不要求删除操作读取已不存在的源内容；新增、删除的详细执行协议仍待设计。
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +21,7 @@ sequenceDiagram
     B-->>W: 返回本次源值及版本
     W->>B: validation / apply 同一操作身份与执行所读字段值
     B->>B: 基于当前目标重授权、整体校验、提交期并发控制
-    alt 拒绝或冲突
+    alt 业务规则拒绝
         B-->>W: 拒绝回执 无业务变化
         W-->>U: 未完成 可修改决定或重新比较
     else 提交成功

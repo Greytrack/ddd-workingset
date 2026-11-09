@@ -22,7 +22,7 @@
 | `FACT-004` | VIRTUAL Item 在没有本地业务内容行时仍被描述为已存在的逻辑条目。 | Reported / Pending | `V4-DOMAIN:214/547`、`EXT-ARCH §1` | 以查询、权限、删除和引用场景验证；`QUESTION-004` |
 | `FACT-005` | 历史材料使用 CommonId 关联同族变体、LocalId 标识具体变体，并要求实例化不更换 LocalId。 | Reported / Pending | `V4-OVERVIEW:5`、`V4-DOMAIN:19/30` | 派生与回并的等值关系已由用户确认，见 [身份规则](glossary.md#item-身份规则用户已确认)；CommonId 家族唯一性及雪花 ID 已由用户确认，实例化身份稳定性继续验证；`QUESTION-004` |
 | `FACT-006` | 派生内容读取被要求固定到可回读的 Source Cut，而不是跟随来源最新值。 | Reported / Pending | `V4-DOMAIN:438/463`、`EXT-ARCH §3.1` | 证明历史、附件、关系及删除态均可按切点回读；`QUESTION-006` |
-| `FACT-007` | Compare／Merge 被描述为有方向，source/target 是本轮角色而非固定父子角色。 | Reported / Pending | `EXT-ARCH §3.1/10`、`MERGE §3.3` | 用父→子及子→父场景确认；`QUESTION-007` |
+| `FACT-007` | 直接父子工作集支持双向比对、合并；任一方向的新增、删除、修改均可经用户选择应用到接收方。source/target 是本轮角色，不固定为父或子。 | 用户已确认 | 本对话用户明确说明父子双向新增、删除、修改的接收效果 | [双向合并场景](../scenarios/core-scenarios.md#直接父子双向合并新增删除修改)；目标业务 BC 校验并提交 |
 | `FACT-008` | Merge 数据选择、实际 Apply Result 与处理确认被描述为不同事实。 | Reported / Pending | `MERGE §4.2-4.4`、`EXT-ARCH §1/10` | 用 `KEEP_TARGET/DEFER` 四组合验收；`QUESTION-008` |
 | `FACT-009` | Reference 可在逻辑目标有效但物理端点暂不可解析时保持有效悬空状态。 | Reported / Pending | `REFERENCE CONTEXT:14/25`、`REFERENCE 05 §4` | 访谈用户可见语义及删除守卫；`QUESTION-010` |
 | `FACT-010` | 创建、拓展、替换和合并被设计为可恢复长流程，受理成功不等于业务结果已可用。 | Reported / Pending | `EXT-ARCH §7.3`、`V4-LRT §3-9` | 用重启、取消、半批失败场景验证；关联 `INV-011` |
@@ -34,8 +34,8 @@
 | --- | --- | --- | --- | --- |
 | `POL-001` | 每个治理范围只有一个默认根且普通用户不能删除。 | Pending | `V4-OVERVIEW:7`、`EXT-ARCH §1` | 业务治理选择；物理 ID=1 另列 `TC-001` |
 | `POL-002` | 子工作集不允许新建 Tracker。历史材料另主张 Tracker 只能由默认根创建。 | 子工作集禁止创建已由用户确认；其他创建入口范围待定 | 本对话用户明确说明；历史 `V4-DOMAIN:394-398` | 区分创建 Tracker 与在已有 Tracker 下创建 Item |
-| `POL-003` | Tracker 的共享特性在创建时确定，后续不允许修改。分类配置为共享时只能创建共享 Tracker；分类配置为非共享时，创建时可选择共享或非共享。 | 用户已确认 | 本对话用户明确确认创建选择规则与创建后不可变 | [创建验收场景](../scenarios/core-scenarios.md#tracker-共享特性的创建约束)；分类配置后续能否变化及治理方式未确认，不推导既有 Tracker 自动转换或允许迁移 |
-| `POL-004` | 比对、合并只允许直接父子工作集之间进行，作用于支持这些能力的对应非共享 Tracker。 | 用户已确认直接父子准入范围 | 本对话用户明确答复；历史 `MERGE:42/841` | 兄弟及跨代不允许直接比对/合并；GateFlow 历史内容替换适用独立规则 |
+| `POL-003` | 分类配置的共享特性为固定出厂设定，不允许修改；Tracker 的共享特性在创建时确定，后续不允许修改。分类配置为共享时只能创建共享 Tracker；分类配置为非共享时，创建时可选择共享或非共享。 | 用户已确认 | 本对话用户明确确认创建选择规则、创建后不可变及分类共享特性为固定出厂设定 | [创建验收场景](../scenarios/core-scenarios.md#tracker-共享特性的创建约束)；分类共享特性变更问题已关闭，不以是否已创建 Tracker 为条件；不推导其他分类属性的变更规则或允许迁移 |
+| `POL-004` | 比对、合并只允许直接父子工作集之间双向进行，支持新增、删除、修改，作用于支持这些能力的对应非共享 Tracker。 | 用户已确认直接父子准入范围 | 本对话用户明确答复；历史 `MERGE:42/841` | 兄弟及跨代不允许直接比对/合并；GateFlow 历史内容替换适用独立规则 |
 | `POL-005` | 一个 Working Set 有效范围内 CommonId 全局唯一。 | Pending | `V4-DOMAIN:425-427` | 无关 Item 的 CommonId 重号已由用户排除；本条仍需确认同一家族多个变体能否同时进入同一有效范围；`QUESTION-004` |
 | `POL-006` | Tracker 一旦加入某个子工作集，无论 SHARED 或 UNSHARED，后续均不允许移除；不以是否已有 Item 或本地修改为条件。 | 用户已确认的当前业务政策 | 本对话用户明确确认“不论共享还是非共享，后续不允许移除” | 限定工作集绑定的移除；不推导 Tracker 销毁、Item 删除或整个工作集删除规则；`QUESTION-009` |
 | `POL-007` | 子工作集可在已有非共享 Tracker 下新建 Item；共享 Tracker 下通过子工作集入口新建的 Item 实际在默认工作集创建。 | 用户已确认 | 本对话用户明确答复，细节见 [创建场景](../scenarios/core-scenarios.md#子工作集新建-item-与-tracker-边界) | 回并父工作集创建对应 Item 已获用户确认，见 [回并场景](../scenarios/core-scenarios.md#子工作集新增-item-回并父工作集)。CommonId/LocalId 等值关系已确认，标识分配机制待定；`QUESTION-005` |
@@ -64,6 +64,14 @@
 | `TC-004` | 旧实现存在 Long 主键、旧 branch 字段、SDK/Biz 分层等结构。 | Reported legacy constraint | `EXT-ARCH §3.3`、`V4-OVERVIEW:38` | 只作为迁移证据，不定义领域身份 |
 | `TC-005` | 事件可能至少一次投递，投影存在延迟。 | Architecture assumption | `REFERENCE 05 §1/5` | 明确幂等键、因果序列和最大延迟 |
 | `TC-006` | `pre-design/` 内存在大量失效相对链接。 | Observed repository condition | 阶段 1/2 链接检查 | 不影响语义，但降低历史证据可导航性 |
+
+## 合并决策优先于接收方变动（已确认业务政策）
+
+用户明确确认：选择合并后，无论接收方发生什么变动，均以用户的合并决策为准，不因接收方变化提示合并冲突。该政策适用于直接父子双向合并的新增、删除、修改。例如子侧删除 Requirement 后父侧又修改它，用户选择向父侧合并删除，仍执行删除，不要求因父侧新修改重新确认。
+
+本政策决定变化竞争中的业务优先级，沿用此前已确认的目标业务 BC 整体校验及提交职责；业务规则拒绝仍保留未完成结果。执行协议应兑现该优先级，不把内部乐观锁竞争直接升级为要求用户重新裁定的合并冲突。实际结果与失败仍须如实记录，不能把未提交操作记为成功。源字段值继续按已确认政策在执行时读取最新值。
+
+验证见 [合并删除覆盖接收方修改](../scenarios/core-scenarios.md#合并删除覆盖接收方修改)。
 
 ## Tracker 加入子工作集后禁止移除（已确认业务政策）
 
