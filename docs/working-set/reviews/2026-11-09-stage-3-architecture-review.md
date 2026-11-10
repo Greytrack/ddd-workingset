@@ -566,3 +566,193 @@ WS0/R0 → WS1/R1 → WS2/R2，R1.SourceLocalId=R0、R2.SourceLocalId=R1 均未�
 ### 追溯
 
 [术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-037/038](../scenarios/core-scenarios.md#scn-037)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-014"></a>
+## D-014：已有下游变体不随中间上游物化自动重定向（2026-11-10）
+
+**业务裁定：用户正式确认；并发派生时间边界仍开放；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户九项）
+
+1. 未物化 LightTrackerItem 派生时 SourceLocalId 直接指向实际拥有完整业务内容的来源变体。
+2. 派生完成后，已存在的未物化变体不因中间上游变体物化而自动重定向 SourceLocalId。
+3. SourceLocalId 不需要在生命周期内始终动态指向最近已物化祖先。
+4. 只有当前 LightTrackerItem 自身完成 COW 后，才将 SourceLocalId 切换为 LocalId、SourceRevision 切换为当前自身 Revision。
+5. 新派生变体仍按派生当时的实际内容来源选择 SourceLocalId，遵守 D-013。
+6. 当前有效来源关系与 Working Set 派生层级是两个不同维度。
+7. 来源业务聚合修改时，基于当前有效来源依赖关系识别需要物化的变体，而非单纯递归遍历工作集后代。
+8. 保持 D-010 异步事件、最终一致性及 D-011 首次修改前快照优先。
+9. 不引入 Manifest、ItemVariant、额外谱系聚合或新的领域状态机。
+
+知识分类：`FACT-019`（[facts](../domain/facts.md)）。
+
+### 核心不变量（去重）
+
+- INV-045：已有未物化变体不因其他变体物化而自动重定向有效来源。
+- 其余（LocalId/CommonId 稳定、Source-backed 直接定位、完成物化切换自身、首次快照优先、事件顺序不改变保护内容）已由 INV-040/043/042/037/039/038 覆盖，不重复编号。不将 SQL 索引、消息投递机制、数据库锁当作领域不变量。
+
+### 聚合与协作影响
+
+继续维持最小 Shared Kernel 核心模型（Working Set、Tracker、LightTrackerItem）；业务 BC 保留完整业务聚合所有权。明确排除：R1 物化后自动更新所有已有下游 SourceLocalId、Query 每次重新寻找最近已物化祖先、依据派生树无差别触发所有后代 COW、为来源重定向新增第四类聚合或复杂状态机。
+
+### 场景与反例
+
+A（SCN-039）R1 独立物化 R2 不重定向；B/C（SCN-040）R0 修改 R2 按 R0 快照 COW、R1 修改 R2 不参与；D（SCN-041）多目标并行物化互不影响；E（SCN-042）新派生按 D-013 选来源与已有下游对照。
+
+### 剩余开放问题
+
+并发派生时间边界：来源修改与新派生操作并发时，如何界定新派生变体继承修改前还是修改后事实（沿用 D-013 开放问题第 1 条）。不得把 SourceLocalId 误当作历史派生父节点。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-039—042](../scenarios/core-scenarios.md#scn-039)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-015"></a>
+## D-015：基于 Snapshot / Head 时间基准的 TrackerItem 派生（2026-11-10）
+
+**业务裁定：用户正式确认；同一 Revision 内时间基准与具体内容状态的关系保持 Open；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十二项）
+
+1. Working Set 派生时不复制完整业务对象数据。
+2. 派生创建 LightTrackerItem，仅建立当前变体的身份、工作范围关联和有效内容来源引用。
+3. 派生时必须选择时间基准：命名 Snapshot（具有名称的时间戳）或 Head（派生提交瞬间对应时间点）。
+4. Head 不是动态查询时刻，而是本次派生请求确定的时间点。
+5. 系统根据选定时间点，选择该时间点之前适用的最大业务 Revision。
+6. 为派生变体写入 LocalId、CommonId、SourceLocalId、SourceRevision。
+7. SourceLocalId 遵循 D-013：直接指向实际拥有完整业务内容的变体。
+8. 派生时不等待来源停止变化，不因某个并发修改先完成而改变已选时间基准。
+9. 派生完成后已有未物化变体不因上游物化重定向（D-014）。
+10. 来源普通修改不自动升级业务 Revision，显式版次升级是独立行为。
+11. 来源内容变化触发的异步 COW 机制遵循 D-009～D-011。
+12. 领域模型围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合，不增加 Manifest、ItemVariant。
+
+知识分类：`FACT-020`（[facts](../domain/facts.md)）。
+
+### 领域语义区分
+
+- Derivation Time Basis：派生操作选择的时间基准。
+- Named Snapshot：具有名称的时间戳。
+- Head：派生提交时刻的时间基准。
+- Business Revision：显式升级的业务版次。
+- SourceRevision：当前有效内容来源对应的业务版次。
+- SourceLocalId：当前实际拥有业务内容的来源变体。
+- BeforeSnapshot：来源业务聚合修改前、随 COW 事件传递的不可变内容快照。
+
+Derivation Time Basis 与 BeforeSnapshot 不是同一个概念；命名 Snapshot 不是完整业务内容快照。
+
+### 与既有 COW 规则的关系
+
+保留 D-009～D-014。来源修改事件目标发现规则需检查是否还需限定 SourceRevision：不能仅凭 SourceLocalId 相等就推断所有不同 Revision 的变体都应参与本次 COW。
+
+### 重要反例（保持 Open）
+
+R0 Revision 3 在 10:00 已存在；10:20 内容 A；10:20 普通修改 A→B；10:30 Head 派生 R1 选 Revision 3；10:40 普通修改 B→C。待分析：R1 应保留哪一时刻内容事实、SourceRevision=3 是否足以表达派生基准、第一次有效来源修改如何识别、乱序如何避免误用 10:20 快照 A、是否需要额外内容状态位置或时间顺序语义。本轮未裁定，保持 Open，不得自行决定新增字段、聚合或表。
+
+### 聚合与协作分析
+
+Working Set 派生时间基准与工作范围职责；Tracker 创建及派生身份职责；LightTrackerItem 身份/来源/版次定位职责；业务 BC 按指定 Revision 提供 Query/工厂重建能力；COW 事件在内容修改时保护已有派生变体。领域选择时间基准不等于跨聚合大事务；不提前选定数据库锁、时间戳生成方式、事务隔离级别或消息基础设施。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[派生主流程](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-043/044](../scenarios/core-scenarios.md#scn-043)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-016"></a>
+## D-016：派生仅固定业务版次，完整派生完成后才进入 COW 保护范围（2026-11-10）
+
+**业务裁定：用户正式确认；完整派生完成与来源修改实际先后的判定协议、场景 C 竞态仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十二项）
+
+1. 派生操作不复制或固定完整业务数据，只生成 LightTrackerItem 并保存身份及有效来源引用（LocalId、CommonId、SourceLocalId、SourceRevision）。
+2. 命名 Snapshot 或 Head 时间基准只用于确定来源适用的业务 Revision。
+3. 同一 Revision 内普通内容修改，派生不要求保留所选时间点完整内容。
+4. R0 Revision 仍为 3、R1.SourceRevision=3，R1 可 Query 读取 R0 Revision 3 当前内容。
+5. 完整派生操作完成，是新派生 LightTrackerItem 开始受来源变更 COW 保护的业务边界。
+6. 来源修改发生时 R1 完整派生已完成 → 该修改触发 R1 COW。
+7. 来源修改发生时 R1 完整派生未完成 → 不要求触发 COW；派生完成后 R1 继续引用该 Revision 已修改内容。
+8. D-011 首次修改前快照优先，限定为「派生完成之后首次需要保护的相关来源修改」。
+9. 保持 D-010 异步事件与最终一致性。
+10. 多级派生遵循 D-013、D-014。
+11. 正确术语为 SourceRevision，不使用 SourceVersion。
+12. 围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合，不引入 Manifest、ItemVariant。
+
+知识分类：`FACT-021`（[facts](../domain/facts.md)）。
+
+### 纠正的已有设计假设
+
+- 派生瞬间自动固定完整业务内容 → 修正为只固定业务版次。
+- Head 时间点代表不可变内容快照 → 修正为只用于选 Revision。
+- 同一 Revision 内普通修改与 Revision 升级混为一谈 → 明确区分。
+- 所有 SourceRevision 相同变体无论派生是否完成都参与 COW → 修正为以 Derivation Completion 为界。
+- 来源修改与派生并发时按请求发起时间判断最终内容 → 修正为待裁定竞态。
+
+保留历史来源与被修正关系，不静默改写。
+
+### 领域语义区分
+
+Derivation Time Basis（Snapshot/Head 选 Revision 的时间基准）≠ Derivation Completion（完整派生完成，进入 COW 保护的业务边界）；SourceRevision 不等于不可变内容快照。
+
+### 领域不变量（去重）
+
+- INV-049：完整派生完成前发生的来源修改不为该派生变体触发 COW。
+- 其余（派生身份与内容复制解耦、派生不冻结 Revision 普通内容、首次快照优先、LocalId/CommonId 稳定、事件乱序不改变内容）已由 INV-046/047/037/040/042/038 覆盖，不重复编号。
+
+### 事件目标发现
+
+在 SourceLocalId = 来源 LocalId、SourceRevision = 被修改 Revision、尚未物化的基础上，还必须满足该变体在来源修改发生时已完成派生的业务条件。如何表达和判定完整派生完成与来源修改的实际先后属候选协作协议，不直接确定新数据库字段、全局锁或新聚合。
+
+### 场景与竞态
+
+A（SCN-045）派生完成→来源修改→触发 COW，R1 物化为 B；B（SCN-046）来源修改→派生完成→不触发 COW，R1 引用 C；C（SCN-047）来源修改已开始→派生完成→来源修改提交，仅标记为待裁定竞态，不自行决定以开始还是提交时间判断。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-045—047](../scenarios/core-scenarios.md#scn-045)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-017"></a>
+## D-017：COW 目标在事件 Handler 消费时确定（2026-11-10）
+
+**业务裁定：用户正式确认；D-011 乱序/幂等实现细节留待实施评审；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十一项）
+
+1. COW 目标集合在事件 Handler 实际消费来源变更事件时确定。
+2. Handler 查询当前有效内容来源指向本次修改来源的 LightTrackerItem。
+3. 保留 SourceLocalId、SourceRevision 和未物化状态等基本匹配条件。
+4. 当前查询命中的符合条件的 LightTrackerItem，均参与本次 COW 物化。
+5. 不在来源修改开始时提前固定 COW 目标集合。
+6. 不追溯比较来源修改开始时间与完整派生完成时间。
+7. 不引入专门的跨聚合全局时序协调机制。
+8. 即使派生变体在来源修改开始后才完成派生，只要 Handler 消费时满足条件，也参与本次物化。
+9. COW 仍然通过修改前完整不可变快照完成。
+10. 保留异步事件与最终一致性政策。
+11. 保留 D-011 首次有效快照优先，其乱序、幂等实现细节留待实施评审。
+
+知识分类：`FACT-022`（[facts](../domain/facts.md)）。
+
+### 修订的旧规则（保留历史，标注由 D-017 取代）
+
+- 来源修改开始时必须固定 COW 保护范围 → 删除。
+- 事件必须携带修改开始时的目标集合 → 删除。
+- 需要比较派生完成时间与来源修改开始时间以决定目标资格 → 删除。
+- 必须建立跨聚合全局时序判断协议 → 删除。
+- 来源修改开始后才完成派生的变体绝对不能参与此次 COW → 删除。
+
+### 与 D-016 的一致性
+
+D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则不变；D-016 的 COW 保护资格历史时间边界服从 D-017（以 Handler 消费时的当前有效引用关系为准，不再要求历史资格判断）。
+
+### COW 主流程
+
+1. 来源 BC 修改前获取完整内容快照；2. 执行修改并保存；3. 发布携带快照的事件；4. Handler 异步消费；5. 查询 SourceLocalId/SourceRevision 匹配且未物化的 LightTrackerItem；6. 对目标执行 COW；7. 目标 BC 保存完整聚合；8. 发物化完成事件；9. 更新有效内容来源（SourceLocalId=LocalId、SourceRevision=Revision）。
+
+保持最小模型，不增加额外领域聚合、Manifest、ItemVariant 或复杂事件协调机制。
+
+### 评审边界
+
+继续记录 D-011 首次快照优先，但本轮不展开乱序事件处理算法；并发交错边缘行为列入实施评审关注点，不新增业务裁定问题。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-048](../scenarios/core-scenarios.md#scn-048)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。

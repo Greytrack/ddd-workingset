@@ -218,3 +218,129 @@ sequenceDiagram
     H->>H: 通知 LightTrackerItem 更新有效来源（SourceLocalId=LocalId）
     Note over H: 不要求所有目标在同一全局事务完成
 ```
+
+## 派生层级与有效来源依赖的区分（D-014）
+
+已确认：R1 物化后，已有下游 R2 的 SourceLocalId 不自动重定向；派生层级（虚线）与有效来源依赖（实线）是两个不同维度。
+
+```mermaid
+flowchart LR
+    R0["R0（WS0）已物化"]
+    R1["R1（WS1）已物化<br/>SourceLocalId=R1"]
+    R2["R2（WS2）未物化<br/>SourceLocalId=R0（不重定向）"]
+    R0 -.->|"派生层级"| R1
+    R1 -.->|"派生层级"| R2
+    R0 -->|"有效来源依赖（R2 固定指向 R0）"| R2
+```
+
+R1 物化前后 R2 来源保持不变：
+
+```mermaid
+flowchart LR
+    subgraph Before["R1 物化前"]
+        B1["R1 未物化<br/>SourceLocalId=R0"]
+        B2["R2 未物化<br/>SourceLocalId=R0"]
+    end
+    subgraph After["R1 物化后"]
+        A1["R1 已物化<br/>SourceLocalId=R1"]
+        A2["R2 未物化<br/>SourceLocalId=R0（不变）"]
+    end
+    Before -->|"R1 独立 COW"| After
+```
+
+说明：R2 的 SourceLocalId 固定于派生时确定的实际内容来源，直至 R2 自身 COW；不随 R1 物化重定向。派生层级仅表达 Working Set 派生关系，不决定有效内容依赖。
+
+## 派生主流程（D-015 时间基准）
+
+已确认：派生不复制完整业务数据，只生成 LightTrackerItem 建立身份与有效来源引用；时间基准（命名 Snapshot 或 Head）只用于选 Revision，不固定内容。
+
+```mermaid
+flowchart TD
+    Start(["用户发起派生"]) --> Choose{"选择时间基准"}
+    Choose -->|"命名 Snapshot"| Snap["固定 T = Snapshot 时间戳"]
+    Choose -->|"Head"| Head["固定 T = 派生请求时刻"]
+    Snap --> Track["创建或关联 Tracker（按选择范围）"]
+    Head --> Track
+    Track --> Rev["按 T 解析来源适用的最大业务 Revision"]
+    Rev --> Loc["定位实际拥有内容的来源 LocalId（D-013）"]
+    Loc --> Create["创建 LightTrackerItem<br/>保存 LocalId/CommonId/SourceLocalId/SourceRevision"]
+    Create --> Done["完成派生，不复制完整业务聚合"]
+```
+
+说明：Derivation Time Basis（T）不等于 BeforeSnapshot；命名 Snapshot 不是完整业务内容快照。同一 Revision 内时间基准与具体内容状态的关系保持 Open（SCN-044）。
+
+## 派生完成边界与 COW 保护（D-016 时序对比）
+
+已确认：完整派生完成（Derivation Completion）是新变体开始受 COW 保护的边界；派生完成前来源修改不触发 COW。
+
+场景 A：派生完成 → 来源修改 → 触发 COW。
+
+```mermaid
+sequenceDiagram
+    participant W as Working Set
+    participant R1 as LightTrackerItem R1
+    participant SBC as 来源业务 BC
+    participant H as COW Handler
+
+    W->>R1: 完整派生完成（Derivation Completion）
+    SBC->>SBC: R0 修改 B→C，形成修改前快照 B
+    SBC->>H: 来源变更事件（快照 B）
+    H->>R1: 检查派生已完成 → 触发 COW
+    H->>H: R1 据快照 B 物化
+```
+
+场景 B：来源修改 → 派生完成 → 不因该修改触发 COW。
+
+```mermaid
+sequenceDiagram
+    participant SBC as 来源业务 BC
+    participant W as Working Set
+    participant R1 as LightTrackerItem R1
+
+    SBC->>SBC: R0 修改 B→C（事件携带快照 B）
+    Note over R1: R1 派生尚未完成，不触发 COW
+    W->>R1: 完整派生完成（Derivation Completion）
+    Note over R1: R1 仍 Source-backed，Query 得到 R0 Revision 3 当前内容 C
+```
+
+场景 C：来源修改已开始 → 派生完成 → 来源修改成功提交（竞态，待裁定）。
+
+```mermaid
+sequenceDiagram
+    participant SBC as 来源业务 BC
+    participant W as Working Set
+    participant R1 as LightTrackerItem R1
+
+    SBC->>SBC: 来源修改开始（B→C）
+    W->>R1: R1 派生完成（Derivation Completion）
+    SBC->>SBC: 来源修改成功提交
+    Note over SBC,R1: 待裁定竞态：以修改开始还是提交时间判断 R1 是否受 COW 保护
+```
+
+说明：如何表达和判定 Derivation Completion 与 Source Mutation 的实际先后属候选协作协议，不直接确定新数据库字段、全局锁或新聚合。（此时间边界判定现由 D-017 修订，见下节）
+
+## COW 目标集合消费时确定（D-017 主流程时序）
+
+已确认：COW 目标集合在 Handler 消费事件时确定，不在修改开始时固定；查询当前 SourceLocalId/SourceRevision 匹配且未物化的 LightTrackerItem，命中的都物化。前文 D-016 场景 A/B/C 时序图的「派生完成时间边界」由本裁定取代。
+
+```mermaid
+sequenceDiagram
+    participant SBC as 来源业务 BC
+    participant EV as 事件总线
+    participant H as COW Handler
+    participant L as LightTrackerItem
+    participant DBC as 目标业务 BC
+
+    SBC->>SBC: 修改前获取完整内容快照
+    SBC->>SBC: 执行来源业务聚合修改并保存
+    SBC->>EV: 发布携带不可变快照的变更事件
+    EV->>H: 异步消费事件
+    H->>L: 查询 SourceLocalId/SourceRevision 匹配且未物化的 LightTrackerItem
+    L-->>H: 命中的目标集合（消费时确定）
+    H->>DBC: 对各目标执行 COW（据快照物化）
+    DBC-->>H: 保存完整业务聚合
+    H->>EV: 物化完成事件
+    EV->>L: 更新有效内容来源（SourceLocalId=LocalId、SourceRevision=Revision）
+```
+
+说明：不追溯比较修改开始时间与派生完成时间；D-011 首次快照优先的乱序/幂等实现细节留待实施评审。

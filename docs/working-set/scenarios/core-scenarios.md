@@ -476,3 +476,101 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When R0 修改：不应因此直接物化 R2（R2 不依赖 R0）。
 - When R1 修改：R2 才依据 R1 修改前内容进行 COW。
 - 反例：R0 修改不得触发 R2 物化；依赖者集合由 SourceLocalId 指向的实际来源决定。
+
+<a id="scn-039"></a>
+## SCN-039 中间上游物化不重定向已有下游（场景 A）
+
+**业务规则：用户确认 D-014；验收表述 Draft。** 关联 FACT-019、INV-045。
+
+- Given WS0/R0 → WS1/R1 → WS2/R2；R0 已物化，R1/R2 未物化，均 SourceLocalId=R0。
+- When R1 在 R0 未修改的前提下独立完成 COW：R1.SourceLocalId=R1、R1.SourceRevision=R1.Revision。
+- Then R2 仍保持 SourceLocalId=R0，不自动改为 R1。
+- 反例：不得因 R1 物化而自动更新 R2 的 SourceLocalId；SourceLocalId 不需始终动态指向最近已物化祖先。
+
+<a id="scn-040"></a>
+## SCN-040 有效来源依赖而非派生层级触发 COW（场景 B/C）
+
+**业务规则：用户确认 D-014；验收表述 Draft。** 关联 FACT-019。
+
+- Given R1 已物化（SourceLocalId=R1），R2 未物化且仍 SourceLocalId=R0。
+- When R0 修改：R2 是 R0 的直接有效内容依赖者，据 R0 的首次修改前快照执行 COW。
+- When R1 修改：不应因 R2 在派生层级上位于 R1 之下就自动将 R2 视为 R1 的有效内容依赖者，R2 不参与 R1 的 COW。
+- 反例：识别需物化变体基于当前有效来源依赖关系，而非递归遍历工作集后代。
+
+<a id="scn-041"></a>
+## SCN-041 多目标并行物化互不影响（场景 D）
+
+**候选；D-014 提出，快照选择独立性确认。** 关联 INV-037/038。
+
+- Given R0 修改导致 R1、R2 等多个目标并行 COW。
+- When 部分目标先完成物化。
+- Then 不应改变其他目标的快照选择与有效来源；各目标独立按各自首次快照物化。
+- 反例：一个目标的完成不得触发其他目标的来源重定向或快照替换。
+
+<a id="scn-042"></a>
+## SCN-042 新派生按 D-013 选来源与已有下游对照（场景 E）
+
+**业务规则：用户确认 D-014；验收表述 Draft。** 关联 FACT-018/FACT-019。
+
+- Given R1 已物化（SourceLocalId=R1），R2 已存在且 SourceLocalId=R0（不重定向）。
+- When 从已物化的 R1 派生新变体 R3。
+- Then R3 按 D-013 选择 SourceLocalId=R1（派生当时的实际内容来源），与已有下游 R2 保持 SourceLocalId=R0 形成对照。
+- 反例：新派生选来源与已有下游不重定向是两条不同规则，不得混用。
+
+<a id="scn-043"></a>
+## SCN-043 派生按时间基准选 Revision 且不复制内容
+
+**业务规则：用户确认 D-015；验收表述 Draft。** 关联 FACT-020、INV-046。
+
+- Given 用户发起 Working Set 派生，选择命名 Snapshot 或 Head 作为时间基准 T。
+- When 系统按 T 选择之前适用的最大业务 Revision，定位实际拥有内容的来源 LocalId，创建 LightTrackerItem 保存 LocalId/CommonId/SourceLocalId/SourceRevision。
+- Then 派生完成，不复制完整业务聚合；SourceLocalId 遵循 D-013 直接指向实际拥有内容的变体。
+- 反例：Head 不是动态查询时刻，而是派生请求确定的时间点；派生不等待来源停止变化，不因并发修改先完成而改变已选时间基准。
+
+<a id="scn-044"></a>
+## SCN-044 同一 Revision 内时间基准与内容状态（D-015 反例，D-016 部分裁定）
+
+**D-015 提出，D-016 部分裁定：派生仅固定版次、COW 保护从派生完成开始。** 关联 INV-047/048/049。
+
+- Given R0 Revision 3 在 10:00 已存在；10:20 内容 A；10:20 普通修改 A→B（Revision 仍 3）；10:30 用户以 Head 派生 R1 选 Revision 3；10:40 普通修改 B→C（Revision 仍 3）。
+- D-016 裁定：SourceRevision=3 只表达业务版次，不表达内容；派生不冻结 Revision 3 的普通内容。10:40 修改是否触发 R1 COW，取决于 R1 完整派生是否已在 10:40 前完成（见 SCN-045/046）。
+- 仍待裁定：完整派生完成与来源修改实际先后的判定协议（场景 C 竞态）。
+
+<a id="scn-045"></a>
+## SCN-045 派生完成后来源修改触发 COW（场景 A，D-017 后判定简化为消费时）
+
+**业务规则：用户确认 D-016/D-017；验收表述 Draft。** 关联 FACT-021/022、INV-049/050。
+
+- Given R0 处于 Revision 3；R1 已完整派生完成（R1.SourceLocalId=R0、SourceRevision=3、未物化）。
+- When R0 普通修改 B→C（Revision 不变），事件携带不可变修改前快照 B。
+- Then（D-017）Handler 消费时查询到 R1 满足条件，R1 参与异步 COW，最终物化为 B（修改前快照）。
+- 反例：判定依据是消费时是否满足条件，而非追溯修改开始时间。
+
+<a id="scn-046"></a>
+## SCN-046 消费时未满足条件则不物化（场景 B，D-017 修订）
+
+**业务规则：用户确认 D-017；验收表述 Draft。** 关联 FACT-022、INV-050。
+
+- Given R1 尚在完整派生操作执行过程中（LightTrackerItem 尚未创建）；R0 普通修改 B→C（Revision 仍 3）。
+- When Handler 消费来源变更事件时，查询不到 R1（尚未派生完成）。
+- Then 此次消费不物化 R1；随后 R1 派生完成，仍 Source-backed，Query 得到 R0 Revision 3 当前内容 C。
+- 反例：判定依据是消费时是否查询到满足条件的 LightTrackerItem，而非修改发生时派生是否完成。
+
+<a id="scn-047"></a>
+## SCN-047 来源修改与派生完成竞态（D-016 场景 C，D-017 关闭）
+
+**D-016 提出，D-017 关闭：不再比较修改开始与派生完成时间。** 关联 FACT-022。
+
+- Given 来源修改已开始 → R1 派生完成 → 来源修改成功提交。
+- D-017 裁定：不追溯比较修改开始时间与派生完成时间；Handler 消费时查询到 R1 满足条件即物化，查询不到则不物化。
+- 反例：不再以开始时间还是提交时间判断，改为消费时确定。
+
+<a id="scn-048"></a>
+## SCN-048 COW 目标集合在消费时确定
+
+**业务规则：用户确认 D-017；验收表述 Draft。** 关联 FACT-022、INV-050。
+
+- Given 来源 R0 修改并保存，发布携带不可变快照的变更事件。
+- When Handler 异步消费事件，查询当前 SourceLocalId=R0、SourceRevision=匹配、尚未物化的 LightTrackerItem。
+- Then 查询命中的所有 LightTrackerItem（不限工作集派生深度、不追溯修改开始时间）均参与本次 COW 物化。
+- 反例：不在修改开始时提前固定目标集合；即使派生在修改开始后才完成，只要消费时满足条件也参与。

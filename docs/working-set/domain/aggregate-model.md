@@ -143,3 +143,49 @@ LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/So
 前文 D-012 的「多级派生逐级解析」候选假设被 D-013 排除，保留历史追溯。LightTrackerItem 不承担历史派生关系保存职责；不引入 Manifest、ItemVariant 或额外领域聚合。
 
 核心聚合仍为 Working Set、Tracker、LightTrackerItem，业务 BC 保留完整业务聚合所有权。图见 [有效来源定位图](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-014：已有下游不随中间上游物化重定向（Draft 设计影响）
+
+已确认：派生完成后，已存在的未物化 LightTrackerItem 不因中间上游变体物化而自动重定向 SourceLocalId；SourceLocalId 不需在生命周期内始终动态指向最近已物化祖先。只有当前变体自身完成 COW 后才切换 SourceLocalId=LocalId、SourceRevision=自身 Revision。
+
+关键区分两个维度：
+
+- **Working Set 派生层级**：WS0→WS1→WS2，表达派生关系。
+- **有效来源依赖（SourceLocalId）**：R2 的 SourceLocalId 固定指向派生时确定的实际内容来源（如 R0），不随 R1 物化而改为 R1。
+
+明确排除：R1 物化后自动更新所有已有下游 SourceLocalId、Query 每次重新寻找最近已物化祖先、依据派生树无差别触发所有后代 COW、为来源重定向新增第四类聚合或复杂状态机。
+
+核心聚合仍为 Working Set、Tracker、LightTrackerItem，业务 BC 保留完整业务聚合所有权。图见 [派生层级与有效来源依赖图](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-015：派生时间基准与不复制内容（Draft 设计影响）
+
+已确认：Working Set 派生不复制完整业务对象数据，仅创建 LightTrackerItem 建立身份、工作范围关联与有效内容来源引用。派生必须选择时间基准（命名 Snapshot 或 Head，Head 是派生请求确定的时间点），系统按该时间点选择之前适用的最大业务 Revision；派生时不等待来源停止变化、不因并发修改先完成而改变已选时间基准。
+
+职责划分：
+
+- **Working Set**：派生时间基准选择与工作范围职责。
+- **Tracker**：创建及派生身份职责。
+- **LightTrackerItem**：身份、来源、版次定位职责（保存 LocalId/CommonId/SourceLocalId/SourceRevision）。
+- **业务 BC**：根据指定 Revision 提供 Query/工厂重建能力。
+
+领域选择时间基准不等于要求跨聚合大事务；不提前选定数据库锁、时间戳生成方式、事务隔离级别或消息基础设施。图见 [派生主流程](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-016：派生仅固定版次与 COW 保护边界（Draft 设计影响）
+
+已确认：派生仅固定业务版次（SourceRevision），不复制或固定完整业务数据。完整派生操作完成（Derivation Completion）是新派生 LightTrackerItem 开始受到来源变更 COW 保护的业务边界：派生完成前来源修改不为该变体触发 COW，派生完成后首次相关来源修改触发 COW。
+
+关键区分：
+
+- **Derivation Time Basis**（派生时间基准，选 Revision）≠ **Derivation Completion**（完整派生完成，COW 保护边界）。
+- SourceRevision 只表达业务版次，不等于不可变内容快照。
+- D-011 首次快照优先限定为「派生完成之后首次需要保护的相关来源修改」。
+
+候选协作协议：如何表达和判定 Derivation Completion 与 Source Mutation 的实际先后（场景 A/B 判定依据）；场景 C 竞态（来源修改已开始 → 派生完成 → 来源修改提交）标记为待裁定，不自行决定以开始时间还是提交时间判断。不直接确定新数据库字段、全局锁或新聚合。（此候选协作协议现由 D-017 关闭，见下节）
+
+## D-017：COW 目标集合在事件消费时确定（Draft 设计影响）
+
+已确认：COW 目标集合在事件 Handler 实际消费来源变更事件时确定，不在来源修改开始时提前固定；Handler 查询当前 SourceLocalId/SourceRevision 匹配且尚未物化的 LightTrackerItem，查询命中的都参与本次 COW 物化。不追溯比较修改开始时间与完整派生完成时间，不引入跨聚合全局时序协调机制。
+
+前文 D-016 的「Derivation Completion 与 Source Mutation 实际先后判定」「场景 C 竞态」候选协作协议由 D-017 关闭，保留历史追溯。D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则不变；D-016 的 COW 保护资格历史时间边界由 D-017 取代为「消费时按当前有效引用关系确定」。
+
+保持最小模型（Working Set、Tracker、LightTrackerItem），不增加额外领域聚合、Manifest、ItemVariant 或复杂事件协调机制。图见 [COW 主流程时序](../diagrams/lighttrackeritem-lifecycle.md)。

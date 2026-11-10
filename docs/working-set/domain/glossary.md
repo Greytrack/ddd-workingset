@@ -177,3 +177,47 @@ Source Change Order、Derivation Baseline、Materialization Claim 均为候选�
 - COW 依据 SourceLocalId 发现所有依赖该实际内容来源的未物化 LightTrackerItem，即使分布在不同层级 Working Set 也都要物化（扇出）。
 
 前文 D-012 的「多级派生逐级解析」候选假设被 D-013 排除，保留历史追溯。
+
+## 已有下游不随中间上游物化重定向（D-014）
+
+用户确认，澄清 D-013 的边界：
+
+- SourceLocalId 在**派生时**按 D-013 选择实际拥有完整业务内容的来源（直接上游未物化则向上找最近已物化上游）。
+- **派生完成后**，已存在的未物化变体不因中间上游变体物化而自动重定向 SourceLocalId；SourceLocalId 不需要在生命周期内始终动态指向最近已物化祖先。
+- 只有当前 LightTrackerItem 自身完成 COW 后，才将 SourceLocalId 切换为自身 LocalId、SourceRevision 切换为自身 Revision。
+- 当前有效来源关系与 Working Set 的派生层级是两个不同维度；来源修改时基于当前有效来源依赖关系识别需物化变体，而非递归遍历工作集后代。
+
+示例：R0 已物化，R1/R2 未物化均 SourceLocalId=R0；R1 独立物化后 SourceLocalId=R1，R2 仍保持 SourceLocalId=R0，不自动改为 R1。
+
+## 派生时间基准与命名 Snapshot / Head（D-015）
+
+用户确认 Working Set 派生不复制完整业务对象数据，仅创建 LightTrackerItem 建立身份、工作范围关联与有效内容来源引用。派生时必须选择时间基准：
+
+- **Derivation Time Basis／派生时间基准**：派生操作选择的时间基准，用于确定来源适用的业务 Revision。
+- **Named Snapshot／命名快照**：具有名称的时间戳，作为派生时间基准。
+- **Head／当前头**：用户提交派生操作瞬间对应的时间点，不是动态查询时刻。
+
+系统根据选定时间点选择该时间点之前适用的最大业务 Revision。**Derivation Time Basis 不等于 BeforeSnapshot**；命名 Snapshot 不是完整业务内容快照，只用于选 Revision。派生时不等待来源停止变化，不因并发修改先完成而改变已选时间基准。
+
+## 派生仅固定版次与 Derivation Completion 边界（D-016）
+
+用户确认，修正此前将派生时间点解释为完整业务内容快照的设计假设：
+
+- 派生操作不复制或固定完整业务数据，只生成 LightTrackerItem 保存身份及有效来源引用（LocalId、CommonId、SourceLocalId、SourceRevision）。
+- 命名 Snapshot 或 Head 时间基准只用于确定来源适用的业务 Revision；即使同一 Revision 内发生普通内容修改，派生也不要求保留所选时间点的完整内容。
+- **Derivation Completion／完整派生完成**：完整派生操作完成，新变体进入有效工作范围的业务边界，也是该变体开始受到来源变更 COW 保护的边界。
+- **COW Protection／COW 保护**：派生完成后来源相关修改触发的物化保护。
+- **Source Mutation／来源修改**：来源业务内容修改。
+
+Derivation Time Basis 不等于 Derivation Completion；SourceRevision 不等于不可变内容快照。D-011 的首次修改前快照优先原则限定为「派生完成之后首次需要保护的相关来源修改」。
+
+## COW 目标在事件消费时确定（D-017）
+
+用户确认，修订 D-016 的「完整派生完成后才进入 COW 保护范围」时间边界：
+
+- COW 目标集合在事件 Handler 实际消费来源变更事件时确定，不在来源修改开始时提前固定。
+- Handler 查询当前有效内容来源指向本次修改来源的 LightTrackerItem（保留 SourceLocalId、SourceRevision、未物化状态等匹配条件），查询命中的都参与本次 COW 物化。
+- 不追溯比较来源修改开始时间与完整派生完成时间，不引入专门的跨聚合全局时序协调机制。
+- 即使派生变体在来源修改开始后才完成派生，只要 Handler 消费时满足条件，也参与本次物化。
+
+D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则保持不变；D-016 的 COW 保护资格历史时间边界由本裁定取代。
