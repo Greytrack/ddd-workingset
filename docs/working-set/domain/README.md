@@ -11,6 +11,11 @@
 - [facts-policy-baseline-v1.md](facts-policy-baseline-v1.md)：事实与政策主题基线 v1（Accepted，2026-11-10；覆盖阶段 3.1 的 R01—R19 与限定术语）；
 - [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：首版领域模型基线候选 v1（Accepted 候选，含 D-001～D-019 与阶段 4 补充；未正式发布）。
 
+## 阶段 5 契约草案
+
+- [merge-execution-contract-v1.md](merge-execution-contract-v1.md)：Merge 执行行为契约草案（Draft，T1；MergeRound / MergeCheckpoint / Diff+ComparisonToken / MergeEntry 生命周期、行为矩阵与部分成功表达），待用户裁定 Q1～Q3。
+- [ADR-0005（Proposed）](../adr/0005-merge-execution-model.md)：Merge 执行模型的结构决策，与上述契约配套。
+
 ## 阶段 2 候选知识
 
 - [evidence-register.md](evidence-register.md)：来源代号、读取范围和确认状态；

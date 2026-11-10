@@ -53,7 +53,9 @@
 
 - [productspace-tracker-workingset.md](productspace-tracker-workingset.md)：ProductSpace／Tracker／Working Set 归属与绑定关系，Draft / Candidate（阶段 4 补充）。
 
+- [merge-entry-lifecycle.md](merge-entry-lifecycle.md)：MergeEntry 从提交到确认的协作时序与状态机，Draft / Candidate（阶段 5 T1，配套 [Merge 执行行为契约](../domain/merge-execution-contract-v1.md)）。
+
 ## 渲染检查状态（2026-11-10）
 
-- **静态检查（脚本执行）**：11 个图文件、39 个 `mermaid` 代码块；fence 配对完整（每文件 ``` 数为偶数）；图类型均为 `flowchart`、`classDiagram`、`stateDiagram-v2`、`sequenceDiagram`（通用语法，无专有扩展）。
+- **静态检查（脚本执行）**：12 个图文件、41 个 `mermaid` 代码块；fence 配对完整（每文件 ``` 数为偶数）；图类型均为 `flowchart`、`classDiagram`、`stateDiagram-v2`、`sequenceDiagram`（通用语法，无专有扩展）。
 - **实际渲染：未执行**。当前环境无 `mmdc`；`npx @mermaid-js/mermaid-cli` 在 45 秒内无响应（疑似需联网下载 puppeteer）。按 `AGENTS.md` 4.1 第 6 条，图纳入正式基线与发布前须在可渲染环境完成渲染检查并回填结论；当前状态记为「静态检查通过 / 渲染未验证」，不得据此宣称图已通过渲染评审。

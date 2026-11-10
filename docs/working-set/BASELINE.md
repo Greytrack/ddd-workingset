@@ -83,6 +83,8 @@
 
 ## 最近基线变更
 
+- **2026-11-10 阶段 5 T1 草案**：产出 [Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md)（Draft）、[MergeEntry 生命周期图](diagrams/merge-entry-lifecycle.md)（Draft/Candidate）与 [ADR-0005](adr/0005-merge-execution-model.md)（Proposed）；待裁定 Q1～Q3 与 ADR-0005 状态。发布仍 Unreleased。
+
 - **2026-11-10 阶段 4 收尾与首版基线审核**：阶段 4 领域知识扩充结束；[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)结论「通过（附观察项）」（Reviewed）。观察项：D-019 无对应 ADR、`aggregate-model` 阶段 3 候选根表待收敛、图表渲染未验证、实现证据为零。转入阶段 5 契约层，首议题为 Diff/Merge 执行协议（QUESTION-015）。发布仍 Unreleased。
 
 - **2026-11-10 ADR-0004 转 Accepted**：用户明确批准 [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md) 为 Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054）；ADR-0001～0004 现全部 Accepted。发布仍 Unreleased。
@@ -111,3 +113,5 @@
 ## 阶段 5 契约层（2026-11-10 起）
 
 阶段 4 收尾与首版基线审核完成后进入契约层：[阶段 5 契约层计划](reviews/2026-11-10-stage-5-contract-plan.md)（Draft）。首议题 T1 Merge 执行协议（`QUESTION-015`），随后 T2 绑定与删除契约、T3 LightTrackerItem 物化协议、T4 跨 BC 公共契约；契约确认后才启动 T5 最小纵向切片。发布仍 Unreleased。
+
+T1 进度（2026-11-10）：已产出 Draft 草案——[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md)、[MergeEntry 生命周期图](diagrams/merge-entry-lifecycle.md)、[ADR-0005（Proposed）](adr/0005-merge-execution-model.md)；待用户裁定 Q1～Q3 与 ADR-0005 状态。

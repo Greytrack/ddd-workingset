@@ -51,4 +51,8 @@
 
 ## 7. 下一步
 
-从 **T1（Merge 执行协议）** 开始：先输出三套方案比较与 SCN-057 起的扩展场景，等待用户方案裁定后起草契约与 ADR-0005 建议。
+**T1 已产出 Draft 草案**（2026-11-10）：[Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)、[MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md)、[ADR-0005（Proposed）](../adr/0005-merge-execution-model.md)。
+
+待用户裁定：Q1 MergeEntry 归属（推荐 MergeRound 内 Entity）、Q2 ComparisonToken 证据要求（推荐必须绑双侧内容证据）、Q3 Checkpoint 确认发起方（推荐由 MergeRound 在 `markAsMerged=true` 且 `Applied` 时发起）；以及 ADR-0005 是否批准为 Accepted。
+
+裁定后：补充 SCN-057 起的执行场景（过期审阅、撤销晚到、`DEFER` 残留、部分成功后重试、未物化目标失败），冻结契约 v1，再进入 T2。
