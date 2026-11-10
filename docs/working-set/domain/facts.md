@@ -18,7 +18,7 @@
 | --- | --- | --- | --- | --- |
 | `FACT-001` | 历史资料把 Working Set 描述为选择 Tracker 并形成有效工作范围，而非拥有全部 Item。 | Reported / Pending | `EXT-ARCH §0`、`V4-UL:10` | 访谈工作集创建、发布、归档的业务负责人；关联 `QUESTION-001` |
 | `FACT-002` | SHARED Tracker 及其 Item 的新增、修改实际归属默认工作集，所有已绑定工作集同时可见，不产生子工作集独有副本。 | 用户已确认 | 本对话用户对共享修改归属的明确说明 | [SCN-002](../scenarios/core-scenarios.md#scn-002-引用-shared-tracker)；权限与可见性实现继续设计 |
-| `FACT-003` | 非共享 Tracker 派生产生新的独立业务身份，源与派生 Tracker 是两个不同领域对象；Tracker 间追溯层级由 parentId、sourceId 表达。 | 用户已确认 D-002（仅非共享派生） | 用户 2026-11-10 明确裁定；历史 `EXT-ARCH §0/3.1`、`V4-DOMAIN:409` 保留为背景 | 字段准确指向、多级派生、谱系可变性及同谱系共存仍待确认；Item 边界不由本条推导；SCN-013、QUESTION-002 |
+| `FACT-003` | 非共享 Tracker 派生产生新的独立业务身份；sourceId 指向直接父级 Working Set 下的来源 Tracker，逐级追溯，不跳过中间工作集。parentId 另表达同工作集直属结构父子关系，不属于派生维度。 | 用户确认 D-002 身份事实；D-003 澄清双维语义 | 用户 2026-11-10 D-003 正式裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-003) | SCN-013/014；修改规则、组织树继承、同源多派生及 Item 边界待定 |
 | `FACT-004` | VIRTUAL Item 在没有本地业务内容行时仍被描述为已存在的逻辑条目。 | Reported / Pending | `V4-DOMAIN:214/547`、`EXT-ARCH §1` | 以查询、权限、删除和引用场景验证；`QUESTION-004` |
 | `FACT-005` | 历史材料使用 CommonId 关联同族变体、LocalId 标识具体变体，并要求实例化不更换 LocalId。 | 部分 Accepted：R05 身份关系；实例化稳定性待验证 | `V4-OVERVIEW:5`、`V4-DOMAIN:19/30` | 派生与回并的等值关系已由用户确认，见 [身份规则](glossary.md#item-身份规则用户已确认)；CommonId 家族唯一性及雪花 ID 已由用户确认，实例化身份稳定性继续验证；`QUESTION-004` |
 | `FACT-006` | 派生内容读取被要求固定到可回读的 Source Cut，而不是跟随来源最新值。 | Accepted：R07/R19 固定派生内容含附件关系；保留协议待设计 | `V4-DOMAIN:438/463`、`EXT-ARCH §3.1` | 证明历史、附件、关系及删除态均可按切点回读；`QUESTION-006` |
@@ -40,6 +40,12 @@
 | `POL-006` | Tracker 一旦加入某个子工作集，无论 SHARED 或 UNSHARED，后续均不允许移除；不以是否已有 Item 或本地修改为条件。 | 用户已确认的当前业务政策 | 本对话用户明确确认“不论共享还是非共享，后续不允许移除” | 限定工作集绑定的移除；不推导 Tracker 销毁、Item 删除或整个工作集删除规则；`QUESTION-009` |
 | `POL-007` | 子工作集可在已有非共享 Tracker 下新建 Item；共享 Tracker 下通过子工作集入口新建的 Item 实际在默认工作集创建。 | 用户已确认 | 本对话用户明确答复，细节见 [创建场景](../scenarios/core-scenarios.md#子工作集新建-item-与-tracker-边界) | 回并父工作集创建对应 Item 已获用户确认，见 [回并场景](../scenarios/core-scenarios.md#子工作集新增-item-回并父工作集)。CommonId/LocalId 等值关系已确认，标识分配机制待定；`QUESTION-005` |
 | `POL-008` | SHARED 修改对所有已绑定工作集同时可见；具体读取面的实现与验收指标待设计。 | 业务要求已确认；技术指标待定 | 本对话用户明确确认“所有工作集同时可见” | 不得自行改为允许业务可见延迟；`QUESTION-003` |
+
+## POL-009：非共享派生组织裁剪（用户已确认）
+
+来源：用户 2026-11-10 D-004 正式裁定。派生时仅选择部分 Tracker，若原结构父未带入目标工作集，允许新 Tracker.parentId=null，使其成为目标根；不强制自动派生未选择的父 Tracker。不同 Working Set 可拥有不同 Tracker 组织树，parentId 的组织结果不改变 sourceId 的直接派生来源含义。
+
+例：WS0 中 B.parentId=A，仅选择 B 派生 WS1；产生独立身份 B1，B1.parentId=null，B1.sourceId=B，不创建 A1。此为已确认合法结果，不补造所有输入下唯一的裁剪算法，也不授权派生后的任意移动。适用于非共享派生，Shared 及混合树有效父解析仍待裁定。原父也被选择的处理、同源多派生数量和整批原子性均不由本政策决定。验证见 [SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)。
 
 ## Hypothesis（Stage 2 inference）
 
@@ -79,10 +85,26 @@
 
 阶段 3.1 用户已批准 R01—R17 及限定术语，接受范围以 [BASELINE](../BASELINE.md) 为准；本页其余候选内容仍 Draft。FACT-006 的派生历史覆盖现已明确包含派生时的附件与关系状态（用户 2026-11-09 直接裁定，SCN-012）；保留期限、读取和删除守卫协议仍待设计，不推导永久保留。
 
-## D-002 的确认范围
+## D-002 的确认范围（历史记录，双字段合称追溯的解释由 D-003 澄清）
 
 用户 2026-11-10 明确确认：非共享派生建立新的独立 Tracker，源与派生是不同领域对象，追溯层级通过 `parentId`、`sourceId` 表达。Tracker 拥有自己的状态、生命周期及管理行为，Working Set 不拥有其完整生命周期；D-001 的独立聚合及停用 Tracker Branch 规则继续有效。Shared Tracker 的 FACT-002/POL-008 完全不变。
 
 `parentId` 不先解释为直接父，`sourceId` 不先解释为最初来源；不自动确认多级派生、谱系可修改、同谱系共存或 Item 归属。FACT-003 原历史陈述中的 Item 变体部分不借本次 Tracker 裁定整体升级，既有 Item 身份裁定仍按原范围有效。来源和影响见 [阶段 3 D-002](../reviews/2026-11-09-stage-3-architecture-review.md#d-002)。
 
 POL-002 的禁止子工作集新建 Tracker 与本次派生产生新身份分别保留：前者是创建入口政策，后者是派生结果；不从派生结果推导开放任意原生新建入口。具体用例分类与权限协议待设计。
+
+## D-003 当前双维关系语义
+
+用户明确确认：Tracker.parentId 是同一 Working Set 内的直属结构父节点；Tracker.sourceId 是直接父级 Working Set 下的来源 Tracker，沿直接派生链逐级指向，不跨越中间工作集。两者分别表达组织树和派生链，不互相替代。用户的 WS0→WS1→WS2、T0←T1←T2 示例同时关闭“仅允许一层派生”的旧选项。
+
+D-002 身份独立与生命周期裁定继续有效；其将两个字段一起描述为派生追溯的分析不再是当前解释。Shared 权威复用不变；结构有效性按工作集的有效组织范围检查，不能只比较数据库归属字段。Shared 在多个工作集是否必须具有一致结构父节点尚未裁定。见 [D-003 图](../diagrams/tracker-dual-relations.md) 与 [规则分类](invariants.md#d-003-双维关系约束审查)。
+
+## POL-010：默认继承与创建前显式重组（D-005，用户已确认）
+
+非共享派生时原父也被选择，默认继承已选节点间的组织关系；用户可在创建完成前显式指定新的合法组织结构，包括使子节点为根。未选原父仍适用 POL-009，不自动补派生。两种组织结果均不改变直接 sourceId。来源：本轮 D-006 正文第 3 条直接重申，以及引用对话第 5 题选择 C；证据见 [D-005 补录](../reviews/2026-11-09-stage-3-architecture-review.md#d-005)。默认政策、显式重组能力和最终结构合法性分别成立，不等于创建后允许修改。
+
+## POL-011：创建完成后组织位置不可变（D-006，用户已确认）
+
+Tracker 新建时确定组织位置，parentId 可为 null。创建完成后 parentId 不可修改，不支持移动、更换父节点或调整为根；允许的裁剪与显式重组须在创建完成前确定。来源为本轮用户 D-006 八项裁定，见 [记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
+
+此限制只针对组织位置，不冻结 Tracker 的其他业务状态、身份生命周期或 Working Set 的成员扩展；也不扩大 POL-002 的原生创建入口。sourceId 直接来源语义不变，但不由此自动批准其所有生命周期可变性规则。父后续删除/停用的子节点处理仍待裁定，不能自动清空 parentId、级联删除或禁止父删除。

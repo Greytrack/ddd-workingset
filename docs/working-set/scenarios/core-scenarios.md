@@ -10,7 +10,7 @@
 
 - **Given** 父 Working Set 已有可选择 Tracker，创建请求固定了输入、来源切点和幂等键。
 - **When** 用户创建子 Working Set。
-- **Then（候选预期）** 系统先准备身份、Binding、来源和必要关系，只有封闭清单完成后才发布；重试复用已分配身份，受理不等于可用。
+- **Then（候选预期）** 系统先准备身份、Binding、来源和必要关系，只有封闭清单完成后才发布（D-004：封闭不意味着自动补派生未选的结构父）；重试复用已分配身份，受理不等于可用。
 - **待确认**：用户看到的中间态、取消后资源保留、默认根的业务含义。
 
 ## `SCN-002` 引用 Shared Tracker
@@ -222,3 +222,26 @@
 - Then 产生具有不同业务身份的 Tracker B，A 与 B 是两个独立领域对象；Tracker 具有自己的状态、生命周期与管理行为，Working Set 不拥有其完整生命周期。
 - Then Tracker 追溯层级通过 parentId/sourceId 表达；在字段语义裁定前，不写 parentId=A 或 sourceId=A 的测试期望。
 - 范围：仅一次非共享派生；不推导 B 能继续派生、不允许或允许改谱系、同工作集能同时纳入 A/B、Item 所属聚合或删除级联。SCN-002 的 Shared 规则保持原样。
+
+## SCN-014 Tracker 双维关系
+
+**业务规则：用户确认 D-003；验收表述 Draft，未运行测试。** 依据：[D-003](../reviews/2026-11-09-stage-3-architecture-review.md#d-003)，[完整图](../diagrams/tracker-dual-relations.md)。
+
+- Given WS0→WS1→WS2 是直接逐级工作集链，非共享 T0→T1→T2 逐级派生。
+- Then T1.sourceId=T0，T2.sourceId=T1；T2.sourceId=T0 不符合禁止跳级规则。
+- Given WS1 内 B1 的直属结构父为 A1，B1 的派生来源 B0 位于 WS0。
+- Then B1.parentId=A1，B1.sourceId=B0。parentId 不指向 B0，不用于跨工作集复制。
+- 结构父需在本工作集有效组织范围；Shared 不能仅由物理归属断言有效或无效。跨工作集父级是否一致待确认。
+- 自环/结构环作为 INV-015 候选反例，尚不批准具体拒绝协议。字段可变性、树继承、同源数量、Item 归属不由本场景补全。
+
+SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本场景为准；其非共享派生新身份规则不变。
+
+## SCN-015 非共享 Tracker 派生组织裁剪
+
+**业务规则：用户确认 D-004；验收表述 Draft，未运行测试。** 关联 POL-009、INV-019—021；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)、[图](../diagrams/tracker-dual-relations.md#d-004-clipping)。
+
+- Given WS0 中非共享 Tracker B 的直属结构父为 A；WS1 直接派生自 WS0。
+- When 派生 WS1 时只选择 B，没有选择 A，采用允许的根节点结果。
+- Then WS1 产生新身份 Tracker B1，B1.parentId=null、B1.sourceId=B；不自动创建 A1。B1 是 WS1 中的合法根，源 A/B 的组织关系不因目标裁剪被改写。
+- 反例：不能以“必须完整继承树”为由拒绝这一结果或自动补建 A1；不能将 B1.sourceId 清空或改为 A 来修复组织父。
+- 未决分支：同时选 A/B、派生后移动、Shared 混合树、同源多派生及整批失败/原子性均不在本场景补全。源关系不被回写是本例派生含义的推论，不规定其并发编辑协议。

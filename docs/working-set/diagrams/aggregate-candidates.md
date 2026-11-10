@@ -4,7 +4,7 @@
 
 目的：比较 AP-001/002/003 的范围和谱系一致性边界；依据 [方案比较](../proposals/aggregate-boundary-options.md)、[逐概念审查](../domain/aggregate-model.md)、[场景](../scenarios/shared-kernel-boundary-scenarios.md)、[评审](../reviews/2026-11-09-stage-3-architecture-review.md)。假设稳定身份、保留历史与 BC 提交能力可兑现，均待确认。不表达表、Java 类型或部署。
 
-D-001（2026-11-10）已确认所有图中的 Tracker 是独立聚合，其余根与 Item 归属均为方案假设。AP-001/003 的 Item 独立根与 ID 引用只表达待评审选项，不是 D-001 的结论；D-002 已确认非共享派生为不同身份，追溯字段指向仍未裁定。
+D-001（2026-11-10）已确认所有图中的 Tracker 是独立聚合，其余根与 Item 归属均为方案假设。AP-001/003 的 Item 独立根与 ID 引用只表达待评审选项，不是 D-001 的结论；D-002 已确认非共享派生为不同身份，D-003 已区分同工作集结构父与直接父工作集来源；字段可变性等仍待裁定。
 
 图例：AggregateRoot 除 Tracker 外为候选根；Entity 为聚合内实体；ValueObject 为值；DomainService 为纯业务计算。实心菱形仅表达聚合内组合，箭头标 ID reference 为跨聚合身份引用；flowchart 的 subgraph 是事务边界，框间边不是外键。业务内容始终属于各 BC。
 
@@ -59,7 +59,7 @@ flowchart LR
 
 ## AP-002：去除失效 Branch 根后的最小修订草图
 
-D-001 已排除原独立 Branch 根。此图不将原 BranchSource、BranchId 或 SourceCut 自动归入 Tracker；非共享派生新身份由 D-002 确认；来源证据归属及追溯字段指向待定，Item 不画入任一聚合。修订后是否仍构成与 AP-001 不同的方案待评审。
+D-001 已排除原独立 Branch 根。此图不将原 BranchSource、BranchId 或 SourceCut 自动归入 Tracker；非共享派生新身份由 D-002 确认；D-003 双维指向已确认，来源证据承载与 Item 归属仍待定。修订后是否仍构成与 AP-001 不同的方案待评审。
 
 ```mermaid
 classDiagram
@@ -70,7 +70,7 @@ classDiagram
         <<CandidateAggregateRoot>>
     }
     WorkingSet --> Tracker : scope association
-    note for Tracker "D-002: parentId and sourceId express traceability; targets TBD"
+    note for Tracker "D-003: parentId is same-WS structure; sourceId is direct-parent-WS origin"
 ```
 
 ```mermaid
@@ -157,9 +157,10 @@ classDiagram
     Reference --> BusinessObject : ID reference
 ```
 
-## D-002：非共享派生身份与追溯边界
+<a id="d-002非共享派生身份与追溯边界"></a>
+## D-002：非共享派生身份与追溯边界（Superseded 图）
 
-**图状态：Draft；业务身份事实已由 D-002 确认，关联及存储方案未批准。** 适用于非共享派生，不表达 Shared、不表达多级派生、不包含 Item。A/B 是示例身份，非根节点或初始来源的编码约定。派生箭头仅表示产生结果，绝不表示 parentId 或 sourceId 的具体指向。
+**图状态：Superseded；字段未定的历史图由 [D-003 双维关系图](tracker-dual-relations.md) 替代。D-002 身份事实继续有效。** 适用于非共享派生，不表达 Shared、不表达多级派生、不包含 Item。A/B 是示例身份，非根节点或初始来源的编码约定。派生箭头仅表示产生结果，绝不表示 parentId 或 sourceId 的具体指向。
 
 ```mermaid
 flowchart LR
@@ -177,3 +178,5 @@ flowchart LR
 ```
 
 图中不设 Lineage 聚合；这仅是当前候选表达，不代表“不设聚合”已经接受。Working Set 不拥有 Tracker 完整生命周期；未画删除级联或多级链。参见 [D-002 裁定与影响](../reviews/2026-11-09-stage-3-architecture-review.md#d-002)、[QUESTION-002 子问题](../domain/open-questions.md#question-002d-002-后保留的子问题)。
+
+D-004 补充：各候选的组织完整性/Manifest 封闭性均不得要求补派生未选的父 Tracker。合法裁剪终态与独立根见 [组织裁剪图](tracker-dual-relations.md#d-004-clipping)。此图不批准整批创建原子性或更改 Item 归属。

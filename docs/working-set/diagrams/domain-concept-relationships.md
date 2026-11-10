@@ -41,11 +41,11 @@ flowchart LR
 ## 需要图表帮助裁定的问题
 
 - Working Set 是工作视图、发布范围还是业务分支；
-- Tracker 独立聚合与非共享派生新身份已确认；parentId/sourceId 指向、多级能力、谱系修改、同谱系共存及 Item 归属待裁定；
+- Tracker 独立聚合与非共享派生新身份已确认；D-003 已明确双维指向与逐级派生；D-004 已允许父未选时成为根；关系修改、同源多派生、父也选时的树继承及 Item 归属待裁定；
 - Item Family、Item Variant、Item Revision 的身份边界；
 - Reference 指向逻辑家族还是具体变体；
 - Source Cut、业务 Snapshot、Merge Base 与仓库 Design Baseline 的不同含义。
 
 除 D-001 的 Tracker 独立聚合结论外，不从本图推导其他聚合或数据库结构。
 
-非共享派生身份与追溯字段的限定图见 [D-002 图](aggregate-candidates.md#d-002非共享派生身份与追溯边界)。不把 Tracker 追溯关系等同 Working Set 父子关系。
+当前关系视图见 [D-003 双维关系图](tracker-dual-relations.md)；D-002 图保留为已被替代的历史视图。不把 Tracker 追溯关系等同 Working Set 父子关系。

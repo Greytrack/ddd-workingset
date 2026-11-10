@@ -160,3 +160,35 @@ QUESTION-002 的独立性问题关闭。跨 Working Set 的 Tracker 身份关系
 一致性注意：POL-002 原生创建入口限制不因派生产生新身份自动放宽；不把新身份等同允许用户任意创建。已接受 Shared 规则不参与本次修改。新的 Tracker 关系也不改变已确认的 Item 身份规则。
 
 追溯：[SCN-013](../scenarios/core-scenarios.md#scn-013-非共享-tracker-派生独立身份)、[候选图](../diagrams/aggregate-candidates.md#d-002非共享派生身份与追溯边界)、[方案影响](../proposals/aggregate-boundary-options.md#d-002-影响与修订方向draft)。无实现或运行测试证据；图形渲染仍待验证。
+
+<a id="d-003"></a>
+## D-003：Tracker 双维关系模型（2026-11-10）
+
+**用户正式确认；候选图与架构推论仍 Draft；不发布基线。** 直接依据：本聊天用户“阶段 3 · D-003”裁定及 WS0/WS1/WS2 示例。
+
+parentId 表达同工作集的直属结构父子关系；sourceId 表达直接父级工作集下的来源 Tracker，逐级指向，不跨中间工作集。两字段是组织树与派生链两个维度，不能互换。Tracker 继续独立聚合，不使用独立 Tracker Branch。多级逐级派生已由示例确认。
+
+**历史澄清**：保留前节 D-002 七项裁定与当时分析。将两个字段一起解释为派生谱系不准确，由本节明确纠正；D-002 的非共享新身份、Shared 不变及生命周期结论继续有效。不是删除历史或将 D-001 ADR 自动 Accepted。
+
+候选约束逐条记录为 INV-014—018：同范围结构父、直接父工作集来源、禁止跳级、双维分离直接有裁定支持；结构无环为组织树推导候选，不自动批准其算法、事务或所有 INV 全文。Shared 结构有效性不能用数据库归属代替有效组织范围；其不同工作集父级一致性仍未确认。
+
+六项开放问题：Shared 父级一致性、同一工作集同源多个派生、parentId 可修改性、sourceId 创建后不可变性、跨工作集树继承、Item 聚合归属。保留在 QUESTION-002，旧 a/b/c 关闭，旧修改问题分解为两个维度。
+
+影响：[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[不变量](../domain/invariants.md)、[聚合分析](../domain/aggregate-model.md)、[方案](../proposals/aggregate-boundary-options.md) 均区分两维；AP-001/002/003 继续 Draft，不因树形连线聚合全部 Tracker。旧 D-002 图标记 Superseded，[新图](../diagrams/tracker-dual-relations.md) 用工作集有效范围框及独立 Tracker 根表示两维共存；场景见 SCN-014。
+
+<a id="d-004"></a>
+## D-004：Tracker 派生时的组织结构裁剪（2026-11-10）
+
+**用户正式裁定；候选模型推论保持 Draft。** 直接依据：本聊天“阶段 3 · D-004”的八项规则及只选 B 的示例。关联 D-001 独立聚合、D-002 非共享新身份与 D-003 双维语义，不替代它们已确认的身份规则。
+
+确认：parentId 是同工作集直属结构父，sourceId 是直接父级工作集来源。非共享派生获得新身份；只选 B 而不选其父 A 时，允许 B1.parentId=null 成为 WS1 根，B1.sourceId=B，不自动创建 A1。不同工作集可有不同组织树，组织结果变化不改变直接来源语义。不引入 Tracker Branch。
+
+知识分类：POL-009 是当前选择/裁剪政策及合法结果；Tracker Hierarchy 与 Tracker Derivation 分开定义。INV-019/020 的业务子句有直接裁定，INV-021 的目标合法结构而非完整源树同构是推论；形式化/技术保护方案继续 Draft，不自动升级全部 INV。
+
+影响与旧假设：当前文档未发现已接受的完整树继承要求；候选 INV-011/SCN-001 封闭清单、AP-001 配置完整、AP-003 Manifest 不能解释为来源祖先闭包。保留旧推演并增加这一限定，不静默变更历史决定。D-003 的泛化“树继承未定”收窄为“父也选择时如何继承未定”。Shared 跨范围父级一致性不从“不同工作集树可不同”得出答案。
+
+聚合与生命周期：Tracker 仍独立，根是合法组织位置而非未完成创建；Working Set 的范围协作不变成 Tracker 完整生命周期所有权。跨聚合准备、失败恢复、纳入可见性及整批原子性均未确认，不借 Merge 部分成功或 GateFlow 整体切换政策代答。
+
+本轮五项未决：父也选择是否必须保留关系、派生后能否修改 parentId、Shared/非共享混合树有效父、同目标同源多派生、整批派生原子性。此前 sourceId 可变性、Item 归属继续开放，不自动关闭。
+
+追溯：[POL-009](../domain/facts.md#pol-009非共享派生组织裁剪用户已确认)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[完整双维及裁剪图](../diagrams/tracker-dual-relations.md)、[候选方案影响](../proposals/aggregate-boundary-options.md)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。

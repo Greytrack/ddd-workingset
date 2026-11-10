@@ -38,3 +38,7 @@
 - [合并与共享/COW 行为](collaboration-behavior.md)：候选提交、回执与 Checkpoint 责任。
 
 以上补齐本轮候选评审视图；此前渐进清单中的“待创建”是阶段 2 历史进度，当前三方案图已创建，尚待业务裁定及正式渲染检查。
+
+- [Tracker 双维关系](tracker-dual-relations.md)：D-003 同工作集组织树与跨直接父子工作集派生链，Draft；替代旧 D-002 字段未定图。
+
+- [D-004 派生组织裁剪图](tracker-dual-relations.md#d-004-clipping)：仅选 B，目标 B1 为根，直接来源仍为 B；不自动创建 A1。
