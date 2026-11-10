@@ -317,3 +317,148 @@ AP-001 的 ID 引用可表达独立业务聚合，但不得把业务对象组合
 ### 追溯
 
 [术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[契约与聚合图](../diagrams/trackeritem-contract.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[方案影响](../proposals/aggregate-boundary-options.md)、[SCN-021—024](../scenarios/core-scenarios.md#scn-021)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-009"></a>
+## D-009：来源变更触发 COW 物化及有效内容切换（2026-11-10）
+
+**业务裁定：用户正式确认事件驱动 COW 机制；事件与事务可见性协议、历史内容保护与来源身份语义仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十一项）
+
+1. 业务聚合普通内容修改不自动升级 Revision；Revision 升级是独立显式业务行为。
+2. SourceVersion 可能指向来源头版次，不保证对应不可变历史内容。
+3. 仅通过可变来源头版次解析未物化变体，源端变化可能导致读取事实失真。
+4. 来源修改前先 Query 获得修改前完整业务事实。
+5. 来源业务 BC 随后执行领域修改及仓储保存。
+6. 保存后发送来源变更事件，触发受影响派生变体 COW 物化。
+7. COW 物化 Handler 据修改前事实形成派生变体自身完整业务聚合并保存。
+8. 物化成功后发送物化完成事件。
+9. LightTrackerItem 索引 Handler 收到后标记已物化，有效内容来源定位到自身 LocalId 及自身有效版次。
+10. Working Set 负责公共身份、来源关系与有效内容定位；业务 BC 负责完整业务聚合构造、不变量与保存。
+11. 采用事件驱动来源变更 COW，但事件与事务的准确可见性协议尚未裁定。
+
+知识分类：`FACT-014`（[facts](../domain/facts.md)）；术语区分见 [glossary](../domain/glossary.md)（Business Revision、Concurrent Version、Derivation Origin、Effective Content Source、Source-backed、Local-backed、Materialization）。SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
+
+### 必须纠正的既有模型假设
+
+- 不得将业务 Revision 变化等同所有普通业务修改。
+- 不得将 SourceRevision/SourceVersion 自动解释为不可变历史快照。
+- 不得默认未物化变体可永久通过源端最新头版次得到创建时内容。
+- 不得默认查询到修改前数据就意味着异步 Handler 之后仍能取得该数据。
+- 不得将业务 BC 完整业务数据所有权转移给 Working Set。
+
+### 重点反例审查
+
+- 反例一（SCN-029）：物化完成前查询可见性（A/B/延迟可见）——未裁定。
+- 反例二（SCN-026）：修改前事实 A 的不可变快照/稳定引用及谁拥有——候选。
+- 反例三（SCN-027）：sourceLocalId 物化切换后如何追溯 R1 来源于 R0——区分 Derivation Origin 与 Effective Content Source，候选。
+- 反例四（SCN-028）：连续修改多事件乱序是否重复/错误覆盖已物化变体——候选。
+
+### 特别评审的设计问题
+
+1. 修改前完整业务事实如何可靠保存并交给物化 Handler。
+2. 业务修改保存后、物化完成前，派生变体查询可见性。
+3. 派生历史来源与当前有效内容来源是否分别建模。
+4. SourceVersion / SourceRevision 的严格定义。
+5. COW 物化的唯一性、重复事件与并发处理。
+（第 6 点未在本轮请求中完整给出，待补充。）
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-025—029](../scenarios/core-scenarios.md#scn-025)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-010"></a>
+## D-010：COW 最终一致性与最小聚合模型收敛（2026-11-10）
+
+**业务与架构裁定：用户正式确认；快照序列化/交付/持久化与首次快照业务选择规则仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十四项）
+
+1. COW 采用异步事件驱动策略，只保证最终一致性。
+2. 来源业务聚合修改前，通过 Query 获取修改前完整业务事实。
+3. 修改前事实作为事件关联的不可变内容快照，与来源变更事件一起传递。
+4. 来源业务 BC 执行修改并保存后，发送来源变更事件。
+5. COW Handler 据事件中的修改前快照物化尚未具有完整本地业务内容的派生 TrackerItem。
+6. 目标业务聚合物化完成后发送物化完成事件。
+7. LightTrackerItem 索引 Handler 标记已物化，有效内容来源切换为自身 LocalId 及自身有效版次。
+8. 来源修改已保存、COW 尚未完成期间，允许派生工作集暂时读取到来源修改后的内容。
+9. 物化完成后，派生变体以需要保护的修改前业务事实形成独立内容。
+10. 不要求来源业务修改、目标物化与 LightTrackerItem 切换在同一跨 BC 事务。
+11. 不再引入 AP-003 的 Manifest、ItemVariant。
+12. 领域模型围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合收敛。
+13. 业务 BC 的 Requirement、Part、Process 仍为独立完整业务聚合。
+14. TrackerItem 仍为 Shared Kernel 定义的公共领域接口。
+
+知识分类：`FACT-015`（[facts](../domain/facts.md)）。
+
+### 领域一致性边界（三职责）
+
+- 来源业务修改：所属 BC 保证不变量、获取修改前完整快照并关联事件、保存成功后可靠交付事件。
+- 派生业务聚合物化：SK 的 COW 机制确定目标变体、目标 BC 据快照构造并保存、完成后发物化完成事件。
+- LightTrackerItem 状态切换：维护当前变体身份与有效内容定位、物化完成后切换有效来源到自身、不要求与来源修改同步提交。
+
+不强行增加全局事务、跨 BC 大聚合或复杂安全门。
+
+### 不可变快照语义
+
+修改前快照必须稳定表达需要保护的完整业务事实；不得将可变的头 Revision 或仅有 SourceVersion 的事件当作不可变快照。Query 读取修改前事实不等于异步处理时仍可从来源数据库重建；事件关联的不可变快照是核心。事件序列化、可靠交付与持久化留待实施设计。
+
+### LightTrackerItem 生命周期收敛
+
+主状态收敛为 Source-backed（内容由来源解析）与 Local-backed（本地聚合已物化，有效来源定位到自身）；Materializing 是技术运行状态，不增加第三种业务状态。SourceLocalId 区分历史派生来源与当前有效内容来源，字段是否拆分待设计。
+
+### 连续修改反例
+
+A → B（E1 快照 A）→ C（E2 快照 B），事件可能乱序。需审查如何避免 R1 被 E2 错误覆盖，首次快照业务选择规则待用户确认；不提前用数据库锁或消息队列偏移量替代业务裁定。
+
+### 聚合候选方案收敛
+
+AP-001、AP-002 保留历史方案与可复用论证；AP-003 标记当前不采用，不删除历史讨论；不再引入 Manifest 或 ItemVariant 聚合。最小模型只含 Working Set、Tracker、LightTrackerItem 三类核心聚合，保留业务 BC 独立聚合与 TrackerItem 公共接口。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[方案收敛](../proposals/aggregate-boundary-options.md)、[契约与聚合图](../diagrams/trackeritem-contract.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-029/030](../scenarios/core-scenarios.md#scn-029)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-011"></a>
+## D-011：连续来源修改时首次快照优先（2026-11-10）
+
+**业务裁定：用户正式确认；Source Change Order / Derivation Baseline / Materialization Claim 等候选协议仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户九项）
+
+1. 对尚未物化的派生 TrackerItem，来源首次发生需要触发 COW 的修改时，该修改前完整业务事实确定目标变体最终应物化内容。
+2. 同一来源之后的连续修改不能覆盖首次确定的快照。
+3. 快照选择按来源业务修改的实际先后顺序，而非事件到达顺序。
+4. 即使第二次来源修改事件早于第一次事件被消费，最终也必须采用第一次修改前的内容。
+5. 同一目标变体不得因重复事件产生多个不同的有效物化结果。
+6. 目标 LightTrackerItem 成为 Local-backed 后，来源后续修改事件不能覆盖其本地业务内容。
+7. 保持 D-010：事件异步处理、最终一致性，COW 完成前允许暂时读取变化后的来源内容。
+8. 修改前完整事实通过事件关联的不可变快照传递。
+9. Working Set、Tracker、LightTrackerItem 仍是最小领域模型核心，不重新引入 Manifest、ItemVariant。
+
+知识分类：`FACT-016`（[facts](../domain/facts.md)）。
+
+### 三个核心领域不变量
+
+INV-037 首次快照确定性；INV-038 物化结果唯一性；INV-039 本地化后不可被源事件覆盖（[invariants](../domain/invariants.md)）。不将消息队列偏移量、数据库锁等技术实现写成领域不变量。
+
+### 候选领域协议（不自动建聚合/表）
+
+- **Source Change Order**：反映来源成功修改先后顺序的机制。
+- **BeforeSnapshot**：来源修改前不可变完整业务事实。
+- **Derivation Baseline**：目标变体派生时已继承的来源内容位置。
+- **Materialization Claim**：候选的首次快照选择记录。
+
+### 事件顺序与幂等评审重点
+
+A. 如何确认一条事件是相对目标变体派生基准的首次相关修改（Derivation Baseline）。
+B. 为什么不能采用「最先收到的事件直接物化」（事件乱序，E2 先到不代表是首次修改）。
+C. 复用已有 Concurrent Version 还是独立变更序列表达来源修改顺序。
+D. 物化采用已分配 LocalId，重复事件不生成不同有效业务对象（幂等）。
+E. 多级派生中各层需要保护的目标变体如何识别。
+
+以上 A—E 均为候选协议，不提前确定数据库锁、消息队列、Outbox 或分布式事务方案。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-030—034](../scenarios/core-scenarios.md#scn-030)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。

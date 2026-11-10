@@ -94,3 +94,44 @@ Shared Tracker 可以被多个工作集引用，数据库归属默认工作集�
 已确认：LightTrackerItem 是 Working Set 专属独立聚合（非查询投影），派生时创建并分配当前 LocalId、保留 CommonId、记录 SourceLocalId/SourceRevision、经 TrackerId/WorkingSetId 指向，承担身份与有效变体定位权威。派生采用 COW，不立即物化完整业务对象副本。业务 BC 通过 CQRS Query 与工厂重建完整业务聚合，调用方不感知物化状态；Working Set 不拥有或重建业务 BC 完整状态。
 
 候选：LightTrackerItem 完整属性与物化协议、LocalId 是否等同业务聚合变体身份、首次物化标志与有效内容指针、物化原子性、SourceRevision 版本选择。LightTrackerItem 与业务对象是双事实：LightTrackerItem 持身份/来源/定位，业务对象持完整内容与不变量，二者按 ID reference 关联，不组合、不跨 BC 事务。图见 [D-008 生命周期图](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-009：来源变更 COW 与有效内容切换（Draft 设计影响）
+
+已确认：事件驱动的来源变更 COW 机制——来源业务对象普通修改不升级 Revision；来源修改前先 Query 获得修改前完整业务事实，修改保存后发来源变更事件触发受影响派生变体 COW 物化；物化 Handler 据修改前事实形成派生变体自身完整业务聚合并保存，成功后发物化完成事件；LightTrackerItem 索引 Handler 标记已物化，有效内容来源切换到自身 LocalId 及自身有效版次。Working Set 负责公共身份、来源关系与有效内容定位，业务 BC 负责完整业务聚合构造、不变量与保存。
+
+LightTrackerItem 需区分两个来源维度（候选，不未经确认新增字段）：
+
+- **Derivation Origin／派生历史来源**：派生时的历史来源（sourceLocalId），用于追溯谱系，物化后不覆盖。
+- **Effective Content Source／有效内容来源**：当前有效内容读取来源；物化前 Source-backed（指向来源），物化后 Local-backed（指向自身）。
+
+候选：修改前事实的可靠保存/稳定引用、查询可见性窗口、物化唯一性与重复事件处理、SourceVersion/SourceRevision 严格定义。图见 [D-009 事件 COW 时序](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-010：COW 最终一致与最小模型收敛（Draft 设计影响）
+
+已确认：COW 采用异步事件驱动、只保证最终一致；来源修改前事实作为事件关联的不可变内容快照传递；来源修改已保存、COW 未完成期间允许派生工作集暂时读到修改后内容，物化完成后以修改前事实形成独立内容；不要求跨 BC 事务。
+
+**最小模型收敛**：领域模型围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合收敛；不再引入 AP-003 的 Manifest、ItemVariant。前文「方案结论状态」与「逐概念一致性审查」表中 AP-003 的 Manifest/ItemVariant 相关表述均为历史候选，现由 D-010 标记为当前不采用（保留历史讨论）。
+
+**LightTrackerItem 双态**：Source-backed（内容由来源解析）与 Local-backed（本地业务聚合已物化，有效来源定位到自身）为两个领域主状态；Materializing 是技术运行状态，不增加第三种业务状态。SourceLocalId 区分历史派生来源（Derivation Origin）与当前有效内容来源（Effective Content Source），字段是否拆分待设计。
+
+不得把 Tracker、LightTrackerItem 或业务 BC 聚合包含进 Working Set 大聚合；不引入全局事务、跨 BC 大聚合或复杂安全门。图见 [契约与聚合图](../diagrams/trackeritem-contract.md) 与 [生命周期图](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-011：首次快照优先与物化声明（Draft 设计影响）
+
+已确认：对尚未物化的派生 TrackerItem，来源首次触发 COW 的修改时，修改前完整业务事实（事件关联不可变快照）确定目标变体最终物化内容；同一来源后续连续修改不覆盖首次快照；快照选择按来源修改实际先后顺序而非事件到达顺序；同一目标变体不因重复事件产生多个有效物化结果；Local-backed 后来源事件不覆盖本地内容。
+
+LightTrackerItem 保持 Source-backed / Local-backed 两个稳定业务状态，不因事件处理中间步骤增加额外领域状态。候选领域协议（不自动建聚合/表）：
+
+- **Source Change Order**：反映来源成功修改先后顺序的机制（复用并发 version 还是独立序列待定）。
+- **Derivation Baseline**：目标变体派生时已继承的来源内容位置，用于判断「首次相关修改」。
+- **Materialization Claim**：候选的首次快照选择记录，保留首次快照的确定性证据。
+
+这些候选概念不自动设立新聚合、数据库表或持久状态。图见 [D-011 事件时序](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-012：SourceLocalId / SourceRevision 职责分离（Draft 设计影响）
+
+已确认：LightTrackerItem 的 SourceLocalId 表示当前有效内容来源的 LocalId，SourceRevision 表示当前有效内容来源的业务 Revision；SourceVersion 为表述错误，统一为 SourceRevision。未物化（Source-backed）时 SourceLocalId/SourceRevision 解析来源内容；COW 完成后 SourceLocalId=LocalId、SourceRevision=Revision，有效内容定位指向自身；COW 不改变 LocalId、CommonId。
+
+前文 D-008/D-009/D-010 将 SourceLocalId 描述为历史派生来源、SourceRevision 描述为快照语义、SourceLocalId 双语义的表述均为历史分析，现由 D-012 收敛为「当前有效内容来源」单一职责。R0→R1 历史派生关系不要求由 LightTrackerItem 保存，历史谱系最终承载方式保持开放；不新增 OriginLocalId、谱系聚合或独立历史聚合。
+
+LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/SourceRevision 只表达当前有效内容来源，历史派生关系由外部机制承载（待定）。图见 [契约与聚合图](../diagrams/trackeritem-contract.md) 与 [生命周期图](../diagrams/lighttrackeritem-lifecycle.md)。

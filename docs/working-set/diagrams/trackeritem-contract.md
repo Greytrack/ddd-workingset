@@ -1,4 +1,4 @@
-# D-007/D-008：TrackerItem 公共契约、LightTrackerItem 权威聚合与业务 BC 聚合
+# D-007/D-008/D-010：TrackerItem 公共契约、LightTrackerItem 权威聚合与业务 BC 聚合（最小模型）
 
 **状态：Draft / Candidate；TrackerItem 契约与 LightTrackerItem 独立聚合由 D-007/D-008 确认，LightTrackerItem 完整属性与物化协议仍候选，图未纳入正式基线。**
 

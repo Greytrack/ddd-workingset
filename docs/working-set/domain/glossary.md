@@ -112,6 +112,57 @@ Tracker 仍是独立聚合，不因管理 TrackerItem 工作范围而拥有业�
 - **CommonId**：共同逻辑身份，跨派生变体保留。
 - **LocalId**：当前变体身份，派生时分配。
 - **SourceLocalId**：直接来源变体身份。
-- **SourceRevision**：来源业务版次信息（快照语义候选）。
+- **SourceRevision**：来源业务版次信息；可能指向来源头版次，不保证对应不可变历史内容（D-009 纠正「快照语义」旧假设）。SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
 
 LocalId 是否直接等同业务聚合变体身份、首次物化标志与有效内容指针、物化原子性均待裁定。
+
+## 来源变更 COW 的领域语义（D-009）
+
+用户确认事件驱动的来源变更 COW 机制，并纠正若干旧假设。以下术语区分：
+
+- **Business Revision／业务版次**：显式升级的业务版次；普通内容修改不自动升级 Revision。
+- **Concurrent Version／并发版本**：普通修改可能推动的并发控制版本，与 Business Revision 分开。
+- **Derivation Origin／派生历史来源**：派生时的历史来源（如 sourceLocalId 指向的 R0），用于追溯谱系。
+- **Effective Content Source／有效内容来源**：当前有效内容的读取来源；物化前指向来源，物化后切换到自身 LocalId 及自身有效版次。
+- **Source-backed**：依赖来源解析内容的未物化变体。
+- **Local-backed**：本地物化内容成为有效来源的变体。
+- **Materialization／物化**：基于既有事实创建当前变体的完整业务内容。
+
+SourceRevision 与 SourceVersion 是否同义未确认，不机械归并；SourceVersion 可能指向来源头版次，不保证对应不可变历史内容。不得把派生历史来源与当前有效内容来源混为一谈。
+
+## COW 最终一致与最小模型收敛（D-010）
+
+用户确认：
+
+- **不可变内容快照**：来源修改前的完整业务事实作为事件关联的不可变内容快照，与来源变更事件一起传递；不得将可变的头 Revision 或仅有 SourceVersion 的事件当作不可变快照。
+- **最终一致**：来源修改已保存、COW 尚未完成期间，允许派生工作集暂时读取到来源修改后的内容；物化完成后以需要保护的修改前事实形成独立内容。
+- **LightTrackerItem 双态**：Source-backed（内容由来源解析）与 Local-backed（本地业务聚合已物化，有效来源定位到自身）为两个领域主状态；Materializing 是处理过程/技术运行状态，不增加第三种业务状态。
+- **SourceLocalId 双语义**：历史派生来源（Derivation Origin）与当前有效内容来源（Effective Content Source）分别表达；物化后有效 SourceLocalId 指向自身，历史派生来源保留追溯。字段是否拆分仍待设计。
+- **最小模型**：领域模型围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合收敛，不引入 Manifest 或 ItemVariant。
+
+SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
+
+## 首次快照优先与来源变更顺序（D-011）
+
+用户确认：对尚未物化的派生 TrackerItem，来源首次发生需要触发 COW 的修改时，该修改前的完整业务事实确定目标变体最终应物化的内容；同一来源之后的连续修改不能覆盖首次确定的快照；快照选择按来源业务修改的实际先后顺序，而非事件到达顺序。
+
+候选领域协议/设计概念（不自动设立新聚合、数据库表或持久状态）：
+
+- **Source Change Order／来源变更顺序**：能够反映来源成功修改先后顺序的机制。
+- **BeforeSnapshot／修改前快照**：来源修改前不可变的完整业务事实。
+- **Derivation Baseline／派生基准**：目标变体派生时已继承的来源内容位置。
+- **Materialization Claim／物化声明**：候选的首次快照选择记录。
+
+Source Change Order、Derivation Baseline、Materialization Claim 均为候选领域协议或设计概念。
+
+## SourceLocalId / SourceRevision 的最终语义（D-012）
+
+用户正式裁定并修正此前表述：
+
+- **SourceLocalId** 表示**当前有效内容来源**的 LocalId，而不是必须永久保存的历史派生来源身份。未物化（Source-backed）时指向来源变体（如 R0）；COW 完成后等于自身 LocalId（如 R1）。
+- **SourceRevision** 表示**当前有效内容来源**的业务 Revision，不是不可变内容快照。COW 完成后等于自身 Revision。
+- **SourceVersion** 是表述错误，统一更正为 `SourceRevision`，不得与并发控制 Version 混淆。
+- R0 → R1 的历史派生关系不要求由 LightTrackerItem 保存；历史派生来源与当前有效内容来源在领域语义上必须区分，但历史关系由哪个领域对象或机制保存，本轮不决定。
+- 不因此新增 OriginLocalId、ItemVariant、Manifest 或额外谱系聚合。
+
+修正说明：前文 D-008 的「SourceLocalId = 直接来源变体身份」、D-009 的「SourceRevision 快照语义」、D-010 的「SourceLocalId 双语义（历史派生来源 + 当前有效内容来源）」均为历史分析，现由 D-012 收敛为「当前有效内容来源」单一职责，保留历史记录但以本节为准。

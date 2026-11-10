@@ -32,7 +32,9 @@
 
 原 Branch 根组合了独立生命周期、派生身份与来源切点。D-001 只确定独立管理者为 Tracker，不确定原 BranchId 与 TrackerId 的映射，当时尚不确定跨工作集是否新建 Tracker；D-002 现已明确非共享派生建立新的独立 Tracker，Shared 不变。建议去掉独立 Branch 根，Working Set 通过关联选择独立 Tracker；将演进关系、来源证据的归属列为未决，暂不画入 Tracker 内部。Item 的包含或独立引用均待确认。若修订后与 AP-001 无实质区别，应合并方案而非仅改名维持三套。
 
-## `AP-003`：版本化 Manifest + Tracker 谱系 + Item Variant
+## `AP-003`：版本化 Manifest + Tracker 谱系 + Item Variant（当前不采用，D-010）
+
+**状态：Draft，当前不采用（D-010 已确认不再引入 Manifest、ItemVariant）；以下保留历史方案及权衡。**
 
 **核心**：Working Set 根只原子切换已准备好的 Manifest revision；Binding 可分片准备，Tracker 谱系和 Item Variant 各自管理身份与来源。该方案吸收 `EXT-ARCH §6 方案 A`，但不接受其推荐结论。
 
@@ -133,3 +135,15 @@ D-008 确认 LightTrackerItem 是独立聚合并承担身份、来源与有效�
 - **AP-001/002**：不受 LightTrackerItem 权威地位改变其兼容性结论；AP-001 不得把 LightTrackerItem 组合进 Working Set 配置，AP-002 修订不得让 Tracker 拥有业务对象。
 
 LocalId 是否等同业务聚合变体身份、物化完成标志与有效内容指针、物化原子性仍待裁定，不自动选定任一 AP。
+
+## D-010：聚合候选方案收敛（最小模型）
+
+用户确认领域模型围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合收敛，不再引入 AP-003 的 Manifest、ItemVariant。据此：
+
+- **AP-001**：保留为历史方案与可复用论证；其「Working Set 配置聚合」可作为最小模型的一个视角，但不得把 Tracker、LightTrackerItem 或业务 BC 聚合包含进 Working Set 大聚合。
+- **AP-002**：保留历史方案（原 Branch 根已不兼容 D-001），修订方向作为 Tracker 独立聚合的可复用论证。
+- **AP-003**：标记为当前不采用（见上文标题），不删除历史讨论；不再为现行候选模型引入 Manifest 或 ItemVariant 聚合。
+
+最小领域模型候选：Working Set（工作范围与选择）、Tracker（独立聚合，谱系/组织）、LightTrackerItem（身份、来源与有效变体定位权威，Source-backed/Local-backed 双态）；各业务 BC 的 Requirement/Part/Process 仍是独立业务聚合，实现 TrackerItem 公共接口。三类核心聚合之间按 ID reference 关联，不组合、不跨 BC 事务。
+
+不因收敛模型自动批准全部聚合设计；Proposed ADR 不自动升级 Accepted。

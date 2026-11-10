@@ -70,3 +70,76 @@ sequenceDiagram
 ```
 
 说明：此图不承诺跨 BC 事务或物化原子性；业务对象内部不变量仍由业务 BC 负责。
+
+## Source-backed 与 Local-backed 有效内容切换（D-009）
+
+已确认：物化前变体为 Source-backed（依赖来源解析内容），物化后切换为 Local-backed（本地物化内容成为有效来源）；Derivation Origin 保留用于追溯谱系，不被有效内容切换覆盖。
+
+```mermaid
+flowchart LR
+    SB["Source-backed<br/>未物化，有效来源=来源"] -->|"来源变更事件 + COW 物化"| LB["Local-backed<br/>已物化，有效来源=自身 LocalId"]
+    LB -.->|"Derivation Origin 保留，追溯 R0"| SB
+```
+
+## 来源变更触发 COW 物化（D-009 事件时序）
+
+已确认：来源普通修改不升级 Revision；修改前先 Query 获得修改前完整业务事实，修改保存后发来源变更事件触发 COW 物化；物化 Handler 据修改前事实形成派生变体自身内容并保存，成功后发物化完成事件；LightTrackerItem 索引 Handler 标记已物化，有效来源切换到自身。事件与事务的准确可见性协议未裁定。
+
+```mermaid
+sequenceDiagram
+    actor U as 来源编辑者
+    participant SBC as 来源业务 BC
+    participant EV as 事件总线
+    participant H as COW 物化 Handler
+    participant DBC as 派生业务 BC
+    participant L as LightTrackerItem
+
+    U->>SBC: Query 修改前完整业务事实 A
+    SBC-->>U: A（修改前事实）
+    U->>SBC: 领域修改并仓储保存
+    SBC->>SBC: 保存 B（普通修改，Revision 不升级）
+    SBC->>EV: 来源变更事件
+    EV->>H: 触发受影响派生变体 COW
+    H->>H: 据修改前事实 A 形成派生变体完整业务聚合
+    H->>DBC: 保存派生变体本地内容
+    DBC-->>H: 物化成功
+    H->>EV: 物化完成事件
+    EV->>L: 索引 Handler
+    L->>L: 标记已物化，有效来源切换到自身 LocalId
+```
+
+注意：修改前事实 A 的可靠保存/稳定引用（反例二）、物化完成前的查询可见性（反例一）、连续修改的多事件乱序与幂等（反例四）均候选。图不承诺跨 BC 事务。
+
+## D-010 收敛：不可变快照与查询可见性
+
+D-010 确认：修改前事实 A 作为事件关联的不可变内容快照与来源变更事件一起传递（反例二关闭）；来源修改已保存、COW 尚未完成期间，允许派生工作集暂时读取到修改后内容 B，物化完成后以修改前事实形成独立内容（反例一关闭）。连续修改的多事件乱序与「首次快照」业务选择规则仍候选（反例四）。
+
+LightTrackerItem 主状态收敛为 Source-backed 与 Local-backed 两个，Materializing 作为技术运行状态，不增加第三种业务状态。
+
+SourceLocalId 双语义：历史派生来源（Derivation Origin，追溯谱系）与当前有效内容来源（Effective Content Source，物化后指向自身），字段是否拆分待设计。
+
+## 首次快照优先与乱序处理（D-011 事件时序）
+
+已确认：对未物化派生 TrackerItem，来源首次相关修改的修改前快照确定最终物化内容；快照选择按来源修改实际先后顺序而非事件到达顺序；E2 先于 E1 到达仍采用第一次修改前快照 A。Source Change Order / Derivation Baseline / Materialization Claim 为候选协议，不自动建聚合/表。
+
+```mermaid
+sequenceDiagram
+    participant SBC as 来源业务 BC
+    participant EV as 事件总线
+    participant H as COW 物化 Handler
+    participant L as LightTrackerItem
+
+    Note over SBC: R0 初始 A：A→B（E1 快照 A），B→C（E2 快照 B）
+    SBC->>EV: E1（快照 A）
+    SBC->>EV: E2（快照 B）
+    EV->>H: E2 先于 E1 到达（乱序）
+    H->>L: 检查 Derivation Baseline / Materialization Claim（候选）
+    Note over H,L: E2 不是首次相关修改，不物化为 B
+    EV->>H: E1 后到
+    H->>L: 首次相关修改 = E1，快照 A
+    H->>H: 物化 R1 为 A（首次快照优先）
+    L->>L: 标记 Local-backed，有效来源=自身 LocalId
+    Note over L: 后续 E2 或其他来源事件不覆盖已物化 A
+```
+
+注意：Source Change Order 如何表达（复用并发 version 还是独立序列）、Derivation Baseline 判定、Materialization Claim 证据保留均候选，不提前用数据库锁或消息队列偏移量替代业务裁定。

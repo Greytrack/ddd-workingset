@@ -85,7 +85,9 @@ flowchart LR
     Q["Item 归属与来源证据责任待确认 - 此节点非聚合"]
 ```
 
-## AP-003：Manifest 发布指针
+## AP-003：Manifest 发布指针（当前不采用，D-010）
+
+**状态：Draft，当前不采用（D-010 已确认不再引入 Manifest、ItemVariant）；以下保留历史图与权衡。**
 
 ```mermaid
 classDiagram
