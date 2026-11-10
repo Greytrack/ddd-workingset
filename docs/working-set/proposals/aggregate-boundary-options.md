@@ -113,3 +113,23 @@ D-002 章节为历史分析；其中 parentId/sourceId 合称派生追溯、字�
 - AP-003：不再以运行期可变组织树作为 Manifest 必要性的理由；成员规模、版本化范围与发布可见性仍可另作依据。新 Manifest 不得暗中改写已有 Tracker.parentId。
 
 三方案均不承诺整批创建原子、不决定父删除/停用或 Item 边界，不增加复杂 Draft Tracker 状态机。
+
+## D-007：TrackerItem 契约对三方案的影响（Draft）
+
+D-007 确认 TrackerItem 是公共契约，业务 BC 对象是独立聚合，Working Set 只负责公共身份；LightTrackerItem 是候选聚合。据此重新审查：
+
+- **AP-001**：以 ID 引用选择独立 Tracker 与业务对象，与「业务 BC 拥有聚合」兼容；但 Binding 作为配置内部实体只承载工作范围，不得把业务对象组合进 Working Set。需明确业务对象实现 TrackerItem 后，其公共身份由 SK 维护、内容由 BC 提交。
+- **AP-002 修订**：独立 Tracker 演进保留，但其原 Branch 根已不兼容；修订方向不得让 Tracker 拥有业务对象聚合，TrackerItem 契约已排除「Tracker 内部 Item」的解释。
+- **AP-003**：Manifest 选择 Tracker 与业务对象身份；其 ItemVariant 独立根候选与 LightTrackerItem 候选聚合在「轻量索引/公共身份」上高度重叠，需澄清二者是同一概念的命名差异还是不同边界，避免重复建模。
+
+LightTrackerItem 的出现不必然替代 ItemVariant、Manifest 或索引概念：若 LightTrackerItem 只是索引，则不构成独立聚合根，与 AP-003 的 ItemVariant 权威根形成对比；若它拥有有效变体与版本定位权威，则更接近变体聚合。三者均继续候选，不自动选定。CommonId/LocalId/Revision/Version 的分配、COW 事务协议仍待裁定。
+
+## D-008：LightTrackerItem 权威聚合对三方案的影响（Draft）
+
+D-008 确认 LightTrackerItem 是独立聚合并承担身份、来源与有效变体定位权威。据此更新：
+
+- **AP-003 的 Manifest/Variant 与 LightTrackerItem 的关系**：AP-003 的 ItemVariant 独立根候选在「身份/来源/有效变体定位」上与 LightTrackerItem 高度重合。若 LightTrackerItem 已承担该权威，则 ItemVariant 独立根可能冗余，应澄清是同一概念的命名收敛还是不同边界（例如 ItemVariant 承载物化内容指针，LightTrackerItem 承载身份索引）。不得为维持三方案数量重复建两个身份聚合。
+- **Manifest**：仍可承载工作范围的发布指针与封闭清单，不与 LightTrackerItem 的身份定位职责冲突；LightTrackerItem 通过 WorkingSetId 指向工作范围，二者是引用关系而非组合。
+- **AP-001/002**：不受 LightTrackerItem 权威地位改变其兼容性结论；AP-001 不得把 LightTrackerItem 组合进 Working Set 配置，AP-002 修订不得让 Tracker 拥有业务对象。
+
+LocalId 是否等同业务聚合变体身份、物化完成标志与有效内容指针、物化原子性仍待裁定，不自动选定任一 AP。

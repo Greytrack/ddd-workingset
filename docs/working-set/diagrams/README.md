@@ -42,3 +42,7 @@
 - [Tracker 双维关系](tracker-dual-relations.md)：D-003 同工作集组织树与跨直接父子工作集派生链，Draft；替代旧 D-002 字段未定图。
 
 - [D-004 派生组织裁剪图](tracker-dual-relations.md#d-004-clipping)：仅选 B，目标 B1 为根，直接来源仍为 B；不自动创建 A1。
+
+- [D-007/D-008 TrackerItem 契约与聚合图](trackeritem-contract.md)：TrackerItem 接口、LightTrackerItem 权威聚合与业务 BC 聚合关系，Draft / Candidate。
+
+- [D-008 LightTrackerItem 派生/解析/物化生命周期](lighttrackeritem-lifecycle.md)：派生创建 LightTrackerItem、COW 延迟物化、Query 工厂时序与首次 COW 并发反例，Draft / Candidate。

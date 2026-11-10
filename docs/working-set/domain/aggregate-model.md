@@ -10,8 +10,9 @@
 | --- | --- | --- | --- | --- |
 | Working Set | 有长期身份；准备、发布、归档等状态维度尚未确认 | 发布 revision 与当前范围一致；发布／取消不互相覆盖 | 巨量 Binding 会造成加载与版本热点 | 改名不应加载十万 Item；`QUESTION-001/012` |
 | Tracker | D-001/D-002：独立聚合及非共享派生新身份 | D-003：parentId 为同工作集结构父，sourceId 为直接父级工作集来源；禁止跳级 | 结构范围校验与来源准入分别分析；不组合整树或整链 | D-006 已禁止创建后 parentId 修改；Shared 父级一致性、sourceId 可变性、同源多派生及 Item 归属待定 |
-| Item Variant | 候选 LocalId；从 VIRTUAL 到本地内容有持续身份 | 家族、LocalId、所属 Tracker、Source Cut 不被 COW 改写 | 首次写竞争、来源事件乱序、索引/内容双事实 | 若只是缓存则不应是聚合；`QUESTION-004/006` |
-| Business Item | 各业务上下文已有身份与生命周期 | 内容、状态机、revision、字段组合合法性 | Merge/COW 必须走其公开写能力 | 不能用通用字段 Map 绕过规则 |
+| TrackerItem（公共契约） | 无自身聚合；是 Working Set 与业务 BC 的公共 Item 能力接口（D-007） | 公共身份与工作集语义，不拥有业务状态 | 跨 BC 协作的公共语言，不承载业务不变量 | CommonId/LocalId/Revision/Version 的分配待定 |
+| LightTrackerItem（已确认独立聚合） | Working Set 专属独立聚合（D-008）；身份、来源与有效变体定位权威 | 当前 LocalId、保留 CommonId、SourceLocalId/SourceRevision、TrackerId/WorkingSetId | 与业务对象身份一致性、双事实收敛、物化并发 | 完整属性与物化协议候选；非查询投影 |
+| Business Item | 各业务上下文独立聚合（Requirement/Part/Process 等），实现 TrackerItem | 内容、状态机、revision、字段组合合法性 | Merge/COW 必须走其公开写能力 | 不能用通用字段 Map 绕过规则；SK 不拥有其完整状态 |
 | Merge Round | 轮次身份和可恢复生命周期 | 命令冻结、状态转换、进度与唯一终态结果 | 不持有所有业务对象；部分成功需保留 | 把整轮设为大事务会掩盖已提交结果 |
 | Merge Checkpoint | 有向 source-target-family 键候选 | 确认／撤销因果单调、证据关联 | 旧事件不能覆盖新决定 | `KEEP_TARGET + true` 内容仍不同 |
 | Reference | 关系身份持续跨版次 | 逻辑目标、有效性、钉版、修复不换身份 | 修复与删除竞态；每关系独立提交候选 | 右侧为空不等于无引用 |
@@ -72,7 +73,7 @@ Shared Tracker 可以被多个工作集引用，数据库归属默认工作集�
 
 已确认合法终态：仅选 B，派生新 Tracker B1，其结构父为空、直接来源为 B；不自动补建 A1。Working Set 定义选择/有效范围，Tracker 保持独立身份与生命周期；不能为了保留源组织树把全部 Tracker 合入一个聚合。
 
-候选协作须分别处理选择范围、新 Tracker 身份、目标结构父和直接来源。null 结构父是合法根状态，不是来源丢失或创建未完成。它不证明各阶段能部分发布；“已创建但未纳入”等中间态、取消/重试、并发及整批原子性仍待设计。若父也被选，父子新身份映射是否必须建立尚未确认。
+候选协作须分别处理选择范围、新 Tracker 身份、目标结构父和直接来源。null 结构父是合法根状态，不是来源丢失或创建未完成。它不证明各阶段能部分发布；“已创建但未纳入”等中间态、取消/重试、并发及整批原子性仍待设计。父也被选时的默认继承与创建前显式重组已由 D-005 确认（POL-010），创建后 parentId 不可变已由 D-006 确认（POL-011）。
 
 跨聚合校验只需兑现已确认规则，不得把完整来源祖先闭包当作发布条件。Shared 混合树有效父必须检查目标有效范围，不能只看默认工作集归属；本次不选择 parentId 的存储位置或赋予工作集完整生命周期所有权。Item 边界不变。见 [裁剪图](../diagrams/tracker-dual-relations.md#d-004-clipping)。
 
@@ -82,4 +83,14 @@ Shared Tracker 可以被多个工作集引用，数据库归属默认工作集�
 
 候选跨聚合校验集中于目标父有效范围、创建候选结构无环和来源准入；不能据此合并整树。Tracker 局部不可变性不独自保证跨 Tracker 父有效，仍需创建时的协作协议。创建时父消失的竞态、父后续删除/停用、批次原子性未裁定。
 
-成员扩展可继续关联新 Tracker，不移动已有节点。AP-002 获得结构稳定性依据但未获批准；Item 归属不变。见 [生命周期图](../diagrams/tracker-creation-lifecycle.md) 与 SCN-016—018。
+成员扩展可继续关联新 Tracker，不移动已有节点。AP-002 获得结构稳定性依据但未获批准；Item 归属当时仍待定，现由 D-007 关闭。见 [生命周期图](../diagrams/tracker-creation-lifecycle.md) 与 SCN-016—018。
+
+## D-007：TrackerItem 契约与业务 BC 聚合（Draft 设计影响）
+
+已确认：TrackerItem 是公共能力契约，业务 BC 对象（Requirement/Part/Process 等）是完整独立聚合并实现该契约，Working Set 只负责公共身份与工作集机制，不拥有业务对象状态、生命周期与不变量。LightTrackerItem 是候选聚合，边界与权威性待定，不得因索引表定根或否定候选定位。类图见 [D-007 契约与聚合图](../diagrams/trackeritem-contract.md)。
+
+## D-008：LightTrackerItem 权威聚合与 COW 延迟物化（Draft 设计影响）
+
+已确认：LightTrackerItem 是 Working Set 专属独立聚合（非查询投影），派生时创建并分配当前 LocalId、保留 CommonId、记录 SourceLocalId/SourceRevision、经 TrackerId/WorkingSetId 指向，承担身份与有效变体定位权威。派生采用 COW，不立即物化完整业务对象副本。业务 BC 通过 CQRS Query 与工厂重建完整业务聚合，调用方不感知物化状态；Working Set 不拥有或重建业务 BC 完整状态。
+
+候选：LightTrackerItem 完整属性与物化协议、LocalId 是否等同业务聚合变体身份、首次物化标志与有效内容指针、物化原子性、SourceRevision 版本选择。LightTrackerItem 与业务对象是双事实：LightTrackerItem 持身份/来源/定位，业务对象持完整内容与不变量，二者按 ID reference 关联，不组合、不跨 BC 事务。图见 [D-008 生命周期图](../diagrams/lighttrackeritem-lifecycle.md)。

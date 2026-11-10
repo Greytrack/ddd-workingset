@@ -27,6 +27,8 @@
 | `FACT-009` | Reference 可在逻辑目标有效但物理端点暂不可解析时保持有效悬空状态。 | Reported / Pending | `REFERENCE CONTEXT:14/25`、`REFERENCE 05 §4` | 访谈用户可见语义及删除守卫；`QUESTION-010` |
 | `FACT-010` | 创建、拓展、替换和合并被设计为可恢复长流程，受理成功不等于业务结果已可用。 | 部分 Accepted：R16/R17 GateFlow 替换；其他长流程仍候选 | `EXT-ARCH §7.3`、`V4-LRT §3-9` | 用重启、取消、半批失败场景验证；关联 `INV-011` |
 | `FACT-011` | 当前架构示意把 `create / extend / resolve / diff / merge` 画作业务 BC 调用 Working Set 的统一 API 面。 | Reported / Pending | `USER-ARCH-2026-11-09` 附件 `image(1).png` | 确认这些是稳定业务能力、现有 API 名称还是示意占位；关联 `QUESTION-013` |
+| `FACT-012` | 工作集领域统一使用 TrackerItem 作为公共 Item 契约；Part、Requirement 等业务对象是各自业务 BC 的完整独立聚合，通过实现 TrackerItem 接口获得公共工作集能力。Working Set 不拥有业务对象聚合，只负责公共 TrackerItem 身份与工作集机制。 | 用户确认 D-007 | 本对话用户 D-007 裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-007) | LightTrackerItem 聚合边界、COW 事务协议仍候选；QUESTION-002.h 关闭 |
+| `FACT-013` | LightTrackerItem 是 Working Set 专属独立聚合，非查询投影；派生采用 Copy-on-Write，不立即物化完整业务对象副本，而是创建 LightTrackerItem、分配当前变体 LocalId、保留 CommonId，记录 SourceLocalId/SourceRevision，经 TrackerId/WorkingSetId 指向，承担身份与有效变体定位权威。业务 BC 通过 CQRS Query 与工厂重建完整业务聚合，调用方不感知底层物化状态；Working Set 不拥有或重建业务 BC 完整领域状态。 | 用户确认 D-008 | 本对话用户 D-008 裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-008) | LocalId 是否等同业务聚合变体身份、首次物化标志/内容指针、同步原子性、SourceRevision 版本选择仍候选 |
 
 ## Business Policy（逐条标注确认范围）
 
@@ -108,3 +110,9 @@ D-002 身份独立与生命周期裁定继续有效；其将两个字段一起�
 Tracker 新建时确定组织位置，parentId 可为 null。创建完成后 parentId 不可修改，不支持移动、更换父节点或调整为根；允许的裁剪与显式重组须在创建完成前确定。来源为本轮用户 D-006 八项裁定，见 [记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
 
 此限制只针对组织位置，不冻结 Tracker 的其他业务状态、身份生命周期或 Working Set 的成员扩展；也不扩大 POL-002 的原生创建入口。sourceId 直接来源语义不变，但不由此自动批准其所有生命周期可变性规则。父后续删除/停用的子节点处理仍待裁定，不能自动清空 parentId、级联删除或禁止父删除。
+
+## D-007：TrackerItem 契约与 LightTrackerItem 候选定位
+
+已确认（用户 D-007 裁定，见 [评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-007)）：工作集领域统一使用 TrackerItem 作为公共 Item 概念，不继续将 Item 作为独立于 TrackerItem 的通用聚合模型；Working Set Shared Kernel 声明顶级 TrackerItem interface；Part、Requirement 等是各自业务 BC 的完整独立聚合，通过实现该接口获得参与 Working Set 管理的公共能力；Working Set 不拥有业务对象状态、业务生命周期与业务不变量，只负责公共 TrackerItem 身份与工作集机制；Tracker 仍是独立聚合，Shared Kernel 定位不变。
+
+候选（Draft）：LightTrackerItem 作为专属领域聚合管理轻量化索引信息，其完整聚合边界、内部属性与领域行为，是否拥有有效变体及版本定位的权威状态，以及 CommonId/LocalId/Revision/Version 在 TrackerItem 契约与 LightTrackerItem 之间的分配，均未确认。不得因已有索引表就判定 LightTrackerItem 必为聚合根，也不否定候选聚合定位。跨 BC 首次 COW 的事务与一致性协议仍候选。

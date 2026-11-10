@@ -192,3 +192,128 @@ parentId 表达同工作集的直属结构父子关系；sourceId 表达直接�
 本轮五项未决：父也选择是否必须保留关系、派生后能否修改 parentId、Shared/非共享混合树有效父、同目标同源多派生、整批派生原子性。此前 sourceId 可变性、Item 归属继续开放，不自动关闭。
 
 追溯：[POL-009](../domain/facts.md#pol-009非共享派生组织裁剪用户已确认)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[完整双维及裁剪图](../diagrams/tracker-dual-relations.md)、[候选方案影响](../proposals/aggregate-boundary-options.md)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-005"></a>
+## D-005：父也选择时的默认继承与创建前显式重组（2026-11-10）
+
+**业务政策：用户已确认；技术组织协议仍 Draft；不发布基线。** 直接依据：用户对“非共享派生且原父也被选择时组织关系如何处理”的裁定（引用对话第 5 题选择 C），并由 D-006 正文第 3 条重申。
+
+确认：非共享派生时，若原结构父也被选择，默认继承已选节点间的组织关系（子仍以已选父为结构父）；用户可在创建完成前显式指定新的合法组织结构，包括使子节点成为根（parentId=null）。未选择原父时仍适用 POL-009（裁剪为根），不自动补派生未选父。以上两种组织结果均不改变直接 sourceId。
+
+知识分类：`POL-010`（业务政策，见 [facts](../domain/facts.md#pol-010默认继承与创建前显式重组d-005用户已确认)）。默认继承、显式重组能力与最终结构合法性分别成立，均不等于创建后允许修改（后者由 D-006 关闭）。
+
+关闭项：QUESTION-002.g（父也选中时是否必须保留关系）。仍未决：组织树映射、提交与范围校验协议、创建批次原子性。
+
+追溯：[POL-010](../domain/facts.md#pol-010默认继承与创建前显式重组d-005用户已确认)、[INV-023](../domain/invariants.md)、[SCN-016](../scenarios/core-scenarios.md#scn-016-创建前显式重组)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-006"></a>
+## D-006：Tracker 创建后组织关系不可变（2026-11-10）
+
+**业务政策：用户正式裁定；技术守卫与创建协议仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+用户本轮明确裁定以下八项，作为 Tracker 组织位置的创建边界：
+
+1. Tracker 的 `parentId` 表达同一 Working Set 内直属组织父节点。
+2. 新建 Tracker 时必须确定其组织位置，可以是根节点，即 `parentId = null`。
+3. 非共享 Tracker 派生创建时按 D-004、D-005 处理组织结构：未带入源 Tracker 的父节点时可裁剪父子关系、设 `parentId = null`；原父节点也被选择时默认继承组织关系；用户可在创建完成前显式指定新的合法组织结构。
+4. Tracker 一旦创建完成，`parentId` 不允许修改。
+5. 创建完成后，不支持对已有 Tracker 进行移动、更换父节点或调整为根节点。
+6. 不同 Working Set 可以在各自创建或派生过程中形成不同的组织树。
+7. Tracker 的 `sourceId` 继续表示直接父级 Working Set 中的来源 Tracker，不受组织结构裁剪和重组影响。
+8. Tracker 仍然是独立聚合，统一领域语言不使用 Tracker Branch。
+
+知识分类：`POL-011`（业务政策，见 [facts](../domain/facts.md#pol-011创建完成后组织位置不可变d-006用户已确认)）；对应候选约束 `INV-022/023`。此裁定只冻结组织位置，不冻结 Tracker 的其他业务状态、身份生命周期，也不封闭 Working Set 的成员扩展；不扩大 `POL-002` 的原生创建入口。`sourceId` 直接来源语义不变，但不由此自动批准其生命周期可变性规则。无需为此设计复杂 Draft Tracker 状态机。
+
+关闭项：QUESTION-002.d1（创建后 parentId 可修改 → 不可修改）。仍未决：Shared 混合树有效父及跨工作集一致性、同源多派生、sourceId 创建后可变性、派生整批原子性、Item 聚合归属。父 Tracker 后续删除或停用时子节点如何处理属于 QUESTION-009.a 的独立生命周期问题，本轮不选择：不自动清空或重挂 parentId、不级联删除，也不因此重新开放移动权限。
+
+追溯：[POL-011](../domain/facts.md#pol-011创建完成后组织位置不可变d-006用户已确认)、[INV-022/023](../domain/invariants.md#d-005--d-006组织位置的创建边界)、[生命周期图](../diagrams/tracker-creation-lifecycle.md)、[SCN-017](../scenarios/core-scenarios.md#scn-017-创建后组织位置不可变)、[SCN-018](../scenarios/core-scenarios.md#scn-018-创建时父缺失与组织环反例)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-007"></a>
+## D-007：TrackerItem 公共契约与业务 BC 聚合边界（2026-11-10）
+
+**业务裁定：用户正式确认；LightTrackerItem 聚合边界与事务协议仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户裁定）
+
+1. 工作集领域统一使用 `TrackerItem` 作为公共 Item 概念，不继续将 `Item` 作为独立于 TrackerItem 的通用聚合模型。
+2. Working Set Shared Kernel 内声明顶级 `TrackerItem` interface。
+3. 各业务 BC 的领域对象通过实现 TrackerItem 接口获得参与 Working Set 管理的公共能力。
+4. Part、Requirement 等业务对象是各自业务 BC 中的完整独立聚合。
+5. Working Set 不拥有各业务 BC 业务对象的完整领域状态、业务生命周期与业务不变量。
+6. Working Set 负责公共 TrackerItem 身份及工作集相关机制。
+7. Working Set 内计划引入 `LightTrackerItem`，作为专属领域聚合，用于管理轻量化索引信息。
+8. Tracker 仍然是独立聚合，不因管理 TrackerItem 的工作范围而拥有业务对象聚合。
+9. Shared Kernel 的组织定位保持不变。
+
+知识分类：`FACT-012`（[facts](../domain/facts.md)）；术语 `CONCEPT-021/022`（[glossary](../domain/glossary.md)）。第 7 项 LightTrackerItem 的「专属领域聚合」是候选定位，其完整边界与权威性未确认，不得因已有索引表就判定其必为聚合根，也不否定该候选定位。
+
+### 关闭项
+
+QUESTION-002.h（Item 聚合归属）：业务 BC 拥有具体业务对象聚合，Working Set 通过 TrackerItem 契约协作，只负责公共身份与工作集机制。原「Tracker 内部或独立边界」二选一不再成立。
+
+### 仍需候选设计（不自动批准）
+
+- LightTrackerItem 的完整聚合边界、内部属性和领域行为。
+- LightTrackerItem 是否拥有有效变体及版本定位的权威状态。
+- CommonId、LocalId、Revision、Version 等信息如何分配到 TrackerItem 契约和 LightTrackerItem。
+- 跨 BC 首次 COW 修改的事务与一致性协议。
+- 业务 revision 与 Working Set revision 的关系；TrackerItem 接口的最小共同语义；跨 BC 业务校验与公共工作集操作的协调。
+
+### 对候选方案的影响
+
+AP-001 的 ID 引用可表达独立业务聚合，但不得把业务对象组合进 Working Set；AP-002 修订方向不得让 Tracker 拥有业务对象聚合；AP-003 的 ItemVariant 独立根候选与 LightTrackerItem 在「轻量索引/公共身份」上高度重叠，需澄清命名差异或边界，避免重复建模。三者均继续候选，不自动选定。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[契约与聚合图](../diagrams/trackeritem-contract.md)、[方案影响](../proposals/aggregate-boundary-options.md)、[SCN-019/020](../scenarios/core-scenarios.md#scn-019)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-008"></a>
+## D-008：LightTrackerItem 权威聚合与 COW 延迟物化（2026-11-10）
+
+**业务与架构裁定：用户正式确认；物化协议、身份等值关系与并发仍 Draft；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十二项裁定）
+
+1. Working Set 负责公共 TrackerItem 身份与工作集相关机制。
+2. 各业务 BC 的 Part、Requirement、Process 等是独立完整业务聚合，由各自 BC 管理业务内容与领域不变量。
+3. Working Set 定义 TrackerItem 公共接口，业务 BC 对象实现。
+4. LightTrackerItem 是 Working Set 专属独立聚合，不是单纯查询投影。
+5. 创建顺序：先 Working Set 聚合、Tracker 聚合，再执行 TrackerItem 派生。
+6. 派生采用 Copy-on-Write，不立即创建和持久化完整业务对象副本。
+7. 派生时创建 LightTrackerItem，分配当前变体 LocalId，保留 CommonId。
+8. LightTrackerItem 记录 SourceLocalId、SourceRevision。
+9. LightTrackerItem 经 TrackerId 指向所属 Tracker、经 WorkingSetId 指向所属 Working Set。
+10. LightTrackerItem 承担工作集内身份与有效变体定位权威。
+11. 业务 BC 通过 CQRS Query 路径获取业务对象，借助工厂重建完整业务聚合；调用方不感知底层物化状态。
+12. Working Set 不拥有或直接重建各业务 BC 完整领域状态。
+
+知识分类：`FACT-013`（[facts](../domain/facts.md)）；术语 `CONCEPT-022` 更新（[glossary](../domain/glossary.md)）。Derive/Resolve/Materialize 为候选统一语言，不固定其全部生命周期行为。
+
+### 候选不变量审查
+
+提取 INV-026—032 逐条审查（[invariants](../domain/invariants.md)）：INV-026/027/029/030 有 D-008 直接确认支撑，INV-028（范围约束）/031（首次物化唯一身份）/032（可观察一致性）仍候选。不因 D-008 自动把候选不变量标记 Accepted。
+
+### 架构审查重点（保留候选）
+
+- LightTrackerItem 权威状态 vs 查询投影：已确认非投影，但完整属性与物化协议候选。
+- LocalId 是否同时代表完整业务聚合变体身份：待裁定。
+- SourceRevision 快照语义与版本选择策略：待裁定。
+- Current Revision 与 SourceRevision 的责任划分：待裁定。
+- COW 状态演进：Derive → 未物化 → 物化，物化完成标志与有效内容指针候选。
+- Query 返回完整业务聚合 vs CQRS 查询模型：已确认经 Query + 工厂重建，具体查询模型选择候选。
+- 跨 BC 首次物化事务与并发：候选。
+- AP-003 Manifest/Variant 与 LightTrackerItem 是否重复：需澄清，避免重复建模。
+
+### 尚待用户裁定
+
+1. 源端 Revision 派生后变化，未物化子工作集读取哪个版本。
+2. LightTrackerItem.LocalId 是否直接作为业务聚合变体 LocalId。
+3. 首次物化是否必须使用派生时预分配 LocalId。
+4. 首次物化完成标志与有效内容指针定义。
+5. 业务内容与 LightTrackerItem 更新是否必须同步原子完成。
+
+不得因已有 `air_ws_items_index` 数据库表反向决定领域模型，只可作实现映射参考。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[契约与聚合图](../diagrams/trackeritem-contract.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[方案影响](../proposals/aggregate-boundary-options.md)、[SCN-021—024](../scenarios/core-scenarios.md#scn-021)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。

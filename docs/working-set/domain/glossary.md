@@ -11,7 +11,7 @@
 | `CONCEPT-003` | **Shared Tracker**：多个 Working Set 选择同一权威 Tracker 与 Item 变体的协作语义。 | “共享”不等于所有用户有权；不等于复制后同步。 | 所有绑定工作集同时可见已确认；各读取面须兑现 POL-008，指标与实现待设计。 | Reported；`EXT-ARCH §2.1/11` |
 | `CONCEPT-004` | **Non-shared Tracker**：非共享协作模式下的 Tracker；派生时产生具有独立身份的新 Tracker，源与派生为不同对象。 | 不等同同一 Tracker 的视图，也不引入 Tracker Branch。 | parentId 表达同工作集直属结构父，sourceId 表达直接父级工作集中的来源；两维独立（D-003）。 | 用户确认 D-002；[裁定记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-002) |
 | `CONCEPT-005` | **Tracker Branch（停用术语，仅历史追溯）** | D-001 排除其作为独立领域概念或聚合根。 | 原描述混合了演进线、来源及生命周期，不机械映射为一个 Tracker；具体语义重新审查。 | Historical；由 D-001 终止候选资格 |
-| `CONCEPT-006` | **Item**：由具体业务上下文拥有内容和业务生命周期的受管业务对象。 | 不等同索引行、LightTrackerItem 或任意属性 Map。 | Requirement、Bug 等上下文可有不同规则。 | Reported；`EXT-ARCH §4/5` |
+| `CONCEPT-006` | **Item（停用为通用聚合；由 TrackerItem 契约取代）**：历史中指由具体业务上下文拥有内容和业务生命周期的受管业务对象。 | D-007 后不再作为独立于 TrackerItem 的通用聚合模型；不等同 LightTrackerItem 索引行。 | 各 BC 业务对象实现 TrackerItem 接口获得公共能力，专有规则由各 BC 拥有。 | Superseded by D-007；`EXT-ARCH §4/5` |
 | `CONCEPT-007` | **Item Family／Item Identity**：以 CommonId 识别跨派生变体的同一逻辑对象家族。 | 无关 Item 跨类型、跨 Tracker 也不能共享 CommonId。 | 同一家族各变体共享 CommonId、拥有不同 LocalId。 | 本对话用户已确认身份关系与唯一性 |
 | `CONCEPT-008` | **Item Variant／Branch-local Item**：某个非共享 Tracker 上具有稳定 LocalId 的具体变体。 | 不等于业务 revision；无本地内容行仍可能存在。 | V4 名称为 LightTrackerItem；报告建议用 ItemVariant 避免技术索引含义。 | Candidate；`EXT-ARCH §1/2.1`、`V4-DOMAIN:214` |
 | `CONCEPT-009` | **Item Revision／业务版次**：由显式升级版次操作推进的业务版本标识。 | 普通编辑增加乐观锁 version，业务版次保持不变。 | 用户已确认只有显式升级版次才产生版次历史数据，版次号向前推进 +1。MergeCheckpoint 的双侧版次使用此标识。 | 用户在本对话明确确认；数值与显示编码的映射待具体设计 |
@@ -26,6 +26,8 @@
 | `CONCEPT-018` | **Association／关联**：表达两个业务对象之间业务联系的独立关系。 | 不应把引用属性与一般关联强行统一。 | 缺端点时是否落库与 Reference 不同。 | Reported；`REFERENCE CONTEXT §关系与方向` |
 | `CONCEPT-019` | **Shared Kernel／共享内核**：本项目企业架构中由四个业务 BC 共同依赖的共享能力集合，包含 Working Set、Privilege、Workflow、Class Hierarchy。 | 不自动等同 DDD 书中协同维护少量共享模型的集成模式；也不等同单一聚合、模块或微服务。 | 企业归属由 `AC-001` 固定；内部治理和模型边界仍待设计。 | Confirmed constraint；`USER-ARCH-2026-11-09` |
 | `CONCEPT-020` | **Business Bounded Context／业务限界上下文**：拥有自身业务对象语言、状态机和不变量的 GateFlow、ALM、DQA 或 PLM 上下文。 | 不应因共同调用 Working Set API 而把四个 BC 的专有规则合并进 Shared Kernel。 | 业务 BC 消费共享能力，并保留对自身内容变化的最终合法性裁决。 | Confirmed landscape / boundary candidate；`AC-001` |
+| `CONCEPT-021` | **TrackerItem／公共 Item 契约**：Working Set Shared Kernel 声明的顶级接口，是各业务 BC 领域对象参与工作集管理的公共能力契约。 | 不等同业务对象的完整领域模型，也不把 `Item` 作为独立通用聚合。 | 业务对象通过实现该接口获得公共身份与工作集语义；公共机制不拥有业务状态、生命周期与不变量。 | 用户确认 D-007；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-007) |
+| `CONCEPT-022` | **LightTrackerItem／轻量身份项**：Working Set 专属的独立聚合，负责工作集内身份、来源与有效变体定位的权威，不是单纯的查询投影。 | 不拥有完整 Part／Requirement 对象；不等同业务对象本身；不等于查询投影。 | 派生时创建并分配当前变体 LocalId、保留 CommonId，记录 SourceLocalId/SourceRevision，经 TrackerId/WorkingSetId 指向；完整属性与物化协议候选。 | 独立聚合已由 D-008 确认；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-008) |
 
 ## Item 身份规则（用户已确认）
 
@@ -88,3 +90,28 @@
 **创建时组织位置**：Tracker 在创建完成前确定的 parentId（同工作集有效组织父或 null 根）。非共享派生默认继承已选父子结构，允许用户在完成前显式选择其他合法结构。**创建完成后组织位置稳定性**：已有 Tracker 的 parentId 不再允许改变。
 
 这不是新增 Draft Tracker 实体或状态机。“创建完成”是业务边界，其持久化、发布时点与重试协议仍待设计。组织位置稳定不等于 Tracker 其他属性不可变，也不等于 Working Set 成员集合封闭。不同工作集的不同树形成于各自创建/派生过程，而非允许已创建节点随后移动。见 [生命周期图](../diagrams/tracker-creation-lifecycle.md)。
+
+## TrackerItem 公共契约与 LightTrackerItem（D-007）
+
+用户正式确认：工作集领域统一使用 `TrackerItem` 作为公共 Item 概念，不继续将 `Item` 作为独立于 TrackerItem 的通用聚合模型；Working Set Shared Kernel 声明顶级 `TrackerItem` interface；各业务 BC 领域对象通过实现该接口获得参与 Working Set 管理的公共能力。
+
+- **已确认**：TrackerItem 是公共领域能力契约；Part、Requirement 等是各自业务 BC 的完整独立聚合；Working Set 不拥有其领域状态、业务生命周期与业务不变量，只负责公共 TrackerItem 身份及工作集相关机制。
+- **候选**：LightTrackerItem 作为专属领域聚合的完整边界、内部属性、领域行为，及其是否拥有有效变体与版本定位的权威状态；CommonId、LocalId、Revision、Version 在 TrackerItem 契约与 LightTrackerItem 之间的分配；跨 BC 首次 COW 的事务与一致性协议。不得因已有索引表就判定 LightTrackerItem 必为聚合根，也不否定候选聚合定位。
+
+Tracker 仍是独立聚合，不因管理 TrackerItem 工作范围而拥有业务对象聚合。类图见 [D-007 契约与聚合图](../diagrams/trackeritem-contract.md)。
+
+## Derive / Resolve / Materialize 与身份字段（D-008）
+
+用户确认 LightTrackerItem 是 Working Set 专属独立聚合（非查询投影），负责身份、来源与有效变体定位权威；派生采用 Copy-on-Write，不立即物化完整业务对象副本。派生时创建 LightTrackerItem、分配当前变体 LocalId、保留 CommonId，记录 SourceLocalId/SourceRevision，经 TrackerId/WorkingSetId 指向。业务 BC 通过 CQRS Query 与工厂重建完整业务聚合，调用方不感知底层物化状态；Working Set 不拥有或重建业务 BC 完整状态。
+
+以下为候选统一语言，不固定其全部生命周期行为：
+
+- **Derive／派生**：从来源变体派生出新变体身份，创建 LightTrackerItem 并分配 LocalId，不立即物化完整业务内容。
+- **Resolve／解析**：解析当前业务变体及其来源（经 LightTrackerItem 定位）。
+- **Materialize／物化**：形成变体自身的完整业务持久化内容（首次本地写入触发）。
+- **CommonId**：共同逻辑身份，跨派生变体保留。
+- **LocalId**：当前变体身份，派生时分配。
+- **SourceLocalId**：直接来源变体身份。
+- **SourceRevision**：来源业务版次信息（快照语义候选）。
+
+LocalId 是否直接等同业务聚合变体身份、首次物化标志与有效内容指针、物化原子性均待裁定。

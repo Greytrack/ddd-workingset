@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | 组合并发布工作范围 | 核心域 | 用户通过 Working Set 选择可工作的范围 |
 | Tracker 共享、派生与谱系治理 | 核心域 | 解释共享与独立演进 |
-| Item 变体身份、固定来源与 COW | 核心／支撑域待定 | 业务显著性取决于 `QUESTION-004/006` |
+| TrackerItem 公共契约与 LightTrackerItem 索引 | 核心域契约 + 候选聚合 | TrackerItem 是公共契约（D-007 已确认）；LightTrackerItem 边界与权威性待定 |
 | 具体业务对象生命周期 | GateFlow、ALM、DQA、PLM 各自业务域 | 各 BC 拥有自身业务对象的内容、状态机和合法性 |
 | Compare／Merge | 核心域候选 | 需要有向证据、决定与可审计结果 |
 | Reference／Association | 核心邻域候选 | 关系有独立语义、钉版和悬空状态 |
@@ -30,7 +30,7 @@
 | --- | --- | --- | --- | --- |
 | `CTX-001` | Workspace Composition | Working Set、Manifest/Binding、准备与发布范围 | Tracker 谱系、Item 内容、关系 | Candidate；`QUESTION-001/012` 未决 |
 | `CTX-002` | Tracker Lineage | Tracker 身份、Sharing Mode、来源谱系、生命周期 | Working Set 的选择、完整 Item 内容 | Candidate；可能与 CTX-001 同部署但语言边界应可见 |
-| `CTX-003` | Item Variant & Materialization | Item Family/Variant、Source Cut、VIRTUAL/INSTANTIATED、COW 协议 | Requirement/Bug 的业务字段与状态机 | Candidate；可能只是技术索引，取决于 `QUESTION-004/006` |
+| `CTX-003` | Item Variant & Materialization | LightTrackerItem 已确认独立聚合（身份/来源/有效变体定位权威）、COW 延迟物化、Source Cut | Requirement/Bug 的业务字段与状态机（业务 BC 拥有） | LightTrackerItem 已确认聚合（D-008）；物化协议/权威细节候选 |
 | `CTX-004` | GateFlow／ALM／DQA／PLM Business Object Contexts | 各 BC 的 Item 内容、revision、状态机、整体合法性 | Working Set 私有索引、对其他 BC 的通用字段覆盖 | 企业四 BC 外框 Confirmed；内部对象合同 Candidate |
 | `CTX-005` | Temporal History & Snapshot | 固定切点读取、保留、墓碑、Snapshot | 当前业务写规则 | Candidate；能力是否足够尚未验证 |
 | `CTX-006` | Compare & Merge | ComparisonContext、Difference、Decision、Round、Apply Result、Checkpoint | 直接修改任意业务表 | Candidate；通过 CTX-004 的公开写能力应用 |
@@ -43,8 +43,8 @@
 ## 候选关系
 
 - `CTX-001 → CTX-002`：Workspace 选择 Tracker 身份；谁是上游取决于“创建 Tracker”和“纳入 Tracker”的能力边界。
-- `CTX-002 → CTX-003`：谱系提供派生身份与 Source Cut；不得把 Tracker 对象图组合进 Item Variant。
-- `CTX-003 ↔ CTX-004`：变体身份与业务内容是双事实风险点。候选方案是 Published Language + 可靠事实事件，而不是共享可变对象。
+- `CTX-002 → CTX-003`：谱系提供派生身份与 Source Cut；不得把 Tracker 对象图组合进 LightTrackerItem。
+- `CTX-003 ↔ CTX-004`：LightTrackerItem 公共身份与业务对象内容是双事实风险点。业务 BC 通过 TrackerItem 契约提供公共身份；候选方案是 Published Language + 可靠事实事件，而不是共享可变对象。
 - `CTX-005` 是 `CTX-001/003/006/007` 的共同上游历史能力；历史不可用必须返回明确失败，不得读当前值替代。
 - `CTX-006 → CTX-004`：Merge 是业务对象上下文的客户，只能请求合法业务变化。
 - `CTX-007` 消费范围发布和合并成功事实进行最终一致修复；删除守卫在投影滞后时需同步核验。

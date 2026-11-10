@@ -244,4 +244,93 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When 派生 WS1 时只选择 B，没有选择 A，采用允许的根节点结果。
 - Then WS1 产生新身份 Tracker B1，B1.parentId=null、B1.sourceId=B；不自动创建 A1。B1 是 WS1 中的合法根，源 A/B 的组织关系不因目标裁剪被改写。
 - 反例：不能以“必须完整继承树”为由拒绝这一结果或自动补建 A1；不能将 B1.sourceId 清空或改为 A 来修复组织父。
-- 未决分支：同时选 A/B、派生后移动、Shared 混合树、同源多派生及整批失败/原子性均不在本场景补全。源关系不被回写是本例派生含义的推论，不规定其并发编辑协议。
+- 未决分支：Shared 混合树、同源多派生及整批失败/原子性均不在本场景补全。父也选择时的默认继承与创建前显式重组已由 D-005 确认（见 SCN-016），派生后移动已由 D-006 禁止（见 SCN-017）。源关系不被回写是本例派生含义的推论，不规定其并发编辑协议。
+
+## SCN-016 创建前显式重组
+
+**业务规则：用户确认 D-005；验收表述 Draft，未运行测试。** 关联 POL-010、INV-023；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-005)。
+
+- Given WS0 中非共享 Tracker B 的结构父为 A；WS1 派生时同时选择了 A 与 B。
+- When 创建 WS1 的派生 Tracker，且未在创建完成前做显式重组。
+- Then 默认继承已选节点间的组织关系：B1.parentId=A1（A1 为 A 在 WS1 的对应身份）。
+- When 用户在创建完成前显式指定新的合法组织结构，包括使 B1 成为根。
+- Then 以用户指定结构为准，B1.parentId 可为 null 或其他合法父；无论默认继承还是显式重组，B1.sourceId 仍为 B（直接来源不变）。
+- 反例：不得把显式重组解释为创建完成后再修改 parentId；不得以默认继承为由拒绝用户在创建完成前指定其他合法结构。
+
+## SCN-017 创建后组织位置不可变
+
+**业务规则：用户确认 D-006；验收表述 Draft，未运行测试。** 关联 POL-011、INV-022；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
+
+- Given Tracker T 已完成创建，组织位置为 parentId=P。
+- When 请求将 T 移动（更改 parentId）、更换父节点或调整为根（parentId=null）。
+- Then 全部被拒绝，parentId 保持创建完成时确定的值；不存在创建后移动的合法路径。
+- 边界：此冻结仅针对组织位置，不影响 T 的其他业务状态或生命周期；不封闭该 Working Set 继续加入新的 Tracker，也不扩大 POL-002 的原生创建入口。sourceId 不因移动请求而变化。
+
+## SCN-018 创建时父缺失与组织环反例
+
+**业务规则：合法性约束与 D-006 相关；验收表述 Draft，未运行测试。** 关联 INV-014/015/023；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
+
+- Given 创建 Tracker 时指定 parentId 指向一个在当前 Working Set 有效组织范围内不存在的父节点。
+- Then 创建不能以该非法父完成；必须改用合法父或 null 根。父缺失是创建期反例，不是创建后移动的借口。
+- Given 创建候选结构形成组织环（如 A.parent=B 且 B.parent=A，或自环 A.parent=A）。
+- Then 该候选结构非法，创建不能完成。无环检查集中于创建候选结构（INV-015），不批准创建后并发移动。
+- 待确认（QUESTION-009.a）：父 Tracker 后续删除或停用时，仍存在的子 Tracker 如何处理。候选包括拒绝该父生命周期操作、保留有明确历史/停用语义的引用，或另行明确业务处置；本轮不选择。不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
+
+<a id="scn-019"></a>
+## SCN-019 首次 COW 业务对象与索引身份一致
+
+**候选；D-007 提出，未确认事务协议。** 关联 INV-024。
+
+- Given 非共享 Tracker 派生后的 VIRTUAL 业务对象（如 Requirement）首次本地写入，触发 COW。
+- When 目标业务 BC 创建本地业务对象并提交，同时 Working Set 维护 LightTrackerItem 公共身份索引。
+- Then（候选预期）本地业务对象与 LightTrackerItem 的公共身份（CommonId/LocalId）保持一致，二者指向同一逻辑条目。
+- 待确认：LightTrackerItem 是否为有效身份及版本定位的权威来源；新业务对象与索引更新的提交顺序与一致性协议；业务对象成功但索引失败时的恢复。
+
+<a id="scn-020"></a>
+## SCN-020 业务提交成功而索引失败
+
+**候选；D-007 提出，未确认收敛协议。** 关联 INV-025。
+
+- Given 业务对象修改已由业务 BC 校验并提交成功。
+- When 后续 LightTrackerItem 索引更新失败（投递丢失、投影失败等）。
+- Then（候选预期）系统不伪造成功，也不丢失已提交业务内容；索引通过可靠重试或回读业务事实恢复一致。
+- 待确认：业务提交与索引是双事实，权威回读、幂等键、失败可见性与恢复协议；不得用索引状态反向否定业务提交成功。
+
+<a id="scn-021"></a>
+## SCN-021 派生创建 LightTrackerItem
+
+**业务规则：用户确认 D-008；验收表述 Draft。** 关联 INV-026/027、FACT-013。
+
+- Given 已创建 Working Set 聚合与 Tracker 聚合。
+- When 执行 TrackerItem 派生（Copy-on-Write，不立即物化完整业务对象副本）。
+- Then 创建 LightTrackerItem，分配当前变体 LocalId、保留 CommonId，记录 SourceLocalId 与 SourceRevision，经 TrackerId/WorkingSetId 指向。
+- 反例：不得把派生等同立即物化；未物化不代表变体不存在。
+
+<a id="scn-022"></a>
+## SCN-022 LightTrackerItem 引用范围约束
+
+**候选；D-008 指向确认，范围约束规则未定。** 关联 INV-028。
+
+- Given LightTrackerItem 经 TrackerId/WorkingSetId 指向所属 Tracker 与 Working Set。
+- Then（候选预期）该 Tracker 属于该 Working Set 的有效工作范围，来源可追溯。
+- 待确认：范围约束的精确规则与校验协议。
+
+<a id="scn-023"></a>
+## SCN-023 未物化经 Query 与工厂重建
+
+**业务规则：用户确认 D-008；验收表述 Draft。** 关联 INV-029/030。
+
+- Given 派生后的 LightTrackerItem 处于未物化（VIRTUAL）状态，无本地完整业务内容。
+- When 业务调用方经 Working Set 解析身份后，通过业务 BC 的 CQRS Query 获取业务对象。
+- Then 业务 BC 借助工厂以派生来源（Source Cut）重建完整业务聚合并返回；调用方不感知底层是否已物化。
+- 边界：Working Set 不拥有或重建业务 BC 完整状态；业务对象内部不变量由业务 BC 负责。
+
+<a id="scn-024"></a>
+## SCN-024 首次 COW 并发反例
+
+**候选；D-008 提出，物化协议未定。** 关联 INV-031/032。
+
+- Given 同一 LightTrackerItem 未物化，两个命令并发首次本地写入。
+- When 双方都尝试物化并提交完整业务对象。
+- Then（候选预期）最多一个业务对象物化获胜，身份（LocalId 候选）保持不变，失败方重读后重新校验。
+- 待确认：首次物化完成标志与有效内容指针、LocalId 是否等同业务聚合变体身份、业务内容与 LightTrackerItem 更新是否同步原子。

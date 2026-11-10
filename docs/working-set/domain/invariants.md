@@ -71,3 +71,30 @@ INV-014 的“有结构父时”不要求所有 Tracker 非空父；INV-011 的�
 | INV-023 | 完成创建前必须确定符合当前范围组织规则的位置，允许的结构重组在此前完成 | D-005/D-006 直接确认；合法父范围复用 INV-014，默认继承属于 POL-010，不提升为永不例外的真理 | SCN-016/018：合法显式重组、缺父和环反例 |
 
 已确认业务子句可作测试期望，不批准整份 INV 的实现列。父后续删除/停用导致引用无效属于 QUESTION-009.a；不能拿 INV-014 自动决定清空父、级联或拒删。INV-020 的“未批准创建后可改”现收敛为 INV-022 明确禁止。INV-021 中父也选的默认关系现由 POL-010 补齐，显式重组仍允许。
+
+## D-007：LightTrackerItem 与业务对象的身份一致性（候选）
+
+业务规则按 D-007 保持用户确认（TrackerItem 契约、业务 BC 拥有聚合、SK 管公共身份）；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-007 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-007)。
+
+| 编号 | 约束 | 确认与边界 | 验证 |
+| --- | --- | --- | --- |
+| INV-024 | 首次 COW 建立本地业务对象时，该对象与对应 LightTrackerItem 的公共身份（CommonId/LocalId）保持一致 | 候选；D-007 提出但未确认事务/一致性协议，LightTrackerItem 是否权威待定 | [SCN-019](../scenarios/core-scenarios.md#scn-019) |
+| INV-025 | 业务对象修改成功但索引更新失败时，系统状态与可恢复结果一致（不伪造成功，也不丢失已提交业务内容） | 候选；业务提交与索引是双事实，收敛协议待设计 | [SCN-020](../scenarios/core-scenarios.md#scn-020) |
+
+已确认的「业务 BC 拥有完整领域状态与不变量、SK 只负责公共身份与工作集机制」是职责边界，不因此自动批准 LightTrackerItem 的聚合边界、权威性、CommonId/LocalId/Revision/Version 分配或跨 BC 事务方案。
+
+## D-008：LightTrackerItem 权威聚合与 COW 派生（候选审查）
+
+业务规则按 D-008 保持用户确认（LightTrackerItem 是独立聚合、COW 延迟物化、身份与来源字段、CQRS 工厂重建）；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-008 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-008)。
+
+| 编号 | 约束 | 确认与边界 | 验证 |
+| --- | --- | --- | --- |
+| INV-026 | LightTrackerItem 派生时具有明确当前 LocalId 与 CommonId | D-008 第 7 条直接确认；编码与并发分配协议候选 | SCN-021 |
+| INV-027 | 派生变体的来源信息可追溯（SourceLocalId/SourceRevision） | D-008 第 8 条直接确认；SourceRevision 快照语义候选 | SCN-021/022 |
+| INV-028 | LightTrackerItem 经 TrackerId/WorkingSetId 指向的 Tracker 与 Working Set 满足工作范围约束 | D-008 第 9 条指向确认；范围约束具体规则候选 | SCN-022 |
+| INV-029 | 未物化不代表业务变体不存在 | D-008 第 6 条 COW 不立即物化直接确认；VIRTUAL 是合法状态 | SCN-023 |
+| INV-030 | 业务对象内部不变量由业务 BC 负责，Working Set 不拥有或重建 | D-008 第 2/12 条直接确认 | 跨 BC 合并/COW 场景 |
+| INV-031 | 同一 LightTrackerItem 首次物化后仅一个有效业务对象身份 | 候选；LocalId 是否等同业务聚合变体身份未定 | SCN-024（并发反例） |
+| INV-032 | LightTrackerItem 与业务对象持久化之间的可观察一致性 | 候选；同步原子性未定 | SCN-024 |
+
+已确认子句可作测试期望，不批准完整 INV 实现列、物化完成标志、有效内容指针或跨 BC 事务方案。

@@ -84,3 +84,26 @@ D-004 已确认裁剪根的 parentId=null、sourceId 仍指直接来源；其他
 QUESTION-009.a：父 Tracker 后续删除或停用时如何处理仍存在的子 Tracker？候选包括拒绝该父生命周期操作、保留有明确历史/停用语义的引用，或另行明确业务处置；本轮不选择。不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
 
 “创建完成”的可观察时点、与 Working Set 纳入/发布的关系及失败重试属于待细化协议；不预建复杂 Draft Tracker 状态机。组织位置冻结不关闭 Working Set 加入新 Tracker 的能力。
+
+## D-007 后的当前未决项
+
+QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具体业务对象聚合（Requirement/Part/Process 等完整独立聚合），Working Set 通过 TrackerItem 公共契约协作，只负责公共身份与工作集机制，不拥有业务对象状态、生命周期与不变量。原「Tracker 内部或独立边界」二选一不再成立。
+
+继续开放（均为候选，不自动批准）：
+
+- **LightTrackerItem 聚合边界**：完整边界、内部属性与领域行为；是否拥有有效变体及版本定位的权威状态；不得因已有索引表就判定其必为聚合根，也不否定候选聚合定位。
+- **身份信息分配**：CommonId、LocalId、Revision、Version 如何分配到 TrackerItem 契约与 LightTrackerItem。
+- **跨 BC 首次 COW 一致性**：新业务对象与 LightTrackerItem 如何一致；业务对象修改成功但索引更新失败如何处理。
+- **业务 revision 与 Working Set revision 的关系**：是否同一概念、由谁权威。
+- **TrackerItem 接口的最小共同语义**：应提供哪些公共能力。
+- **协调职责**：跨 BC 业务校验与公共工作集操作由谁协调（沿用已确认的「BC 校验并提交、SK 管选择/协调/结果」职责，具体协议仍候选）。
+
+## D-008 后的尚待裁定
+
+1. 源端 Revision 在派生后发生变化，未物化的子工作集读取哪个版本（SourceRevision 的版本选择策略）。
+2. LightTrackerItem.LocalId 是否直接作为业务聚合变体的 LocalId。
+3. 首次物化时是否必须使用派生时预分配的 LocalId。
+4. 首次物化的完成标志和有效内容指针如何定义。
+5. 业务内容与 LightTrackerItem 更新是否必须同步原子完成。
+
+以上均为候选，不自动确认；不得因已有 `air_ws_items_index` 数据库表反向决定领域模型，只可作实现映射参考。
