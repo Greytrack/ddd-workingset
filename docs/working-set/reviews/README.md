@@ -17,3 +17,5 @@
 
 - [2026-11-10 候选不变量逐条审查](2026-11-10-invariant-evidence-review.md)：区分已接受测试依据与仍待批准的 INV 全文。
 - [2026-11-10 阶段 4 集中评审](2026-11-10-stage-4-productspace-classification-review.md)：ProductSpace/Classification/绑定、删除语义与 D-019 Diff/Merge 衔接裁定。
+- [2026-11-10 首版基线审核](2026-11-10-baseline-v1-audit.md)：首版领域模型基线 v1 静态一致性审核；结论「通过（附观察项）」，不构成发布/Commit/Tag 授权。
+- [2026-11-10 阶段 5 契约层计划](2026-11-10-stage-5-contract-plan.md)：契约层议题顺序（T1 Merge 执行协议 → T2 绑定与删除 → T3 物化协议 → T4 跨 BC 契约 → T5 最小纵向切片）、产出物与门禁。

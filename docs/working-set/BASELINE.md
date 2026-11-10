@@ -10,7 +10,7 @@
 
 ## 当前基线状态
 
-事实与政策主题已有 Accepted 基线；首版领域模型候选基线已接受（含 ProductSpace/Classification/绑定）；正式发布仍为 Unreleased。
+事实与政策主题已有 Accepted 基线；首版领域模型候选基线已接受（含 ProductSpace/Classification/绑定与 Diff/Merge 聚合定位），并通过[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)（Reviewed，结论「通过（附观察项）」，2026-11-10）；阶段 4 领域知识扩充已收尾，当前转入阶段 5 契约层。正式发布仍为 Unreleased。
 
 用户已于 2026-11-09 明确批准阶段 3.1 首版清单，并确认单工作集 CommonId 唯一及派生附件、关系固定。
 
@@ -22,6 +22,7 @@
 - 阶段 4 补充：ProductSpace 独立聚合（Shared Kernel）、Classification 投影、默认 WorkingSet（Id=1 不可删除/隐藏）、SpaceBinding/TrackerBinding 为 WorkingSet 聚合内两个 Entity、Tracker 删除/移除语义、Diff/Merge 聚合定位（MergeRound 载体 + MergeCheckpoint 独立；未物化可参与 Diff；Merge 修改未物化目标时构建业务聚合并 save）（详见 [阶段 4 集中评审](reviews/2026-11-10-stage-4-productspace-classification-review.md)）。
 - **D-019（Diff/Merge 衔接）**：未物化变体可参与 Diff；未物化目标被 Merge 修改时在 merge 中构建业务聚合正常 save（物化与修改一体）；合并决策为用户决策、command 入参，作为 ValueObject 归属 MergeRound 聚合；MergeCheckpoint 是独立聚合；MergeRound 是合并载体（LRO 发起后记录参数、进度、成功/失败）；共享 Tracker 不参与 Merge，非共享只允许直接父子准入。
 - 未接受部分：Working Set 聚合内部结构细节、LightTrackerItem 完整属性/物化标志/内容指针、绑定 Entity 内部结构、软删/彻底删除机制、Diff/Merge 的差异冻结/令牌/幂等执行协议。
+- 首版基线审核：[2026-11-10 首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)（Reviewed，通过附观察项；观察项：D-019 无对应 ADR、`aggregate-model` 阶段 3 候选根表待收敛、图表渲染未验证、实现证据为零）。
 - 相关 ADR：[ADR-0001](adr/0001-tracker-independent-aggregate.md)、[ADR-0002](adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](adr/0003-cow-event-driven-final-consistency.md)、[ADR-0004](adr/0004-productspace-independent-aggregate.md)（均已 Accepted）。
 
 ## 当前已确认领域文档
@@ -82,6 +83,8 @@
 
 ## 最近基线变更
 
+- **2026-11-10 阶段 4 收尾与首版基线审核**：阶段 4 领域知识扩充结束；[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)结论「通过（附观察项）」（Reviewed）。观察项：D-019 无对应 ADR、`aggregate-model` 阶段 3 候选根表待收敛、图表渲染未验证、实现证据为零。转入阶段 5 契约层，首议题为 Diff/Merge 执行协议（QUESTION-015）。发布仍 Unreleased。
+
 - **2026-11-10 ADR-0004 转 Accepted**：用户明确批准 [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md) 为 Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054）；ADR-0001～0004 现全部 Accepted。发布仍 Unreleased。
 
 - **2026-11-10 阶段 4（D-019）**：用户确认 Diff/Merge 衔接——未物化变体可参与 Diff；未物化目标被 Merge 修改时在 merge 中构建业务聚合正常 save；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合；MergeRound 记录参数/进度/成功失败；共享 Tracker 不参与 Merge、非共享只允许直接父子准入。写入 [候选基线](domain/model-baseline-candidate-v1.md) 第 5/7/10 节、FACT-027、INV-061～063、SCN-055/056。发布仍 Unreleased。
@@ -104,3 +107,7 @@
 ## 阶段 3 候选评审登记
 
 [阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md) 已整理责任 A/B/C、三套聚合图、B01—B12 与八项裁定，并记录 D-001～D-018 裁定。领域模型见 [首版基线候选](domain/model-baseline-candidate-v1.md)；ADR-0001～0004 均已 Accepted。发布仍 Unreleased。
+
+## 阶段 5 契约层（2026-11-10 起）
+
+阶段 4 收尾与首版基线审核完成后进入契约层：[阶段 5 契约层计划](reviews/2026-11-10-stage-5-contract-plan.md)（Draft）。首议题 T1 Merge 执行协议（`QUESTION-015`），随后 T2 绑定与删除契约、T3 LightTrackerItem 物化协议、T4 跨 BC 公共契约；契约确认后才启动 T5 最小纵向切片。发布仍 Unreleased。

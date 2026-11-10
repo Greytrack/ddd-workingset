@@ -1,6 +1,6 @@
 # 阶段 4：ProductSpace、Classification 与绑定模型集中补充评审
 
-**状态：Draft / Reviewed（集中补充评审，供基线批准前决策）**
+**状态：Reviewed（阶段 4 已收尾，2026-11-10）；第 2～7 节裁定已并入候选基线并通过首版基线审核。**
 
 - 日期：2026-11-10
 - 范围：ProductSpace、Classification、SpaceBinding/TrackerBinding、默认 WorkingSet、Tracker 删除与移除。
@@ -86,3 +86,9 @@
 聚合定位：MergeRound、MergeCheckpoint 属合并模型区域的聚合，不是三类核心聚合（Working Set/Tracker/LightTrackerItem）之一。
 
 仍待（执行协议，留实施）：差异冻结/比较令牌、幂等键、乱序确认、MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 精确字段映射。
+
+## 8. 阶段 4 收尾（2026-11-10）
+
+阶段 4 的领域知识扩充到此结束。本评审第 2～7 节的裁定已分别落地为 FACT-024～027、POL-012～015、INV-053～063、SCN-050～056，并写入[候选基线](../domain/model-baseline-candidate-v1.md) 第 9/10 节与 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)（Accepted）。
+
+首版基线审核结论见 [2026-11-10 首版基线审核](2026-11-10-baseline-v1-audit.md)：**通过（附观察项）**。后续不再扩充阶段 4 领域知识；未决执行协议转入阶段 5 契约层（`QUESTION-015`）。

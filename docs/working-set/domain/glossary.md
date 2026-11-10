@@ -253,3 +253,13 @@ D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则保�
 - ProductSpace 移除最后一个 Tracker → 不触发空间移除，SpaceBinding 保留。
 - 移除 ProductSpace 时仍有 TrackerBinding → 抛出异常，有 Tracker 时不允许移除空间绑定。
 - 默认 WorkingSet 下共享 Tracker 在空且无子时可删除。
+
+## Diff/Merge 聚合定位（阶段 4 补充，D-019）
+
+用户 2026-11-10 确认（FACT-027）：
+
+- **MergeRound／合并轮次**：合并的载体聚合。发起 LRO 后记录本轮参数、进度、成功与失败信息，并持有本轮合并决策；**不是三类核心聚合之一**，属合并模型区域。
+- **Merge Decision／合并决策**：用户决策，来自 command 入参；作为 **ValueObject 归属 MergeRound 聚合**，不是独立聚合或实体根。`CONCEPT-015` 的决定语义在此收敛归属。
+- **MergeCheckpoint／合并检查点**：**独立聚合**，表达「差异已处理」的确认/撤销事实，不等同内容相等；键候选为有向 source-target-family，确认/撤销需因果单调。
+- **差异冻结／比较令牌**：待定执行协议（`QUESTION-015`），尚未确认机制，不得据此宣称 D-019 已确定执行细节。
+- 准入与物化：未物化变体可参与 Diff；未物化目标被 Merge 修改时在 merge 中构建业务聚合正常 save（物化与修改一体）；共享 Tracker 不参与 Merge，非共享只允许直接父子准入。
