@@ -166,3 +166,14 @@ Source Change Order、Derivation Baseline、Materialization Claim 均为候选�
 - 不因此新增 OriginLocalId、ItemVariant、Manifest 或额外谱系聚合。
 
 修正说明：前文 D-008 的「SourceLocalId = 直接来源变体身份」、D-009 的「SourceRevision 快照语义」、D-010 的「SourceLocalId 双语义（历史派生来源 + 当前有效内容来源）」均为历史分析，现由 D-012 收敛为「当前有效内容来源」单一职责，保留历史记录但以本节为准。
+
+## 多级派生的直接有效来源定位（D-013）
+
+用户确认，并修正此前「逐级递归解析未物化中间变体」的候选假设：
+
+- **SourceLocalId 直接指向实际拥有完整业务内容的变体**，不是直接父工作集中的历史派生来源。
+- 直接上游已物化 → SourceLocalId 指向该上游；直接上游未物化 → 继续向上寻找最近一个实际拥有完整内容的上游，直接定位。
+- **不采用对未物化中间变体逐级递归解析**。多级派生（R0→R1→R2）中，若仅 R0 已物化，则 R1.SourceLocalId=R0、R2.SourceLocalId=R0（R2 跳过未物化的 R1 直接指向 R0）。
+- COW 依据 SourceLocalId 发现所有依赖该实际内容来源的未物化 LightTrackerItem，即使分布在不同层级 Working Set 也都要物化（扇出）。
+
+前文 D-012 的「多级派生逐级解析」候选假设被 D-013 排除，保留历史追溯。

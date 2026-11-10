@@ -159,15 +159,62 @@ flowchart LR
     Before -->|"COW 物化（LocalId/CommonId 不变）"| After
 ```
 
-多级派生（R0→R1→R2）：各层按自身 SourceLocalId 解析来源，历史派生关系不要求由 LightTrackerItem 保存。
+多级派生（R0→R1→R2）：D-012 原按逐级解析绘制，现由 D-013 修正为直接有效来源定位（见下节）。历史派生关系不要求由 LightTrackerItem 保存。
 
 ```mermaid
 flowchart LR
     R0["R0（WS0）<br/>CommonId=C100, LocalId=R0"]
     R1["R1（WS1）<br/>SourceLocalId=R0"]
-    R2["R2（WS2）<br/>SourceLocalId=R1"]
+    R2["R2（WS2）<br/>SourceLocalId=R1（D-012 逐级假设，已被 D-013 排除）"]
     R1 -->|"解析来源"| R0
-    R2 -->|"解析来源"| R1
+    R2 -->|"解析来源（逐级，已排除）"| R1
 ```
 
-说明：R0→R1→R2 的历史派生链不要求由 LightTrackerItem 保存，其承载方式保持开放；多级事件传播机制待确认。
+## 直接有效来源定位与依赖者扇出（D-013）
+
+已确认：SourceLocalId 直接指向实际拥有完整业务内容的变体，不逐级递归解析未物化中间变体。
+
+场景 A（仅 R0 物化，R1/R2 未物化）：R1.SourceLocalId=R0、R2.SourceLocalId=R0，R0 修改触发 R1、R2 都 COW 物化。
+
+```mermaid
+flowchart LR
+    R0["R0（WS0）已物化"]
+    R1["R1（WS1）<br/>SourceLocalId=R0"]
+    R2["R2（WS2）<br/>SourceLocalId=R0"]
+    R0 -->|"有效来源定位"| R1
+    R0 -->|"有效来源定位（直接，跳过 R1）"| R2
+```
+
+场景 B（R0/R1 已物化，R2 未物化）：R2.SourceLocalId=R1；R0 修改不物化 R2，R1 修改才物化 R2。
+
+```mermaid
+flowchart LR
+    R0["R0（WS0）已物化"]
+    R1["R1（WS1）已物化"]
+    R2["R2（WS2）<br/>SourceLocalId=R1"]
+    R0 -->|"派生"| R1
+    R1 -->|"有效来源定位"| R2
+```
+
+COW 扇出时序：同一实际来源修改，触发所有依赖该来源的未物化变体物化（不限派生深度）。
+
+```mermaid
+sequenceDiagram
+    participant SBC as 来源业务 BC
+    participant EV as 事件总线
+    participant H as COW 物化 Handler
+    participant B1 as 业务 BC（R1）
+    participant B2 as 业务 BC（R2）
+
+    SBC->>SBC: 获取修改前不可变快照 A
+    SBC->>SBC: 修改并保存
+    SBC->>EV: 来源变更事件（快照 A）
+    EV->>H: 依据 SourceLocalId 查找全部受影响变体
+    H->>H: 发现 R1、R2（都 SourceLocalId=R0）
+    H->>B1: 物化 R1（快照 A）
+    H->>B2: 物化 R2（快照 A）
+    B1-->>H: R1 物化完成
+    B2-->>H: R2 物化完成
+    H->>H: 通知 LightTrackerItem 更新有效来源（SourceLocalId=LocalId）
+    Note over H: 不要求所有目标在同一全局事务完成
+```

@@ -510,3 +510,59 @@ WS0/R0 → WS1/R1 → WS2/R2，R1.SourceLocalId=R0、R2.SourceLocalId=R1 均未�
 ### 追溯
 
 [术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-035/036](../scenarios/core-scenarios.md#scn-035)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-013"></a>
+## D-013：多级派生采用直接有效来源定位与依赖者批量 COW（2026-11-10）
+
+**业务裁定：用户正式确认；来源修改与派生并发、事件延迟/乱序的首次来源确认等边界协议仍开放；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十四项）
+
+1. 多级派生中 LightTrackerItem 的 SourceLocalId 直接指向实际拥有完整业务内容的变体。
+2. 不采用对未物化中间变体逐级递归解析的策略。
+3. 直接上游已物化则 SourceLocalId 指向该上游。
+4. 直接上游未物化则继续向上找最近实际拥有完整内容的上游，直接定位。
+5. SourceRevision 与 SourceLocalId 一起表达当前有效业务内容定位，正式术语 SourceRevision。
+6. 来源修改前获取修改前完整内容快照。
+7. 来源修改保存后发布携带不可变快照的事件。
+8. COW 依据 SourceLocalId 发现所有依赖该实际来源的未物化 LightTrackerItem。
+9. 这些目标即使分布在不同层级 Working Set 也都要 COW 物化（扇出）。
+10. 目标物化后 SourceLocalId=LocalId、SourceRevision=Revision。
+11. 保留 D-010 异步最终一致。
+12. 保留 D-011 首次快照优先。
+13. LightTrackerItem 不承担历史派生关系保存职责。
+14. 不引入 Manifest、ItemVariant 或额外领域聚合。
+
+知识分类：`FACT-018`（[facts](../domain/facts.md)）。
+
+### 修正的候选假设
+
+原 D-012 的「多级派生逐级递归解析未物化中间变体」候选假设被 D-013 排除，保留历史追溯；当前采用直接有效来源定位。
+
+### 核心领域不变量（去重）
+
+- INV-043：未物化变体直接指向实际拥有完整业务内容的来源（直接定位，非逐级递归）。
+- INV-044：同一实际来源修改时保护所有符合条件的直接内容依赖者，不限派生深度（扇出）。
+- 其余（COW 不改变 LocalId/CommonId、Local-backed 指向自身、首次快照优先、物化唯一性）已由 INV-040/042/037/038 覆盖，不重复编号。
+
+### Query 解析模型
+
+查询业务对象：定位 LightTrackerItem → 获取 SourceLocalId + SourceRevision → 直接定位实际拥有完整内容的业务变体 → 业务 BC 工厂构造完整聚合。不再将逐级解析未物化 LightTrackerItem 作为正常主线。
+
+### 需要保留的未决问题
+
+1. 来源修改与新派生并发时，目标继承修改前还是修改后事实。
+2. 事件延迟/乱序时如何确认每个目标变体的首次有效来源修改。
+3. 依赖者集合在事件生成时确定还是消费时发现。
+4. 新上游物化节点出现后，已存在下游未物化变体是否需要重新定位。
+5. SourceRevision 指向可变头版次时派生基准如何稳定表达。
+
+这些属尚需审查的边界/协议，不自行添加新聚合解决。
+
+### 聚合模型收敛
+
+继续围绕 Working Set、Tracker、LightTrackerItem 收敛；业务 BC 保留完整业务聚合所有权；不引入 Manifest、ItemVariant 或历史谱系聚合。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-037/038](../scenarios/core-scenarios.md#scn-037)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。

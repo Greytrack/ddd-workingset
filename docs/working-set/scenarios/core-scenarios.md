@@ -447,12 +447,32 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：Revision=3 仅为示例，不推断物化时业务 Revision 必然不变；R0→R1 历史派生关系不要求由 LightTrackerItem 保存。
 
 <a id="scn-036"></a>
-## SCN-036 多级派生与有效内容解析
+## SCN-036 多级派生与有效内容解析（D-012 历史，逐级解析假设被 D-013 排除）
 
-**候选；D-012 提出，多级事件传播机制未确认。** 关联 FACT-017。
+**历史候选；D-012 提出「逐级递归解析」，现由 D-013 排除。** 关联 FACT-017/FACT-018。
 
-- Given WS0/R0 → WS1/R1 → WS2/R2；R1.SourceLocalId=R0、R2.SourceLocalId=R1，R1/R2 均未物化。
-- When R0 修改：分析 R1 的 COW（R1 据修改前 R0 快照物化）与 R2 的有效内容解析关系（R2 经 R1 定位）。
-- When R1 已物化后再次修改：R2 应保护修改前的 R1 内容（据 R1 修改前快照物化）。
-- Then（候选预期）多级派生中，各层目标变体按各自 SourceLocalId/SourceRevision 解析，并据首次相关修改前快照物化；不要求 LightTrackerItem 保存完整历史链。
-- 待确认：完整事件传播策略、谱系历史承载方式；不自行确认新聚合或传播机制。
+- 原假设：WS0/R0 → WS1/R1 → WS2/R2；R1.SourceLocalId=R0、R2.SourceLocalId=R1，R1/R2 均未物化，R2 经 R1 逐级定位。
+- D-013 修正：R2.SourceLocalId 直接指向实际拥有完整内容的变体（若 R1 未物化则直接指向 R0），不逐级递归解析。
+- 现见 SCN-037（场景 A）与 SCN-038（场景 B）。
+
+<a id="scn-037"></a>
+## SCN-037 仅根物化的直接定位与扇出（场景 A）
+
+**业务规则：用户确认 D-013；验收表述 Draft。** 关联 FACT-018、INV-043/044。
+
+- Given WS0/R0 → WS1/R1 → WS2/R2；仅 R0 已物化，R1、R2 未物化。
+- Then R1.SourceLocalId=R0、R2.SourceLocalId=R0（R2 跳过未物化的 R1 直接指向 R0）。
+- When R0 修改前形成快照 A、修改后为 B，发来源变更事件。
+- Then COW 依据 SourceLocalId 发现依赖 R0 的 R1、R2，二者均以快照 A 物化（扇出，不限派生深度）。
+- 反例：不得采用逐级递归解析；R2 不因 R1 未物化而无法定位。
+
+<a id="scn-038"></a>
+## SCN-038 中间层物化后的定位与依赖（场景 B）
+
+**业务规则：用户确认 D-013；验收表述 Draft。** 关联 FACT-018、INV-044。
+
+- Given R0、R1 已物化，R2 未物化。
+- Then R2.SourceLocalId=R1（R1 已物化，是最近实际拥有完整内容的上游）。
+- When R0 修改：不应因此直接物化 R2（R2 不依赖 R0）。
+- When R1 修改：R2 才依据 R1 修改前内容进行 COW。
+- 反例：R0 修改不得触发 R2 物化；依赖者集合由 SourceLocalId 指向的实际来源决定。

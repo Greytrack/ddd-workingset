@@ -135,3 +135,11 @@ LightTrackerItem 保持 Source-backed / Local-backed 两个稳定业务状态，
 前文 D-008/D-009/D-010 将 SourceLocalId 描述为历史派生来源、SourceRevision 描述为快照语义、SourceLocalId 双语义的表述均为历史分析，现由 D-012 收敛为「当前有效内容来源」单一职责。R0→R1 历史派生关系不要求由 LightTrackerItem 保存，历史谱系最终承载方式保持开放；不新增 OriginLocalId、谱系聚合或独立历史聚合。
 
 LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/SourceRevision 只表达当前有效内容来源，历史派生关系由外部机制承载（待定）。图见 [契约与聚合图](../diagrams/trackeritem-contract.md) 与 [生命周期图](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## D-013：直接有效来源定位与依赖者批量 COW（Draft 设计影响）
+
+已确认：多级派生中 SourceLocalId 直接指向实际拥有完整业务内容的变体，不采用对未物化中间变体逐级递归解析；直接上游已物化则指向该上游，未物化则继续向上找最近实际拥有完整内容的上游。COW 依据 SourceLocalId 发现所有依赖该实际来源的未物化 LightTrackerItem，即使分布在不同层级 Working Set 也都需物化（扇出）。
+
+前文 D-012 的「多级派生逐级解析」候选假设被 D-013 排除，保留历史追溯。LightTrackerItem 不承担历史派生关系保存职责；不引入 Manifest、ItemVariant 或额外领域聚合。
+
+核心聚合仍为 Working Set、Tracker、LightTrackerItem，业务 BC 保留完整业务聚合所有权。图见 [有效来源定位图](../diagrams/lighttrackeritem-lifecycle.md)。
