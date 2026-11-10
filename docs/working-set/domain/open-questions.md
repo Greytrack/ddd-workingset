@@ -20,6 +20,7 @@
 | P2 `QUESTION-012` | **Working Set 与 Binding 的规模和并发上限是多少？** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备+发布指针。 | 决定 `AP-001` 与 `AP-003` 的可行性及热点。 | 采集 P95/P99 数量、写并发、发布频率和允许时延。 | 物理聚合伸缩，不阻塞术语确认 |
 | P0 `QUESTION-013` | **Working Set 通用机制与四个业务 BC 专有规则的边界在哪里？** | BC 整体校验并决定提交、SK 管选择/协调/结果已确认；Part、DQA、GateFlow 接入范围见专项。剩余为其他能力分工及公共协议，不重新开放最终提交权。 | 决定 create/extend/resolve/diff/merge 的契约、依赖方向、事务和失败语义；若边界过宽会形成巨型跨域服务。 | ALM 验证合并拒绝，PLM Part 验证共享纳入查看，GateFlow/DQA 按确认后的接入能力选择场景。 | 阶段 3.0、所有跨 BC 合同 |
 | P1 `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本和兼容性？** | A 共同发布；B 版本化 Published Language；C 适配器／ACL 隔离演进。 | 决定共享模型范围、契约版本、弃用策略和团队协作方式。 | 访谈发布责任、升级节奏、兼容期限和变更审批者。 | 不阻塞概念发现，阻塞正式公共契约 |
+| P0 `QUESTION-015` | **Diff/Merge 执行协议如何定义？** 业务裁定已由 D-019 确认（未物化可参与 Diff、Merge 修改未物化目标时构建业务聚合并 save、决策 VO 归 MergeRound、MergeCheckpoint 独立、共享 Tracker 不参与 Merge）。剩余为执行协议：① 差异冻结与比较令牌；② 幂等键；③ 乱序确认（旧确认晚于撤销）；④ MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 的精确字段映射。 | A 令牌绑定冻结差异清单 + 幂等键（推荐）；B 每次执行重新比较、仅以版本号乐观校验；C 以事件序号串行化单执行队列。 | 决定 MergeRound 参数/进度/终态的持久化、Checkpoint 因果单调、过期审阅与乱序确认防护；不改变 D-019 已确认的聚合定位。 | 用 SCN-055/056 扩场景：过期审阅、撤销晚到、DEFER 残留、部分成功后重试、未物化目标物化与修改同事务失败。 | Merge 契约（阶段 5 B1） |
 
 ## 建议确认顺序（阶段 3 历史规划）
 
@@ -214,3 +215,14 @@ QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具�
 3. 缺失 3（Revision 升级触发 COW）：触发。
 
 仍保留：事件同步细节、幂等去重留待实施；Source Cut（物化固定依据）与 SourceRevision（未物化读取来源 Revision）的区分已由 D-018 澄清。
+
+## D-019 后的待定执行协议（2026-11-10）
+
+D-019 已确认 Diff/Merge 的业务规则与聚合定位（FACT-027、INV-061～063、SCN-055/056），执行协议仍待契约层裁定，登记为 `QUESTION-015`：
+
+1. **差异冻结与比较令牌**：一次 Diff 结果如何绑定比较上下文与双侧证据，避免把分页差异或过期清单当作实时差异。
+2. **幂等键**：重复提交同一轮 Merge 请求（网络重试、消息重投）如何识别为同一轮而不重复应用决定。
+3. **乱序确认**：撤销事件晚于确认事件到达时，Checkpoint 的确认/撤销因果单调如何保证（旧确认不得覆盖新撤销）。
+4. **字段映射**：MergeCheckpoint 的「业务 Revision」与 LightTrackerItem 的 `SourceRevision`／`Revision` 的精确对应关系；`KEEP_TARGET` 时 Revision 是否变化。
+
+边界：本问题不重新开放 D-019 已确认的业务规则，也不改变 MergeRound／MergeCheckpoint 的聚合定位；只裁定执行协议与字段映射。

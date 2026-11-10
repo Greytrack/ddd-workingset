@@ -66,7 +66,7 @@
 ## 6. 对基线候选的影响
 
 - `model-baseline-candidate-v1.md` 新增第 9 节（ProductSpace/Classification/绑定）。
-- 新增 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)（Proposed，未自动 Accepted）。
+- 新增 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)（起草时为 Proposed；2026-11-10 由用户明确批准为 **Accepted**）。
 - 新增 INV-053～059、SCN-050～054、[关系图](../diagrams/productspace-tracker-workingset.md)。
 - 是否阻塞基线批准：A/D 不冲突；B/C 是待确认的删除/移除联动边界，不改变已确认的聚合边界。建议基线批准时把第 5 节 1–4 点标为「批准但不含删除联动细节」，或先裁定 B/C。
 

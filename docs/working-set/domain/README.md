@@ -6,6 +6,11 @@
 
 每份文档应标明状态，并清楚区分已确认内容、假设、技术约束和开放问题；同一规则应有一个权威定义，其余位置使用链接引用。
 
+## 已接受领域文档
+
+- [facts-policy-baseline-v1.md](facts-policy-baseline-v1.md)：事实与政策主题基线 v1（Accepted，2026-11-10；覆盖阶段 3.1 的 R01—R19 与限定术语）；
+- [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：首版领域模型基线候选 v1（Accepted 候选，含 D-001～D-019 与阶段 4 补充；未正式发布）。
+
 ## 阶段 2 候选知识
 
 - [evidence-register.md](evidence-register.md)：来源代号、读取范围和确认状态；
@@ -17,4 +22,4 @@
 - [shared-kernel-boundary.md](shared-kernel-boundary.md)：已确认 Shared Kernel 外框与候选跨 BC 职责边界；
 - [aggregate-model.md](aggregate-model.md)：候选聚合边界分析。
 
-以上文件全部为 `Draft`，不属于当前 Accepted 设计基线。
+上述「阶段 2 候选知识」中的文件均为 `Draft`，不属于当前 Accepted 设计基线；「已接受领域文档」中的两份按各自状态行与 `BASELINE.md` 索引为准。

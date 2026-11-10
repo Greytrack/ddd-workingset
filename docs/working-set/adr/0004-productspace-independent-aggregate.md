@@ -1,9 +1,9 @@
 # ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型
 
-- **状态**：Proposed
+- **状态**：Accepted
 - **日期**：2026-11-10
 - **决策范围**：ProductSpace / Classification / SpaceBinding / TrackerBinding（阶段 4 补充）
-- **确认人／决策权威**：用户已确认相关业务规则（2026-11-10 补充）；本 ADR 文档尚待批准
+- **确认人／决策权威**：用户已确认相关业务规则（2026-11-10 阶段 4 补充）；本 ADR 于 2026-11-10 由用户明确批准为 Accepted
 - **替代**：无
 - **被替代于**：无
 

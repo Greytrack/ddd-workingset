@@ -16,3 +16,4 @@
 阶段 3.1 的限定确认矩阵、候选首版清单及不变量推导见 [规则收敛报告](2026-11-09-stage-3-1-rule-convergence.md)。全部推导仍待批准。
 
 - [2026-11-10 候选不变量逐条审查](2026-11-10-invariant-evidence-review.md)：区分已接受测试依据与仍待批准的 INV 全文。
+- [2026-11-10 阶段 4 集中评审](2026-11-10-stage-4-productspace-classification-review.md)：ProductSpace/Classification/绑定、删除语义与 D-019 Diff/Merge 衔接裁定。

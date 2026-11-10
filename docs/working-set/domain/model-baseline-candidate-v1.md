@@ -141,7 +141,7 @@
 
 **删除/移除语义（已裁定）**：共享 Tracker 从子 WS 移除仅解除 TrackerBinding；非共享无 Item 且无派生子 Tracker → 删除并解除绑定；非共享有派生子 Tracker → 不允许删除；任意 Tracker 有 TrackerItem → 不允许移除；非共享有组织子节点但无派生子节点 → 不允许删除（校验提示含子节点）；移除空间内最后一个 Tracker → 不触发空间移除（SpaceBinding 保留）；移除 ProductSpace 时仍有 TrackerBinding → 抛异常；默认 WorkingSet 共享 Tracker 空且无子时可删除。
 
-追溯：FACT-024～026、POL-012～015（修订 POL-006）、INV-053～060、SCN-050～054、[关系图](../diagrams/productspace-tracker-workingset.md)、[ADR-0004](../adr/0004-productspace-independent-aggregate.md)（Proposed）。
+追溯：FACT-024～026、POL-012～015（修订 POL-006）、INV-053～060、SCN-050～054、[关系图](../diagrams/productspace-tracker-workingset.md)、[ADR-0004](../adr/0004-productspace-independent-aggregate.md)（Accepted，2026-11-10）。
 
 仍待（实现细节）：绑定 Entity 内部结构、软删/彻底删除机制、级联删除实现。
 

@@ -1,9 +1,10 @@
 # Working Set Design Baseline
 
-- **Status**: Accepted（事实与政策主题基线 + 首版领域模型候选基线 + ADR-0001～0004；未正式发布）
+- **Status**: Accepted（事实与政策主题基线 + 首版领域模型候选基线 + ADR-0001～0004 全部 Accepted；未正式发布）
 - **Baseline Version**: 首版领域模型候选基线 v1（阶段 4，基于 D-001～D-019 及阶段 4 补充）
 - **Release Status**: Unreleased
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
+- **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）
 - **Released Git Tag**: None
 - **Last Updated**: 2026-11-10
 
@@ -21,7 +22,7 @@
 - 阶段 4 补充：ProductSpace 独立聚合（Shared Kernel）、Classification 投影、默认 WorkingSet（Id=1 不可删除/隐藏）、SpaceBinding/TrackerBinding 为 WorkingSet 聚合内两个 Entity、Tracker 删除/移除语义、Diff/Merge 聚合定位（MergeRound 载体 + MergeCheckpoint 独立；未物化可参与 Diff；Merge 修改未物化目标时构建业务聚合并 save）（详见 [阶段 4 集中评审](reviews/2026-11-10-stage-4-productspace-classification-review.md)）。
 - **D-019（Diff/Merge 衔接）**：未物化变体可参与 Diff；未物化目标被 Merge 修改时在 merge 中构建业务聚合正常 save（物化与修改一体）；合并决策为用户决策、command 入参，作为 ValueObject 归属 MergeRound 聚合；MergeCheckpoint 是独立聚合；MergeRound 是合并载体（LRO 发起后记录参数、进度、成功/失败）；共享 Tracker 不参与 Merge，非共享只允许直接父子准入。
 - 未接受部分：Working Set 聚合内部结构细节、LightTrackerItem 完整属性/物化标志/内容指针、绑定 Entity 内部结构、软删/彻底删除机制、Diff/Merge 的差异冻结/令牌/幂等执行协议。
-- 相关 ADR：[ADR-0001](adr/0001-tracker-independent-aggregate.md)、[ADR-0002](adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](adr/0003-cow-event-driven-final-consistency.md)、[ADR-0004](adr/0004-productspace-independent-aggregate.md)（ADR-0004 仍 Proposed）。
+- 相关 ADR：[ADR-0001](adr/0001-tracker-independent-aggregate.md)、[ADR-0002](adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](adr/0003-cow-event-driven-final-consistency.md)、[ADR-0004](adr/0004-productspace-independent-aggregate.md)（均已 Accepted）。
 
 ## 当前已确认领域文档
 
@@ -44,6 +45,7 @@
 - [ADR-0001：Tracker 独立聚合](adr/0001-tracker-independent-aggregate.md)：Accepted（D-001，2026-11-10）。
 - [ADR-0002：LightTrackerItem 作为 Working Set 权威聚合](adr/0002-lighttrackeritem-authoritative-aggregate.md)：Accepted（D-007/D-008/D-012，2026-11-10）。
 - [ADR-0003：COW 采用事件驱动最终一致与首次快照优先](adr/0003-cow-event-driven-final-consistency.md)：Accepted（D-009～D-018，2026-11-10）。
+- [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md)：Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054；2026-11-10）。
 
 ## 相关验收标准
 
@@ -80,6 +82,8 @@
 
 ## 最近基线变更
 
+- **2026-11-10 ADR-0004 转 Accepted**：用户明确批准 [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md) 为 Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054）；ADR-0001～0004 现全部 Accepted。发布仍 Unreleased。
+
 - **2026-11-10 阶段 4（D-019）**：用户确认 Diff/Merge 衔接——未物化变体可参与 Diff；未物化目标被 Merge 修改时在 merge 中构建业务聚合正常 save；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合；MergeRound 记录参数/进度/成功失败；共享 Tracker 不参与 Merge、非共享只允许直接父子准入。写入 [候选基线](domain/model-baseline-candidate-v1.md) 第 5/7/10 节、FACT-027、INV-061～063、SCN-055/056。发布仍 Unreleased。
 
 - **2026-11-09 阶段 3.1**：用户接受 R01—R17 及限定术语，补充确认 R18/POL-005 与 R19/FACT-006；登记首版规则清单，发布仍 Unreleased，Commit/Tag 为 None。
@@ -99,4 +103,4 @@
 
 ## 阶段 3 候选评审登记
 
-[阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md) 已整理责任 A/B/C、三套聚合图、B01—B12 与八项裁定，并记录 D-001～D-018 裁定。领域模型见 [首版基线候选](domain/model-baseline-candidate-v1.md)；ADR-0001～0003 已 Accepted，ADR-0004 仍 Proposed。发布仍 Unreleased。
+[阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md) 已整理责任 A/B/C、三套聚合图、B01—B12 与八项裁定，并记录 D-001～D-018 裁定。领域模型见 [首版基线候选](domain/model-baseline-candidate-v1.md)；ADR-0001～0004 均已 Accepted。发布仍 Unreleased。
