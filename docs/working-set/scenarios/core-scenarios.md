@@ -434,3 +434,25 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When 派生与来源修改并发，来源变更事件可能在派生基准建立前后到达。
 - Then（候选预期）R1 的 Derivation Baseline 决定「首次相关修改」的判定基准；派生基准之前的事件不触发 R1 物化。
 - 待确认：多级派生中各层需要保护的目标变体如何识别。
+
+<a id="scn-035"></a>
+## SCN-035 COW 前后 SourceLocalId/SourceRevision 字段对比
+
+**业务规则：用户确认 D-012；验收表述 Draft。** 关联 INV-040/041/042、FACT-017。
+
+- Given WS0 的 R0（CommonId=C100、LocalId=R0、Revision=3）；WS1 派生 R1（CommonId=C100、LocalId=R1、Revision=3）。
+- When COW 前（Source-backed）：R1.SourceLocalId=R0、R1.SourceRevision=3，通过来源解析完整业务内容。
+- When COW 完成后（Local-backed）：R1.LocalId=R1、R1.CommonId=C100、R1.SourceLocalId=R1、R1.SourceRevision=R1.Revision，真实业务内容已物化。
+- Then COW 不改变 LocalId、CommonId；SourceLocalId/SourceRevision 从指向来源切换为指向自身。
+- 边界：Revision=3 仅为示例，不推断物化时业务 Revision 必然不变；R0→R1 历史派生关系不要求由 LightTrackerItem 保存。
+
+<a id="scn-036"></a>
+## SCN-036 多级派生与有效内容解析
+
+**候选；D-012 提出，多级事件传播机制未确认。** 关联 FACT-017。
+
+- Given WS0/R0 → WS1/R1 → WS2/R2；R1.SourceLocalId=R0、R2.SourceLocalId=R1，R1/R2 均未物化。
+- When R0 修改：分析 R1 的 COW（R1 据修改前 R0 快照物化）与 R2 的有效内容解析关系（R2 经 R1 定位）。
+- When R1 已物化后再次修改：R2 应保护修改前的 R1 内容（据 R1 修改前快照物化）。
+- Then（候选预期）多级派生中，各层目标变体按各自 SourceLocalId/SourceRevision 解析，并据首次相关修改前快照物化；不要求 LightTrackerItem 保存完整历史链。
+- 待确认：完整事件传播策略、谱系历史承载方式；不自行确认新聚合或传播机制。

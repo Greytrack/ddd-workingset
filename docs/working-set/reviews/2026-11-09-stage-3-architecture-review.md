@@ -462,3 +462,51 @@ E. 多级派生中各层需要保护的目标变体如何识别。
 ### 追溯
 
 [术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-030—034](../scenarios/core-scenarios.md#scn-030)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-012"></a>
+## D-012：LightTrackerItem 有效来源与派生历史职责分离（2026-11-10）
+
+**业务裁定：用户正式确认；历史谱系承载方式与多级事件传播机制仍开放；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（用户十项）
+
+1. LightTrackerItem 的 SourceLocalId 表示当前有效内容来源的 LocalId，而非必须永久保存的历史派生来源身份。
+2. SourceRevision 表示当前有效内容来源的业务 Revision。
+3. SourceVersion 为表述错误，统一更正为 SourceRevision，不与并发控制 Version 混淆。
+4. 未物化时 SourceLocalId/SourceRevision 用于解析来源业务内容。
+5. COW 完成后 SourceLocalId=LocalId、SourceRevision=Revision，有效内容定位指向当前变体自身。
+6. COW 不改变 LocalId、CommonId。
+7. R0→R1 历史派生关系不要求由 LightTrackerItem 保存。
+8. 历史派生来源与当前有效内容来源必须区分，但本轮不决定历史关系由哪个领域对象或机制保存。
+9. 不新增 OriginLocalId、ItemVariant、Manifest 或额外谱系聚合。
+10. 保持 D-009～D-011 已确认规则。
+
+知识分类：`FACT-017`（[facts](../domain/facts.md)）。
+
+### 修正的旧设计
+
+- 将 SourceLocalId 描述成不可变历史来源（D-008/D-010 双语义）：修正为当前有效内容来源单一职责。
+- 将 SourceRevision 等同于不可变内容快照（D-009）：修正为当前有效内容来源的业务 Revision。
+- 将 SourceVersion 当作正式领域字段：统一为 SourceRevision。
+- 在 LightTrackerItem 中强制增加 OriginLocalId 或谱系聚合：不采用。
+
+旧材料保留历史分析，标记由 D-012 修正，不静默改写。
+
+### 核心领域不变量（去重）
+
+- INV-040：COW 不改变 LocalId、CommonId。
+- INV-041：Source-backed 时有效内容由 SourceLocalId + SourceRevision 解析。
+- INV-042：Local-backed 时 SourceLocalId=LocalId 且 SourceRevision=Revision。
+- 首次快照优先与物化后不可覆盖已由 D-011 的 INV-037/039 覆盖，不重复编号；「完成事件不得早于物化成功」属事件处理技术约束，不作领域不变量。
+
+### 多级派生示例
+
+WS0/R0 → WS1/R1 → WS2/R2，R1.SourceLocalId=R0、R2.SourceLocalId=R1 均未物化。R0 修改时 R1 据修改前 R0 快照 COW，R2 经 R1 定位；R1 物化后再次修改时 R2 保护修改前 R1 内容。不自行确认完整事件传播策略、谱系承载方式或新聚合。
+
+### 聚合模型收敛
+
+继续以 Working Set、Tracker、LightTrackerItem 为 Shared Kernel 核心聚合；Tracker、LightTrackerItem 独立聚合地位已确认。业务 BC 对象仍独立聚合，实现 TrackerItem 接口。不引入 Manifest、ItemVariant 或专门历史谱系聚合。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-035/036](../scenarios/core-scenarios.md#scn-035)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。

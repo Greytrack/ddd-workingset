@@ -143,3 +143,31 @@ sequenceDiagram
 ```
 
 注意：Source Change Order 如何表达（复用并发 version 还是独立序列）、Derivation Baseline 判定、Materialization Claim 证据保留均候选，不提前用数据库锁或消息队列偏移量替代业务裁定。
+
+## SourceLocalId / SourceRevision 职责分离（D-012 字段对比与多级派生）
+
+已确认：SourceLocalId 表示当前有效内容来源的 LocalId，SourceRevision 表示当前有效内容来源的业务 Revision；COW 前指向来源，COW 后指向自身。
+
+```mermaid
+flowchart LR
+    subgraph Before["COW 前（Source-backed）"]
+        B1["R1 未物化<br/>SourceLocalId = R0<br/>SourceRevision = 3<br/>经来源解析内容"]
+    end
+    subgraph After["COW 后（Local-backed）"]
+        A1["R1 已物化<br/>SourceLocalId = R1<br/>SourceRevision = R1.Revision<br/>有效内容定位 = 自身"]
+    end
+    Before -->|"COW 物化（LocalId/CommonId 不变）"| After
+```
+
+多级派生（R0→R1→R2）：各层按自身 SourceLocalId 解析来源，历史派生关系不要求由 LightTrackerItem 保存。
+
+```mermaid
+flowchart LR
+    R0["R0（WS0）<br/>CommonId=C100, LocalId=R0"]
+    R1["R1（WS1）<br/>SourceLocalId=R0"]
+    R2["R2（WS2）<br/>SourceLocalId=R1"]
+    R1 -->|"解析来源"| R0
+    R2 -->|"解析来源"| R1
+```
+
+说明：R0→R1→R2 的历史派生链不要求由 LightTrackerItem 保存，其承载方式保持开放；多级事件传播机制待确认。
