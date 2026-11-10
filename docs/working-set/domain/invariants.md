@@ -235,6 +235,6 @@ D-010 确认修改前事实作为事件关联的不可变内容快照（原 INV-
 | --- | --- | --- | --- |
 | INV-061 | 未物化变体可以参与 Diff（不要求已物化） | 用户确认 | SCN-055 |
 | INV-062 | 未物化目标被 Merge 修改时，构建业务聚合正常 save（物化与修改一体） | 用户确认 | SCN-055 |
-| INV-063 | MergeRound 聚合记录参数/进度/成功失败；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合 | 用户确认 | SCN-056 |
+| INV-063 | MergeRound 聚合记录参数/进度/成功失败；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合 | 用户确认 | SCN-056/059/060 |
 
 证据：FACT-027；场景 SCN-055/056。

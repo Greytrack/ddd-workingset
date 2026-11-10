@@ -56,13 +56,29 @@ D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint �
 
 ## 后果
 
-- 正面后果：三对象责任边界明确；过期审阅（Token 失效）与非法组合（`DEFER + markAsMerged`）在执行前即可拒绝；部分成功与重试已有明确表达。
+- 正面后果：三对象责任边界明确；过期审阅（Token 失效）与非法组合（`DEFER + markAsMerged`）在执行前即可拒绝；部分成功与轮次终态已有明确表达（Q4：一次执行即终态）。
 - 负面后果与风险：MergeRound 聚合承担编排并可能成为轮次级热点（大规模条目需分批执行）；确认时机绑定执行结果，若 BC 提交成功但 Checkpoint 写入失败，需由恢复/重试协议补齐（属 `QUESTION-015`）。
 - 迁移与兼容影响：无既有实现；不影响 ADR-0001～0004。共享 Tracker 与兄弟/跨代合并仍在准入层拒绝，不因本 ADR 放宽。
 
 ## 验证与追溯
 
-- 业务场景／反例：SCN-055（未物化参与 Diff 与修改）、SCN-056（MergeRound/Checkpoint 定位）；待补 SCN-057 起——过期审阅、撤销晚到、`DEFER` 残留、部分成功后重试、未物化目标物化与修改失败。B06（BC 拒绝不部分写入）、B08（部分成功与重试）、B09（ACCEPT 读源最新值）、B10（丢回执与乱序）。
-- 验收条件或测试：§7 行为矩阵八行、§5 状态机迁移、§8 `ApplyResult` 表达；测试 seam 与实现入口待 `implementation/`。
+- 业务场景／反例：SCN-055（未物化参与 Diff 与修改）、SCN-056（MergeRound/Checkpoint 定位）、SCN-057（过期审阅）、SCN-058（撤销晚到）、SCN-059（`DEFER` 残留与轮次终态）、SCN-060（部分成功后以新轮次重做）。B06（BC 拒绝不部分写入）、B08（部分成功）、B09（ACCEPT 读源最新值）、B10（丢回执与乱序）。
+- 验收条件或测试：§7 行为矩阵八行、§5 状态机迁移、§8 轮次终态与 `ApplyResult` 表达；测试 seam 与实现入口待 `implementation/`。
 - 实现入口：待办（当前无实现证据）。
 - 重新评估条件：出现跨轮次条目复用需求；Checkpoint 需要独立确认入口；Token 证据形式无法兑现「过期审阅」防护；BC 写能力与整体校验职责变化。
+
+## 2026-11-11 补充裁定：轮次一次执行即终态（Q4）
+
+用户于 2026-11-11 正式选择方案 B，作为本 ADR 决策范围的补充（不改变上文四项决定，ADR 状态保持 `Accepted`）：
+
+1. MergeRound 一次执行结束即进入终态，不提供同轮业务重试。
+2. 终态轮次不可重开、不可继续登记新决定或重新执行条目。
+3. 每个 MergeRound 只有一个最终 `ApplyResult`（本轮 `summary` + `itemResults` 的不可变快照）。
+4. 本轮部分成功不回滚已成功的业务修改与 MergeCheckpoint。
+5. 未完成条目（`Rejected` / `StaleEvidence` / `Deferred`）重做须重新比较并新建 MergeRound（新 `mergeRoundId`、有效 `ComparisonToken`）。
+6. 新轮次可仅选未完成条目，不自动重复上一轮已成功条目；新旧轮次的用户决定、执行状态与结果相互独立，旧结果保留可追溯。
+7. 消息重复投递的幂等处理不属于业务重试，仍遵循原幂等规则。
+
+终态判定：`Succeeded` ＝本轮全部条目成功处理；`PartiallySucceeded` ＝至少一项成功且存在未完成或失败项；`Failed` ＝无成功项且存在失败或未完成项。`KEEP_TARGET + markAsMerged=true` 属成功处理项；纯 `DEFER` 轮次归入 `Failed`，本轮不新增专用状态枚举。
+
+影响：早期「同一 MergeRound 内重试」候选设计作废；契约 §1/§4/§5/§7/§8 与 [MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md) 已同步。

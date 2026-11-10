@@ -226,3 +226,5 @@ D-019 已确认 Diff/Merge 的业务规则与聚合定位（FACT-027、INV-061�
 4. **字段映射**：MergeCheckpoint 的「业务 Revision」与 LightTrackerItem 的 `SourceRevision`／`Revision` 的精确对应关系；`KEEP_TARGET` 时 Revision 是否变化。
 
 边界：本问题不重新开放 D-019 已确认的业务规则，也不改变 MergeRound／MergeCheckpoint 的聚合定位；只裁定执行协议与字段映射。
+
+**2026-11-11 更新**：重试与终态已裁定（方案 B）——MergeRound 一次执行即终态、不可重开；未完成条目（`Rejected`/`StaleEvidence`/`Deferred`）须重新比较并新建 MergeRound；`ApplyResult` 为本轮不可变快照（见 [ADR-0005](../adr/0005-merge-execution-model.md) 补充裁定、契约 §8、SCN-059/060）。剩余待定：差异冻结/比较令牌的证据形式、幂等键、乱序确认、Checkpoint 字段映射细化。
