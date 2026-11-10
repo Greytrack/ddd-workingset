@@ -13,9 +13,9 @@
 | `CONCEPT-005` | **Tracker Branch（停用术语，仅历史追溯）** | D-001 排除其作为独立领域概念或聚合根。 | 原描述混合了演进线、来源及生命周期，不机械映射为一个 Tracker；具体语义重新审查。 | Historical；由 D-001 终止候选资格 |
 | `CONCEPT-006` | **Item（停用为通用聚合；由 TrackerItem 契约取代）**：历史中指由具体业务上下文拥有内容和业务生命周期的受管业务对象。 | D-007 后不再作为独立于 TrackerItem 的通用聚合模型；不等同 LightTrackerItem 索引行。 | 各 BC 业务对象实现 TrackerItem 接口获得公共能力，专有规则由各 BC 拥有。 | Superseded by D-007；`EXT-ARCH §4/5` |
 | `CONCEPT-007` | **Item Family／Item Identity**：以 CommonId 识别跨派生变体的同一逻辑对象家族。 | 无关 Item 跨类型、跨 Tracker 也不能共享 CommonId。 | 同一家族各变体共享 CommonId、拥有不同 LocalId。 | 本对话用户已确认身份关系与唯一性 |
-| `CONCEPT-008` | **Item Variant／Branch-local Item**：某个非共享 Tracker 上具有稳定 LocalId 的具体变体。 | 不等于业务 revision；无本地内容行仍可能存在。 | V4 名称为 LightTrackerItem；报告建议用 ItemVariant 避免技术索引含义。 | Candidate；`EXT-ARCH §1/2.1`、`V4-DOMAIN:214` |
+| `CONCEPT-008` | **Item Variant／Branch-local Item（停用术语，由 LightTrackerItem 取代）**：历史中指某个非共享 Tracker 上具有稳定 LocalId 的具体变体。 | 不等于业务 revision；无本地内容行仍可能存在。 | V4 名称为 LightTrackerItem；D-010/D-012 已确认不引入 ItemVariant，其职责由 LightTrackerItem（CONCEPT-022）承担。 | Superseded by D-010/D-012；`EXT-ARCH §1/2.1`、`V4-DOMAIN:214` |
 | `CONCEPT-009` | **Item Revision／业务版次**：由显式升级版次操作推进的业务版本标识。 | 普通编辑增加乐观锁 version，业务版次保持不变。 | 用户已确认只有显式升级版次才产生版次历史数据，版次号向前推进 +1。MergeCheckpoint 的双侧版次使用此标识。 | 用户在本对话明确确认；数值与显示编码的映射待具体设计 |
-| `CONCEPT-010` | **Source Cut／来源切点**：派生变体读取初始内容、生命周期及必要从属事实的固定历史依据。 | 不等同父对象当前值、捕获时间字符串或直接父变体。 | 需要历史能力保证可回读。 | Reported；`V4-DOMAIN:438/463`、`EXT-ARCH §2.1` |
+| `CONCEPT-010` | **Source Cut／来源切点**：物化（COW）时固定内容、生命周期及必要从属事实的历史依据，即修改前不可变快照。 | 不等同父对象当前值、捕获时间字符串或直接父变体；不等同 SourceRevision（未物化读取的来源 Revision 引用）。 | 需要历史能力保证可回读。 | Reported；`V4-DOMAIN:438/463`、`EXT-ARCH §2.1`；D-018 澄清 |
 | `CONCEPT-011` | **Copy-on-Write／写时复制**：既有 VIRTUAL 变体首次本地写入时建立本地权威内容、但保持逻辑身份稳定的转换。 | 不是首次创建 Item 身份；不等同整 Tracker 预复制。 | Item Variant 与业务对象上下文共同参与，事务边界待定。 | Reported；`V4-DOMAIN:545-548` |
 | `CONCEPT-012` | **Baseline／基线**：用于固定比较、派生或发布依据的一组不可变、可回读证据。 | 与仓库的 Design Baseline、业务 Snapshot、Merge Base 三者必须分开命名。 | 本文建议：治理基线称 Design Baseline；合并共同依据称 Merge Base。 | Candidate；`EXT-ARCH §2/10` |
 | `CONCEPT-013` | **Difference／差异**：在固定有向比较上下文和双侧证据上得到的记录存在性或字段内容差异。 | LocalId 不同、物化状态不同不自动构成业务差异。 | 相等规则由具体字段／业务上下文提供。 | Reported；`MERGE §4.1`、`EXT-ARCH §10.1` |
@@ -46,7 +46,7 @@
 
 1. **Baseline** 至少有三义：仓库设计基线、工作范围 Snapshot／历史切点、Merge Base。后续文档必须使用限定词。
 2. **Tracker** 已确认为独立聚合；Tracker Branch 为停用的历史术语。D-002 已确认非共享派生为不同 Tracker 身份；D-003 已明确双维字段及逐级派生；可变性、组织继承和同源共存约束仍待确认。Shared 既有同一权威语义不变。
-3. **Item**、**Item Family**、**Item Variant**、**Item Revision** 分别表达业务对象、家族、变体和内容版次，不得互换。
+3. **Item（停用）**、**Item Family**、**Item Revision** 分别表达业务对象、家族和内容版次；**Item Variant** 已被 LightTrackerItem（CONCEPT-022）取代，不得互换。
 4. **共享**表达权威内容复用，不表达访问权限；所有绑定工作集同时可见已确认，不能以投影延迟自行放宽该要求。
 5. **已处理**与内容相等分别表达。用户已确认 `KEEP_TARGET + markAsMerged=true` 可保留真实差异，决定写入 MergeCheckpoint，双侧版次均不变时停止重复提示。详见 [确认场景](../scenarios/core-scenarios.md#keep_target-的已处理确认)，这里的版次已确认为显式升级的业务 revision。普通编辑使乐观锁版本增加但业务版次不变时，已处理差异继续隐藏。任一侧显式升级业务版次后，用户再次主动比对时旧 MergeCheckpoint 对新版本组合过时，所有适用字段重新比较并显示实际差异。
 6. **Shared Kernel** 在本项目首先是已确认的企业架构归属；是否采用经典 DDD Shared Kernel 的共同代码／模型治理方式仍需另行说明。
@@ -112,7 +112,7 @@ Tracker 仍是独立聚合，不因管理 TrackerItem 工作范围而拥有业�
 - **CommonId**：共同逻辑身份，跨派生变体保留。
 - **LocalId**：当前变体身份，派生时分配。
 - **SourceLocalId**：直接来源变体身份。
-- **SourceRevision**：来源业务版次信息；可能指向来源头版次，不保证对应不可变历史内容（D-009 纠正「快照语义」旧假设）。SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
+- **SourceRevision**：来源业务版次信息；可能指向来源头版次，不保证对应不可变历史内容（D-009 纠正「快照语义」旧假设）。SourceVersion 是表述错误，已由 D-012 统一为 SourceRevision，不得与并发控制 Version 混淆。
 
 LocalId 是否直接等同业务聚合变体身份、首次物化标志与有效内容指针、物化原子性均待裁定。
 
@@ -128,7 +128,7 @@ LocalId 是否直接等同业务聚合变体身份、首次物化标志与有效
 - **Local-backed**：本地物化内容成为有效来源的变体。
 - **Materialization／物化**：基于既有事实创建当前变体的完整业务内容。
 
-SourceRevision 与 SourceVersion 是否同义未确认，不机械归并；SourceVersion 可能指向来源头版次，不保证对应不可变历史内容。不得把派生历史来源与当前有效内容来源混为一谈。
+SourceVersion 是表述错误，已由 D-012 统一为 SourceRevision，不得与并发控制 Version 混淆；SourceRevision 可能指向来源头版次，不保证对应不可变历史内容。不得把派生历史来源与当前有效内容来源混为一谈。
 
 ## COW 最终一致与最小模型收敛（D-010）
 
@@ -140,7 +140,7 @@ SourceRevision 与 SourceVersion 是否同义未确认，不机械归并；Sourc
 - **SourceLocalId 双语义**：历史派生来源（Derivation Origin）与当前有效内容来源（Effective Content Source）分别表达；物化后有效 SourceLocalId 指向自身，历史派生来源保留追溯。字段是否拆分仍待设计。
 - **最小模型**：领域模型围绕 Working Set、Tracker、LightTrackerItem 三类核心聚合收敛，不引入 Manifest 或 ItemVariant。
 
-SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
+SourceVersion 是表述错误，已由 D-012 统一为 SourceRevision，不得与并发控制 Version 混淆。
 
 ## 首次快照优先与来源变更顺序（D-011）
 
@@ -162,7 +162,7 @@ Source Change Order、Derivation Baseline、Materialization Claim 均为候选�
 - **SourceLocalId** 表示**当前有效内容来源**的 LocalId，而不是必须永久保存的历史派生来源身份。未物化（Source-backed）时指向来源变体（如 R0）；COW 完成后等于自身 LocalId（如 R1）。
 - **SourceRevision** 表示**当前有效内容来源**的业务 Revision，不是不可变内容快照。COW 完成后等于自身 Revision。
 - **SourceVersion** 是表述错误，统一更正为 `SourceRevision`，不得与并发控制 Version 混淆。
-- R0 → R1 的历史派生关系不要求由 LightTrackerItem 保存；历史派生来源与当前有效内容来源在领域语义上必须区分，但历史关系由哪个领域对象或机制保存，本轮不决定。
+- R0 → R1 的历史派生关系不是业务必需，不要求保存（D-018）；历史派生来源与当前有效内容来源在领域语义上必须区分，历史关系不要求承载。
 - 不因此新增 OriginLocalId、ItemVariant、Manifest 或额外谱系聚合。
 
 修正说明：前文 D-008 的「SourceLocalId = 直接来源变体身份」、D-009 的「SourceRevision 快照语义」、D-010 的「SourceLocalId 双语义（历史派生来源 + 当前有效内容来源）」均为历史分析，现由 D-012 收敛为「当前有效内容来源」单一职责，保留历史记录但以本节为准。
@@ -221,3 +221,13 @@ Derivation Time Basis 不等于 Derivation Completion；SourceRevision 不等于
 - 即使派生变体在来源修改开始后才完成派生，只要 Handler 消费时满足条件，也参与本次物化。
 
 D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则保持不变；D-016 的 COW 保护资格历史时间边界由本裁定取代。
+
+## 整体验证收敛：Revision 字段、事件顺序与历史派生关系（D-018）
+
+用户确认以下收敛（整体验证裁定，非零散问题）：
+
+1. **事件顺序由事件框架兜底**：事件框架按顺序记录事件、消费时按顺序消费；Source Change Order 的先后判定不是领域模型需要关注的细节。D-011 首次快照优先的「实际先后顺序」由事件框架顺序消费保证。
+2. **LightTrackerItem 持有 Revision**：LightTrackerItem 自身持有 Revision 字段，与 SourceRevision 不是始终同步（派生初期 SourceRevision 可为来源 Revision、自身 Revision 为初始值）。业务 BC 实现的 TrackerItem 也持有 Revision，两者通过事件同步（细节不细化）。
+3. **Revision 显式升级触发 COW**：显式升级业务 Revision 触发依赖变体 COW。
+4. **Source Cut 与 SourceRevision 区分**：Source Cut 是物化（COW）时的固定依据（修改前不可变快照）；SourceRevision 是未物化时读取的来源 Revision 引用（Query 读当前内容）。二者不混用。
+5. **历史派生关系（R0→R1）不是业务必需**：不要求保存历史派生链，移除相关的承载方式待裁定与约束。

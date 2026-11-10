@@ -574,3 +574,14 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When Handler 异步消费事件，查询当前 SourceLocalId=R0、SourceRevision=匹配、尚未物化的 LightTrackerItem。
 - Then 查询命中的所有 LightTrackerItem（不限工作集派生深度、不追溯修改开始时间）均参与本次 COW 物化。
 - 反例：不在修改开始时提前固定目标集合；即使派生在修改开始后才完成，只要消费时满足条件也参与。
+
+<a id="scn-049"></a>
+## SCN-049 Revision 显式升级触发 COW 与 LightTrackerItem Revision
+
+**业务规则：用户确认 D-018；验收表述 Draft。** 关联 FACT-023、INV-051/052。
+
+- Given R0 处于 Revision 3；R1 未物化，SourceLocalId=R0、SourceRevision=3、自身 Revision=1。
+- When R0 显式升级业务 Revision 3→4（内容可能不变），发布来源变更事件。
+- Then（已确认）Revision 升级触发 R1 的 COW（与普通修改一样受 COW 保护）。
+- When R1 物化后，SourceRevision 指向来源，但 LightTrackerItem 的 Revision 与 SourceRevision 不是始终同步（派生初期 SourceRevision=3、Revision=1）。
+- 边界：LightTrackerItem 自身 Revision 与业务 BC 的 TrackerItem Revision 通过事件同步（细节不细化）。

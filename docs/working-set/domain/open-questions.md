@@ -151,11 +151,11 @@ QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具�
 
 已由 D-012 关闭：SourceLocalId 是否为历史派生来源（确认为当前有效内容来源，历史关系不要求由 LightTrackerItem 保存）；SourceVersion 表述错误（统一为 SourceRevision）。
 
-仍保持开放：
+仍保持开放（其中 1/2/3 已被后续裁定闭合，见标注）：
 
-1. **历史谱系的最终承载方式**：R0 → R1 历史派生关系由哪个领域对象或机制保存（本轮不决定，不擅自新增 OriginLocalId、谱系聚合）。
-2. **多级事件传播机制**：多级派生（R0→R1→R2）中，R0 修改如何触发 R1、R2 的 COW，以及 R1 物化后再次修改时 R2 如何保护修改前 R1 内容（不自行确认完整传播策略）。
-3. Source Change Order 表达机制、Derivation Baseline 判定、Materialization Claim 证据保留（沿用 D-011 候选）。
+1. 历史谱系的最终承载方式 —— 已由 D-018 确认不需要（移除）。
+2. 多级事件传播机制 —— 已由 D-013（直接有效来源定位+扇出）/D-017（消费时确定）闭合。
+3. Source Change Order 表达机制 —— 已由 D-018 确认由事件框架顺序消费兜底，不是领域模型关注点；Derivation Baseline / Materialization Claim 仍候选。
 4. 快照序列化、可靠交付与持久化策略（实施设计）。
 
 不得因职责分离自动新增谱系聚合、OriginLocalId 或完整事件传播策略。
@@ -204,3 +204,13 @@ QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具�
 - Source Change Order、Materialization Claim 证据保留（沿用 D-011 候选）。
 
 并发交错的边缘行为列入实施评审关注点，不新增业务裁定问题。
+
+## D-018 后的关闭项
+
+已由 D-018 关闭（整体验证收敛）：
+
+1. 缺失 1（Source Change Order 判定）：由事件框架顺序记录、顺序消费兜底，不是领域模型关注细节。
+2. 缺失 2（LightTrackerItem 自身 Revision）：LightTrackerItem 持有 Revision 字段、与 SourceRevision 分离（可不同步），业务 BC 的 TrackerItem 也持有 Revision、两者通过事件同步。
+3. 缺失 3（Revision 升级触发 COW）：触发。
+
+仍保留：事件同步细节、幂等去重留待实施；Source Cut（物化固定依据）与 SourceRevision（未物化读取来源 Revision）的区分已由 D-018 澄清。

@@ -756,3 +756,25 @@ D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则不�
 ### 追溯
 
 [术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[生命周期图](../diagrams/lighttrackeritem-lifecycle.md)、[SCN-048](../scenarios/core-scenarios.md#scn-048)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+
+<a id="d-018"></a>
+## D-018：整体验证收敛——Revision 字段、事件顺序与历史派生关系（2026-11-10）
+
+**业务裁定：用户正式确认（整体验证收敛，非零散问题）；事件同步细节、幂等去重留待实施；不发布基线、不修改代码、不提交或打 Tag。**
+
+### 已确认（整体验证收敛三点）
+
+1. **事件顺序由事件框架兜底**：事件框架按顺序记录、顺序消费；Source Change Order 的先后判定不是领域模型关注细节。D-011 首次快照优先的「实际先后顺序」由事件框架顺序消费保证。
+2. **LightTrackerItem 持有 Revision**：LightTrackerItem 自身持有 Revision 字段，与 SourceRevision 不是始终同步（派生初期 SourceRevision=来源 Revision、自身 Revision=初始值）。业务 BC 实现的 TrackerItem 也持有 Revision，两者通过事件同步（细节不细化）。
+3. **Revision 显式升级触发 COW**：显式升级业务 Revision 触发依赖变体 COW。
+
+知识分类：`FACT-023`（[facts](../domain/facts.md)）；INV-051/052（[invariants](../domain/invariants.md)）。
+
+### 调和与移除
+
+- **矛盾 5 调和**：Source Cut 是物化（COW）时的固定依据（修改前不可变快照），SourceRevision 是未物化时读取的来源 Revision 引用（Query 读当前内容），二者不混用（[glossary](../domain/glossary.md) CONCEPT-010 澄清）。
+- **缺失 5 移除**：历史派生关系（R0→R1）不是业务必需，不要求保存，移除相关的承载方式待裁定与约束。
+
+### 追溯
+
+[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[候选不变量](../domain/invariants.md)、[开放问题](../domain/open-questions.md)、[聚合分析](../domain/aggregate-model.md)、[SCN-049](../scenarios/core-scenarios.md#scn-049)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
