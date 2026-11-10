@@ -209,3 +209,32 @@ D-010 确认修改前事实作为事件关联的不可变内容快照（原 INV-
 | INV-052 | Revision 显式升级触发依赖变体 COW | D-018 第 3 条直接确认 | SCN-049 |
 
 事件顺序由事件框架顺序记录、顺序消费兜底（D-018 第 1 条），Source Change Order 不作为领域不变量。
+
+## 阶段 4 补充：ProductSpace / Classification / 绑定（候选审查）
+
+业务规则按用户 2026-11-10 补充裁定保持确认；以下 INV 形式化与技术保护方案保持 Draft。来源：[阶段 4 集中补充评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md)。
+
+| 编号 | 约束 | 确认与边界 | 验证 |
+| --- | --- | --- | --- |
+| INV-053 | SpaceBinding 是 TrackerBinding 的业务前置约束（先有 SpaceBinding 才能建 TrackerBinding） | 用户确认（POL-012） | SCN-050 |
+| INV-054 | Tracker.productSpaceId 必须等于其 TrackerBinding 的空间 ID | 用户确认（POL-012） | SCN-050 |
+| INV-055 | 同一 WorkingSet 内 ProductSpace 绑定唯一 | 用户确认（POL-012） | SCN-050 |
+| INV-056 | 同一 WorkingSet/ProductSpace/Classification 组合下 Tracker 槽位唯一 | 用户确认（POL-012） | SCN-051 |
+| INV-057 | Shared Tracker 在多个 WorkingSet 共享同一聚合身份；非共享 Tracker 在子 WorkingSet 拥有独立派生身份 | 用户确认（POL-013） | SCN-052 |
+| INV-058 | Tracker 删除/移除语义：共享从子 WS 移除仅解除 TrackerBinding；非共享无 Item 且无派生子 Tracker 才可删除；有派生子 Tracker 不允许删除；有 TrackerItem 不允许移除；有组织子节点但无派生子节点不允许删除；移除最后 Tracker 不触发空间移除；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 共享 Tracker 空且无子可删 | 用户确认（POL-014，修订 POL-006） | SCN-052/053 |
+| INV-059 | 默认 WorkingSet 不可删除、不可隐藏；Tracker parentId 创建后不可变（沿用 INV-022） | 用户确认（FACT-026） | SCN-054 |
+| INV-060 | SpaceBinding、TrackerBinding 是两个 Entity，归属于 WorkingSet 聚合；ProductSpace、Tracker 只维护自身归属身份，不持有绑定 | 用户确认（POL-015） | SCN-050/052 |
+
+区分：INV-053~060 为已确认规则；绑定 Entity 内部结构、软删/彻底删除机制为待确认实现细节。
+
+## 阶段 4 补充：Diff/Merge 衔接（候选审查）
+
+业务规则按用户 2026-11-10 裁定保持确认。
+
+| 编号 | 约束 | 确认与边界 | 验证 |
+| --- | --- | --- | --- |
+| INV-061 | 未物化变体可以参与 Diff（不要求已物化） | 用户确认 | SCN-055 |
+| INV-062 | 未物化目标被 Merge 修改时，构建业务聚合正常 save（物化与修改一体） | 用户确认 | SCN-055 |
+| INV-063 | MergeRound 聚合记录参数/进度/成功失败；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合 | 用户确认 | SCN-056 |
+
+证据：FACT-027；场景 SCN-055/056。

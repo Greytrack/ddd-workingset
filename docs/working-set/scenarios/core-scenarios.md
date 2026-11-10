@@ -585,3 +585,79 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then（已确认）Revision 升级触发 R1 的 COW（与普通修改一样受 COW 保护）。
 - When R1 物化后，SourceRevision 指向来源，但 LightTrackerItem 的 Revision 与 SourceRevision 不是始终同步（派生初期 SourceRevision=3、Revision=1）。
 - 边界：LightTrackerItem 自身 Revision 与业务 BC 的 TrackerItem Revision 通过事件同步（细节不细化）。
+
+<a id="scn-050"></a>
+## SCN-050 空间绑定前置与槽位唯一
+
+**业务规则：用户确认（2026-11-10 补充）；验收表述 Draft。** 关联 POL-012、INV-053/054/055。
+
+- Given 目标 WorkingSet WS1 尚未关联 ProductSpace P。
+- When 尝试为 P 下的 Tracker 建立 TrackerBinding。
+- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效 SpaceBinding；同一 WS1/ProductSpace/Classification 最多一个有效 TrackerBinding。
+- 反例：不得在没有 SpaceBinding 时建立 TrackerBinding；不得在同一 WorkingSet 重复纳入同一 Tracker。
+
+<a id="scn-051"></a>
+## SCN-051 Classification 投影生成 Tracker
+
+**业务规则：用户确认（2026-11-10 补充）；验收表述 Draft。** 关联 FACT-025、INV-056。
+
+- Given 平台元数据已初始化 Classification 集合，常驻内存。
+- When 创建 ProductSpace P。
+- Then 系统读取适用 Classification 集合，按分类逐个创建 Tracker 聚合并持久化，归属于 P，并建立在默认 WorkingSet 的 TrackerBinding。
+- 边界：Tracker 不随元数据初始化自动全量创建；同一 Classification 在不同 ProductSpace 可对应不同 Tracker；同一 ProductSpace/WorkingSet/Classification 最多一个有效 Tracker。
+
+<a id="scn-052"></a>
+## SCN-052 子 WorkingSet 纳入与移除（Shared/非共享）
+
+**业务规则：用户确认（2026-11-10，修订 POL-006）；验收表述 Draft。** 关联 POL-013/014、INV-057/058/060。
+
+- Given 子 WorkingSet WS1 纳入直接上游 Tracker。
+- When Shared Tracker 纳入：复用原 TrackerId，仅建立新 TrackerBinding。
+- When 非共享 Tracker 纳入：创建新 Tracker 聚合，建立直接 sourceId 来源。
+- When 移除 Shared Tracker：仅解除 TrackerBinding（不删除聚合；不受「有 Item 不允许删除」约束，因为那是针对聚合删除）。
+- When 移除非共享 Tracker：无 TrackerItem 数据且无派生子 Tracker → 删除该 Tracker 并解除绑定；已有派生子 Tracker → 不允许删除（保留来源链）。
+- When 任意 Tracker 存在 TrackerItem 数据 → 不允许移除（避免遗留业务数据）。
+- 边界：非共享成功移除后可重新纳入、重新派生新身份；移除空间内最后一个 Tracker 不触发空间移除（SpaceBinding 保留）。
+
+<a id="scn-053"></a>
+## SCN-053 Tracker 删除约束
+
+**业务规则：用户确认（2026-11-10）；验收表述 Draft。** 关联 POL-014、INV-058。
+
+- Given 一个非共享 Tracker T。
+- When 尝试删除 T。
+- Then 必须满足：无 TrackerItem 数据（空 Tracker）、无派生子 Tracker、无组织子节点（parentId 指向 T）；否则不允许删除，校验提示含有子节点。
+- 反例：有 Item 的 Tracker 不能删除；有派生子 Tracker 的非共享 Tracker 不能删除；有组织子节点但无派生子节点的也不能删除（避免 parentId 悬空，D-006 禁止重挂）。
+- 例外：默认 WorkingSet 下的 Shared Tracker 在空且无子时可以删除；Shared Tracker 从子 WorkingSet 移除仅解除 TrackerBinding。
+
+<a id="scn-054"></a>
+## SCN-054 默认 WorkingSet 与 ProductSpace 创建初始化
+
+**业务规则：用户确认（2026-11-10 补充）；验收表述 Draft。** 关联 FACT-024/026、INV-059。
+
+- Given 系统初始化：默认 WorkingSet（固定 Id=1）由平台元数据预初始化，无 ProductSpace。
+- When 用户创建 ProductSpace P。
+- Then 读取适用 Classification 集合，按分类逐个创建 Tracker 聚合并持久化，归属 P，建立在默认 WorkingSet 的绑定关系。
+- 边界：默认 WorkingSet 不可删除/隐藏；Tracker 只能在默认 WorkingSet 创建原始聚合；子 WorkingSet 不能独立创建原始 Tracker，只能纳入直接上游。
+
+<a id="scn-055"></a>
+## SCN-055 未物化变体参与 Diff 与 Merge 修改
+
+**业务规则：用户确认（2026-11-10）；验收表述 Draft。** 关联 FACT-027、INV-061/062。
+
+- Given 目标变体 R1 尚未物化（Source-backed）。
+- When 用户对 R1 与来源变体 R0 发起 Diff。
+- Then Diff 可比较（未物化不阻止 Diff）。
+- When 用户选择对 R1 应用 Merge 修改（ACCEPT 字段）。
+- Then 在 merge 过程中构建 R1 的完整业务聚合正常 save（物化与修改一体），不要求先单独物化。
+- 边界：Merge 修改仍需目标业务 BC 整体校验并提交；Merge 不绕过 COW/物化语义。
+
+<a id="scn-056"></a>
+## SCN-056 MergeRound 载体与 MergeCheckpoint
+
+**业务规则：用户确认（2026-11-10）；验收表述 Draft。** 关联 FACT-027、INV-063。
+
+- Given 用户发起 Diff→Merge（LRO）。
+- When MergeRound 受理：记录参数（方向、范围、决策）、进度、成功/失败信息。
+- Then 合并决策（用户 command 入参）作为 ValueObject 归属 MergeRound；MergeCheckpoint 独立聚合，跨轮次保存最近处理状态。
+- 边界：MergeRound/MergeCheckpoint 属合并模型区域，不是三类核心聚合之一；共享 Tracker 不参与，非共享只允许直接父子准入。

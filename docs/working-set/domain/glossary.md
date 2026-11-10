@@ -231,3 +231,25 @@ D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则保�
 3. **Revision 显式升级触发 COW**：显式升级业务 Revision 触发依赖变体 COW。
 4. **Source Cut 与 SourceRevision 区分**：Source Cut 是物化（COW）时的固定依据（修改前不可变快照）；SourceRevision 是未物化时读取的来源 Revision 引用（Query 读当前内容）。二者不混用。
 5. **历史派生关系（R0→R1）不是业务必需**：不要求保存历史派生链，移除相关的承载方式待裁定与约束。
+
+## ProductSpace、Classification 与绑定（阶段 4 补充）
+
+用户 2026-11-10 补充确认：
+
+- **ProductSpace／产品空间**：Shared Kernel 独立聚合；只维护自身稳定归属身份；在默认 WorkingSet 中维护生命周期，可被多个 WorkingSet 关联；本身不随 WorkingSet 派生复制/迁移。
+- **Classification／分类元模型**：独立共享分类元模型领域（三层，另一团队维护，启动前初始化、常驻内存）；Tracker 是其投影。
+- **SpaceBinding／空间绑定**：WorkingSet 聚合内的 **Entity**，表达当前工作集与 ProductSpace 的有效关联；TrackerBinding 的业务前置。
+- **TrackerBinding／Tracker 绑定**：WorkingSet 聚合内的 **Entity**，表达当前工作集与 Tracker 的有效关联；受空间绑定和槽位唯一约束。
+
+**绑定归属**：WorkingSet 负责维护当前工作集中的空间与 Tracker 绑定结构；SpaceBinding、TrackerBinding 是两个 Entity，归属于 WorkingSet 聚合。ProductSpace、Tracker 只维护自己的稳定归属身份，不持有绑定。Tracker 按共享策略复用同一聚合（Shared）或派生新聚合（非共享）；同一 ProductSpace、同一 WorkingSet、同一 Classification 最多一个有效 Tracker。
+
+**删除/移除语义（用户 2026-11-10 确认）**：
+
+- 共享 Tracker 从子 WorkingSet 移除：仅解除 TrackerBinding（空 Tracker 可移除规则）。
+- 非共享 Tracker 从所属子 WorkingSet 移除：无 TrackerItem 数据且无派生子 Tracker → 删除该 Tracker 并解除绑定。
+- 非共享 Tracker 已有派生子 Tracker → 不允许删除（保留来源链）。
+- 任意 Tracker 存在 TrackerItem 数据 → 不允许移除（避免遗留业务数据）。
+- 非共享 Tracker 有组织子节点但无派生子节点 → 不允许删除（校验提示含有子节点）。
+- ProductSpace 移除最后一个 Tracker → 不触发空间移除，SpaceBinding 保留。
+- 移除 ProductSpace 时仍有 TrackerBinding → 抛出异常，有 Tracker 时不允许移除空间绑定。
+- 默认 WorkingSet 下共享 Tracker 在空且无子时可删除。

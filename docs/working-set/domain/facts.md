@@ -39,6 +39,10 @@
 | `FACT-021` | 派生仅固定业务版次，不复制或固定完整业务数据；命名 Snapshot/Head 时间基准只确定来源适用的业务 Revision。完整派生操作完成（Derivation Completion）是新派生 LightTrackerItem 开始受到来源变更 COW 保护的业务边界：派生完成前来源修改不为该变体触发 COW，派生完成后首次相关来源修改触发 COW（据修改前快照物化）。D-011 首次快照优先限定为派生完成之后首次需要保护的相关来源修改。上述「派生完成前后」时间边界已由 D-017 修订：COW 目标改为在事件 Handler 消费时按当前有效引用关系确定，不再比较派生完成与来源修改的先后（见 FACT-022）。 | 用户确认 D-016 | 本对话用户 D-016 裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-016) | 完整派生完成与来源修改实际先后的判定协议、场景 C 竞态仍候选（COW 保护资格时间边界现由 D-017 修订） |
 | `FACT-022` | COW 目标集合在事件 Handler 实际消费来源变更事件时确定：Handler 查询当前有效内容来源指向本次修改来源（SourceLocalId/SourceRevision 匹配）且尚未物化的 LightTrackerItem，查询命中的都参与本次 COW 物化；不在来源修改开始时提前固定目标集合，不追溯比较修改开始时间与完整派生完成时间，不引入跨聚合全局时序协调机制。 | 用户确认 D-017 | 本对话用户 D-017 裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-017) | D-011 首次快照优先的乱序/幂等实现细节留待实施评审 |
 | `FACT-023` | 事件顺序由事件框架顺序记录、顺序消费兜底，Source Change Order 的先后判定不是领域模型关注细节；LightTrackerItem 自身持有 Revision 字段，与 SourceRevision 不同步（派生初期 SourceRevision 可为来源 Revision、自身 Revision 为初始值），业务 BC 的 TrackerItem 实现也持有 Revision，两者通过事件同步；Revision 显式升级触发依赖变体 COW。 | 用户确认 D-018（整体验证收敛） | 本对话用户整体验证裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-018) | 事件同步细节、幂等去重留待实施 |
+| `FACT-024` | ProductSpace 是 Shared Kernel 独立聚合；在默认 WorkingSet 中维护生命周期，但可关联多个 WorkingSet；本身不随 WorkingSet 派生复制或迁移；Tracker 属于一个 ProductSpace。WorkingSet 关联 ProductSpace，空间绑定独立于 Tracker 绑定。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 创建初始化、绑定唯一性、移除协议 |
+| `FACT-025` | 系统有三层分类元模型，元数据在启动前初始化到平台元数据库、常驻内存；Tracker 是 Classification 在某 ProductSpace/WorkingSet 中的具体投影，遵守其属性/共享策略/规则约束；一个 Classification 可对应多个 Tracker；Tracker 不随元数据初始化自动创建，而在创建 ProductSpace 时按分类集合投影生成。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 分类版本/变更协议仍待 |
+| `FACT-026` | 默认 WorkingSet 由平台元数据预初始化，固定 ID=1，不可删除/隐藏；用户创建子 WorkingSet 前，业务数据均在默认 WorkingSet；Tracker 只能在默认 WorkingSet 创建原始聚合，子 WorkingSet 只能通过纳入直接上游 Tracker（共享绑定或非共享派生）维持来源链完整。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 默认 WorkingSet 归档等生命周期维度待定 |
+| `FACT-027` | Diff/Merge 衔接裁定：① 未物化变体可以参与 Diff；② 未物化目标被 Merge 修改时，在 merge 过程中构建业务聚合正常 save（物化与修改一体）；③ 合并决策是用户决策、command 入参，可作为 ValueObject 归属 MergeRound 聚合；④ MergeCheckpoint 是独立聚合；⑤ MergeRound 是合并载体（LRO 发起后记录参数、进度、成功/失败信息）；⑥ 共享 Tracker 不参与 Merge，非共享只允许直接父子准入。 | 用户确认（2026-11-10 阶段 4 补充） | 本对话用户裁定 | 差异冻结/令牌、幂等与乱序协议仍候选 |
 
 ## Business Policy（逐条标注确认范围）
 
@@ -49,9 +53,13 @@
 | `POL-003` | 分类配置的共享特性为固定出厂设定，不允许修改；Tracker 的共享特性在创建时确定，后续不允许修改。分类配置为共享时只能创建共享 Tracker；分类配置为非共享时，创建时可选择共享或非共享。 | 用户已确认 | 本对话用户明确确认创建选择规则、创建后不可变及分类共享特性为固定出厂设定 | [创建验收场景](../scenarios/core-scenarios.md#tracker-共享特性的创建约束)；分类共享特性变更问题已关闭，不以是否已创建 Tracker 为条件；不推导其他分类属性的变更规则或允许迁移 |
 | `POL-004` | 比对、合并只允许直接父子工作集之间双向进行，支持新增、删除、修改，作用于支持这些能力的对应非共享 Tracker。 | 用户已确认直接父子准入范围 | 本对话用户明确答复；历史 `MERGE:42/841` | 兄弟及跨代不允许直接比对/合并；GateFlow 历史内容替换适用独立规则 |
 | `POL-005` | 同一个 Working Set 有效范围内 CommonId 唯一，同一家族只允许一个有效变体。 | Accepted（阶段 3.1 用户裁定） | 用户 2026-11-09 明确确认；历史 `V4-DOMAIN:425-427` | SCN-011；QUESTION-004 仅保留分配、去重及并发协议 |
-| `POL-006` | Tracker 一旦加入某个子工作集，无论 SHARED 或 UNSHARED，后续均不允许移除；不以是否已有 Item 或本地修改为条件。 | 用户已确认的当前业务政策 | 本对话用户明确确认“不论共享还是非共享，后续不允许移除” | 限定工作集绑定的移除；不推导 Tracker 销毁、Item 删除或整个工作集删除规则；`QUESTION-009` |
+| `POL-006` | （已被 2026-11-10 最新规则修订）Tracker 加入子工作集后按新规则可移除：Shared Tracker 移除=解除 TrackerBinding（非删除聚合）；非共享 Tracker 可删除但须无派生子级且为空（叶子）。 | 已修订 | 本对话用户 2026-11-10 最新业务规则 | 详见 POL-014；原「禁止移除」结论不再生效，不能两套规则同时成立 |
 | `POL-007` | 子工作集可在已有非共享 Tracker 下新建 Item；共享 Tracker 下通过子工作集入口新建的 Item 实际在默认工作集创建。 | 用户已确认 | 本对话用户明确答复，细节见 [创建场景](../scenarios/core-scenarios.md#子工作集新建-item-与-tracker-边界) | 回并父工作集创建对应 Item 已获用户确认，见 [回并场景](../scenarios/core-scenarios.md#子工作集新增-item-回并父工作集)。CommonId/LocalId 等值关系已确认，标识分配机制待定；`QUESTION-005` |
 | `POL-008` | SHARED 修改对所有已绑定工作集同时可见；具体读取面的实现与验收指标待设计。 | 业务要求已确认；技术指标待定 | 本对话用户明确确认“所有工作集同时可见” | 不得自行改为允许业务可见延迟；`QUESTION-003` |
+| `POL-012` | 必须先有目标 WorkingSet 的 SpaceBinding 才能建立 TrackerBinding；同一 WorkingSet 同一 ProductSpace 最多一个有效 SpaceBinding；同一 WorkingSet/ProductSpace/Classification 最多一个有效 TrackerBinding；Tracker.productSpaceId 必须等于绑定空间 ID；一个 Tracker 不在同一 WorkingSet 重复纳入。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 绑定生命周期协议、SLA 待定 |
+| `POL-013` | Shared Tracker 纳入子 WorkingSet 复用原 TrackerId、仅建新绑定；非共享 Tracker 纳入创建新 Tracker 聚合、建立直接 sourceId；非共享成功移除后可重新纳入、重新派生新身份；移除空间内最后一个 Tracker 不移除 SpaceBinding；ProductSpace 移出是独立显式操作。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 纳入/移除事务与并发协议待定 |
+| `POL-014` | 删除/移除语义：共享 Tracker 从子 WS 移除仅解除 TrackerBinding；非共享 Tracker 无 TrackerItem 且无派生子 Tracker → 删除并解除绑定；非共享有派生子 Tracker → 不允许删除；任意 Tracker 有 TrackerItem → 不允许移除；非共享有组织子节点但无派生子节点 → 不允许删除（校验提示含子节点）；移除空间内最后一个 Tracker 不触发空间移除（SpaceBinding 保留）；移除 ProductSpace 时仍有 TrackerBinding → 抛异常，有 Tracker 不允许移除空间绑定；默认 WorkingSet 下共享 Tracker 空且无子时可删除。 | 用户确认（2026-11-10，修订 POL-006） | 本对话用户裁定 | 软删/彻底删除机制待定 |
+| `POL-015` | WorkingSet 负责维护当前工作集中的空间与 Tracker 绑定结构；SpaceBinding、TrackerBinding 是两个 Entity，归属于 WorkingSet 聚合。ProductSpace、Tracker 只维护自身稳定归属身份，不持有绑定。 | 用户确认（2026-11-10） | 本对话用户裁定 | 绑定 Entity 内部结构待定 |
 
 ## POL-009：非共享派生组织裁剪（用户已确认）
 
@@ -91,9 +99,9 @@
 
 验证见 [合并删除覆盖接收方修改](../scenarios/core-scenarios.md#合并删除覆盖接收方修改)。
 
-## Tracker 加入子工作集后禁止移除（已确认业务政策）
+## Tracker 加入子工作集后禁止移除（历史政策，已被 2026-11-10 修订）
 
-用户先确认共享 Tracker 绑定后禁止移除，随后明确统一当前业务限定：Tracker 一旦加入某个子工作集，无论共享还是非共享，后续均不允许移除。统一规则见 `POL-006`；验证见 [子工作集 Tracker 禁止移除](../scenarios/core-scenarios.md#子工作集-tracker-禁止移除)。历史输入中“有内容时禁止解绑或销毁”的说法拆开处理：禁止移除不再以内容为条件，销毁语义仍待确认。
+原政策（POL-006 旧版）：Tracker 一旦加入某个子工作集，无论共享还是非共享，后续均不允许移除。**该结论已被 2026-11-10 最新业务规则修订**：Shared Tracker 移除=解除 TrackerBinding（非删除聚合）；非共享 Tracker 可删除但须无派生子级且为空（叶子）。见 POL-014、SCN-052。本节保留为历史，不再生效。
 
 阶段 3.1 用户已批准 R01—R17 及限定术语，接受范围以 [BASELINE](../BASELINE.md) 为准；本页其余候选内容仍 Draft。FACT-006 的派生历史覆盖现已明确包含派生时的附件与关系状态（用户 2026-11-09 直接裁定，SCN-012）；保留期限、读取和删除守卫协议仍待设计，不推导永久保留。
 

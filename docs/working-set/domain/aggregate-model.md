@@ -189,3 +189,33 @@ LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/So
 前文 D-016 的「Derivation Completion 与 Source Mutation 实际先后判定」「场景 C 竞态」候选协作协议由 D-017 关闭，保留历史追溯。D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则不变；D-016 的 COW 保护资格历史时间边界由 D-017 取代为「消费时按当前有效引用关系确定」。
 
 保持最小模型（Working Set、Tracker、LightTrackerItem），不增加额外领域聚合、Manifest、ItemVariant 或复杂事件协调机制。图见 [COW 主流程时序](../diagrams/lighttrackeritem-lifecycle.md)。
+
+## 阶段 4 补充：ProductSpace、Classification 与绑定（Draft 设计影响）
+
+用户 2026-11-10 补充确认：
+
+- **ProductSpace** 是 Shared Kernel 独立聚合，只维护自身稳定归属身份，在默认 WorkingSet 中维护生命周期、可被多个 WorkingSet 关联，本身不随 WorkingSet 派生复制/迁移；Tracker 属于一个 ProductSpace。
+- **Classification** 是独立的共享分类元模型领域（另一团队维护），Tracker 是其投影；同一 ProductSpace/WorkingSet/Classification 最多一个有效 Tracker。
+- **WorkingSet 聚合**负责维护当前工作集中的空间与 Tracker 绑定结构：**SpaceBinding、TrackerBinding 是两个 Entity，归属于 WorkingSet 聚合**。ProductSpace、Tracker 只维护自身归属身份，不持有绑定。
+- Tracker 按共享策略复用同一聚合（Shared）或派生新聚合（非共享），并遵循 Classification 约束。
+- 三类核心聚合仍为 Working Set、Tracker、LightTrackerItem；新增 ProductSpace 作为 Shared Kernel 独立聚合（不放入 WorkingSet 大聚合），Classification 通过共享契约供 Tracker 创建使用。
+- 跨聚合关系均用 ID：Tracker 含 productSpaceId/classificationId/parentId/sourceId；LightTrackerItem 经 TrackerId/WorkingSetId 引用。
+- WorkingSet 拥有绑定规则与物理上是否一次加载全部绑定记录是两个不同问题，不按 ORM 结构定领域边界。
+
+**删除/移除语义（已确认）**：共享 Tracker 从子 WS 移除仅解除 TrackerBinding；非共享无 Item 且无派生子 Tracker → 删除并解除绑定；非共享有派生子 Tracker → 不允许删除；任意 Tracker 有 TrackerItem → 不允许移除；非共享有组织子节点但无派生子节点 → 不允许删除；移除最后一个 Tracker 不触发空间移除；移除 ProductSpace 时仍有 TrackerBinding → 抛异常；默认 WorkingSet 共享 Tracker 空且无子时可删除。
+
+绑定与删除不变量见 [INV-053～060](invariants.md)；事实见 FACT-024～026、POL-012～015。图见 [ProductSpace/Tracker/WorkingSet 关系图](../diagrams/productspace-tracker-workingset.md)。
+
+候选（未直接 Accepted）：绑定 Entity 的内部结构、软删/彻底删除机制。
+
+## 阶段 4 补充：Diff/Merge 聚合定位（Draft 设计影响）
+
+用户确认 Diff/Merge 衔接：
+
+- 未物化变体可参与 Diff；未物化目标被 Merge 修改时，在 merge 中构建业务聚合正常 save（物化与修改一体）。
+- 合并决策（用户决策、command 入参）可作为 ValueObject 归属 MergeRound 聚合。
+- MergeCheckpoint 是独立聚合。
+- MergeRound 是合并载体（LRO 发起后记录参数、进度、成功/失败）。
+- 共享 Tracker 不参与 Merge；非共享只允许直接父子准入。
+
+聚合定位：MergeRound、MergeCheckpoint 不是三类核心聚合（Working Set/Tracker/LightTrackerItem）之一，而是合并模型区域的聚合（MergeRound 载体 + MergeCheckpoint 独立）。二者与 LightTrackerItem 通过身份/Revision 衔接，不组合。
