@@ -9,9 +9,9 @@
 flowchart LR
     WS["Working Set<br/>候选工作视图"]
     Binding["Tracker Binding<br/>选择事实"]
-    Tracker["Tracker<br/>集合与谱系节点候选"]
+    Tracker["Tracker<br/>独立聚合 D-001"]
     Shared["Shared Tracker<br/>同一权威对象候选"]
-    Unshared["Non-shared Tracker<br/>独立演进候选"]
+    Unshared["Non-shared Tracker<br/>派生产生新身份 D-002"]
     Family["Item Family<br/>逻辑对象家族"]
     Variant["Item Variant<br/>具体变体候选"]
     Item["Business Item<br/>具体业务内容"]
@@ -41,9 +41,11 @@ flowchart LR
 ## 需要图表帮助裁定的问题
 
 - Working Set 是工作视图、发布范围还是业务分支；
-- Tracker 与 Tracker Branch 是否是同一概念；
+- Tracker 独立聚合与非共享派生新身份已确认；parentId/sourceId 指向、多级能力、谱系修改、同谱系共存及 Item 归属待裁定；
 - Item Family、Item Variant、Item Revision 的身份边界；
 - Reference 指向逻辑家族还是具体变体；
 - Source Cut、业务 Snapshot、Merge Base 与仓库 Design Baseline 的不同含义。
 
-这些问题未确认前，不从本图推导聚合或数据库结构。
+除 D-001 的 Tracker 独立聚合结论外，不从本图推导其他聚合或数据库结构。
+
+非共享派生身份与追溯字段的限定图见 [D-002 图](aggregate-candidates.md#d-002非共享派生身份与追溯边界)。不把 Tracker 追溯关系等同 Working Set 父子关系。

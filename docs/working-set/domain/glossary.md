@@ -2,15 +2,15 @@
 
 **状态：Draft**
 
-以下定义用于消除讨论歧义，不表示相应概念必然是实体、聚合或独立限界上下文。来源代号见 [证据登记](evidence-register.md)，可视化关系见 [候选领域概念关系图](../diagrams/domain-concept-relationships.md)。除 `CONCEPT-019/020` 所引用的企业架构外框外，其余领域定义仍待领域专家确认；企业外框已确认也不等于内部模型已确认。
+以下定义用于消除讨论歧义，不表示相应概念必然是实体、聚合或独立限界上下文。来源代号见 [证据登记](evidence-register.md)，可视化关系见 [候选领域概念关系图](../diagrams/domain-concept-relationships.md)。除 `CONCEPT-019/020` 所引用的企业架构外框外，其余定义按条目及下文的用户确认范围区分，不能整体视为已确认；企业外框已确认也不等于内部模型已确认。
 
 | 编号 | 推荐术语与候选定义 | 歧义／应避免混用 | 关系与上下文差异 | 状态与来源 |
 | --- | --- | --- | --- | --- |
 | `CONCEPT-001` | **Working Set／工作集**：有身份和生命周期、选择 Tracker 并形成工作范围的工作上下文。 | 不等同 Git Branch；不预设拥有全部 Item。 | 在 Workspace Composition 中是选择清单；是否为单一大聚合待定。 | Reported；`EXT-ARCH §0/2.1`、`V4-UL §1` |
-| `CONCEPT-002` | **Tracker**：按产品空间与分类组织受管对象并参与共享或派生谱系的集合节点。 | 历史材料同时称“分类投影”“条目容器”“版本线”；需确认哪个是业务本质。 | Tracker Lineage 关注身份与谱系；查询投影不是自动的领域所有权。 | Reported；`V4-OVERVIEW:5`、`V4-UL §1` |
-| `CONCEPT-003` | **Shared Tracker**：多个 Working Set 选择同一权威 Tracker 与 Item 变体的协作语义。 | “共享”不等于所有用户有权；不等于复制后同步。 | 权威点查与列表／搜索投影可能有不同可见时效。 | Reported；`EXT-ARCH §2.1/11` |
-| `CONCEPT-004` | **Non-shared Tracker**：纳入目标 Working Set 后可独立演进的 Tracker 派生节点。 | `UNSHARED` 不自动说明何时复制内容，也不证明必须存在 `TrackerBranch` 类型。 | 与来源的关系需要固定切点和合并方向。 | Reported；`EXT-ARCH §2.1`、`V4-DOMAIN:408-415` |
-| `CONCEPT-005` | **Tracker Branch**：用于讨论 Tracker 独立演进线的候选术语。 | V4 明确取消独立 BranchId；其他资料仍使用“分支”。不能在确认前当成独立实体。 | 若采用，可作为 Tracker 谱系中的角色，而非必然新对象。 | Pending Confirmation；`V4-UL:12`、`EXT-ARCH §0` |
+| `CONCEPT-002` | **Tracker**：具有独立业务身份、状态、生命周期及管理行为的独立聚合。 | 不使用 Tracker Branch 作为独立领域概念；不作为 Working Set 内部实体。 | Working Set 可定义其工作范围或关联，不拥有其完整生命周期；D-002 确认非共享派生产生新 Tracker 身份，Item 聚合归属仍待确认。 | 用户正式确认 D-001（2026-11-10）；见 [裁定记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-001tracker-独立聚合裁定2026-11-10) |
+| `CONCEPT-003` | **Shared Tracker**：多个 Working Set 选择同一权威 Tracker 与 Item 变体的协作语义。 | “共享”不等于所有用户有权；不等于复制后同步。 | 所有绑定工作集同时可见已确认；各读取面须兑现 POL-008，指标与实现待设计。 | Reported；`EXT-ARCH §2.1/11` |
+| `CONCEPT-004` | **Non-shared Tracker**：非共享协作模式下的 Tracker；派生时产生具有独立身份的新 Tracker，源与派生为不同对象。 | 不等同同一 Tracker 的视图，也不引入 Tracker Branch。 | 追溯层级由 parentId/sourceId 表达，二者准确指向尚未确认。 | 用户确认 D-002；[裁定记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-002) |
+| `CONCEPT-005` | **Tracker Branch（停用术语，仅历史追溯）** | D-001 排除其作为独立领域概念或聚合根。 | 原描述混合了演进线、来源及生命周期，不机械映射为一个 Tracker；具体语义重新审查。 | Historical；由 D-001 终止候选资格 |
 | `CONCEPT-006` | **Item**：由具体业务上下文拥有内容和业务生命周期的受管业务对象。 | 不等同索引行、LightTrackerItem 或任意属性 Map。 | Requirement、Bug 等上下文可有不同规则。 | Reported；`EXT-ARCH §4/5` |
 | `CONCEPT-007` | **Item Family／Item Identity**：以 CommonId 识别跨派生变体的同一逻辑对象家族。 | 无关 Item 跨类型、跨 Tracker 也不能共享 CommonId。 | 同一家族各变体共享 CommonId、拥有不同 LocalId。 | 本对话用户已确认身份关系与唯一性 |
 | `CONCEPT-008` | **Item Variant／Branch-local Item**：某个非共享 Tracker 上具有稳定 LocalId 的具体变体。 | 不等于业务 revision；无本地内容行仍可能存在。 | V4 名称为 LightTrackerItem；报告建议用 ItemVariant 避免技术索引含义。 | Candidate；`EXT-ARCH §1/2.1`、`V4-DOMAIN:214` |
@@ -36,25 +36,33 @@
 - 默认工作集中的 Item 满足 CommonId = LocalId。
 - 非默认工作集中的 Item 满足 CommonId != LocalId。
 
-用户已确认默认/非默认按 Item 的实际归属判断。子工作集纳入共享 Tracker 后，查看的仍是归属默认工作集的同一个 Item，因此 CommonId=LocalId，查看入口变化不分配新身份。用户进一步确认，两个无派生关系的 Item 即使属于不同类型或不同 Tracker，也不允许拥有相同 CommonId。CommonId 在逻辑对象家族层面全局唯一，同族变体复用该值。CommonId 与 LocalId 均采用雪花 ID。标识生成协调、去重与子侧原生新建后回并默认工作集时的标识分配协议继续设计。
+用户已确认默认/非默认按 Item 的实际归属判断。子工作集纳入共享 Tracker 后，查看的仍是归属默认工作集的同一个 Item，因此 CommonId=LocalId，查看入口变化不分配新身份。用户进一步确认，两个无派生关系的 Item 即使属于不同类型或不同 Tracker，也不允许拥有相同 CommonId。CommonId 在逻辑对象家族层面全局唯一，同族变体复用该值。CommonId 与 LocalId 均采用雪花 ID。单工作集 CommonId 唯一、同族只允许一个有效变体已于阶段 3.1 确认。标识生成协调、去重与子侧原生新建后回并默认工作集时的标识分配协议继续设计。
 
 例如非共享派生链可表达为默认节点 (CommonId=100, LocalId=100)、子节点 (100,201)、孙节点 (100,302)。数值仅说明等值关系。
 
 ## 重点歧义
 
 1. **Baseline** 至少有三义：仓库设计基线、工作范围 Snapshot／历史切点、Merge Base。后续文档必须使用限定词。
-2. **Tracker Branch** 是否存在独立业务身份未确认；当前统一使用“Tracker 派生节点”，仅在比较方案时保留该术语。
+2. **Tracker** 已确认为独立聚合；Tracker Branch 为停用的历史术语。D-002 已确认非共享派生为不同 Tracker 身份；其追溯字段准确语义、层级能力和共存约束仍待确认。Shared 既有同一权威语义不变。
 3. **Item**、**Item Family**、**Item Variant**、**Item Revision** 分别表达业务对象、家族、变体和内容版次，不得互换。
-4. **共享**表达权威内容复用，不表达访问权限，也不承诺所有投影零延迟。
+4. **共享**表达权威内容复用，不表达访问权限；所有绑定工作集同时可见已确认，不能以投影延迟自行放宽该要求。
 5. **已处理**与内容相等分别表达。用户已确认 `KEEP_TARGET + markAsMerged=true` 可保留真实差异，决定写入 MergeCheckpoint，双侧版次均不变时停止重复提示。详见 [确认场景](../scenarios/core-scenarios.md#keep_target-的已处理确认)，这里的版次已确认为显式升级的业务 revision。普通编辑使乐观锁版本增加但业务版次不变时，已处理差异继续隐藏。任一侧显式升级业务版次后，用户再次主动比对时旧 MergeCheckpoint 对新版本组合过时，所有适用字段重新比较并显示实际差异。
 6. **Shared Kernel** 在本项目首先是已确认的企业架构归属；是否采用经典 DDD Shared Kernel 的共同代码／模型治理方式仍需另行说明。
 
 ## 候选对话检验
 
-> 领域专家：子工作集选择 Shared Tracker 时，是看到同一个权威 Item，还是得到一份同步副本？
+> 领域专家：子工作集选择 Shared Tracker 时，已确认看到同一个权威 Item。
 >
-> 架构师：如果是同一权威 Item，就不应称为分支或通过 Merge 同步；权限和列表刷新时效仍需单独确认。
+> 架构师：因此不通过 Merge 同步；权限与兑现同时可见的读取协议仍需设计。
 >
 > 领域专家：Non-shared Tracker 中 Item 首次修改时，身份是否变化？
 >
 > 架构师：候选模型要求 Item Variant 身份保持不变，只把内容从固定 Source Cut 转为本地权威内容；这仍需业务确认。
+
+## 阶段 3.1 接受范围与补充
+
+限定术语已按 [首版批准记录](../reviews/2026-11-09-stage-3-1-rule-convergence.md#用户批准记录与生效范围) 接受，其余候选定义不整体升级。用户明确确认：同一工作集有效范围内 CommonId 唯一，同族只允许一个有效变体；跨工作集同族仍共用 CommonId。Source Cut 的派生内容覆盖附件与关系，二者均固定为派生时状态；这不自动表示关系所指对象的全部内容也递归冻结。
+
+## Tracker 追溯用语（D-002）
+
+`parentId`、`sourceId` 是已确认用于表达 Tracker 追溯层级的名称，不凭字段名推导直接父或最初来源。二者也不等于 Working Set 的父级或内容 Source Cut。`Tracker Lineage` 可作为描述 Tracker 间追溯关系的候选术语，暂不单独设立聚合只是设计建议，不是用户已接受的聚合结论。多级链图只能在多级派生得到裁定后作为已确认行为绘制。

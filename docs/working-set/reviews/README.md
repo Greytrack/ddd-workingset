@@ -12,3 +12,7 @@
 - [2026-11-09-stage-3-0-shared-kernel-boundary-review.md](2026-11-09-stage-3-0-shared-kernel-boundary-review.md)：Shared Kernel 组织约束、四个业务 BC 外框及待确认合同。
 
 - [阶段 3 正式架构评审](2026-11-09-stage-3-architecture-review.md)：边界、三方案、风险、验证与八项裁定。
+
+阶段 3.1 的限定确认矩阵、候选首版清单及不变量推导见 [规则收敛报告](2026-11-09-stage-3-1-rule-convergence.md)。全部推导仍待批准。
+
+- [2026-11-10 候选不变量逐条审查](2026-11-10-invariant-evidence-review.md)：区分已接受测试依据与仍待批准的 INV 全文。

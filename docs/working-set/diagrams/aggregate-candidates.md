@@ -4,7 +4,9 @@
 
 目的：比较 AP-001/002/003 的范围和谱系一致性边界；依据 [方案比较](../proposals/aggregate-boundary-options.md)、[逐概念审查](../domain/aggregate-model.md)、[场景](../scenarios/shared-kernel-boundary-scenarios.md)、[评审](../reviews/2026-11-09-stage-3-architecture-review.md)。假设稳定身份、保留历史与 BC 提交能力可兑现，均待确认。不表达表、Java 类型或部署。
 
-图例：AggregateRoot 为候选根；Entity 为聚合内实体；ValueObject 为值；DomainService 为纯业务计算。实心菱形仅表达聚合内组合，箭头标 ID reference 为跨聚合身份引用；flowchart 的 subgraph 是事务边界，框间边不是外键。业务内容始终属于各 BC。
+D-001（2026-11-10）已确认所有图中的 Tracker 是独立聚合，其余根与 Item 归属均为方案假设。AP-001/003 的 Item 独立根与 ID 引用只表达待评审选项，不是 D-001 的结论；D-002 已确认非共享派生为不同身份，追溯字段指向仍未裁定。
+
+图例：AggregateRoot 除 Tracker 外为候选根；Entity 为聚合内实体；ValueObject 为值；DomainService 为纯业务计算。实心菱形仅表达聚合内组合，箭头标 ID reference 为跨聚合身份引用；flowchart 的 subgraph 是事务边界，框间边不是外键。业务内容始终属于各 BC。
 
 ## AP-001：Working Set 配置主导
 
@@ -45,7 +47,7 @@ flowchart LR
         Value["Binding"]
         Root --- Value
     end
-    subgraph T["独立选择或谱系聚合"]
+    subgraph T["Tracker 独立聚合 D-001"]
         Other["Tracker AR"]
     end
     subgraph B["业务 BC 聚合 - 独立提交"]
@@ -55,53 +57,32 @@ flowchart LR
     Other -->|"ID reference - 非组合"| Content
 ```
 
-## AP-002：Tracker Branch 独立演进
+## AP-002：去除失效 Branch 根后的最小修订草图
+
+D-001 已排除原独立 Branch 根。此图不将原 BranchSource、BranchId 或 SourceCut 自动归入 Tracker；非共享派生新身份由 D-002 确认；来源证据归属及追溯字段指向待定，Item 不画入任一聚合。修订后是否仍构成与 AP-001 不同的方案待评审。
 
 ```mermaid
 classDiagram
-    class TrackerBranch {
+    class Tracker {
         <<AggregateRoot>>
-    }
-    class BranchSource {
-        <<ValueObject>>
     }
     class WorkingSet {
-        <<AggregateRoot>>
+        <<CandidateAggregateRoot>>
     }
-    class BusinessItem {
-        <<AggregateRoot>>
-    }
-    class SourceCut {
-        <<ValueObject>>
-    }
-    class Difference {
-        <<ValueObject>>
-    }
-    class SemanticComparison {
-        <<DomainService>>
-    }
-    TrackerBranch *-- BranchSource
-    WorkingSet --> TrackerBranch : ID reference
-    TrackerBranch --> BusinessItem : ID reference
-    TrackerBranch *-- SourceCut
-    SemanticComparison ..> Difference : produces
+    WorkingSet --> Tracker : scope association
+    note for Tracker "D-002: parentId and sourceId express traceability; targets TBD"
 ```
 
 ```mermaid
 flowchart LR
-    subgraph R["TrackerBranch 聚合"]
-        Root["AR TrackerBranch"]
-        Value["BranchSource"]
-        Root --- Value
+    subgraph W["Working Set 候选边界"]
+        WS["Working Set"]
     end
-    subgraph T["独立选择或谱系聚合"]
-        Other["WorkingSet AR"]
+    subgraph T["Tracker 独立聚合 D-001"]
+        TR["AR Tracker"]
     end
-    subgraph B["业务 BC 聚合 - 独立提交"]
-        Content["Business Object AR"]
-    end
-    Root -->|"ID reference"| Other
-    Other -->|"ID reference - 非组合"| Content
+    WS -->|"范围关联 - 身份映射待定"| TR
+    Q["Item 归属与来源证据责任待确认 - 此节点非聚合"]
 ```
 
 ## AP-003：Manifest 发布指针
@@ -149,11 +130,15 @@ flowchart LR
     subgraph B["业务 BC 聚合 - 独立提交"]
         Content["Business Object AR"]
     end
+    subgraph TR["Tracker 独立聚合 D-001"]
+        TrackerRoot["AR Tracker"]
+    end
     Root -->|"ID reference"| Other
-    Other -->|"ID reference - 非组合"| Content
+    Other -->|"选择关联"| TrackerRoot
+    TrackerRoot -->|"候选 ID 引用 - Item 归属未裁定"| Content
 ```
 
-AP-001 的 Binding 为 Entity，Source Cut 在业务侧保存为读取依据的图示不规定内容存储实现；Variant 独立成根与否尚待身份权威裁定。AP-002 WorkingSet 以 ID 选择 Branch，不表示 Branch 拥有 WorkingSet。AP-003 ManifestRef 不组合可变 Binding；封闭 Manifest revision 的成员选择是冻结值，ItemVariant 与业务内容是不同根，二者按 LocalId 协作，不属于共同事务。
+AP-001 的 Binding 为 Entity，Source Cut 在业务侧保存为读取依据的图示不规定内容存储实现；Variant 独立成根与否尚待身份权威裁定。AP-002 现仅展示 D-001 允许的最小关联，不承接原 Branch 的身份及来源模型。AP-003 ManifestRef 不组合可变 Binding；封闭 Manifest revision 的成员选择是冻结值；ItemVariant 与业务内容不同根及按 LocalId 协作仅为 AP-003 候选，不裁定 Item 是否属于 Tracker 聚合。
 
 三者共同的 Merge Session、Decision、Apply Result、Checkpoint 与 Reference 见下图；Session 不拥有业务内容，巨大决定集合应冻结清单并拆执行项，是否提升独立根须规模证据。
 
@@ -171,3 +156,24 @@ classDiagram
     MergeSession --> BusinessObject : ID reference
     Reference --> BusinessObject : ID reference
 ```
+
+## D-002：非共享派生身份与追溯边界
+
+**图状态：Draft；业务身份事实已由 D-002 确认，关联及存储方案未批准。** 适用于非共享派生，不表达 Shared、不表达多级派生、不包含 Item。A/B 是示例身份，非根节点或初始来源的编码约定。派生箭头仅表示产生结果，绝不表示 parentId 或 sourceId 的具体指向。
+
+```mermaid
+flowchart LR
+    subgraph SA["独立 Tracker 聚合"]
+        A["源 Tracker A"]
+    end
+    subgraph SB["另一个独立 Tracker 聚合"]
+        B["派生 Tracker B - 身份不同于 A"]
+        P["parentId - 指向语义待确认"]
+        S["sourceId - 指向语义待确认"]
+        B --- P
+        B --- S
+    end
+    A -->|"非共享派生操作产生新对象 - 非字段引用边"| B
+```
+
+图中不设 Lineage 聚合；这仅是当前候选表达，不代表“不设聚合”已经接受。Working Set 不拥有 Tracker 完整生命周期；未画删除级联或多级链。参见 [D-002 裁定与影响](../reviews/2026-11-09-stage-3-architecture-review.md#d-002)、[QUESTION-002 子问题](../domain/open-questions.md#question-002d-002-后保留的子问题)。

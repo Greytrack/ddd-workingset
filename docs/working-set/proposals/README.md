@@ -8,4 +8,4 @@
 
 ## 当前提案
 
-- [aggregate-boundary-options.md](aggregate-boundary-options.md)：Working Set 主导、Tracker Branch 主导、版本化 Manifest 三套竞争性聚合方案。
+- [aggregate-boundary-options.md](aggregate-boundary-options.md)：Working Set 主导、原 AP-002（Branch 根不兼容 D-001，附修订建议）、版本化 Manifest 的方案比较。

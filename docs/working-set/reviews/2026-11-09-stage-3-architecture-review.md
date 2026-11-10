@@ -127,3 +127,36 @@ D4 的源字段取值已按用户裁定更新。D6 若数据表明整体配置�
 - **GateFlow 全量替换的成员规则已确认。** 用户明确 V3 独有、V1 没有的流程元素应从 V3 当前内容移除，使替换后的内容完整对应 V1。见 [GateFlow 场景](../scenarios/shared-kernel-boundary-scenarios.md#gateflow-草稿版次内容替换)。移除后的物理清理与外部引用策略继续设计。
 
 当前 docs/working-set Markdown 本地文件链接失效 0；12 个 Mermaid 块图类型检查通过，新图代码围栏成对。环境无 mmdc，未执行渲染检查或完整 Mermaid parser；仍是接受前待办。历史 pre-design 本轮简单扫描记录 94 个失效本地链接引用（阶段 2 报告记为 93，扫描口径未统一），未修改。git diff --check 已通过；变更仅限 docs/working-set 的 13 个既有 Markdown 与 4 个新增 Markdown，未修改生产代码、历史输入或 AGENTS；Git HEAD 存在，无提交/Tag 操作。一次历史图类型扫描因旧材料使用其他语法中止，随后限定当前知识库重新检查通过。
+
+## D-001：Tracker 独立聚合裁定（2026-11-10）
+
+**用户正式确认的领域建模决定；ADR 文档仍 Proposed，未发布新基线。**
+
+直接依据：用户本轮明确指定 D-001，确认 Tracker 是独立聚合，拥有独立业务身份、状态、生命周期及管理行为。Working Set 可以定义其工作范围或关联，但 Tracker 不作为 Working Set 内部实体；统一语言只使用 Tracker，Tracker Branch 不作为独立概念或根。
+
+QUESTION-002 的独立性问题关闭。跨 Working Set 的 Tracker 身份关系及 Item 是否属于 Tracker 聚合仍未确认；不改变先前已确认的共享权威规则，也不将其泛化为所有工作集同一身份。D6 中以 Branch 独立生命周期作为 AP-002 准入前提的建议现已失效，保留原评审文本供历史追溯。
+
+影响：术语 CONCEPT-002 正式化，CONCEPT-005 停用；AP-001/003 的 Tracker 独立根兼容但其余结构未批准，AP-002 原 Branch 根不兼容，来源与演进语义须重审；候选类图和边界图移除该根，不以改名偷偷接受身份映射。Item 归属继续待定，未新增其业务不变量。
+
+参见 [Proposed ADR-0001](../adr/0001-tracker-independent-aggregate.md)、[修订方案](../proposals/aggregate-boundary-options.md)、[图表](../diagrams/aggregate-candidates.md)。本次不更新已接受事实政策主题的范围，不发布、提交或创建 Tag。
+
+<a id="d-002"></a>
+## D-002：Tracker 独立身份与派生谱系（2026-11-10）
+
+**业务裁定：用户明确确认；设计推论：Draft；不发布新基线。** 来源为本聊天用户标题“阶段 3 · D-002：Tracker 独立身份与派生谱系”下的七项裁定。关联前节 D-001 与 [ADR-0001](../adr/0001-tracker-independent-aggregate.md)，不另设冲突决策编号。
+
+1. 非共享 Tracker 派生产生新的独立业务身份，源与派生是两个不同领域对象。
+2. Tracker 之间有追溯层级，通过 parentId/sourceId 表达；不先定义具体指向。
+3. Tracker 是独立聚合，拥有业务身份、状态、生命周期及管理行为。Working Set 不拥有其完整生命周期。
+4. 统一领域语言只使用 Tracker，不恢复独立 Tracker Branch。
+5. 仅针对非共享派生；Shared 的已有权威复用、默认工作集归属及同时可见规则不变。
+
+归档至 FACT-003、CONCEPT-002/004，QUESTION-002 收窄为 a—e 及 Item 边界。D-001 记录中的“非共享身份关系未决”保留为历史状态，由本节补充关闭，不修改 D-001 原始裁定。
+
+设计影响：按身份引用表达谱系、Working Set/Tracker 独立聚合协作、Lineage 暂不单设根仍为 Draft 推论；Item 边界仍待评审。AP-002 修订方向解释力增强，不代表接受 AP-002，也不恢复原 Branch 根；AP-001/003 同样可以承载不同 Tracker 身份，完整方案未批准。
+
+仍待用户裁定：parentId 是否为直接父、sourceId 是否为最初来源、是否允许多级派生、谱系能否修改、同一 Working Set 能否有同谱系多个 Tracker。POL-005 的 Item CommonId 唯一性不能反推 Tracker 共存政策。对应 [问题与影响](../domain/open-questions.md#question-002d-002-后保留的子问题)。
+
+一致性注意：POL-002 原生创建入口限制不因派生产生新身份自动放宽；不把新身份等同允许用户任意创建。已接受 Shared 规则不参与本次修改。新的 Tracker 关系也不改变已确认的 Item 身份规则。
+
+追溯：[SCN-013](../scenarios/core-scenarios.md#scn-013-非共享-tracker-派生独立身份)、[候选图](../diagrams/aggregate-candidates.md#d-002非共享派生身份与追溯边界)、[方案影响](../proposals/aggregate-boundary-options.md#d-002-影响与修订方向draft)。无实现或运行测试证据；图形渲染仍待验证。

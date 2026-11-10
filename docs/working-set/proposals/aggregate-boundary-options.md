@@ -15,7 +15,9 @@
 - **反例**：数万 Tracker 的 Working Set；仅改名却与高频 Binding 变更冲突。
 - **适用／放弃**：范围有明确上限且整体配置必须原子时适用；P99 规模或冲突率失控时放弃。
 
-## `AP-002`：Tracker Branch 独立演进模型
+## `AP-002`：原 Tracker Branch 独立演进模型（不兼容 D-001）
+
+**状态：Draft，原结构不得作为当前候选实施；以下保留历史方案及权衡。**
 
 **核心**：Tracker Branch 是主要聚合根，拥有派生身份、固定来源和生命周期；Working Set 只维护对 Branch 的选择。
 
@@ -25,6 +27,10 @@
 - **共享/COW/Merge**：Shared 指同一 Branch 或权威 Tracker；Non-shared 建新 Branch；Item COW 依附 Branch。
 - **反例**：用户只关心一个整体工作范围，不单独管理 Tracker Branch；空 ProductSpace Binding 无法由 Branch 解释。
 - **适用／放弃**：业务明确管理 Tracker 分支生命周期时适用；Branch 仅是实现细节时放弃。
+
+### AP-002 修订建议（Draft，非术语替换）
+
+原 Branch 根组合了独立生命周期、派生身份与来源切点。D-001 只确定独立管理者为 Tracker，不确定原 BranchId 与 TrackerId 的映射，当时尚不确定跨工作集是否新建 Tracker；D-002 现已明确非共享派生建立新的独立 Tracker，Shared 不变。建议去掉独立 Branch 根，Working Set 通过关联选择独立 Tracker；将演进关系、来源证据的归属列为未决，暂不画入 Tracker 内部。Item 的包含或独立引用均待确认。若修订后与 AP-001 无实质区别，应合并方案而非仅改名维持三套。
 
 ## `AP-003`：版本化 Manifest + Tracker 谱系 + Item Variant
 
@@ -46,11 +52,11 @@
 | 维度 | AP-001 | AP-002 | AP-003 |
 | --- | --- | --- | --- |
 | 最自然解释 | 整体配置与发布 | Tracker 独立演进 | 大规模混合共享／派生 |
-| 主要强一致点 | Working Set 配置 | 单 Tracker Branch | Manifest 发布指针 + 各根内部状态 |
+| 主要强一致点 | Working Set 配置 | 原 Branch 根（已不兼容） | Manifest 发布指针 + 各根内部状态 |
 | 主要热点 | Working Set version | 热门 Shared Tracker | 协议与准备索引 |
 | 历史依赖 | 中 | 中高 | 高 |
 | 实施复杂度 | 低至中 | 中 | 高 |
-| 关键放弃条件 | 范围巨大 | Branch 无业务身份 | 历史/双事实无法兑现 |
+| 关键放弃条件 | 范围巨大 | D-001 已排除独立 Branch 根 | 历史/双事实无法兑现 |
 
 任何选择都必须先回答 `QUESTION-001/002/004/006/012`，并用 [核心场景](../scenarios/core-scenarios.md) 反驳验证。
 
@@ -58,6 +64,22 @@
 
 责任模式 A/B/C 与 AP-001/002/003 是正交维度：前者决定谁能提交业务内容，后者决定工作范围与谱系如何保持一致。推荐责任 C 不意味着推荐 AP-003。
 
-当前建议以 AP-001 作为最简单的范围配置基准；若收集到巨大 Binding 规模和原子切换要求，再选 AP-003；若领域专家证明 Branch 是被独立管理的演进对象，AP-002 优先。三者均保持业务 BC 内容提交边界，保留历史/权限/删除的显式失败。迁移从 AP-001 到 AP-003 需冻结原选择为首个 Manifest、校验成员身份映射、双读核对并 CAS 切换，不能重分配 LocalId；AP-002 的 Branch 身份迁移则需映射原 Tracker 与派生节点，不能只改术语。
+当前建议以 AP-001 作为最简单的范围配置基准；若收集到巨大 Binding 规模和原子切换要求，再选 AP-003；AP-002 原 Branch 根已由 D-001 排除，其修订方向不再以确认 Branch 身份为前提。三者均保持业务 BC 内容提交边界，保留历史/权限/删除的显式失败。迁移从 AP-001 到 AP-003 需冻结原选择为首个 Manifest、校验成员身份映射、双读核对并 CAS 切换，不能重分配 LocalId；AP-002 的 Branch 身份迁移则需映射原 Tracker 与派生节点，不能只改术语。
 
 图表：[三套类图与聚合边界](../diagrams/aggregate-candidates.md)。逐概念规则：[聚合审查](../domain/aggregate-model.md)。判别场景：[边界场景](../scenarios/shared-kernel-boundary-scenarios.md)。决策状态与反例：[正式评审](../reviews/2026-11-09-stage-3-architecture-review.md)。
+
+## D-001 兼容性审查（2026-11-10）
+
+- AP-001：以 ID 选择独立 Tracker 与 D-001 兼容；若将 Tracker 本身作为配置内部实体则不兼容。Binding 可作为候选内部实体不等于 Tracker 被组合。Item 根结构仍仅方案假设。
+- AP-002：独立 Tracker Branch、BranchId、Non-shared 必建 Branch、COW 依附 Branch 均不能继续采用；修订建议见上节，未选择新身份方案。
+- AP-003：独立 Tracker 与 D-001 兼容；D-002 已确认非共享派生节点对应不同 Tracker 身份；追溯字段指向及 ItemVariant 独立根仍未批准。固定审阅证据不改变执行取源最新值政策。
+
+所有方案继续 Draft，不因局部兼容而 Accepted。决策与开放边界见 [Proposed ADR-0001](../adr/0001-tracker-independent-aggregate.md)；图表同步仅移除失效根及标明候选假设。
+
+## D-002 影响与修订方向（Draft）
+
+- AP-001：范围配置可引用新派生 Tracker；配置范围不拥有 Tracker 完整生命周期。创建 Tracker 与纳入范围的可见性、失败恢复协议仍未确定。
+- AP-002：独立 Tracker 的演进管理获得更多业务依据；候选模型应以不同 Tracker 身份及追溯关系解释非共享派生，不能恢复独立 Branch 根，也不能自动分配 parentId/sourceId 指向。独立演进不证明 Item 属于 Tracker。
+- AP-003：Manifest 可选择新派生 Tracker；这是身份事实，不证明必须采用 Manifest、ItemVariant 独立根或全谱系事务。Shared 仍选择既有权威 Tracker。
+
+跨 Tracker 身份引用、Working Set 独立聚合协作、Lineage 暂不设聚合均保持推论。五项追溯问题及规模/一致性证据不足前，不批准任何 AP。修订后的 AP-002 是否与 AP-001 有实质差异仍须比较，不能为维持三方案数量制造新概念。
