@@ -1,9 +1,9 @@
 # ADR-0005：Merge 执行模型与 MergeEntry 行为契约
 
-- **状态**：Proposed
+- **状态**：Accepted
 - **日期**：2026-11-10
 - **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem 的协作顺序、ComparisonToken 的证据要求（不含编码）、Checkpoint 确认的发起方
-- **确认人／决策权威**：待用户确认（本 ADR 由 AI 起草为 Proposed，未批准）
+- **确认人／决策权威**：用户已确认 Q1～Q3 三项裁定，并于 2026-11-10 明确批准本 ADR 为 Accepted
 - **替代**：无
 - **被替代于**：无
 
@@ -27,7 +27,7 @@ D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint �
 
 ## 决定
 
-（Proposed 建议；用户批准后方可 Accepted）
+（用户 2026-11-10 确认 Q1～Q3 并批准为 Accepted）
 
 1. **MergeEntry 作为 MergeRound 聚合内的 Entity**，表达一条合并事项的完整生命周期：`Compared → Decided → Applying → Applied / Rejected / StaleEvidence / Deferred → Confirmed`。不独立成聚合，不跨轮次复用。
 2. **协作顺序固定**：Diff 产生 `TrackerItemDiff` + `ComparisonToken` → MergeRound 登记决策并建立条目 → 执行时复核证据 → 依 `ItemMergeDecision` 确定目标操作 → 业务 BC 构建目标聚合并整体校验提交 → LightTrackerItem 按既有 COW 机制维护有效来源与 Revision → 依 `markAsMerged` 更新 Checkpoint → MergeRound 记录单项结果、进度与 `ApplyResult`。

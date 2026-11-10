@@ -1,6 +1,6 @@
 # MergeEntry 生命周期与提交到确认时序
 
-**状态：Draft / Candidate（契约候选配套图；不改变 D-001～D-019 已确认规则，未纳入正式基线）**
+**状态：Draft / Candidate（契约候选配套图；Q1～Q3 的语义已由 ADR-0005 确认，图本身未纳入正式基线）**
 
 - 目的：表达一条 MergeEntry 从 Diff、提交决策、执行、业务 BC 提交、LightTrackerItem 维护到 Checkpoint 确认的协作顺序与状态迁移。
 - 适用范围：阶段 5 T1 契约草案；直接父子、非共享 Tracker 的合并路径。

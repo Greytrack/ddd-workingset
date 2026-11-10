@@ -1,6 +1,6 @@
 # Merge 执行行为契约 v1（草案）
 
-**状态：Draft（契约候选；不改变 D-001～D-019 已确认规则，不构成 Accepted 或发布）**
+**状态：Draft（契约候选；Q1～Q3 已由用户于 2026-11-10 裁定并经 ADR-0005 Accepted；本契约整体仍未冻结）**
 
 - 日期：2026-11-10
 - 阶段：阶段 5 契约层 T1（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
@@ -34,7 +34,7 @@ Diff 产生有向冻结差异 + ComparisonToken
 | --- | --- | --- | --- |
 | **Diff 能力**（Compare & Merge 区域） | 查询能力／领域服务，非聚合 | 产生有向、冻结、可追溯的 `TrackerItemDiff` 与 `ComparisonToken`；只读双侧证据 | 不写业务内容；不持决定；不记录「已处理」 |
 | **MergeRound** | 聚合根（合并载体，D-019） | 轮次参数、条目集合、进度、单项结果、最终 `ApplyResult`；持有本轮合并决策 | 不直接写业务字段；不判定 BC 业务合法性；不拥有 Checkpoint |
-| **MergeEntry** | MergeRound 内 **Entity**（候选，见 Q1） | 一次合并事项的生命周期与状态；绑定 token、决定、目标操作、结果 | 不是独立聚合；不跨轮次复用 |
+| **MergeEntry** | MergeRound 内 **Entity**（已裁定：ADR-0005） | 一次合并事项的生命周期与状态；绑定 token、决定、目标操作、结果 | 不是独立聚合；不跨轮次复用 |
 | **MergeCheckpoint** | 独立聚合（D-019） | 「差异已处理」的确认/撤销事实与因果单调；按范围+家族键+双侧版次定位 | 不拥有业务内容；不证明内容相等；不替代 ApplyResult |
 | **业务 BC 聚合** | 各 BC 独立聚合 | 构建目标聚合、整体校验、提交（Save）、返回真实结果与业务 Revision | 不做合并选择；不记录 Checkpoint |
 | **LightTrackerItem** | 独立聚合（D-008） | 身份（LocalId/CommonId）、有效内容来源、自身 Revision 的维护 | 不构造业务内容；不判定合并合法性 |
@@ -65,7 +65,7 @@ Diff 产生有向冻结差异 + ComparisonToken
 2. 可随提交带回，用于校验「比较依据未变化」；
 3. 不承载业务内容，不承载决定；
 4. **不得只由业务 Revision 构成**：Revision 是版次标识，同一 Revision 内内容仍可变（D-015 反例），因此 token 必须绑定双侧内容证据引用，Revision 仅可作为其中一项；
-5. 编码、生成方式、存储形式**不在本轮决定**（列入 Q2）。
+5. 编码、生成方式、存储形式**不在本轮决定**（Q2 只裁定「必须绑双侧内容证据」，不涵盖编码形式）。
 
 ### 3.3 证据时点区分（已确认语义）
 
@@ -178,31 +178,34 @@ Diff 产生有向冻结差异 + ComparisonToken
 | --- | --- |
 | 直接父子准入、决策优先、BC 整体校验提交、KEEP_TARGET 语义、部分成功与重试、Checkpoint 过时判定、未物化可参与 Diff、未物化目标修改即物化 | **已确认**（FACT-007/008、POL-004、R08～R11、D-019） |
 | MergeRound/MergeCheckpoint 的聚合定位；合并决策归属 MergeRound | **已确认**（D-019） |
-| MergeEntry 作为 MergeRound 内 Entity | **契约候选**（Q1） |
-| `TrackerItemDiff` 字段集、`ComparisonToken` 契约要求 | **契约候选**（Q2） |
+| MergeEntry 作为 MergeRound 内 Entity | **已裁定**（Q1；ADR-0005） |
+| `ComparisonToken` 必须绑定双侧内容证据，Revision 仅其中一项 | **已裁定**（Q2；ADR-0005） |
+| Checkpoint 确认由 MergeRound 在 `markAsMerged=true` 且条目 `Applied` 时发起 | **已裁定**（Q3；ADR-0005） |
+| `TrackerItemDiff` 字段集、`ComparisonToken` 编码与存储形式 | **契约候选**（留实现） |
 | MergeRound 行为签名与状态机、MergeEntry 状态机、`ApplyResult` 结构 | **契约候选** |
 | CK-1～CK-5 不变量 | **契约候选**（CK-4 的过时判定已有 R11 依据） |
-| Token 编码、幂等键、中间件、表结构 | **不在本契约**（实现/后续决定） |
+| 幂等键、事件中间件、表结构 | **不在本契约**（实现/后续决定） |
 
-## 11. 阻塞 T1 的三个问题与推荐
+## 11. T1 三个阻塞问题的裁定结果（2026-11-10）
 
-| 编号 | 问题 | 推荐 | 理由 |
+| 编号 | 问题 | 用户裁定 | 理由 |
 | --- | --- | --- | --- |
 | Q1 | MergeEntry 是 MergeRound 内 Entity，还是独立持久对象？ | **MergeRound 内 Entity** | D-019 已确认 MergeRound 是「合并载体并记录参数/进度/成败」；条目是轮次的组成，独立成聚合会引入第二个身份与一致性边界，且与「不新增聚合」原则冲突 |
-| Q2 | `ComparisonToken` 的证据内容：只绑 Revision 是否足够？ | **不够；必须绑定双侧内容证据引用**，Revision 仅作其中一项 | 同一 Revision 内内容仍可变（D-015 反例）；用 Revision 冒充完整比较证据会使「过期审阅」防护失效。证据形式（内容指纹/快照引用）留实现 |
+| Q2 | `ComparisonToken` 的证据内容：只绑 Revision 是否足够？ | **不可以；必须绑定双侧内容证据引用**，Revision 仅作其中一项；证据形式留实现 | 同一 Revision 内内容仍可变（D-015 反例）；用 Revision 冒充完整比较证据会使「过期审阅」防护失效 |
 | Q3 | Checkpoint 确认由谁发起：MergeRound 执行成功时自动，还是独立用户确认？ | **由 MergeRound 在 `markAsMerged=true` 且条目 `Applied` 时发起**；Checkpoint 只做因果校验 | 避免两个入口写同一事实；用户决策已通过 `markAsMerged` 表达；Checkpoint 保持独立聚合、不做反向查询 |
 
-## 12. ADR-0005 建议
+三项裁定已记录于 [ADR-0005](../adr/0005-merge-execution-model.md)（Accepted，2026-11-10）。
 
-**建议：需要（Necessary）**。
+## 12. ADR-0005
 
-- 理由：Merge 执行模型（MergeEntry 的生命周期、三对象协作顺序、Diff 证据要求、Checkpoint 独立与确认发起方）是难以逆转的结构决策，存在真实备选（MergeEntry 独立聚合／不持久化执行记录／确认由用户单独发起），并直接约束后续实现与跨 BC 契约。
-- 建议记录的决策范围：三对象职责与协作顺序、MergeEntry 归属、`ComparisonToken` 的证据要求（不含编码）、Checkpoint 确认发起方。
-- 不纳入 ADR：幂等键实现、Token 编码、中间件与表结构。
-- 状态：起草为 `Proposed`，由用户批准后才可 `Accepted`；本轮不发布。
+**已 Accepted（2026-11-10）**：[ADR-0005：Merge 执行模型与 MergeEntry 行为契约](../adr/0005-merge-execution-model.md)。
+
+- 已记录：三对象职责与协作顺序、MergeEntry 归属、`ComparisonToken` 的证据要求（不含编码）、Checkpoint 确认发起方。
+- 未纳入：幂等键实现、Token 编码、中间件与表结构。
+- 备选方案（MergeEntry 独立持久／用户单独确认）保留在 ADR 中作为重估依据；不重新请求用户选择已排除方案。
 
 ## 13. 追溯与下一步
 
-- 追溯：D-019、FACT-027、INV-061～063、SCN-055/056；FACT-007/008、INV-006～010、POL-004、R08～R11、B06/B08/B09/B10。
+- 追溯：D-019、FACT-027、INV-061～063、SCN-055/056；FACT-007/008、INV-006～010、POL-004、R08～R11、B06/B08/B09/B10；[ADR-0005](../adr/0005-merge-execution-model.md)。
 - 图：[MergeEntry 生命周期与协作时序](../diagrams/merge-entry-lifecycle.md)。
-- 下一步：用户裁定 Q1～Q3 与 ADR-0005 范围后，补充 SCN-057 起的执行场景（过期审阅、撤销晚到、部分成功后重试、未物化目标失败）并冻结契约 v1。
+- 下一步：补齐 SCN-057 起的执行场景（过期审阅、撤销晚到、`DEFER` 残留、部分成功后重试、未物化目标失败），冻结契约 v1；随后进入 T2 绑定与删除契约。

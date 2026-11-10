@@ -51,8 +51,8 @@
 
 ## 7. 下一步
 
-**T1 已产出 Draft 草案**（2026-11-10）：[Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)、[MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md)、[ADR-0005（Proposed）](../adr/0005-merge-execution-model.md)。
+**T1 三项裁定已完成**（2026-11-10，[ADR-0005](../adr/0005-merge-execution-model.md) Accepted）：Q1 MergeEntry 为 MergeRound 内 Entity；Q2 ComparisonToken 必须绑双侧内容证据（Revision 仅其中一项，证据形式留实现）；Q3 Checkpoint 确认由 MergeRound 在 `markAsMerged=true` 且 `Applied` 时发起。
 
-待用户裁定：Q1 MergeEntry 归属（推荐 MergeRound 内 Entity）、Q2 ComparisonToken 证据要求（推荐必须绑双侧内容证据）、Q3 Checkpoint 确认发起方（推荐由 MergeRound 在 `markAsMerged=true` 且 `Applied` 时发起）；以及 ADR-0005 是否批准为 Accepted。
+产出：[Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)（Draft，已同步裁定）、[MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md)（Draft/Candidate）。
 
-裁定后：补充 SCN-057 起的执行场景（过期审阅、撤销晚到、`DEFER` 残留、部分成功后重试、未物化目标失败），冻结契约 v1，再进入 T2。
+下一步：补齐 SCN-057 起的执行场景（过期审阅、撤销晚到、`DEFER` 残留、部分成功后重试、未物化目标失败），冻结契约 v1，再进入 T2。
