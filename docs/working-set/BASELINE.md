@@ -101,8 +101,8 @@
 | T2 | [绑定与删除](domain/binding-deletion-contract-v1.md)，Reviewed | K1～K3；POL-016、INV-064～068 | [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md) |
 | T3 | [物化协议](domain/lighttrackeritem-materialization-contract-v1.md)，Reviewed | K1′～K3′；INV-069～071 | [T3 评审](reviews/2026-11-11-t3-materialization-review.md) |
 | T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
-| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；**S1 已完成**（`mvn test` 12 项通过），S2～S4 待实施 | 无新增业务裁定（沿用 T1～T4）；**P1～P5 工程选型已统一、A1～A3 已确认** | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[S1 验证结果](implementation/t5-s1-verification-result.md) |
+| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；**S1、S2 已完成**（`mvn test` 32 项通过），S3～S4 待实施 | 无新增业务裁定（沿用 T1～T4）；**P1～P5 工程选型已统一、A1～A3 已确认** | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[S1 验证结果](implementation/t5-s1-verification-result.md)、[S2 验证结果](implementation/t5-s2-verification-result.md) |
 
-T5 进度（2026-11-11）：S0 设计与测试规划完成；**S1 已实现并通过审查**（`mvn test` 12 项通过，AC-01/AC-02 覆盖）；**S2 前置工程决定已确定**（Spring Boot 升级、Spring Event、雪花 ID 替换 UUID），[S2 任务说明](implementation/t5-s2-codex-task-brief.md) 已就绪。仓库现有 Maven 工程（Java 21）与 28 个主源文件。
+T5 进度（2026-11-11）：S0 设计与测试规划完成；**S1 已实现并通过审查**（`mvn test` 12 项通过，AC-01/AC-02 覆盖）；**S2 已完成**（`mvn test` 32 项通过：AT-03 前半、修改前快照与事件信封/顺序、并发冲突、Spring Boot 上下文、Spring Event 派发、雪花 ID 替换 UUID），[S2 验证结果](implementation/t5-s2-verification-result.md)；**S3 待启动**（首次 COW 与状态切换）。仓库现有 Maven 工程（Java 21 + Spring Boot 3.3.5）与 38 个主源文件。
 
 SCN-057～071 与配套图表由各契约链接。进度、下一步及门禁统一见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。
