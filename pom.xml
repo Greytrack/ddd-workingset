@@ -14,15 +14,27 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>5.11.3</junit.version>
     <archunit.version>1.3.0</archunit.version>
-    <spring.version>6.1.14</spring.version>
+    <spring-boot.version>3.3.5</spring-boot.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- S2：Spring Boot BOM（非 web），领域层保持纯 Java -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
-    <!-- S1：Spring 仅用于组合根装配；领域保持纯 Java -->
+    <!-- S2：Spring Boot starter（非 web，不启动容器）；仅承担 DI、事件派发与集成测试 -->
     <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-context</artifactId>
-      <version>${spring.version}</version>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
     </dependency>
 
     <!-- 测试 -->
