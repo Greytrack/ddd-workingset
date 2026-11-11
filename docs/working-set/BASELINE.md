@@ -84,6 +84,8 @@
 
 ## 最近基线变更
 
+- **2026-11-11 阶段 5 T4 草案**：产出 [跨 BC 公共契约 v1](domain/cross-bc-contract-v1.md)（Draft）、[跨 BC 契约面与失败语义](diagrams/cross-bc-contract.md)（Draft/Candidate）与 SCN-069～071；修正 [Shared Kernel 边界](domain/shared-kernel-boundary.md) 中已被 POL-014 修订的旧「不允许移除」表述；待用户裁定 K1″（能力集边界：只读 + BC 自管写入 vs 统一写端口）、K2″（失败语义九分类 vs 四态）、K3″（版本治理 B vs A/C）。发布仍 Unreleased。
+
 - **2026-11-11 阶段 5 T3 冻结**：用户正式确认 K1′～K3′；[物化协议契约 v1](domain/lighttrackeritem-materialization-contract-v1.md) 状态 Draft → Reviewed——新增独立 `materialized` 字段（与 `sourceLocalId`/`sourceRevision` 同一次聚合状态变更同步更新）、LocalId 预分配与稳定复用、事件驱动最终一致（切换失败不回滚、幂等只补未完成步骤）、不持久化内容指针；旧「仅由来源字段推导」候选标 Superseded；新增 SCN-066～068、INV-069～071。评审见 [T3 评审](reviews/2026-11-11-t3-materialization-review.md)。发布仍 Unreleased。
 
 - **2026-11-11 阶段 5 T2 冻结**：用户正式确认 K1=A、K2=A、K3=A；[绑定与删除契约 v1](domain/binding-deletion-contract-v1.md) 状态 Draft → Reviewed（冻结）——Shared 解绑不受 Item 限制、非共享解绑三项检查、`deleteProductSpace` 须审查所有 WorkingSet 的 SpaceBinding、`deleteWorkingSet` 受成员关系约束、删除不可恢复且软删/归档/恢复不纳入；新增 SCN-061～065、[绑定与删除生命周期图](diagrams/binding-lifecycle.md)、POL-016、INV-064～068（用户确认）。评审记录见 [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md)。发布仍 Unreleased。
@@ -127,4 +129,6 @@ T1 已关闭（2026-11-11）：Q1～Q4 全部关闭，[T1 契约审核](reviews/
 
 T2 已冻结（2026-11-11）：[绑定与删除契约 v1](domain/binding-deletion-contract-v1.md) 状态 Reviewed——K1～K3 用户确认（不可恢复删除、Tracker 删除三条件、子 WS 删除成员约束）；Shared 解绑不受 Item 限制、非共享解绑三项检查、`deleteProductSpace` 须审查所有 WorkingSet 的 SpaceBinding、`deleteWorkingSet` 受成员关系约束。配套 SCN-061～065、[绑定与删除生命周期图](diagrams/binding-lifecycle.md)、POL-016、INV-064～068。评审见 [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md)。
 
-T3 已冻结（2026-11-11）：[物化协议契约 v1](domain/lighttrackeritem-materialization-contract-v1.md) 状态 Reviewed——K1′～K3′ 用户确认（独立 `materialized` 字段与来源字段同步更新、LocalId 稳定复用、事件驱动最终一致）；配套 SCN-066～068、INV-069～071、[物化状态与首次物化时序](diagrams/lighttrackeritem-materialization.md)。评审见 [T3 评审](reviews/2026-11-11-t3-materialization-review.md)。T4（跨 BC 公共契约）已启动。
+T3 已冻结（2026-11-11）：[物化协议契约 v1](domain/lighttrackeritem-materialization-contract-v1.md) 状态 Reviewed——K1′～K3′ 用户确认（独立 `materialized` 字段与来源字段同步更新、LocalId 稳定复用、事件驱动最终一致）；配套 SCN-066～068、INV-069～071、[物化状态与首次物化时序](diagrams/lighttrackeritem-materialization.md)。评审见 [T3 评审](reviews/2026-11-11-t3-materialization-review.md)。
+
+T4 草案已产出（2026-11-11）：[跨 BC 公共契约 v1](domain/cross-bc-contract-v1.md)（Draft）与 [跨 BC 契约面与失败语义](diagrams/cross-bc-contract.md)，SCN-069～071 已补；待用户裁定 K1″（能力集边界：只读 + BC 自管写入 vs 统一写端口）、K2″（失败语义九分类 vs 四态）、K3″（版本治理 B vs A/C），裁定后冻结并进入 T5。

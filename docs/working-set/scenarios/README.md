@@ -8,6 +8,6 @@
 
 ## 当前场景
 
-- [core-scenarios.md](core-scenarios.md)：创建、共享／非共享、COW、引用、Compare／Merge、并发、Diff/Merge 衔接、绑定/删除与物化协议的 68 个场景（SCN-001～SCN-068；业务规则部分已确认，验收表述多为 Draft）。
+- [core-scenarios.md](core-scenarios.md)：创建、共享／非共享、COW、引用、Compare／Merge、并发、Diff/Merge 衔接、绑定/删除、物化协议与跨 BC 契约的 71 个场景（SCN-001～SCN-071；业务规则部分已确认，验收表述多为 Draft）。
 
 - [Shared Kernel 边界场景](shared-kernel-boundary-scenarios.md)：B01—B12，含四类对象适用条件与 Part 共享查看场景。

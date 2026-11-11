@@ -61,4 +61,4 @@
 
 **T3 已冻结**（2026-11-11，[T3 评审](../reviews/2026-11-11-t3-materialization-review.md)）：[物化协议契约 v1](../domain/lighttrackeritem-materialization-contract-v1.md) 状态 Draft → Reviewed；K1′～K3′ 用户确认（独立 `materialized` 字段、LocalId 稳定复用、事件驱动最终一致）；旧「仅由来源字段推导」候选标 Superseded；配套 SCN-066～068、INV-069～071、[物化状态与首次物化时序](../diagrams/lighttrackeritem-materialization.md)。
 
-**当前推进 T4：跨 BC 公共契约**——TrackerItem 最小能力集、create/extend/resolve/diff/merge 的失败语义、「无权/不存在/已删除/历史不可用」四分、Shared Kernel 版本治理（`QUESTION-014`）；输入为 AC-001、D-007、`QUESTION-013/014`、[Shared Kernel 边界](../domain/shared-kernel-boundary.md)、SCN-002、B01～B12。
+**T4 草案已产出**（2026-11-11）：[跨 BC 公共契约 v1](../domain/cross-bc-contract-v1.md)（Draft）、[跨 BC 契约面与失败语义](../diagrams/cross-bc-contract.md)、SCN-069～071。待用户裁定 K1″（能力集边界：只读 + BC 自管写入 vs 统一写端口）、K2″（失败语义九分类 vs 仅四态）、K3″（版本治理 B vs A/C）；裁定后冻结 T4，再进入 T5 最小纵向切片。
