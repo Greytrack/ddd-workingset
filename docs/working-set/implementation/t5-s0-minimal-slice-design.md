@@ -21,8 +21,8 @@
 
 | 编号 | 决定 | 状态与依据 |
 | --- | --- | --- |
-| P1 构建与 JDK | **Maven + Java 21**；若部署环境仅支持 Java 17 则回退 17，不强制升级环境 | **已确定（基于本地证据）**：本机 `java -version` 为 21.0.7 LTS、`mvn -version` 为 3.9.11、`.idea/misc.xml` 的 `languageLevel=JDK_21` 且 `project-jdk-name=21`。**部署/CI 运行环境未验证**（仓库无 CI 配置），首次 CI 接入时复核 |
-| P2 应用框架 | **Spring Boot + 纯 Java Domain**；Spring 仅承担启动/DI/事务/集成测试；领域不依赖 Spring/ORM/基础设施 | **采用**（用户推荐）；不引入微服务框架、服务发现、插件系统 |
+| P1 构建与 JDK | **Maven + Java 21**（部署仅支持 17 时回退）；**ID 生成用雪花算法**（`IdentifierGenerator` + `SnowflakeIdGenerator`，单体 `@Configuration` 装配） | **已确定**：本机 JDK 21.0.7 LTS、Maven 3.9.11、`.idea` `languageLevel=JDK_21`；**雪花 ID 由用户 2026-11-11 决定**（与 FACT-005 一致，替换 S1 的 UUID）；部署/CI 环境未验证 |
+| P2 应用框架 | **Spring Boot + Spring Event + 纯 Java Domain**；Spring 承担启动/DI/事务/集成测试与事件派发；领域不依赖 Spring/ORM | **采用**（用户 2026-11-11 决定：升级 Spring Boot、事件框架用 Spring Event）；不引入微服务框架、服务发现、插件系统 |
 | P3 代码组织 | 按 BC 组织 + DDD 分层（详见 §4）；**单 Maven 模块 + 逻辑包**，不强制每个目录成为模块 | **采用**（用户推荐）；旧 `biz / sdk / sdkImpl` 结构彻底退出新架构依据 |
 | P4 快照承载 | **公共事件信封 + BC 自有不可变快照**（详见 §8） | **采用（概念级）**；序列化/可靠投递/顺序实现留实施协议 |
 | P5 Requirement 字段 | `localId`、`commonId`、`trackerId`、`title`、`description`、`revision`、`version` | **采用（首切片范围）**；不实现状态机、审批流、评论、附件、复杂属性模型 |
@@ -66,15 +66,15 @@ Working Set **编译期不依赖**具体业务 BC 的内容或实现；只依赖
 
 ```text
 ddd-workingset/
-├── pom.xml                                  # 单 Maven 模块（不预建多模块）
+├── pom.xml                                  # 单 Maven 模块（Spring Boot BOM + starter，非 web）
 ├── src/main/java/
 │   ├── sk/workingset/domain/                # LightTrackerItem、TrackerItem、值对象
-│   ├── sk/workingset/application/           # 应用服务、CowEventHandler、port/
-│   ├── sk/workingset/infrastructure/        # 内存仓库等（Spring 装配放 bootstrap）
+│   ├── sk/workingset/application/           # 应用服务、CowEventHandler、port/、event/
+│   ├── sk/workingset/infrastructure/        # 内存仓库、SnowflakeIdGenerator
 │   ├── alm/requirement/domain/              # Requirement 聚合（实现 TrackerItem）
 │   ├── alm/requirement/application/         # RequirementApplicationService
-│   ├── alm/requirement/infrastructure/      # Adapter、内存仓库、快照存储、事件发布
-│   └── bootstrap/configuration/             # 组合根（Spring @Configuration）
+│   ├── alm/requirement/infrastructure/      # Adapter、内存仓库、快照存储
+│   └── bootstrap/                           # 主类（@SpringBootApplication）+ configuration/（组合根、IdGeneratorConfig）
 └── src/test/java/                           # 与主代码同构的包
 ```
 
@@ -180,6 +180,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | `RequirementWritePort`（port） | `materialize(LocalId, SnapshotRef, Revision)` |
 | `LightTrackerItemRepository`（port） | `findBySource(LocalId, Revision)`、`findById(LocalId)`、`save(LightTrackerItem)` |
 | `EventPublisher`（port） | `publish(DomainEvent)`（进程内实现） |
+| `IdentifierGenerator`（port） | `long nextId()`：雪花 ID 生成（P1/用户 2026-11-11）；`LocalId` 由其产生 |
 
 **ALM（`alm.requirement`）**
 
@@ -208,6 +209,17 @@ bootstrap.configuration    → 所有实现（组合根）
 | `Caller` | 调用者身份/上下文（首切片最小实现，权限系统不接入） |
 | `Materialized` | 物化状态（首切片用 `boolean` 字段，不单独建值对象） |
 
+**基础设施与组合根**
+
+| 类型 | 职责 |
+| --- | --- |
+| `SnowflakeIdGenerator`（`sk.workingset.infrastructure`） | 实现 `IdentifierGenerator`：雪花算法（用户 2026-11-11 决定；去外部日志/异常/静态 holder 依赖） |
+| `IdGeneratorConfig`（`bootstrap.configuration`） | `@Configuration` + `@Bean IdentifierGenerator`；`DATACENTER_ID=1`、workerId 由本机地址哈希取模 |
+| `WorkingsetApplication`（`bootstrap`） | `@SpringBootApplication` 主类（非 web） |
+| `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配内存仓库、应用服务、Adapter 工厂 |
+
+`RequirementChanged` 由 **SK 定义、ALM 通过 Spring Event（`ApplicationEventPublisher`）发布**；S3 以 `@EventListener` 消费（默认同步、同线程顺序）。
+
 **明确不构建**：通用 CRUD Repository、动态 SPI 注册器、通用 Saga/事务框架、跨 BC 事件总线平台、四 BC 通用适配层。
 
 ## 12. 与 T1～T4 的冲突检查
@@ -222,6 +234,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | T2 非共享派生 / 绑定 | 一致：`derive` 仅走非共享路径；绑定只读 |
 | T1 Merge 轮次语义 | 未进入首切片；A3 保留其语义，不重开 |
 | AC-001 / QUESTION-013（BC 校验提交） | 一致：SK 不代写、不操作 BC Repository |
+| 雪花 ID（P1） | 一致：FACT-005 要求 CommonId/LocalId 为雪花 ID；S1 的 UUID 偏离在 S2 修复 |
 | 无冲突项 | **未发现实际冲突** |
 
 ## 13. 最小持久化与测试适配

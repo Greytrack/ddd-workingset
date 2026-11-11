@@ -103,6 +103,6 @@
 | T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
 | T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；**S1 已完成**（`mvn test` 12 项通过），S2～S4 待实施 | 无新增业务裁定（沿用 T1～T4）；**P1～P5 工程选型已统一、A1～A3 已确认** | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[S1 验证结果](implementation/t5-s1-verification-result.md) |
 
-T5-S0 已完成设计与测试规划（2026-11-11）：范围仅 ALM Requirement，产物含设计、架构/首次 COW 时序图、AT-01～AT-05 映射与 S1～S4 任务清单。**S1 待确认 P1～P5（构建工具/Java 版本/Spring/包结构/快照承载/字段集）后交 Codex**；仓库当前无构建系统与 Java 代码（风险 R1）。
+T5 进度（2026-11-11）：S0 设计与测试规划完成；**S1 已实现并通过审查**（`mvn test` 12 项通过，AC-01/AC-02 覆盖）；**S2 前置工程决定已确定**（Spring Boot 升级、Spring Event、雪花 ID 替换 UUID），[S2 任务说明](implementation/t5-s2-codex-task-brief.md) 已就绪。仓库现有 Maven 工程（Java 21）与 28 个主源文件。
 
 SCN-057～071 与配套图表由各契约链接。进度、下一步及门禁统一见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。

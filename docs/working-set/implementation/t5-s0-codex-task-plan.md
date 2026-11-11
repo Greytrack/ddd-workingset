@@ -65,20 +65,26 @@
 
 **允许修改的代码范围**
 
+- `pom.xml`：升级 Spring Boot（BOM + starter，非 web）；
+- `bootstrap`：主类（`@SpringBootApplication`）、`IdGeneratorConfig`（`@Bean IdentifierGenerator`）、组合根调整；
+- `sk.workingset.application.port`：`IdentifierGenerator` 接口；
+- `sk.workingset.infrastructure`：`SnowflakeIdGenerator`（去外部依赖）；
+- `sk.workingset.application`：`RequirementChanged` 事件类型（公共信封）；
 - `alm.requirement.domain`：`Requirement` 增加 `changeTitle(String, Version)`（推进 `version`，不升级 `revision`）；
 - `alm.requirement.application`：`changeTitle(...)` 编排（先取快照、再保存、再发事件）；
-- `alm.requirement.infrastructure`：`SnapshotStore`（内存）、事件发布实现（进程内顺序）；
-- `sk.workingset.application`：`RequirementChanged` 事件类型（公共信封）与 `EventPublisher` 接口（**仅类型与接口，不含 Handler**）。
+- `alm.requirement.infrastructure`：`SnapshotStore`（内存）。
 
-**输入依赖**：S1 完成；P4（信封 + BC 自有快照）。
+**输入依赖**：S1 完成；P4（信封 + BC 自有快照）；用户 2026-11-11 决定（Spring Boot 升级、Spring Event、雪花 ID）。
 
 **需要建立的接口与行为**
 
 | 项 | 最小行为 |
 | --- | --- |
-| 普通修改 | `title: A→B`，`version` +1，**`revision` 不升级** |
+| Spring Boot 升级 | BOM + starter（非 web）+ 主类；升级后原 12 项测试仍绿 |
+| 雪花 ID | `IdentifierGenerator` + `SnowflakeIdGenerator` + `IdGeneratorConfig`；`LocalId` 由其生成，删除 UUID 路径 |
+| 普通修改 | `title: A→B`，`version` +1，**`revision` 不升级**；`expectedVersion` 乐观锁 |
 | 修改前快照 | 保存前读取完整内容写入 `SnapshotStore`，返回 `snapshotRef` |
-| 来源事件 | `RequirementChanged{eventId, requirementId, sourceLocalId, revision, snapshotRef, occurredAt}`；顺序派发 |
+| 来源事件 | `RequirementChanged{eventId, requirementId, sourceLocalId, revision, snapshotRef, occurredAt}`；经 `ApplicationEventPublisher` 发布（S2 不消费） |
 | 并发证据 | 写入以 `version` 作乐观锁前置（`Revision` 不参与并发判定） |
 
 **可执行测试**

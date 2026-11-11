@@ -44,6 +44,26 @@ BUILD SUCCESS
 | Tracker 持久化 | `derive` 返回 `Tracker` 但不持久化 | S1 只需断言 `sourceId`；TrackerRepository 待 S2 需要时增加 |
 | 授权 | `authorize` 恒允许 | 无权限平台接入（P2 范围外） |
 
+## 4.1 S2 前置工程决定（用户 2026-11-11）
+
+| 决定 | 内容 | 对 S1 的影响 |
+| --- | --- | --- |
+| 引入事件框架 | **Spring Event**（`ApplicationEventPublisher` 发布；S3 才加 `@EventListener` 消费） | S1 无事件代码，无需回改 |
+| 引入雪花 ID | `IdentifierGenerator` + `SnowflakeIdGenerator` + `IdGeneratorConfig`；**替换 S1 的 UUID `LocalId.newId()`** | S1 的 `LocalId.newId()` 需在 S2 改为生成器（观察项 #1） |
+| 升级 Spring Boot | 由 `spring-context` 升级为 Spring Boot（BOM + starter，非 web） | S1 的 `@Configuration` 保留；升级后须回归 12 项测试 |
+| 单体部署 | `IdGeneratorConfig` 用 `@Configuration` + 固定 `DATACENTER_ID=1`、workerId 由本机地址哈希取模 | 无 |
+
+详见 [S2 任务说明](t5-s2-codex-task-brief.md)。
+
+## 4.2 S2 前置观察项
+
+| # | 观察项 | 处置 |
+| --- | --- | --- |
+| 1 | `LocalId.newId()` 使用 UUID，与 FACT-005「CommonId/LocalId 为雪花 ID」偏离 | **S2 修复**：改由 `IdentifierGenerator` 生成 |
+| 2 | `RequirementAdapter.readAt` 对非当前版次抛 `IllegalStateException` | **S3 处理**：物化需按快照读取，并补 `HistoryUnavailable` 语义 |
+| 3 | `read` 中授权失败抛 `UnsupportedOperationException` | 权限切片处理，应返回 T4 的 `Denied` |
+| 4 | pom 使用 `spring-context` 而非 Spring Boot | **S2 修复**：升级 Spring Boot，保留非 web |
+
 ## 5. 未做（后续任务）
 
 事件与快照（S2）、首次 COW 与物化切换（S3）、一致性恢复与回归（S4）、Merge/删除/权限/版本治理。
