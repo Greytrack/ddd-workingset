@@ -1,0 +1,12 @@
+# IDE / IntelliJ IDEA local settings
+.idea/
+
+# Build output
+target/
+build/
+out/
+
+# OS / tooling noise
+.DS_Store
+Thumbs.db
+*.log
