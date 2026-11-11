@@ -12,5 +12,6 @@
 - [t5-s0-scenario-test-mapping.md](t5-s0-scenario-test-mapping.md)：AT-01～AT-05 与 AC-01/AC-02 场景-期望-测试映射（Draft）。
 - [t5-s0-codex-task-plan.md](t5-s0-codex-task-plan.md)：S1～S4 Codex 分阶段实施任务（Draft）。
 - [t5-s1-codex-task-brief.md](t5-s1-codex-task-brief.md)：S1 任务说明，可直接交付 Codex（Ready for implementation）。
+- [t5-s1-verification-result.md](t5-s1-verification-result.md)：S1 验证结果（Verified，2026-11-11；`mvn test` 12 项通过，含 AT-01/AT-02/AC-01/AC-02）。
 
 配套：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)、[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)。

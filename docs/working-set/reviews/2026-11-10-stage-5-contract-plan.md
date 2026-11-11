@@ -51,3 +51,5 @@
 **T5-S0 已完成**（2026-11-11，[S0 审核](../reviews/2026-11-11-t5-s0-design-review.md)）：产出[最小纵向切片设计](../implementation/t5-s0-minimal-slice-design.md)（含 P1～P5 工程选型、A1～A3 约束、最小目录/依赖、接口清单与 T1～T4 冲突检查）、[架构与首次 COW 时序图](../diagrams/t5-s0-architecture.md)、[AT-01～AT-05 与 AC-01/AC-02 映射](../implementation/t5-s0-scenario-test-mapping.md)、[S1～S4 Codex 任务清单](../implementation/t5-s0-codex-task-plan.md)。范围仅 ALM Requirement；不含 Merge、删除、权限与版本治理。
 
 **P1～P5 已统一、A1～A3 已确认；S1 可立即启动**——[S1 任务说明](../implementation/t5-s1-codex-task-brief.md) 可直接交付 Codex（白名单范围、10 步 Red→Green、5 类测试与 DoD）。P1 = Maven + Java 21（依据本地 JDK 21.0.7 与 Maven 3.9.11；部署/CI 环境未验证）。仓库当前无构建系统与 Java 代码（R1），S1 第一件事为建骨架。
+
+**T5-S1 已完成**（2026-11-11，[验证结果](../implementation/t5-s1-verification-result.md)）：`mvn test` **12 项通过**（AT-01/AT-02、resolve 的 NOT_FOUND/NOT_INCLUDED、AC-01 ArchUnit、AC-02、LightTrackerItem 不变量 6 项）；建成 pom（Java 21 + spring-context + JUnit 5 + ArchUnit）与 28 个主源文件（`sk.workingset.*` / `alm.requirement.*` / `bootstrap.configuration`），AC-01 编译依赖检查通过。**S2 待启动**（来源普通修改、修改前快照与事件发布）。

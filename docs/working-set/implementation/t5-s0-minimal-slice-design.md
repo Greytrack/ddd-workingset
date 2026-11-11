@@ -186,7 +186,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | 类型 | 职责 |
 | --- | --- |
 | `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, Version)`、`upgradeRevision()`（预留，不触发 COW）、访问器 |
-| `RequirementId` | 业务对象身份（与 `LocalId` 的映射由 BC 自决） |
+| `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
 | `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件） |
 | `RequirementAdapter` | 实现 `TrackerItemReadPort`、`RequirementWritePort` |
 | `SnapshotStore` / `RequirementRepository`（内存） | 快照存取、聚合存取 |
@@ -244,7 +244,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | R1 | 仓库**无构建系统**（无 `pom.xml`，`src/` 为空，0 Java 文件） | 已确认；S1 第一件事为建骨架 |
 | R2 | 部署/CI 运行环境未验证（仅本地 JDK 21 + Maven 3.9.11 证据） | 未验证；CI 接入时复核 P1 |
 | R3 | 快照序列化与可靠投递 | 概念级已定（P4），实现留专项 |
-| R4 | `RequirementId` 与 `LocalId` 的映射 | 由 BC 自决（A2 第 5 条），S1 用 1:1 暂定 |
+| R4 | ~~`RequirementId` 与 `LocalId` 的映射~~ | **已裁定（用户 2026-11-11）：LocalId 是所有业务对象聚合的唯一标识，RequirementId = LocalId；S1 直接以 `LocalId` 作为聚合主键，不需要映射** |
 | R5 | Mermaid 渲染未验证（无 `mmdc`） | 发布前复核 |
 
 ## 15. 追溯

@@ -39,7 +39,7 @@ src/test/java/**（同构包）
 | 4 | `Tracker`（最小） | 非共享派生：新身份 + `sourceId` 指向来源 |
 | 5 | SK Port 与仓库 | `TrackerItemReadPort`（`readAt`/`revision`/`capabilities`/`authorize`）、`LightTrackerItemRepository`（`save`/`findById`/`findBySource`），内存实现 |
 | 6 | SK 应用服务 | `WorkingSetApplicationService.derive` / `resolve`（`NotFound`/`NotIncluded`） |
-| 7 | ALM 最小实现 | `Requirement`（P5 字段，实现 `TrackerItem`）、内存 `RequirementRepository`、`RequirementApplicationService.create`、`RequirementAdapter implements TrackerItemReadPort` |
+| 7 | ALM 最小实现 | `Requirement`（P5 字段，实现 `TrackerItem`）、内存 `RequirementRepository`、`RequirementApplicationService.create`、`RequirementAdapter implements TrackerItemReadPort`；**以 `LocalId` 作为唯一标识（`RequirementId = LocalId`，不另建独立 ID）** |
 | 8 | `read` 编排 | `materialized=false` 时沿 `sourceLocalId` 调 `readAt(sourceRevision)`；返回内容 + 实际 revision |
 | 9 | bootstrap 装配 | Spring `@Configuration`/`@Bean` 装配 SK 与 ALM 实现（组合根是唯一同时引用两侧的位置） |
 | 10 | 测试 | AT-01、AT-02；`resolve` 两个失败分类；AC-01 ArchUnit；AC-02 派生部分 |
