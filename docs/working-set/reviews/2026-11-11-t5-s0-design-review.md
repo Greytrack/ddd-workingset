@@ -19,7 +19,7 @@
 | 首切片范围与 T5 约定一致（仅 ALM、不含 Merge/删除/权限/版本治理） | 通过 |
 | 依赖方向：SK 只依赖两个应用层 Port，ALM Adapter 实现，SK 不引用 ALM 聚合 | 通过（设计 §4/§5、图 §1/§2） |
 | 两层接口并存（T4 §3.1 选择 B） | 通过：`Requirement` 实现 `TrackerItem`；`RequirementAdapter` 实现应用层 Port |
-| 业务 Revision 不当乐观锁（T4 §3.2） | 通过：P5 引入 `version`；写入以 `version` 作并发前置 |
+| 业务 Revision 不当乐观锁（T4 §3.2） | 通过：P5 引入 `lock_version`；写入以 `lock_version` 作并发前置；`version` 为发布大版本（可空） |
 | 四项能力（derive/resolve/read/materialize）与契约对应 | 通过 |
 | LightTrackerItem 不变量 L1～L4 与 T3 一致 | 通过（materialized 三字段同步、身份不可变） |
 | 内容固定范围（T3 §2.1 选择 A） | 通过：首切片仅普通字段；附件/关系不被较新事件覆盖 |
@@ -42,7 +42,7 @@
 | P2 | Spring Boot + 纯 Java Domain | 采用（Spring 仅装配/测试） |
 | P3 | 单 Maven 模块 + BC/DDD 分包 | 采用；不预建多模块；旧模块结构退出 |
 | P4 | 公共事件信封 + BC 自有不可变快照 | 采用（概念级；序列化/投递留实施） |
-| P5 | `localId`/`commonId`/`trackerId`/`title`/`description`/`revision`/`version` | 采用（首切片范围） |
+| P5 | `localId`/`commonId`/`trackerId`/`title`/`description`/`revision`/`version`/`lock_version` | 采用（首切片范围）；`version` 发布大版本可空、`revision` 手动版次、`lock_version` 乐观锁 |
 
 ## 3. 架构前置约束落实（A1～A3）
 

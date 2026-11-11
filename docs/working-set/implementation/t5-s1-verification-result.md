@@ -29,7 +29,7 @@ BUILD SUCCESS
 
 | 层 | 包 | 内容 |
 | --- | --- | --- |
-| SK 领域 | `sk.workingset.domain` | `LocalId`、`CommonId`、`Revision`、`Version`、`TrackerId`、`WorkingSetId`、`TrackerItem`、`Tracker`、`LightTrackerItem` |
+| SK 领域 | `sk.workingset.domain` | `LocalId`、`CommonId`、`Revision`、`Version`（发布大版本，可空）、`LockVersion`（乐观锁）、`TrackerId`、`WorkingSetId`、`TrackerItem`、`Tracker`、`LightTrackerItem` |
 | SK 应用 | `sk.workingset.application` + `port` | `WorkingSetApplicationService`（derive/resolve/read）、`TrackerItemReadPort`、`LightTrackerItemRepository`、`CapabilitySet`、`Operation`、`Caller`、`TrackerItemContent`、`FailureReason`、`ApplicationFailure`、`DeriveCommand/Result`、`ReadResult` |
 | SK 基础 | `sk.workingset.infrastructure` | `InMemoryLightTrackerItemRepository` |
 | ALM | `alm.requirement.{domain,application,infrastructure}` | `Requirement`（实现 `TrackerItem`，`RequirementId = LocalId`）、`RequirementRepository`、`RequirementApplicationService`、`InMemoryRequirementRepository`、`RequirementAdapter` |

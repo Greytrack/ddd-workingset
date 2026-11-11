@@ -19,7 +19,7 @@
 | R09 | 合并决策优先于接收方各种变动，包括删除覆盖新修改；仍受目标 BC 整体校验，拒绝不提交且保留选择/结果 | facts 决策优先政策、FACT-007/008；QUESTION-008/013 | 核心删除覆盖场景、B06；D1 及最后决策优先补充 |
 | R10 | 批次可部分成功，重试仅未完成项；已成功项即使源又变化仍跳过 | FACT-008 关联（无独立 POL）；QUESTION-008 | B08；D5 |
 | R11 | KEEP_TARGET 可 markAsMerged，Checkpoint 表达处理而非内容相等；双侧业务 revision 不变，普通编辑后仍隐藏；任一侧升级后用户主动比对全部适用字段 | FACT-008 已确认子集；QUESTION-008 | SCN-008 补充、SCN-009；KEEP_TARGET 裁定 |
-| R12 | 普通编辑只增乐观锁 version；显式升级才产生版次历史并使业务 revision +1 | CONCEPT-009；QUESTION-006/008 | SCN-009 及 KEEP_TARGET 补充；版次裁定 |
+| R12 | 普通编辑只增乐观锁 `lock_version`；显式升级才产生版次历史并使业务 revision +1；发布大版本 `version`（字符串、可空）仅在发布时出现 | CONCEPT-009；QUESTION-006/008；2026-11-11 术语修正 | SCN-009 及 KEEP_TARGET 补充；版次裁定 |
 | R13 | Part 由 PLM 默认工作集管理，经共享 Tracker 纳入查看，不派生/比对/合并 | FACT-011 关联（不接受 API 定义）；QUESTION-013 | 边界 Part 专项；D2 |
 | R14 | DQA 八类对象全部共享纳入查看，自管业务逻辑，不派生/比对/合并 | FACT-011 关联；QUESTION-013 | 边界 DQA 专项列举八类；DQA 裁定 |
 | R15 | GateFlow Process 为核心聚合，每版次一个工作集，父子链表达版次链；四类对象范围且无共享 Tracker，内部规则归 GateFlow | FACT-011 关联；QUESTION-001/013 | 边界 GateFlow 专项；GateFlow 映射与对象范围裁定 |

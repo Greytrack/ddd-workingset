@@ -124,7 +124,7 @@ LightTrackerItem 需区分两个来源维度（候选，不未经确认新增字
 
 LightTrackerItem 保持 Source-backed / Local-backed 两个稳定业务状态，不因事件处理中间步骤增加额外领域状态。候选领域协议（不自动建聚合/表）：
 
-- **Source Change Order**：反映来源成功修改先后顺序的机制（复用并发 version 还是独立序列待定）。
+- **Source Change Order**：反映来源成功修改先后顺序的机制（复用乐观锁 `lock_version` 还是独立序列待定）。
 - **Derivation Baseline**：目标变体派生时已继承的来源内容位置，用于判断「首次相关修改」。
 - **Materialization Claim**：候选的首次快照选择记录，保留首次快照的确定性证据。
 

@@ -80,7 +80,7 @@ D4 的源字段取值已按用户裁定更新。D6 若数据表明整体配置�
 
 - **D5 / QUESTION-008 已确认批次部分成功与重试范围。** 用户明确接受 [B08](../scenarios/shared-kernel-boundary-scenarios.md#b08-部分成功与批次重试)。重试只处理未完成的 B，保留已成功的 A，即使 A 的源端再次变化也跳过 A。成功结果如何可靠查回及提交结果未知时的恢复机制仍需验证。
 
-- **QUESTION-008 的 KEEP_TARGET 确认语义已确认。** 用户明确允许内容未合并且仍有差异时设置 markAsMerged，决策结果记入 MergeCheckpoint。双侧版次均不变时，下次比对不显示该差异。见 [已确认场景](../scenarios/core-scenarios.md#keep_target-的已处理确认)。用户进一步明确版次为显式升级的业务 revision，普通修改只增加乐观锁 version。显式升级才产生版次历史数据并推进版次号 +1。双侧业务版次不变时，内容普通修改后已处理差异仍隐藏。用户进一步确认比对由用户主动发起。任一侧显式升级业务版次后，再次比对时旧 MergeCheckpoint 对新版本组合过时，之前合并过与未合并过的字段均重新比对，显示仍存在的差异。过时记录的物理保留方式与乱序协议仍待设计。
+- **QUESTION-008 的 KEEP_TARGET 确认语义已确认。** 用户明确允许内容未合并且仍有差异时设置 markAsMerged，决策结果记入 MergeCheckpoint。双侧版次均不变时，下次比对不显示该差异。见 [已确认场景](../scenarios/core-scenarios.md#keep_target-的已处理确认)。用户进一步明确版次为显式升级的业务 revision，普通修改只增加乐观锁 `lock_version`。显式升级才产生版次历史数据并推进版次号 +1。双侧业务版次不变时，内容普通修改后已处理差异仍隐藏。用户进一步确认比对由用户主动发起。任一侧显式升级业务版次后，再次比对时旧 MergeCheckpoint 对新版本组合过时，之前合并过与未合并过的字段均重新比对，显示仍存在的差异。过时记录的物理保留方式与乱序协议仍待设计。
 
 - **D2 的 PLM Part 接入范围已确认。** 用户明确 Part 通过共享 Tracker 接入，PLM 在默认工作集独立管理，其他工作集纳入共享查看，Part 不派生、不比对、不合并。依据见 [职责边界](../domain/shared-kernel-boundary.md#plm-part-的接入范围用户已确认)。该确认替代本轮早期基于 V4 非受管 Part 的推演，历史输入保留。GateFlow 对象范围见后续裁定，DQA 接入范围见后续共享查看裁定。
 
@@ -337,7 +337,7 @@ AP-001 的 ID 引用可表达独立业务聚合，但不得把业务对象组合
 10. Working Set 负责公共身份、来源关系与有效内容定位；业务 BC 负责完整业务聚合构造、不变量与保存。
 11. 采用事件驱动来源变更 COW，但事件与事务的准确可见性协议尚未裁定。
 
-知识分类：`FACT-014`（[facts](../domain/facts.md)）；术语区分见 [glossary](../domain/glossary.md)（Business Revision、Concurrent Version、Derivation Origin、Effective Content Source、Source-backed、Local-backed、Materialization）。SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
+知识分类：`FACT-014`（[facts](../domain/facts.md)）；术语区分见 [glossary](../domain/glossary.md)（Business Revision、Lock Version（`lock_version`）、Derivation Origin、Effective Content Source、Source-backed、Local-backed、Materialization）。SourceRevision 与 SourceVersion 是否同义未确认，不机械归并。
 
 ### 必须纠正的既有模型假设
 
@@ -453,7 +453,7 @@ INV-037 首次快照确定性；INV-038 物化结果唯一性；INV-039 本地�
 
 A. 如何确认一条事件是相对目标变体派生基准的首次相关修改（Derivation Baseline）。
 B. 为什么不能采用「最先收到的事件直接物化」（事件乱序，E2 先到不代表是首次修改）。
-C. 复用已有 Concurrent Version 还是独立变更序列表达来源修改顺序。
+C. 复用已有乐观锁 `lock_version` 还是独立变更序列表达来源修改顺序。
 D. 物化采用已分配 LocalId，重复事件不生成不同有效业务对象（幂等）。
 E. 多级派生中各层需要保护的目标变体如何识别。
 
@@ -472,7 +472,7 @@ E. 多级派生中各层需要保护的目标变体如何识别。
 
 1. LightTrackerItem 的 SourceLocalId 表示当前有效内容来源的 LocalId，而非必须永久保存的历史派生来源身份。
 2. SourceRevision 表示当前有效内容来源的业务 Revision。
-3. SourceVersion 为表述错误，统一更正为 SourceRevision，不与并发控制 Version 混淆。
+3. SourceVersion 为表述错误，统一更正为 SourceRevision，不与乐观锁 `lock_version` 混淆。
 4. 未物化时 SourceLocalId/SourceRevision 用于解析来源业务内容。
 5. COW 完成后 SourceLocalId=LocalId、SourceRevision=Revision，有效内容定位指向当前变体自身。
 6. COW 不改变 LocalId、CommonId。

@@ -9,7 +9,7 @@
 
 ```text
 mvn -B test
-Tests run: 32, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 35, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
@@ -17,17 +17,17 @@ BUILD SUCCESS
 
 | 编号 | 测试类/方法 | 结果 |
 | --- | --- | --- |
-| AT-03 前半：普通修改不升级 Revision、快照为修改前内容 | `bootstrap.RequirementChangeFlowTest#AT03_change_title_keeps_revision_and_publishes_pre_change_snapshot` | ✅ |
+| AT-03 前半：普通修改不升级 Revision、不改变发布 version、lock_version 递增、快照为修改前内容 | `bootstrap.RequirementChangeFlowTest#AT03_change_title_keeps_revision_and_version_but_increments_lock_version` | ✅ |
 | 事件仅在保存成功后发布 | 同上 `#event_is_published_only_after_saved_state_is_visible` | ✅ |
-| 并发证据：旧 `expectedVersion` 显式拒绝，无事件、无快照 | 同上 `#stale_expected_version_is_rejected_without_event_or_snapshot` | ✅ |
+| 并发证据：旧 `expectedLockVersion` 显式拒绝，无事件、无快照 | 同上 `#stale_expected_lock_version_is_rejected_without_event_or_snapshot` | ✅ |
 | 连续修改：事件有序、每次捕获修改前快照 | 同上 `#consecutive_changes_publish_ordered_events_and_capture_each_pre_change_snapshot` | ✅ |
 | 保存失败不发布事件 | 同上 `#save_failure_does_not_publish_event_or_change_stored_content` | ✅ |
 | Spring Boot 非 web 上下文可加载 | `bootstrap.ApplicationContextTest#context_loads_without_web_and_exposes_composition_root_beans` | ✅ |
 | `RequirementChanged` 经 Spring Event 同步派发 | 同上 `#requirement_changed_is_delivered_through_spring_event_synchronously` | ✅ |
 | 雪花 ID 唯一性、位段、时钟回拨 | `sk.workingset.infrastructure.SnowflakeIdGeneratorTest`（5 项） | ✅ |
 | 派生 LocalId/TrackerId 为雪花值（非 UUID） | `bootstrap.WorkingSetSliceIntegrationTest#derived_local_id_is_a_snowflake_value_not_uuid` | ✅ |
-| changeTitle 不可变与乐观锁 | `alm.requirement.domain.RequirementTest`（4 项） | ✅ |
-| 快照完整性与修改隔离 | `alm.requirement.infrastructure.SnapshotStoreTest`（3 项） | ✅ |
+| changeTitle 不可变、version 可空与 lock_version 自动递增 | `alm.requirement.domain.RequirementTest`（6 项） | ✅ |
+| 快照完整性与修改隔离（含 version/lock_version） | `alm.requirement.infrastructure.SnapshotStoreTest`（4 项） | ✅ |
 | S1 回归（AT-01/AT-02、AC-01、AC-02） | `bootstrap.WorkingSetSliceIntegrationTest`（6 项）、`architecture.ArchitectureTest`、`sk.workingset.domain.LightTrackerItemTest`（6 项） | ✅ |
 
 ## 3. 实现位置
@@ -37,7 +37,7 @@ BUILD SUCCESS
 | SK 应用端口 | `sk.workingset.application.port` | `IdentifierGenerator`（`long nextId()`） |
 | SK 事件信封 | `sk.workingset.application.event` | `RequirementChanged`（`eventId`/`requirementId`/`sourceLocalId`/`revision`/`snapshotRef`/`occurredAt`）、`SnapshotRef` |
 | SK 基础设施 | `sk.workingset.infrastructure` | `SnowflakeIdGenerator`（3/3/5 位宽、2020-01-01 纪元、回拨拒绝、`synchronized`） |
-| ALM 领域 | `alm.requirement.domain` | `Requirement.changeTitle(String, Version)`（不可变、`version` +1、`revision` 不变）、`VersionConflictException` |
+| ALM 领域 | `alm.requirement.domain` | `Requirement.changeTitle(String, LockVersion)`（不可变、`lock_version` 自动 +1、`revision`/`version` 不变）、`LockVersionConflictException` |
 | ALM 应用 | `alm.requirement.application` | `RequirementApplicationService.changeTitle`（并发校验 → 修改前快照 → 保存 → 发布事件） |
 | ALM 基础设施 | `alm.requirement.infrastructure` | `RequirementSnapshot`、`SnapshotStore`、`InMemorySnapshotStore`（引用为雪花 ID） |
 | 组合根 | `bootstrap` / `bootstrap.configuration` | `WorkingsetApplication`（`@SpringBootApplication`，非 web）、`IdGeneratorConfig`、`ApplicationConfiguration`（装配快照存储与 Spring Event 发布器） |
@@ -58,6 +58,7 @@ BUILD SUCCESS
 | 快照类型位置 | `RequirementSnapshot` 放在 `alm.requirement.infrastructure` | 遵循 S2 白名单（仅允许新增 infrastructure 快照存储）；S3 通过 `SnapshotStore` 回读 |
 | 快照引用 | `SnapshotRef.id` 为雪花 ID 字符串 | 与 FACT-005 一致；引用不含内容 |
 | `TrackerId` | 由雪花生成器产生（原 `T-<UUID>` 移除） | 完成 UUID 路径清理，未改动 TrackerId 契约 |
+| `lock_version` 自动递增 | 内存实现由 `Requirement.changeTitle` 在数据变动时自动 +1；未引入数据库事务钩子 | 与用户术语一致（不需要调用方显式触发）；持久化落地时由事务层统一维护 |
 
 ## 6. 观察项（S3 前置）
 
@@ -77,5 +78,5 @@ S3：`CowEventHandler`、`RequirementWritePort.materialize`、`switchToLocalBack
 
 ```text
 mvn -B -DskipTests compile   # 38 个主源文件
-mvn -B test                  # 32 个测试
+mvn -B test                  # 35 个测试
 ```

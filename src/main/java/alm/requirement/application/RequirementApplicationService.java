@@ -13,10 +13,10 @@ import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.Version;
 
 /**
  * ALM Requirement 应用服务：创建、普通修改（修改前快照 + 保存成功后发布来源事件）。
@@ -38,7 +38,7 @@ public class RequirementApplicationService {
         this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
     }
 
-    /** 创建并提交一个 Requirement；并发版本从 0 开始。 */
+    /** 创建并提交一个 Requirement；乐观锁从 0 开始，尚未发布大版本。 */
     public Requirement create(LocalId localId,
                               CommonId commonId,
                               TrackerId trackerId,
@@ -46,24 +46,24 @@ public class RequirementApplicationService {
                               String description,
                               Revision revision) {
         Requirement requirement = Requirement.create(
-                localId, commonId, trackerId, title, description, revision, Version.of(0));
+                localId, commonId, trackerId, title, description, revision);
         repository.save(requirement);
         return requirement;
     }
 
     /**
-     * 普通修改标题：先以 {@code expectedVersion} 判并发（冲突即失败，不产生快照或事件），
+     * 普通修改标题：先以 {@code expectedLockVersion} 判乐观锁（冲突即失败，不产生快照或事件），
      * 再捕获修改前完整快照，保存成功后发布 {@link RequirementChanged}。
      *
-     * <p>业务 {@code revision} 不升级；仅并发 {@code version} 递增。
+     * <p>业务 {@code revision} 不升级；发布大版本 {@code version} 不变；仅乐观锁自动 +1。
      */
-    public Requirement changeTitle(LocalId localId, String newTitle, Version expectedVersion) {
+    public Requirement changeTitle(LocalId localId, String newTitle, LockVersion expectedLockVersion) {
         Objects.requireNonNull(localId, "localId");
         Requirement current = repository.findById(localId)
                 .orElseThrow(() -> new IllegalArgumentException("requirement not found: " + localId.value()));
 
-        // 先做并发校验：聚合不可变，失败时 current 不变，也不会留下无主快照
-        Requirement changed = current.changeTitle(newTitle, expectedVersion);
+        // 先做乐观锁校验：聚合不可变，失败时 current 不变，也不会留下无主快照
+        Requirement changed = current.changeTitle(newTitle, expectedLockVersion);
 
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
         SnapshotRef snapshotRef = snapshotStore.save(snapshot);

@@ -33,7 +33,7 @@
 
 | 项 | 最小行为 |
 | --- | --- |
-| 值对象与领域接口 | `LocalId`/`CommonId`/`Revision`/`Version`/`TrackerId`/`WorkingSetId`；`TrackerItem`（`commonId()`/`localId()`/`revision()`） |
+| 值对象与领域接口 | `LocalId`/`CommonId`/`Revision`/`Version`/`LockVersion`/`TrackerId`/`WorkingSetId`；`TrackerItem`（`commonId()`/`localId()`/`revision()`）；`Version` 为发布大版本（字符串、可空），`LockVersion` 为乐观锁 |
 | `LightTrackerItem`（聚合根） | 派生构造：预分配 `localId`、继承 `commonId`、`sourceLocalId`=实际内容拥有者、`sourceRevision`=选定 Revision、`materialized=false`；只读视图 |
 | `Tracker`（最小） | 非共享派生：新身份 + `sourceId` 指向来源 |
 | `WorkingSetApplicationService` | `derive`、`resolve`、`read`（`materialized=false` 时沿 `sourceLocalId` 读来源 revision） |
@@ -70,7 +70,7 @@
 - `sk.workingset.application.port`：`IdentifierGenerator` 接口；
 - `sk.workingset.infrastructure`：`SnowflakeIdGenerator`（去外部依赖）；
 - `sk.workingset.application`：`RequirementChanged` 事件类型（公共信封）；
-- `alm.requirement.domain`：`Requirement` 增加 `changeTitle(String, Version)`（推进 `version`，不升级 `revision`）；
+- `alm.requirement.domain`：`Requirement` 增加 `changeTitle(String, LockVersion)`（推进 `lock_version`，不升级 `revision`、不改变发布 `version`）；
 - `alm.requirement.application`：`changeTitle(...)` 编排（先取快照、再保存、再发事件）；
 - `alm.requirement.infrastructure`：`SnapshotStore`（内存）。
 
@@ -82,14 +82,14 @@
 | --- | --- |
 | Spring Boot 升级 | BOM + starter（非 web）+ 主类；升级后原 12 项测试仍绿 |
 | 雪花 ID | `IdentifierGenerator` + `SnowflakeIdGenerator` + `IdGeneratorConfig`；`LocalId` 由其生成，删除 UUID 路径 |
-| 普通修改 | `title: A→B`，`version` +1，**`revision` 不升级**；`expectedVersion` 乐观锁 |
+| 普通修改 | `title: A→B`，`lock_version` 自动 +1，**`revision` 不升级、`version` 不变**；`expectedLockVersion` 乐观锁 |
 | 修改前快照 | 保存前读取完整内容写入 `SnapshotStore`，返回 `snapshotRef` |
 | 来源事件 | `RequirementChanged{eventId, requirementId, sourceLocalId, revision, snapshotRef, occurredAt}`；经 `ApplicationEventPublisher` 发布（S2 不消费） |
-| 并发证据 | 写入以 `version` 作乐观锁前置（`Revision` 不参与并发判定） |
+| 并发证据 | 写入以 `lock_version` 作乐观锁前置（`Revision` 与发布 `version` 不参与并发判定） |
 
 **可执行测试**
 
-- AT-03 前半：`revision` 保持 3、`version` 递增、快照内容为 `A`、事件被发布且载荷完整；
+- AT-03 前半：`revision` 保持 3、`lock_version` 递增、`version` 保持为空、快照内容为 `A`、事件被发布且载荷完整；
 - 事件顺序可观察（同步总线断言）。
 
 **完成定义**
@@ -117,7 +117,7 @@
 | 项 | 最小行为 |
 | --- | --- |
 | 目标定位 | `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配（消费时确定，D-017） |
-| 业务保存 | 以**快照**构建 `Requirement`（复用预分配 `localId`，`version` 并发校验），整体校验后保存 |
+| 业务保存 | 以**快照**构建 `Requirement`（复用预分配 `localId`，`lock_version` 并发校验），整体校验后保存 |
 | 状态切换 | 保存成功后，单聚合事务内一次更新 `materialized=true`、`sourceLocalId=localId`、`sourceRevision=revision` |
 | Local-backed Query | `read` 返回本地内容（`readAt(revision)`） |
 | 失败分支 | 保存失败不切换；切换失败不回滚业务内容（S4 补恢复） |

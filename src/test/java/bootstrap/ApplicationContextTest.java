@@ -19,10 +19,10 @@ import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.Version;
 
 /**
  * Spring Boot 上下文与 Spring Event 派发检查（S2 DoD：上下文可加载、事件经 Spring Event 发布）。
@@ -53,7 +53,7 @@ class ApplicationContextTest {
             RequirementApplicationService service = context.getBean(RequirementApplicationService.class);
 
             service.create(L0, C1, T0, "A", "source description", R3);
-            service.changeTitle(L0, "B", Version.of(0));
+            service.changeTitle(L0, "B", LockVersion.of(0));
 
             assertEquals(1, received.size(), "Spring Event 应同步派发一条来源事件");
             RequirementChanged event = received.get(0);

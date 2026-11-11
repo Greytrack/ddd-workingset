@@ -24,7 +24,7 @@ src/main/java/sk/workingset/infrastructure/SnowflakeIdGenerator.java    # 新增
 src/main/java/sk/workingset/application/WorkingSetApplicationService.java  # 注入生成器
 src/main/java/sk/workingset/domain/LocalId.java      # 移除/替换 newId()
 src/main/java/sk/workingset/application/event/**     # RequirementChanged、SnapshotRef（SK 定义公共信封）
-src/main/java/alm/requirement/domain/Requirement.java                  # changeTitle + version
+src/main/java/alm/requirement/domain/Requirement.java                  # changeTitle + version/lock_version
 src/main/java/alm/requirement/application/RequirementApplicationService.java  # 修改编排
 src/main/java/alm/requirement/infrastructure/**      # SnapshotStore、内存实现
 src/test/java/**
@@ -64,8 +64,8 @@ src/test/java/**
 | 1 | Spring Boot 升级 | BOM + starter + 主类；`mvn test` 12 绿回归 |
 | 2 | 雪花 ID 基础设施 | `IdentifierGenerator` + `SnowflakeIdGenerator` + `IdGeneratorConfig`；唯一性测试（同毫秒多 ID 不重复） |
 | 3 | LocalId 接入生成器 | `WorkingSetApplicationService.derive` 用生成器预分配；删除 `LocalId.newId()` 的 UUID 路径 |
-| 4 | `Requirement.changeTitle` | 不可变聚合返回新实例；`version` +1；`revision` 不变；以 `expectedVersion` 做乐观锁校验 |
-| 5 | 修改前快照 | `SnapshotRef`（SK 定义）+ `SnapshotStore`（ALM 内存实现）：保存前捕获完整内容（title/description/revision/version） |
+| 4 | `Requirement.changeTitle` | 不可变聚合返回新实例；`lock_version` 自动 +1；`revision` 不变；`version`（发布大版本）不变；以 `expectedLockVersion` 做乐观锁校验 |
+| 5 | 修改前快照 | `SnapshotRef`（SK 定义）+ `SnapshotStore`（ALM 内存实现）：保存前捕获完整内容（title/description/revision/version/lock_version） |
 | 6 | 事件发布 | `RequirementChanged` + `ApplicationEventPublisher.publishEvent`（保存成功后） |
 | 7 | 测试 | AT-03 前半 + 事件捕获 + 雪花 ID 唯一性 |
 
@@ -77,9 +77,9 @@ src/test/java/**
 | --- | --- |
 | Spring Boot 基线 | 升级后原 12 项仍全绿；`ApplicationContext` 可加载（`@SpringBootTest` 或显式上下文测试） |
 | 雪花 ID | 连续生成的 ID 唯一；`eventId`、新 `localId` 均为雪花值（非 UUID 格式） |
-| AT-03 前半 | 修改 `title A→B` 后 `revision` 仍为 3、`version` 递增；快照内容为 `A`（修改前） |
+| AT-03 前半 | 修改 `title A→B` 后 `revision` 仍为 3、`lock_version` 递增、`version` 保持为空；快照内容为 `A`（修改前） |
 | 事件 | 发布 1 条 `RequirementChanged`，载荷含 `eventId/requirementId/sourceLocalId/revision/snapshotRef/occurredAt`；顺序可观察 |
-| 并发证据 | 以错误的 `expectedVersion` 修改 → 拒绝（`Rejected`/冲突语义），不得静默覆盖 |
+| 并发证据 | 以错误的 `expectedLockVersion` 修改 → 拒绝（`Rejected`/冲突语义），不得静默覆盖 |
 
 ## 6. 完成定义（DoD）
 

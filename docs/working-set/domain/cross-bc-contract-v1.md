@@ -63,7 +63,7 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 ### 3.2 写入协作 Port（SK 定义 Outbound Port，BC 通过 Adapter 实现）
 
 - **每个 BC 一个专用 Port**（如 `RequirementWritePort`），**不是**具有通用 CRUD 权限的 `TrackerItem` 接口。
-- 请求载荷（契约级，非最终 API）：目标身份、业务 `Revision`、独立的并发版本/写入前置证据、字段与存在性决定、审阅证据引用、操作身份（幂等）、调用者上下文。业务 Revision 不充当乐观锁；证据形式留实现契约确定（CONCEPT-009、ADR-0005）。
+- 请求载荷（契约级，非最终 API）：目标身份、业务 `Revision`、独立的乐观锁版本（`lock_version`）/写入前置证据、字段与存在性决定、审阅证据引用、操作身份（幂等）、调用者上下文。业务 Revision 与发布 `version` 不充当乐观锁；证据形式留实现契约确定（CONCEPT-009、ADR-0005）。
 - 返回（契约级）：成功 + 提交后的业务 `Revision`（普通编辑不升级版次）；或业务拒绝 / 冲突 / 未知结果等（见 §5）。并发控制不得改变 T1 已确认的决策优先与执行语义。
 - 结构可具有 **SPI 扩展特征**（按能力声明发现可用实现），但**不强制** Java `ServiceLoader` 或动态插件机制。
 

@@ -34,7 +34,7 @@ src/test/java/**（同构包）
 | # | 行为 | 最小产出 |
 | --- | --- | --- |
 | 1 | 工程骨架 | `pom.xml`（Java 21、JUnit 5、Spring Boot 仅用于装配/测试）、包结构、`mvn -q -DskipTests compile` 通过 |
-| 2 | 值对象与领域接口 | `LocalId`/`CommonId`/`Revision`/`Version`/`TrackerId`/`WorkingSetId`；`TrackerItem`（`commonId()`/`localId()`/`revision()`） |
+| 2 | 值对象与领域接口 | `LocalId`/`CommonId`/`Revision`/`Version`/`LockVersion`/`TrackerId`/`WorkingSetId`；`TrackerItem`（`commonId()`/`localId()`/`revision()`）；`Version` 为发布大版本（字符串、可空），`LockVersion` 为乐观锁 |
 | 3 | `LightTrackerItem` 聚合 | 派生构造：预分配 `localId`、继承 `commonId`、`sourceLocalId`=内容拥有者、`sourceRevision`、`materialized=false`；只读视图；L1/L3 后置条件 |
 | 4 | `Tracker`（最小） | 非共享派生：新身份 + `sourceId` 指向来源 |
 | 5 | SK Port 与仓库 | `TrackerItemReadPort`（`readAt`/`revision`/`capabilities`/`authorize`）、`LightTrackerItemRepository`（`save`/`findById`/`findBySource`），内存实现 |

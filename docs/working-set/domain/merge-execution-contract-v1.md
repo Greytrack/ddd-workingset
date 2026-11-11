@@ -137,7 +137,7 @@ Diff 产生有向冻结差异 + ComparisonToken
 | CK-1 | 同一（范围、家族键）的确认必须基于不低于已存决定版本的决定；更旧的决定版本不得覆盖新确认 | INV-010 的 Checkpoint 因果顺序；B10 |
 | CK-2 | 撤销一经记录，晚到的同版本或更旧确认不得使其失效 | 「旧确认不得覆盖更新的撤销」（INV-010） |
 | CK-3 | 确认不等于内容相等：`KEEP_TARGET` 可确认；确认不写业务内容、不改变业务 Revision | R11；CONCEPT-015 |
-| CK-4 | 任一侧业务 Revision 显式升级后，旧 Checkpoint 对该版本组合过时；普通编辑只增乐观锁 version 时不失效 | R11/R12（已确认） |
+| CK-4 | 任一侧业务 Revision 显式升级后，旧 Checkpoint 对该版本组合过时；普通编辑只增乐观锁 `lock_version` 时不失效 | R11/R12（已确认；2026-11-11 术语修正） |
 | CK-5 | Checkpoint 独立聚合，不持有业务内容、不以 MergeRound 为父，只按范围+家族键+决定版本关联 | D-019 |
 
 ## 7. ACCEPT / KEEP_TARGET / DEFER 与 markAsMerged 行为矩阵

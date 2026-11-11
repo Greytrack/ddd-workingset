@@ -99,13 +99,13 @@ sequenceDiagram
 
     U->>AAPP: 修改 title A→B（普通修改）
     AAPP->>SNAP: 读取修改前完整内容，保存不可变快照
-    AAPP->>RAGG: 保存修改（version 推进，Revision 不升级）
+    AAPP->>RAGG: 保存修改（lock_version 自动 +1，Revision 与发布 version 不变）
     AAPP->>EV: 发布 RequirementChanged（snapshotRef + revision）
     EV->>COW: 顺序派发
     COW->>LTI: 查询 materialized=false 且 sourceLocalId/sourceRevision 匹配
     LTI-->>COW: 目标变体（扇出）
     COW->>WP: materialize(targetLocalId, snapshotRef, revision)
-    WP->>RAGG: 以快照构建聚合 → 整体校验（含 version 并发）→ 保存（幂等键）
+    WP->>RAGG: 以快照构建聚合 → 整体校验（含 lock_version 并发）→ 保存（幂等键）
     alt 保存失败
         RAGG-->>WP: 拒绝
         WP-->>COW: 失败

@@ -25,7 +25,7 @@
 | P2 应用框架 | **Spring Boot + Spring Event + 纯 Java Domain**；Spring 承担启动/DI/事务/集成测试与事件派发；领域不依赖 Spring/ORM | **采用**（用户 2026-11-11 决定：升级 Spring Boot、事件框架用 Spring Event）；不引入微服务框架、服务发现、插件系统 |
 | P3 代码组织 | 按 BC 组织 + DDD 分层（详见 §4）；**单 Maven 模块 + 逻辑包**，不强制每个目录成为模块 | **采用**（用户推荐）；旧 `biz / sdk / sdkImpl` 结构彻底退出新架构依据 |
 | P4 快照承载 | **公共事件信封 + BC 自有不可变快照**（详见 §8） | **采用（概念级）**；序列化/可靠投递/顺序实现留实施协议 |
-| P5 Requirement 字段 | `localId`、`commonId`、`trackerId`、`title`、`description`、`revision`、`version` | **采用（首切片范围）**；不实现状态机、审批流、评论、附件、复杂属性模型 |
+| P5 Requirement 字段 | `localId`、`commonId`、`trackerId`、`title`、`description`、`revision`、`version`、`lock_version` | **采用（首切片范围）**；`revision` 为手动版次，`version` 为发布大版本（字符串、可空），`lock_version` 为乐观锁（自动 +1）；不实现状态机、审批流、评论、附件、复杂属性模型 |
 
 P1～P4 为工程实施决策，不新增领域 ADR；P5 字段集只服务首切片验证，不代表 ALM Requirement 最终模型。
 
@@ -100,7 +100,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | `LightTrackerItem` / `Tracker` / `WorkingSet` | SK | 派生身份、物化状态与有效来源、范围与绑定 | 业务状态机、业务字段 |
 | `TrackerItem`（领域接口） | SK 定义 | 公共身份与 Revision（由 BC 聚合实现） | 应用层调用与授权 |
 | `TrackerItemReadPort` / `RequirementWritePort` | SK 定义（应用层 Outbound Port） | 只读能力；写入协作（物化保存） | 不实现业务逻辑 |
-| `Requirement`（聚合） | ALM | 完整内容、不变量、`revision`/`version`、提交；实现 `TrackerItem` | 工作集范围、绑定、物化状态；不实现应用层 Port |
+| `Requirement`（聚合） | ALM | 完整内容、不变量、`revision`/`version`/`lock_version`、提交；实现 `TrackerItem` | 工作集范围、绑定、物化状态；不实现应用层 Port |
 | `RequirementApplicationService` | ALM | 创建/普通修改/保存；产生快照与事件 | 工作集编排 |
 | `RequirementAdapter` | ALM | **另行实现** `TrackerItemReadPort` 与 `RequirementWritePort` | 不向 SK 开放 Repository 或通用 Save |
 | `bootstrap` | 组合根 | 装配实现（Spring Bean） | 领域行为 |
@@ -140,7 +140,7 @@ bootstrap.configuration    → 所有实现（组合根）
 ```
 事件 → Handler 定位目标集合
   → 每个目标：RequirementWritePort.materialize(targetLocalId, snapshotRef, revision)
-       ALM：以快照构建 Requirement 聚合 → 整体校验（含 version 并发）→ 保存（幂等键 eventId + targetLocalId）
+       ALM：以快照构建 Requirement 聚合 → 整体校验（含 lock_version 并发）→ 保存（幂等键 eventId + targetLocalId）
   → 保存成功 → LightTrackerItem.switchToLocalBacked(revision)（单聚合事务）
   → 记录物化完成
 失败分支：
@@ -150,7 +150,7 @@ bootstrap.configuration    → 所有实现（组合根）
 
 **内容固定范围（T3 §2.1 选择 A）**：首切片仅普通字段（`title`）；派生仅选定业务 Revision；附件与关系固定为派生时状态（R19），首切片不涉及，但实现不得用较新附件/关系覆盖派生基准（SCN-072）。
 
-**并发与版次（T4 §3.2 + P5）**：写入携带独立 `version` 作乐观锁；`revision` 为业务版次，不充当乐观锁；普通修改推进 `version`、不升级 `revision`。
+**并发与版次（T4 §3.2 + P5，2026-11-11 术语修正）**：写入携带独立 `lock_version` 作乐观锁；`lock_version` 在每次 command 处理后数据变动时自动 +1。`revision` 是手动触发的递增版次；`version` 是发布大版本（字符串、可空，只有某个版次发布时才出现）。普通修改只推进 `lock_version`，不升级 `revision`，也不改变 `version`。业务 `revision` 与发布 `version` 均不充当乐观锁。
 
 ## 10. 三字段一致性
 
@@ -166,7 +166,7 @@ bootstrap.configuration    → 所有实现（组合根）
 
 | 类型 | 职责 |
 | --- | --- |
-| `LocalId` / `CommonId` / `Revision` / `Version` / `TrackerId` / `WorkingSetId` | 值对象（包装标识/版本，纯 Java） |
+| `LocalId` / `CommonId` / `Revision` / `Version` / `LockVersion` / `TrackerId` / `WorkingSetId` | 值对象（包装标识/版本/乐观锁，纯 Java）；`Version` 为发布大版本（字符串、可空），`LockVersion` 为乐观锁 |
 | `TrackerItem`（接口） | `commonId()`、`localId()`、`revision()` |
 | `LightTrackerItem`（聚合根） | `derive(...)`、`switchToLocalBacked(Revision)`、只读访问器（含 `materialized`） |
 
@@ -186,7 +186,7 @@ bootstrap.configuration    → 所有实现（组合根）
 
 | 类型 | 职责 |
 | --- | --- |
-| `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, Version)`、`upgradeRevision()`（预留，不触发 COW）、访问器 |
+| `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, LockVersion)`、`upgradeRevision()`（预留，不触发 COW）、访问器；`version` 发布大版本可空、`lockVersion` 乐观锁 |
 | `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
 | `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件） |
 | `RequirementAdapter` | 实现 `TrackerItemReadPort`、`RequirementWritePort` |
@@ -227,7 +227,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | 检查项 | 结论 |
 | --- | --- |
 | T4 §3.1 两层接口并存 | 一致：`Requirement` 实现 `TrackerItem`；`RequirementAdapter` 实现应用层 Port |
-| T4 §3.2 业务 Revision 不当乐观锁 | 一致：新增 `version` 作并发证据；`revision` 仅业务版次 |
+| T4 §3.2 业务 Revision 不当乐观锁 | 一致：新增 `lock_version` 作并发证据；`revision` 仅手动版次，`version` 仅发布大版本 |
 | T3 §2.1 内容固定范围（A） | 一致：首切片普通字段；附件/关系不涉及但不得被覆盖 |
 | T3 `materialized` 三字段一致性 | 一致：A2 与 §7/§10 |
 | T3 COW 失败语义（保存成功不回滚） | 一致：A3 与 §9 |

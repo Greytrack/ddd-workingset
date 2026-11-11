@@ -142,7 +142,7 @@ sequenceDiagram
     Note over L: 后续 E2 或其他来源事件不覆盖已物化 A
 ```
 
-注意：Source Change Order 如何表达（复用并发 version 还是独立序列）、Derivation Baseline 判定、Materialization Claim 证据保留均候选，不提前用数据库锁或消息队列偏移量替代业务裁定。
+注意：Source Change Order 如何表达（复用乐观锁 `lock_version` 还是独立序列）、Derivation Baseline 判定、Materialization Claim 证据保留均候选，不提前用数据库锁或消息队列偏移量替代业务裁定。
 
 ## SourceLocalId / SourceRevision 职责分离（D-012 字段对比与多级派生）
 

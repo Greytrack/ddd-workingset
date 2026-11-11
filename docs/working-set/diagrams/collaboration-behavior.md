@@ -36,7 +36,7 @@ sequenceDiagram
     end
 ```
 
-KEEP_TARGET 已确认可通过 markAsMerged 记录处理决定而保留目标内容，决定写入 MergeCheckpoint。双侧业务版次未变时下次比对不再显示该差异，普通编辑只增加乐观锁版本也继续隐藏。该无内容变更路径直接记录决定与确认，图中业务内容提交分支适用于存在数据变更的情况。DEFER 保留未处理状态。部分对象失败不改变其他对象的成功事实。
+KEEP_TARGET 已确认可通过 markAsMerged 记录处理决定而保留目标内容，决定写入 MergeCheckpoint。双侧业务版次未变时下次比对不再显示该差异，普通编辑只增加乐观锁 `lock_version` 也继续隐藏。该无内容变更路径直接记录决定与确认，图中业务内容提交分支适用于存在数据变更的情况。DEFER 保留未处理状态。部分对象失败不改变其他对象的成功事实。
 
 ```mermaid
 flowchart TB
@@ -64,7 +64,7 @@ B08 已确认批次允许部分成功。重试只进入未完成项的执行流�
 ```mermaid
 flowchart TD
     Start["用户主动发起比对"] --> Match{"存在适用的已处理 Checkpoint<br/>且双侧业务版次均相同"}
-    Match -->|"是"| Hide["抑制对应已处理差异<br/>普通编辑增加乐观锁版本也不改变此结果"]
+    Match -->|"是"| Hide["抑制对应已处理差异<br/>普通编辑增加乐观锁 lock_version 也不改变此结果"]
     Match -->|"任一侧业务版次已升级"| Expired["旧 Checkpoint 对新版本组合过时"]
     Expired --> Compare["重新比较所有适用字段<br/>包含曾合并与未合并的字段"]
     Match -->|"无适用 Checkpoint"| Compare
