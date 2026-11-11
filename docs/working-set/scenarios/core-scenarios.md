@@ -809,37 +809,41 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 <a id="scn-069"></a>
 ## SCN-069 跨 BC 读取的统一失败语义
 
-**业务规则：AC-001、D-007、QUESTION-013 已确认；「六态 + 三附加」分类为 T4 契约候选（K2″，待用户确认）。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)、B02。
+**业务规则：用户确认（2026-11-11，K2″）；AC-001、D-007、QUESTION-013 已确认。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)、B02。
 
 - Given 查询者通过 Working Set 解析某业务对象。
 - When 对象从未存在（或不在身份空间内）→ `NotFound`。
-- When 对象存在但未纳入当前工作集 → `NotIncluded`（不得合并为 `NotFound`）。
+- When 对象存在但未纳入当前工作集 → `NotIncluded`（**不得降级为 `NotFound`**）。
 - When 对象存在、已纳入，但调用方无权读取 → `Denied`（**不得降级为 `NotFound`**，也不得泄露内容）。
 - When 对象已删除 → `Deleted`；若历史仍可读，另以历史接口返回，不得把「已删除」当「历史不可用」。
 - When 所需历史/切点不可读 → `HistoryUnavailable`（**不得用当前值冒充**）。
 - When 范围或成员处于准备中 → `Preparing`（不得当作已完成返回）。
-- 边界：对外披露按权限政策脱敏，仅内部可信接口可见具体原因（B02/B12）。
+- When 依赖（Privilege/Workflow/Class Hierarchy）不可用 → `DependencyUnavailable`（不得默许通过）。
+- When 执行结果未知 → `Unknown`（不得解释为确定未执行，须按幂等协议恢复或确认）。
+- 边界：九分类是**统一语义词汇表**，不是九状态生命周期；每个用例只暴露其适用子集（见[契约 §5.2](../domain/cross-bc-contract-v1.md)），不要求每个接口统一返回九类；对外披露按权限政策脱敏（B02/B12）。
 
 <a id="scn-070"></a>
-## SCN-070 能力不支持不等于无差异
+## SCN-070 能力不支持不等于无差异，写入必须经 BC
 
-**业务规则：POL-003/QUESTION-013、B05 已确认（不支持字段不能算相等）；能力标记为 T4 契约候选（K1″，待用户确认）。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)。
+**业务规则：用户确认（2026-11-11，K1″）；POL-003、QUESTION-013、B05 已确认。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)。
 
 - Given 用户对两个工作集中的 Part（或 DQA 对象）发起 Diff。
-- When SK 查询对象能力标记，得到 `comparable = false`。
+- When SK 通过 `TrackerItemReadPort` 查询能力声明，得到 `comparable = false`。
 - Then 返回 `CapabilityNotSupported`，**不得返回「无差异」或空结果**，也不得进入 Merge 路径（`mergeable = false`）。
 - When 用户对 ALM Requirement 发起同一操作。
 - Then `comparable = true`，按 T1 的 Diff 契约产生有向冻结差异与 `ComparisonToken`。
-- 边界：能力标记按对象类型声明，不按工作集推断；不支持时的失败必须可被调用方区分于「内容相等」。
+- When 用户对 ALM Requirement 提交字段决定（ACCEPT）。
+- Then SK 只能经 `<BC>WritePort` 请求 ALM 应用服务；由 ALM 重建聚合、整体校验、提交，SK **不代写**、不通过通用字段写入绕过聚合。
+- 边界：`TrackerItemReadPort` 只提供身份、Revision、内容解析、能力声明与授权事实；整体校验与提交属业务 BC 职责，不是只读契约的方法。
 
 <a id="scn-071"></a>
-## SCN-071 契约版本与能力协商
+## SCN-071 契约版本与能力协商（团队开放项）
 
-**业务规则：`QUESTION-014` 尚待裁定；版本治理方案 B（版本化 Published Language + 能力协商）为 T4 契约候选（K3″）。验收表述 Draft。**
+**业务规则：`QUESTION-014` 保持 Open，未裁定（2026-11-11 K3″：延后至四 BC 共同评审）；版本治理方案 B（版本化 Published Language + 能力协商）为推荐候选，非当前有效契约。验收表述 Draft。**
 
 - Given Shared Kernel 发布新版本契约（新增一个可选能力标记）。
 - When 旧版本 BC 适配器接入。
 - Then 通过能力协商识别缺失能力：调用该能力时返回 `CapabilityNotSupported` 或按协商降级，**不得静默忽略或假装成功**。
 - When 契约需要破坏性变更。
 - Then 走新版本 + 兼容期 + 弃用公告；旧版本在其兼容期内继续工作，不得要求四 BC 同步升级（否则退化为方案 A）。
-- 边界：版本号、协商格式与兼容期长度属实现/治理决定；本场景只约束「不静默、可协商、可弃用」。
+- 边界：本场景为**讨论用**，不构成裁定；版本号、协商格式与兼容期长度属团队治理决定；K3″ 不作为 T5 首个纵向切片的阻塞条件。

@@ -22,3 +22,4 @@
 - [2026-11-11 T1 契约审核](2026-11-11-t1-contract-review.md)：T1 通过并关闭（Reviewed）；重试与终态话题不再新增领域问题，进入 T2。
 - [2026-11-11 T2 评审（冻结）](2026-11-11-t2-binding-deletion-review.md)：K1～K3 用户确认落地、4 项一致性修正、旧表述清理；绑定与删除契约 v1 冻结为 Reviewed，进入 T3。
 - [2026-11-11 T3 评审（冻结）](2026-11-11-t3-materialization-review.md)：K1′～K3′ 用户确认落地（独立 materialized 字段、LocalId 稳定复用、事件驱动最终一致）、旧推导候选标 Superseded；物化协议契约 v1 冻结为 Reviewed，进入 T4。
+- [2026-11-11 T4 评审（冻结）](2026-11-11-t4-cross-bc-review.md)：K1″（只读 TrackerItemReadPort + BC 自管写入）与 K2″（九分类公共失败语义）用户确认落地、架构前提（新 DDD、旧模块为历史）记录；K3″ 保持团队开放项；跨 BC 契约 v1 冻结为 Reviewed，进入 T5。

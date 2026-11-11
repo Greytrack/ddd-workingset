@@ -19,7 +19,7 @@
 | P1 `QUESTION-011` | **Baseline 的业务含义是什么？** | A Snapshot；B 发布清单；C Merge Base；D 多概念并存但分别命名。 | 决定不可变性、保留和引用语义，避免与仓库 Design Baseline 混淆。 | 收集业务人员使用“基线”的原句和操作。 | 统一语言、历史 |
 | P2 `QUESTION-012` | **Working Set 与 Binding 的规模和并发上限是多少？** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备+发布指针。 | 决定 `AP-001` 与 `AP-003` 的可行性及热点。 | 采集 P95/P99 数量、写并发、发布频率和允许时延。 | 物理聚合伸缩，不阻塞术语确认 |
 | P0 `QUESTION-013` | **Working Set 通用机制与四个业务 BC 专有规则的边界在哪里？** | BC 整体校验并决定提交、SK 管选择/协调/结果已确认；Part、DQA、GateFlow 接入范围见专项。剩余为其他能力分工及公共协议，不重新开放最终提交权。 | 决定 create/extend/resolve/diff/merge 的契约、依赖方向、事务和失败语义；若边界过宽会形成巨型跨域服务。 | ALM 验证合并拒绝，PLM Part 验证共享纳入查看，GateFlow/DQA 按确认后的接入能力选择场景。 | 阶段 3.0、所有跨 BC 合同 |
-| P1 `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本和兼容性？** | A 共同发布；B 版本化 Published Language；C 适配器／ACL 隔离演进。 | 决定共享模型范围、契约版本、弃用策略和团队协作方式。 | 访谈发布责任、升级节奏、兼容期限和变更审批者。 | 不阻塞概念发现，阻塞正式公共契约 |
+| **团队开放项（待访）** `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本和兼容性？** | A 共同发布；B 版本化 Published Language（讨论推荐）；C 适配器／ACL 隔离演进。 | 决定共享模型范围、契约版本、弃用策略和团队协作方式。 | 访谈发布责任、升级节奏、兼容期限和变更审批者。 | **不作为当前实现重点**；不阻塞 T4 的 K1″/K2″ 与 T5；需四 BC 访谈后裁定（讨论稿见[跨 BC 契约图 §6](../diagrams/cross-bc-contract.md)） |
 | P0 `QUESTION-015` | **Diff/Merge 执行协议如何定义？** 业务裁定已由 D-019 确认（未物化可参与 Diff、Merge 修改未物化目标时构建业务聚合并 save、决策 VO 归 MergeRound、MergeCheckpoint 独立、共享 Tracker 不参与 Merge）。剩余为执行协议：① 差异冻结与比较令牌；② 幂等键；③ 乱序确认（旧确认晚于撤销）；④ MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 的精确字段映射。 | A 令牌绑定冻结差异清单 + 幂等键（推荐）；B 每次执行重新比较、仅以版本号乐观校验；C 以事件序号串行化单执行队列。 | 决定 MergeRound 参数/进度/终态的持久化、Checkpoint 因果单调、过期审阅与乱序确认防护；不改变 D-019 已确认的聚合定位。 | 用 SCN-055/056 扩场景：过期审阅、撤销晚到、DEFER 残留、部分成功后重试、未物化目标物化与修改同事务失败。 | Merge 契约（阶段 5 B1） |
 
 ## 建议确认顺序（阶段 3 历史规划）

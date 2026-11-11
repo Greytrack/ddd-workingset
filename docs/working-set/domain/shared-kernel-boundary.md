@@ -79,6 +79,8 @@ DQA 是质量体系建设的一环，自行管理业务逻辑。其 Tracker 全�
 
 以下是阶段 3.0 的评审起点，不是已确认契约。
 
+> **2026-11-11 更新**：下列「仍需确认」中的多数事项已由 T1～T4 契约关闭——`create` 的入口与归属（POL-002/007）、`resolve` 的错误语言（T4 九分类）、`merge` 的执行与终态（T1）、`diff` 的冻结与凭据（T1）。未关闭项（`extend` 的补偿细节、通用差异模型覆盖范围）见 T4 契约「不在本契约」与实现待办。
+
 | 候选能力 | Working Set Shared Kernel 的通用责任 | 业务 BC 的专有责任 | 仍需确认 |
 | --- | --- | --- | --- |
 | `create` | 建立工作上下文、范围选择、稳定身份映射和可恢复任务候选 | 校验并创建合法业务对象或暴露已有对象事实 | `create` 是创建 Working Set、Tracker 还是业务 Item；事务返回语义 |
@@ -95,13 +97,15 @@ DQA 是质量体系建设的一环，自行管理业务逻辑。其 Tracker 全�
 
 “共享一个通用业务对象 Map 并由 Working Set 直接写所有字段”不是默认候选，因为它会绕过四个 BC 的专有模型。
 
+**2026-11-11 T4 裁定（K1″/K2″，用户确认）**：采用「稳定 Port／Adapter」，并收敛为**只读 `TrackerItemReadPort` + 每 BC 专用写入协作 Port**；SK 不提供通用写端口、不通过字段 Map 直写；整体校验与提交属业务 BC；失败语义采用九分类公共词汇。详见[跨 BC 契约](cross-bc-contract-v1.md)与[契约图](../diagrams/cross-bc-contract.md)。
+
 ## 阶段 3.0 必须回答
 
-- 哪些 create／extend／resolve／diff／merge 名称是稳定业务能力，哪些只是示意 API？
-- 每个 BC 向 Working Set 暴露的最小公共语言是什么？
-- BC 拒绝 Merge Decision 时，共享内核如何表达未执行、冲突、部分成功和可重试？
-- Privilege、Workflow、Class Hierarchy 与 Working Set 的交互是共享模型、同步端口还是事实事件？
-- Shared Kernel 的模型变更由谁批准，四个 BC 如何版本兼容？
+- 哪些 create／extend／resolve／diff／merge 名称是稳定业务能力，哪些只是示意 API？**（已由 T4 契约 §4 收敛为六个用例边界）**
+- 每个 BC 向 Working Set 暴露的最小公共语言是什么？**（已由 T4 契约 §3 的只读契约 + 写入协作 Port 表达）**
+- BC 拒绝 Merge Decision 时，共享内核如何表达未执行、冲突、部分成功和可重试？**（已由 T1 契约与九分类部分覆盖；`Rejected`／`StaleEvidence`／`Unknown` 保留）**
+- Privilege、Workflow、Class Hierarchy 与 Working Set 的交互是共享模型、同步端口还是事实事件？**（部分：依赖不可用返回 `DependencyUnavailable`；缓存与撤权时效仍待确认）**
+- Shared Kernel 的模型变更由谁批准，四个 BC 如何版本兼容？**（K3″ 保持 Open，待四 BC 共同评审）**
 
 在这些问题闭合前，不确认跨 BC 接口签名，也不据此选择 Working Set 内部聚合方案。
 

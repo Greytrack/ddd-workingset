@@ -13,11 +13,12 @@
 
 ## 阶段 5 契约
 
-- [merge-execution-contract-v1.md](merge-execution-contract-v1.md)：Merge 执行行为契约（Reviewed，T1 已关闭；MergeRound / MergeCheckpoint / Diff+ComparisonToken / MergeEntry 生命周期、行为矩阵与轮次终态）。
-- [binding-deletion-contract-v1.md](binding-deletion-contract-v1.md)：绑定与删除契约（Reviewed，T2 已冻结；SpaceBinding／TrackerBinding 契约、九个操作、四类操作区分；K1～K3 用户确认）。
-- [lighttrackeritem-materialization-contract-v1.md](lighttrackeritem-materialization-contract-v1.md)：LightTrackerItem 物化协议契约（Reviewed，T3 已冻结；`materialized` 状态字段、双态、LocalId 预分配、首次物化、双事实一致性；K1′～K3′ 用户确认）。
-- [cross-bc-contract-v1.md](cross-bc-contract-v1.md)：跨 BC 公共契约（Draft，T4；TrackerItem 能力集与能力标记、六个用例、统一失败语义九分类、版本治理候选；待裁定 K1″～K3″）。
-- [ADR-0005（Accepted）](../adr/0005-merge-execution-model.md)：Merge 执行模型的结构决策，与 T1 契约配套。
+契约正文按主题维护，确认范围见 [BASELINE](../BASELINE.md)，进度见[阶段 5 计划](../reviews/2026-11-10-stage-5-contract-plan.md)。
+
+- [Merge 执行](merge-execution-contract-v1.md)：轮次、条目、比较证据与 Checkpoint。
+- [绑定与删除](binding-deletion-contract-v1.md)：绑定结构、操作与拒绝条件。
+- [物化协议](lighttrackeritem-materialization-contract-v1.md)：身份、状态转换与失败恢复。
+- [跨 BC 公共契约](cross-bc-contract-v1.md)：Port、用例边界、失败分类与治理待办。
 
 ## 阶段 2 候选知识
 
@@ -30,4 +31,4 @@
 - [shared-kernel-boundary.md](shared-kernel-boundary.md)：已确认 Shared Kernel 外框与候选跨 BC 职责边界；
 - [aggregate-model.md](aggregate-model.md)：候选聚合边界分析。
 
-上述「阶段 2 候选知识」中的文件均为 `Draft`，不属于当前 Accepted 设计基线；「已接受领域文档」中的两份按各自状态行与 `BASELINE.md` 索引为准。
+上述资料包含已确认子句与候选内容；文件级 Draft 不取消已登记的条款确认。具体接受范围以 [BASELINE](../BASELINE.md) 为准。
