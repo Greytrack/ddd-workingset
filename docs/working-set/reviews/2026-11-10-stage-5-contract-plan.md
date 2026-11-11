@@ -55,4 +55,6 @@
 
 产出：[Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)（Draft，已同步 Q4）、[MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md)（含 MergeRound 终态图）、SCN-057～060（过期审阅、撤销晚到、`DEFER` 残留与轮次终态、部分成功后以新轮次重做）。
 
-下一步：冻结契约 v1（待用户确认）后进入 T2 绑定与删除契约。
+**T1 已关闭**（2026-11-11，[T1 契约审核](../reviews/2026-11-11-t1-contract-review.md) 结论「通过并关闭」）：契约状态 `Reviewed`；Q1～Q4 全部关闭，重试与终态不再新增领域问题；遗留仅实现协议（Token 编码、幂等键、乱序实现、Checkpoint 字段映射），不阻塞后续。
+
+**当前推进 T2：绑定与删除契约**——SpaceBinding／TrackerBinding 内部结构与键、软删 vs 彻底删除、级联边界、默认 WorkingSet 约束；输入为 FACT-024～026、POL-012～015、INV-053～060、SCN-050～054、`QUESTION-009`。

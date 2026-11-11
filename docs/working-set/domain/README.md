@@ -11,10 +11,11 @@
 - [facts-policy-baseline-v1.md](facts-policy-baseline-v1.md)：事实与政策主题基线 v1（Accepted，2026-11-10；覆盖阶段 3.1 的 R01—R19 与限定术语）；
 - [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：首版领域模型基线候选 v1（Accepted 候选，含 D-001～D-019 与阶段 4 补充；未正式发布）。
 
-## 阶段 5 契约草案
+## 阶段 5 契约
 
-- [merge-execution-contract-v1.md](merge-execution-contract-v1.md)：Merge 执行行为契约草案（Draft，T1；MergeRound / MergeCheckpoint / Diff+ComparisonToken / MergeEntry 生命周期、行为矩阵与部分成功表达），待用户裁定 Q1～Q3。
-- [ADR-0005（Proposed）](../adr/0005-merge-execution-model.md)：Merge 执行模型的结构决策，与上述契约配套。
+- [merge-execution-contract-v1.md](merge-execution-contract-v1.md)：Merge 执行行为契约（Reviewed，T1 已关闭；MergeRound / MergeCheckpoint / Diff+ComparisonToken / MergeEntry 生命周期、行为矩阵与轮次终态）。
+- [binding-deletion-contract-v1.md](binding-deletion-contract-v1.md)：绑定与删除契约（Draft，T2；SpaceBinding／TrackerBinding 契约、六个操作、删除与级联边界；待用户裁定 K1～K3）。
+- [ADR-0005（Accepted）](../adr/0005-merge-execution-model.md)：Merge 执行模型的结构决策，与 T1 契约配套。
 
 ## 阶段 2 候选知识
 

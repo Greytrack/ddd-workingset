@@ -84,6 +84,8 @@
 
 ## 最近基线变更
 
+- **2026-11-11 阶段 5 T1 审核关闭**：T1 契约审核结论「通过并关闭」（[记录](reviews/2026-11-11-t1-contract-review.md)）；[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md) 状态 Draft → Reviewed（未 Accepted）；Q1～Q4 全部关闭，**重试与终态不再新增领域问题**；遗留仅实现协议（Token 编码、幂等键、乱序实现、Checkpoint 字段映射）。进入 T2 绑定与删除契约。发布仍 Unreleased。
+
 - **2026-11-11 阶段 5 T1 Q4 裁定（方案 B）**：用户裁定 MergeRound 一次执行结束即进入终态、不提供同轮业务重试；终态不可重开、不可再登记或再执行；未完成项须重新比较并新建 MergeRound（新 `mergeRoundId`、有效 `ComparisonToken`）；`ApplyResult` 为本轮不可变终态快照；部分成功不回滚、旧结果保留。已同步契约 §1/§4/§5/§7/§8、ADR-0005 补充裁定、MergeRound 终态图与 SCN-057～060。发布仍 Unreleased。
 
 - **2026-11-10 阶段 5 T1 裁定**：用户裁定 Q1～Q3（MergeEntry 为 MergeRound 内 Entity、ComparisonToken 必须绑双侧内容证据、Checkpoint 由 MergeRound 在 `markAsMerged=true` 且 `Applied` 时发起），批准 [ADR-0005](adr/0005-merge-execution-model.md) 为 Accepted；[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md) 已同步裁定（仍为 Draft，待补 SCN-057 起场景后冻结）。发布仍 Unreleased。
@@ -117,4 +119,6 @@
 
 阶段 4 收尾与首版基线审核完成后进入契约层：[阶段 5 契约层计划](reviews/2026-11-10-stage-5-contract-plan.md)（Draft）。首议题 T1 Merge 执行协议（`QUESTION-015`），随后 T2 绑定与删除契约、T3 LightTrackerItem 物化协议、T4 跨 BC 公共契约；契约确认后才启动 T5 最小纵向切片。发布仍 Unreleased。
 
-T1 进度（2026-11-11）：Q1～Q4 已裁定（Q4 方案 B：一次执行即终态、不可重开、未完成项须新建 MergeRound），[ADR-0005](adr/0005-merge-execution-model.md) 已 Accepted 并追加补充裁定；[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md) 已同步（仍 Draft）、[MergeEntry 生命周期图](diagrams/merge-entry-lifecycle.md) 含 MergeRound 终态图、SCN-057～060 已补。下一步冻结契约 v1（待用户确认）后进入 T2。
+T1 已关闭（2026-11-11）：Q1～Q4 全部关闭，[T1 契约审核](reviews/2026-11-11-t1-contract-review.md) 结论「通过并关闭」；[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md) 状态 Reviewed（未 Accepted）、[ADR-0005](adr/0005-merge-execution-model.md) 含 2026-11-11 补充裁定、[MergeEntry 生命周期图](diagrams/merge-entry-lifecycle.md) 含 MergeRound 终态图、SCN-057～060 已补。**重试与终态不再新增领域问题。**
+
+T2 进行中（2026-11-11）：[绑定与删除契约 v1](domain/binding-deletion-contract-v1.md)（Draft）已产出——SpaceBinding／TrackerBinding 契约、六个操作及失败语义、删除与级联边界；待用户裁定 K1（软删 vs 彻底删除）、K2（父 Tracker 删除/停用）、K3（子 WorkingSet 删除）。
