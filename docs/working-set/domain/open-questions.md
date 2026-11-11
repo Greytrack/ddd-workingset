@@ -18,11 +18,13 @@
 | P1 `QUESTION-010` | **跨 Working Set 的 Reference/Association 如何解析、钉版和修复？** | A 逻辑 Family；B 具体 Variant；C 按关系类型选择。 | 决定关系身份、悬空状态、历史和修复事件。 | 以目标缺失、无权、删除、后续纳入四场景访谈。 | 关系上下文 |
 | P1 `QUESTION-011` | **Baseline 的业务含义是什么？** | A Snapshot；B 发布清单；C Merge Base；D 多概念并存但分别命名。 | 决定不可变性、保留和引用语义，避免与仓库 Design Baseline 混淆。 | 收集业务人员使用“基线”的原句和操作。 | 统一语言、历史 |
 | P2 `QUESTION-012` | **Working Set 与 Binding 的规模和并发上限是多少？** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备+发布指针。 | 决定 `AP-001` 与 `AP-003` 的可行性及热点。 | 采集 P95/P99 数量、写并发、发布频率和允许时延。 | 物理聚合伸缩，不阻塞术语确认 |
-| P0 `QUESTION-013` | **Working Set 通用机制与四个业务 BC 专有规则的边界在哪里？** | BC 整体校验并决定提交、SK 管选择/协调/结果已确认；Part、DQA、GateFlow 接入范围见专项。剩余为其他能力分工及公共协议，不重新开放最终提交权。 | 决定 create/extend/resolve/diff/merge 的契约、依赖方向、事务和失败语义；若边界过宽会形成巨型跨域服务。 | ALM 验证合并拒绝，PLM Part 验证共享纳入查看，GateFlow/DQA 按确认后的接入能力选择场景。 | 阶段 3.0、所有跨 BC 合同 |
+| Working Set 侧已收敛 `QUESTION-013` | **跨 BC 责任与公共契约**：T4 K1″/K2″ 已冻结；用户选择 B，业务聚合接口与 Adapter 并存。 | 当前定义见 [T4](cross-bc-contract-v1.md)；BC 专有能力仍由各 BC 确认。 | 不重开提交权与两层接口责任。 | SCN-069/070/073；单 BC 首切片验证。 | 版本治理转 QUESTION-014；不阻塞首切片准备 |
 | **团队开放项（待访）** `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本和兼容性？** | A 共同发布；B 版本化 Published Language（讨论推荐）；C 适配器／ACL 隔离演进。 | 决定共享模型范围、契约版本、弃用策略和团队协作方式。 | 访谈发布责任、升级节奏、兼容期限和变更审批者。 | **不作为当前实现重点**；不阻塞 T4 的 K1″/K2″ 与 T5；需四 BC 访谈后裁定（讨论稿见[跨 BC 契约图 §6](../diagrams/cross-bc-contract.md)） |
-| P0 `QUESTION-015` | **Diff/Merge 执行协议如何定义？** 业务裁定已由 D-019 确认（未物化可参与 Diff、Merge 修改未物化目标时构建业务聚合并 save、决策 VO 归 MergeRound、MergeCheckpoint 独立、共享 Tracker 不参与 Merge）。剩余为执行协议：① 差异冻结与比较令牌；② 幂等键；③ 乱序确认（旧确认晚于撤销）；④ MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 的精确字段映射。 | A 令牌绑定冻结差异清单 + 幂等键（推荐）；B 每次执行重新比较、仅以版本号乐观校验；C 以事件序号串行化单执行队列。 | 决定 MergeRound 参数/进度/终态的持久化、Checkpoint 因果单调、过期审阅与乱序确认防护；不改变 D-019 已确认的聚合定位。 | 用 SCN-055/056 扩场景：过期审阅、撤销晚到、DEFER 残留、部分成功后重试、未物化目标物化与修改同事务失败。 | Merge 契约（阶段 5 B1） |
+| 已关闭（实施待验证） `QUESTION-015` | **Diff/Merge 行为契约已关闭**：Q1～Q4 已裁定。 | [T1](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)；不重开原 A/B/C 选择。 | Token 编码、幂等键、乱序实现及 Checkpoint 字段映射待兑现。 | SCN-057～060；[T1 关闭评审](../reviews/2026-11-11-t1-contract-review.md)。 | 对应 Merge 实施切片，不阻塞 T5 首切片准备 |
 
 ## 建议确认顺序（阶段 3 历史规划）
+
+**当前推进范围（2026-11-11）**：T5 首切片准备采用已确认模型及 T3/T4；内容固定与接口责任两项歧义已关闭，见[一致性修正记录](../reviews/2026-11-11-consistency-reconciliation.md)。QUESTION-001/002 等历史问题只保留未被后续裁定覆盖的部分，不重开聚合身份与绑定归属；QUESTION-006 的内容固定范围以 T3 §2.1 为准。保留期限、共享读取 SLA、关系修复、停用和规模验证按相关切片处理，不代表整个领域已验证。
 
 阶段 3.1 当前仅需裁定事项见 [收敛报告](../reviews/2026-11-09-stage-3-1-rule-convergence.md)，已确认子项不重复提问。以下为原阶段规划，不表示重开已确认规则：先以 `AC-001` 为固定外部边界完成 `QUESTION-013`，再确认 `QUESTION-001 → 002 → 003/004 → 006 → 008`。它们决定共享能力边界、身份、历史和合法性；在这些问题未闭合前，不宜确认最终内部模型边界或聚合方案。
 

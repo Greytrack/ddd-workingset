@@ -23,3 +23,5 @@
 - [2026-11-11 T2 评审（冻结）](2026-11-11-t2-binding-deletion-review.md)：K1～K3 用户确认落地、4 项一致性修正、旧表述清理；绑定与删除契约 v1 冻结为 Reviewed，进入 T3。
 - [2026-11-11 T3 评审（冻结）](2026-11-11-t3-materialization-review.md)：K1′～K3′ 用户确认落地（独立 materialized 字段、LocalId 稳定复用、事件驱动最终一致）、旧推导候选标 Superseded；物化协议契约 v1 冻结为 Reviewed，进入 T4。
 - [2026-11-11 T4 评审（冻结）](2026-11-11-t4-cross-bc-review.md)：K1″（只读 TrackerItemReadPort + BC 自管写入）与 K2″（九分类公共失败语义）用户确认落地、架构前提（新 DDD、旧模块为历史）记录；K3″ 保持团队开放项；跨 BC 契约 v1 冻结为 Reviewed，进入 T5。
+- [2026-11-11 一致性修正](2026-11-11-consistency-reconciliation.md)：两项用户裁定（派生内容固定边界 A、TrackerItem 实现责任 B）与文档一致性修正；含 SCN-072/073。
+- [2026-11-11 T5-S0 设计审核](2026-11-11-t5-s0-design-review.md)：首切片设计、架构/COW 时序图、AT-01～AT-05 映射与 S1～S4 任务清单审核通过；S1 待 P1～P5 确认后交 Codex。
