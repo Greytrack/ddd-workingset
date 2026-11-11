@@ -26,21 +26,7 @@ ADR 使用：`Proposed`、`Accepted`、`Rejected`、`Superseded`。
 
 ## 阶段 2 候选知识入口
 
-- [证据登记](domain/evidence-register.md)
-- [统一领域语言](domain/glossary.md)
-- [事实、政策、假设与技术约束](domain/facts.md)
-- [候选业务不变量](domain/invariants.md)
-- [开放问题](domain/open-questions.md)
-- [候选 Context Map](domain/context-map.md)
-- [Shared Kernel 边界](domain/shared-kernel-boundary.md)
-- [候选概念关系图与 Context Map 图表](diagrams/README.md)
-- [候选聚合边界](domain/aggregate-model.md)
-- [竞争性聚合方案](proposals/aggregate-boundary-options.md)
-- [核心候选场景](scenarios/core-scenarios.md)
-- [阶段 2 设计审查](reviews/2026-11-09-stage-2-domain-discovery-review.md)
-- [阶段 3.0 Shared Kernel 边界评审](reviews/2026-11-09-stage-3-0-shared-kernel-boundary-review.md)
-
-这些内容已完成候选整理，但全部保持 `Draft`；它们不是已确认领域设计，也不替代 [BASELINE.md](BASELINE.md) 中的正式清单。
+候选知识按主题见 [domain/](domain/README.md)，历史评审见 [reviews/](reviews/README.md)。这些目录包含混合状态材料，接受范围以 [BASELINE](BASELINE.md) 为准。
 
 ## 建议阅读顺序
 
@@ -52,4 +38,4 @@ ADR 使用：`Proposed`、`Accepted`、`Rejected`、`Superseded`。
 
 只读取当前任务需要的材料。若文档状态、确认依据或替代关系不清楚，先记录为开放问题，不自行提升状态。
 
-阶段 3 决策包入口：[正式架构评审与八项待裁定问题](reviews/2026-11-09-stage-3-architecture-review.md)。候选建议尚未接受。
+当前阶段与下一步见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)；历史决策过程见[阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md)。

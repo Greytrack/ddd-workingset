@@ -14,18 +14,7 @@ LightTrackerItem 的**完整属性契约**（含独立的物化状态字段）�
 
 ## 2. 已确认依据摘要（不重复论证，只引用）
 
-| 规则 | 来源 |
-| --- | --- |
-| TrackerItem 是 Shared Kernel 公共契约；业务 BC 对象是完整独立聚合；LightTrackerItem 是 Working Set 专属独立聚合（非查询投影） | D-007、D-008、ADR-0002 |
-| LightTrackerItem 持有 LocalId、CommonId、SourceLocalId、SourceRevision、自身 Revision、TrackerId、WorkingSetId；派生时创建并分配 LocalId、保留 CommonId | D-008、D-012、D-018 |
-| COW 延迟物化：派生不复制完整内容；Source-backed 初始态 | D-008、D-015、INV-046 |
-| COW 事件驱动、最终一致；来源修改前事实作为事件关联的不可变快照 | D-009、D-010、INV-034/037 |
-| 首次快照优先；物化结果唯一；Local-backed 后不被来源事件覆盖 | D-011、INV-037/038/039 |
-| SourceLocalId 直接指向实际拥有完整内容的变体；已有下游不因其他变体重定向 | D-013、D-014、INV-043/045 |
-| COW 目标集合在事件 Handler 消费时确定 | D-017、INV-050 |
-| COW 不改变 LocalId/CommonId；Local-backed 时 SourceLocalId=LocalId、SourceRevision=Revision | D-012、INV-040/041/042 |
-| LightTrackerItem 持有自身 Revision（与 SourceRevision 分离）；Revision 显式升级触发 COW | D-018、INV-051/052 |
-| 未物化变体可参与 Diff；未物化目标被 Merge 修改时构建业务聚合并正常 Save（物化与修改一体） | D-019、INV-061/062 |
+聚合与责任依据见 [ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)，COW 与顺序前提见 [ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)，D-007～D-019 的确认链见[模型基线](model-baseline-candidate-v1.md) §5。本契约在 §3～§8 定义属性、行为及跨契约衔接。
 
 ## 3. 属性契约
 
@@ -113,21 +102,15 @@ LightTrackerItem 与业务聚合是**双事实**：前者持身份/来源/物化
 
 ## 9. 规则性质
 
-| 内容 | 性质 |
-| --- | --- |
-| 双态语义、字段语义（LocalId/CommonId/SourceLocalId/SourceRevision/revision）、COW 不改变身份、首次快照优先、消费时确定目标、Revision 分离 | **已确认**（D-008～D-019、INV-040～052） |
-| `materialized` 独立字段；与来源字段同一次聚合状态变更一致更新；外部不得绕过聚合修改 | **用户确认**（2026-11-11，K1′；INV-069） |
-| LocalId 预分配、首次物化复用、COW 不变、业务 BC 必须能按 LocalId 定位/创建、不持久化内容指针 | **用户确认**（2026-11-11，K2′；INV-070） |
-| 事件驱动最终一致 + 幂等重试仅补未完成步骤；保存失败不切换 | **用户确认**（2026-11-11，K3′；INV-071） |
-| 表结构、索引、事件中间件、快照格式、并发锁、幂等键实现 | **不在本契约** |
+既有规则沿用 D-008～D-019 的确认范围；本轮 K1′、K2′、K3′ 分别关联 INV-069、INV-070、INV-071。具体定义见 §3～§8，确认索引见 §10，技术实现排除范围见文首。
 
 ## 10. K1′～K3′ 最终裁定（用户确认，2026-11-11）
 
 | 编号 | 用户裁定 | 状态 |
 | --- | --- | --- |
-| K1′ | **新增独立 `materialized: boolean` 字段**（`false`=Source-backed、`true`=Local-backed），便于 Query 模型直接筛选；与 `sourceLocalId`/`sourceRevision` 在同一次聚合状态变更中一致更新；外部不得绕过聚合行为修改；三字段不一致属元数据一致性缺陷，不定义第三种业务状态 | **用户已确认** |
-| K2′ | 派生时预分配全局唯一 `LocalId`；首次物化必须复用；COW 不改变 LocalId/CommonId；不强制业务 BC 主键等于 LocalId，但业务 BC 必须能通过稳定 LocalId 定位或创建变体；不持久化内容指针、不持有完整业务字段 | **用户已确认** |
-| K3′ | 来源修改前捕获不可变快照 → 保存成功 → 发事件；Handler 消费时确定符合条件的 Source-backed 依赖者；保存成功后才允许切换；切换在单个 LightTrackerItem 聚合事务中同时更新三字段；保存成功而切换失败不回滚、幂等重试仅补未完成步骤；保存失败不切换；`Materializing` 仅为技术运行态 | **用户已确认** |
+| K1′ | §3～§4：物化字段与状态约束 | **用户已确认** |
+| K2′ | §5：LocalId 契约 | **用户已确认** |
+| K3′ | §6～§7：首次物化与双事实一致性 | **用户已确认** |
 
 ### 已被取代的候选（历史痕迹）
 
@@ -142,4 +125,4 @@ LightTrackerItem 与业务聚合是**双事实**：前者持身份/来源/物化
 - 追溯：D-007～D-019、FACT-014～023/027、INV-024～052/061～063/069～071、SCN-019～049、SCN-066～068、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)。
 - 图：[LightTrackerItem 生命周期](../diagrams/lighttrackeritem-lifecycle.md)、[物化状态与首次物化时序](../diagrams/lighttrackeritem-materialization.md)。
 - 评审：[T3 评审记录](../reviews/2026-11-11-t3-materialization-review.md)。
-- 下一步：进入 **T4（跨 BC 公共契约）**。
+- 当前进度与下一步统一见[阶段 5 计划](../reviews/2026-11-10-stage-5-contract-plan.md)。
