@@ -1,11 +1,11 @@
 package sk.workingset.domain;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * 所有业务对象聚合的唯一标识（用户 2026-11-11 裁定：LocalId 即业务聚合标识，RequirementId = LocalId）。
- * <p>派生时预分配；首次 COW 复用；COW 前后不变（T3/A2、INV-040）。
+ * <p>由 {@code IdentifierGenerator} 以雪花 ID 产生（FACT-005）；派生时预分配，首次 COW 复用，
+ * COW 前后不变（T3/A2、INV-040）。
  */
 public record LocalId(String value) {
 
@@ -18,9 +18,5 @@ public record LocalId(String value) {
 
     public static LocalId of(String value) {
         return new LocalId(value);
-    }
-
-    public static LocalId newId() {
-        return new LocalId(UUID.randomUUID().toString());
     }
 }

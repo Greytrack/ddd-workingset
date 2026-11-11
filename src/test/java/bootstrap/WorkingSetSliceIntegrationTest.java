@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import alm.requirement.application.RequirementApplicationService;
 import alm.requirement.infrastructure.InMemoryRequirementRepository;
+import alm.requirement.infrastructure.InMemorySnapshotStore;
 import alm.requirement.infrastructure.RequirementAdapter;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.Caller;
@@ -26,6 +28,7 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.infrastructure.InMemoryLightTrackerItemRepository;
+import sk.workingset.infrastructure.SnowflakeIdGenerator;
 
 /**
  * S1 纵向切片集成测试（位于组合根包：允许同时引用 SK 与 ALM 实现）。
@@ -48,9 +51,12 @@ class WorkingSetSliceIntegrationTest {
     void setUp() {
         items = new InMemoryLightTrackerItemRepository();
         requirements = new InMemoryRequirementRepository();
-        RequirementApplicationService requirementApp = new RequirementApplicationService(requirements);
+        SnowflakeIdGenerator ids = new SnowflakeIdGenerator(1, 1);
+        InMemorySnapshotStore snapshots = new InMemorySnapshotStore(ids);
+        RequirementApplicationService requirementApp = new RequirementApplicationService(
+                requirements, snapshots, ids, event -> { });
         workingSet = new WorkingSetApplicationService(
-                items, localId -> new RequirementAdapter(requirements, localId));
+                items, localId -> new RequirementAdapter(requirements, localId), ids);
         // 来源 Requirement R0：默认工作集 WS0、revision 3、title=A
         requirementApp.create(L0, C1, T0, "A", "source description", R3);
     }
@@ -111,5 +117,13 @@ class WorkingSetSliceIntegrationTest {
 
         assertEquals(before, item.localId(), "物化前后 LocalId 不变");
         assertSame(item, workingSet.resolve(WS1, before), "同一 LocalId 可定位同一变体");
+    }
+
+    @Test
+    void derived_local_id_is_a_snowflake_value_not_uuid() {
+        LightTrackerItem item = workingSet.derive(new DeriveCommand(WS1, T0, L0, R3, C1)).item();
+
+        assertTrue(item.localId().value().matches("\\d+"), "LocalId 应为雪花 ID（纯数字）: " + item.localId().value());
+        assertTrue(item.trackerId().value().matches("\\d+"), "TrackerId 应为雪花 ID（纯数字）: " + item.trackerId().value());
     }
 }

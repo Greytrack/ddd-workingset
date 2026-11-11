@@ -1,9 +1,9 @@
 package sk.workingset.application;
 
 import java.util.Objects;
-import java.util.UUID;
 import java.util.function.Function;
 
+import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.TrackerItemReadPort;
 import sk.workingset.domain.LightTrackerItem;
@@ -16,27 +16,31 @@ import sk.workingset.domain.WorkingSetId;
  * SK 应用服务（首切片）：非共享派生、解析与读取编排。
  *
  * <p>SK 只依赖 {@link TrackerItemReadPort} 与自身仓储；不引用 ALM 的任何类型（AC-01）。
+ * 业务标识由 {@link IdentifierGenerator} 以雪花 ID 产生（P1/FACT-005）。
  */
 public class WorkingSetApplicationService {
 
     private final LightTrackerItemRepository items;
     private final Function<LocalId, TrackerItemReadPort> readPorts;
+    private final IdentifierGenerator identifierGenerator;
 
     public WorkingSetApplicationService(LightTrackerItemRepository items,
-                                        Function<LocalId, TrackerItemReadPort> readPorts) {
+                                        Function<LocalId, TrackerItemReadPort> readPorts,
+                                        IdentifierGenerator identifierGenerator) {
         this.items = Objects.requireNonNull(items, "items");
         this.readPorts = Objects.requireNonNull(readPorts, "readPorts");
+        this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
     }
 
     /** 非共享派生：创建目标 Tracker 与 Source-backed 的 LightTrackerItem，不复制业务内容。 */
     public DeriveResult derive(DeriveCommand command) {
         Objects.requireNonNull(command, "command");
         Tracker tracker = Tracker.derived(
-                TrackerId.of("T-" + UUID.randomUUID()),
+                TrackerId.of(String.valueOf(identifierGenerator.nextId())),
                 command.sourceTrackerId(),
                 command.workingSetId());
         LightTrackerItem item = LightTrackerItem.derive(
-                LocalId.newId(),
+                LocalId.of(String.valueOf(identifierGenerator.nextId())),
                 command.commonId(),
                 tracker.trackerId(),
                 command.workingSetId(),

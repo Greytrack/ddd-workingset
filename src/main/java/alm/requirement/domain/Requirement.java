@@ -65,6 +65,28 @@ public final class Requirement implements TrackerItem {
         return localId;
     }
 
+    /**
+     * 普通修改标题（不可变聚合）：返回新实例；推进并发 {@code version}，**不升级业务 {@code revision}**。
+     *
+     * @param expectedVersion 调用方读取到的并发版本；不一致时显式冲突，不静默覆盖
+     * @throws VersionConflictException 版本已变化
+     */
+    public Requirement changeTitle(String newTitle, Version expectedVersion) {
+        Objects.requireNonNull(newTitle, "title");
+        Objects.requireNonNull(expectedVersion, "expectedVersion");
+        if (!version.equals(expectedVersion)) {
+            throw new VersionConflictException(expectedVersion, version);
+        }
+        return new Requirement(
+                localId,
+                commonId,
+                trackerId,
+                newTitle,
+                description,
+                revision,
+                Version.of(Math.addExact(version.value(), 1L)));
+    }
+
     @Override
     public CommonId commonId() {
         return commonId;

@@ -1,9 +1,17 @@
 package alm.requirement.application;
 
+import java.time.Instant;
 import java.util.Objects;
+
+import org.springframework.context.ApplicationEventPublisher;
 
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
+import alm.requirement.infrastructure.RequirementSnapshot;
+import alm.requirement.infrastructure.SnapshotStore;
+import sk.workingset.application.event.RequirementChanged;
+import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -11,14 +19,23 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Version;
 
 /**
- * ALM Requirement 应用服务（S1 仅创建；修改与事件发布在 S2 实现）。
+ * ALM Requirement 应用服务：创建、普通修改（修改前快照 + 保存成功后发布来源事件）。
  */
 public class RequirementApplicationService {
 
     private final RequirementRepository repository;
+    private final SnapshotStore snapshotStore;
+    private final IdentifierGenerator identifierGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public RequirementApplicationService(RequirementRepository repository) {
+    public RequirementApplicationService(RequirementRepository repository,
+                                          SnapshotStore snapshotStore,
+                                          IdentifierGenerator identifierGenerator,
+                                          ApplicationEventPublisher eventPublisher) {
         this.repository = Objects.requireNonNull(repository, "repository");
+        this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
+        this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
+        this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
     }
 
     /** 创建并提交一个 Requirement；并发版本从 0 开始。 */
@@ -32,5 +49,34 @@ public class RequirementApplicationService {
                 localId, commonId, trackerId, title, description, revision, Version.of(0));
         repository.save(requirement);
         return requirement;
+    }
+
+    /**
+     * 普通修改标题：先以 {@code expectedVersion} 判并发（冲突即失败，不产生快照或事件），
+     * 再捕获修改前完整快照，保存成功后发布 {@link RequirementChanged}。
+     *
+     * <p>业务 {@code revision} 不升级；仅并发 {@code version} 递增。
+     */
+    public Requirement changeTitle(LocalId localId, String newTitle, Version expectedVersion) {
+        Objects.requireNonNull(localId, "localId");
+        Requirement current = repository.findById(localId)
+                .orElseThrow(() -> new IllegalArgumentException("requirement not found: " + localId.value()));
+
+        // 先做并发校验：聚合不可变，失败时 current 不变，也不会留下无主快照
+        Requirement changed = current.changeTitle(newTitle, expectedVersion);
+
+        RequirementSnapshot snapshot = RequirementSnapshot.of(current);
+        SnapshotRef snapshotRef = snapshotStore.save(snapshot);
+
+        repository.save(changed);
+
+        eventPublisher.publishEvent(new RequirementChanged(
+                identifierGenerator.nextId(),
+                changed.localId(),
+                changed.localId(),
+                changed.revision(),
+                snapshotRef,
+                Instant.now()));
+        return changed;
     }
 }
