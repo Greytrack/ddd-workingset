@@ -769,3 +769,39 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When 尝试通过任何「恢复」操作找回该聚合。
 - Then 不存在恢复路径（当前领域不提供该能力）。
 - 边界：不强制映射为数据库物理 `DELETE`；实现层可保留审计副本、延迟清理或历史归档，但不得据此让业务侧产生「可恢复」预期。
+
+<a id="scn-066"></a>
+## SCN-066 独立物化状态字段与来源一致性
+
+**业务规则：用户确认（2026-11-11，K1′；INV-069）。验收表述 Draft。** 关联 [物化协议契约](../domain/lighttrackeritem-materialization-contract-v1.md)。
+
+- Given 某 LightTrackerItem 尚未物化。
+- Then `materialized = false`；`sourceLocalId` 指向外部实际有效内容来源；`sourceRevision` 为该来源的业务 Revision。
+- When 该变体完成首次物化。
+- Then 在**同一次 LightTrackerItem 聚合状态变更**中：`materialized = true`、`sourceLocalId = localId`、`sourceRevision = revision`。
+- 反例：若只改 `materialized` 而来源字段仍指向外部（或反之），属**元数据一致性缺陷**，须由修复流程收敛；Query 不得把这种不一致当成第三种业务状态。
+- 边界：`sourceLocalId != localId` 不再是唯一权威状态定义，只作为身份/来源一致性约束；状态字段不得由外部服务绕过聚合行为直接修改；不存在 `Materializing` 业务态。
+
+<a id="scn-067"></a>
+## SCN-067 业务保存成功而状态切换失败后的幂等收敛
+
+**业务规则：用户确认（2026-11-11，K3′；INV-071）。验收表述 Draft。** 关联 INV-025/038。
+
+- Given 来源修改事件消费到 Source-backed 变体 R1，目标 BC 已按修改前快照构建并保存完整聚合。
+- When 随后的 LightTrackerItem 切换失败（`materialized` 仍为 `false`）。
+- Then 不回滚已保存的业务内容；R1 仍为 Source-backed；不得对外宣称已物化。
+- When 幂等重试执行。
+- Then **只补齐尚未完成的步骤**（三字段同步切换），不重新构建或覆盖已存在的业务对象；成功后 R1 为 Local-backed，且不产生第二个有效物化结果（INV-038）。
+- 边界：物化完成 = 业务保存成功 **且** 切换成功；`materialized=false` 但业务内容已存在属可收敛的中间态，不是新业务状态。
+
+<a id="scn-068"></a>
+## SCN-068 预分配 LocalId 的稳定复用与跨 BC 解析
+
+**业务规则：用户确认（2026-11-11，K2′；INV-070）。验收表述 Draft。** 关联 INV-026/040。
+
+- Given 非共享派生创建 LightTrackerItem R1，派生时预分配全局唯一 `localId` 与 `commonId`。
+- When R1 首次物化。
+- Then 业务 BC 以同一 `localId` 定位或创建对应业务变体（业务主键不必等于 `localId`，但必须能按它定位）；物化前后 `localId`/`commonId` 不变（INV-040）。
+- Then LightTrackerItem 不持久化内容指针、不持有完整业务字段；跨 BC 解析通过稳定 `localId` 完成。
+- 反例：若物化时另分配新身份，同一变体会出现两个身份，破坏引用、去重与 Merge/Checkpoint 的 Revision 追溯。
+- 边界：业务 BC 是否以 `localId` 作为存储主键由该 BC 自决；不因此放宽其业务不变量。

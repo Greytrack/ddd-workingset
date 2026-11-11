@@ -11,7 +11,7 @@
 | Working Set | 有长期身份；准备、发布、归档等状态维度尚未确认 | 发布 revision 与当前范围一致；发布／取消不互相覆盖 | 巨量 Binding 会造成加载与版本热点 | 改名不应加载十万 Item；`QUESTION-001/012` |
 | Tracker | D-001/D-002：独立聚合及非共享派生新身份 | D-003：parentId 为同工作集结构父，sourceId 为直接父级工作集来源；禁止跳级 | 结构范围校验与来源准入分别分析；不组合整树或整链 | D-006 已禁止创建后 parentId 修改；Shared 父级一致性、sourceId 可变性、同源多派生及 Item 归属待定 |
 | TrackerItem（公共契约） | 无自身聚合；是 Working Set 与业务 BC 的公共 Item 能力接口（D-007） | 公共身份与工作集语义，不拥有业务状态 | 跨 BC 协作的公共语言，不承载业务不变量 | CommonId/LocalId/Revision/Version 的分配待定 |
-| LightTrackerItem（已确认独立聚合） | Working Set 专属独立聚合（D-008）；身份、来源与有效变体定位权威 | 当前 LocalId、保留 CommonId、SourceLocalId/SourceRevision、自身 Revision（D-018，与 SourceRevision 分离）、TrackerId/WorkingSetId | 与业务对象身份一致性、双事实收敛、物化并发 | 完整属性与物化协议候选；非查询投影 |
+| LightTrackerItem（已确认独立聚合） | Working Set 专属独立聚合（D-008）；身份、来源与有效变体定位权威 | 当前 LocalId、保留 CommonId、SourceLocalId/SourceRevision、自身 Revision（D-018，与 SourceRevision 分离）、`materialized` 物化状态（K1′）、TrackerId/WorkingSetId | 与业务对象身份一致性、双事实收敛、物化并发 | 属性集与物化协议见 [T3 契约](lighttrackeritem-materialization-contract-v1.md)（已冻结）；非查询投影 |
 | Business Item | 各业务上下文独立聚合（Requirement/Part/Process 等），实现 TrackerItem | 内容、状态机、revision、字段组合合法性 | Merge/COW 必须走其公开写能力 | 不能用通用字段 Map 绕过规则；SK 不拥有其完整状态 |
 | Merge Round | 轮次身份和可恢复生命周期 | 命令冻结、状态转换、进度与唯一终态结果 | 不持有所有业务对象；部分成功需保留 | 把整轮设为大事务会掩盖已提交结果 |
 | Merge Checkpoint | 有向 source-target-family 键候选 | 确认／撤销因果单调、证据关联 | 旧事件不能覆盖新决定 | `KEEP_TARGET + true` 内容仍不同 |
@@ -94,6 +94,8 @@ Shared Tracker 可以被多个工作集引用，数据库归属默认工作集�
 已确认：LightTrackerItem 是 Working Set 专属独立聚合（非查询投影），派生时创建并分配当前 LocalId、保留 CommonId、记录 SourceLocalId/SourceRevision、经 TrackerId/WorkingSetId 指向，承担身份与有效变体定位权威。派生采用 COW，不立即物化完整业务对象副本。业务 BC 通过 CQRS Query 与工厂重建完整业务聚合，调用方不感知物化状态；Working Set 不拥有或重建业务 BC 完整状态。
 
 候选：LightTrackerItem 完整属性与物化协议、LocalId 是否等同业务聚合变体身份、首次物化标志与有效内容指针、物化原子性、SourceRevision 版本选择。LightTrackerItem 与业务对象是双事实：LightTrackerItem 持身份/来源/定位，业务对象持完整内容与不变量，二者按 ID reference 关联，不组合、不跨 BC 事务。图见 [D-008 生命周期图](../diagrams/lighttrackeritem-lifecycle.md)。
+
+**2026-11-11 T3 裁定（K1′～K3′，用户确认）**：物化状态改为独立 `materialized` 字段（与 `sourceLocalId`/`sourceRevision` 同一次聚合状态变更同步更新）；首次物化复用预分配 `LocalId`、不持久化内容指针；业务 BC 必须能按稳定 `LocalId` 定位或创建变体（主键不强制等同）；跨 BC 采用事件驱动 + 幂等重试（只补未完成步骤，不覆盖已有业务对象）。详见 [T3 契约](lighttrackeritem-materialization-contract-v1.md)、INV-069～071、SCN-066～068。
 
 ## D-009：来源变更 COW 与有效内容切换（Draft 设计影响）
 

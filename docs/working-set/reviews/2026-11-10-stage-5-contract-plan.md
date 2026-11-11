@@ -59,4 +59,6 @@
 
 **T2 已冻结**（2026-11-11，[T2 评审](../reviews/2026-11-11-t2-binding-deletion-review.md)）：[绑定与删除契约 v1](../domain/binding-deletion-contract-v1.md) 状态 Draft → Reviewed；K1～K3 用户确认（不可恢复删除、Tracker 删除三条件、子 WS 删除成员约束）；Shared 与非共享解绑前置完全区分；ProductSpace 删除须审查全部 SpaceBinding；配套 SCN-061～065、[绑定与删除生命周期图](../diagrams/binding-lifecycle.md)、POL-016、INV-064～068。遗留「停用」生命周期（QUESTION-009.a）与实现细节，不阻塞。
 
-**当前推进 T3：LightTrackerItem 物化协议**——完整属性（物化标志、内容指针）、LocalId 预分配、跨 BC 首次物化一致性（业务保存成功但索引更新失败）、与 T1 Revision 字段映射衔接；输入为 D-008/D-009/D-010/D-017、INV-024～052、ADR-0002/0003、SCN-019～049。
+**T3 已冻结**（2026-11-11，[T3 评审](../reviews/2026-11-11-t3-materialization-review.md)）：[物化协议契约 v1](../domain/lighttrackeritem-materialization-contract-v1.md) 状态 Draft → Reviewed；K1′～K3′ 用户确认（独立 `materialized` 字段、LocalId 稳定复用、事件驱动最终一致）；旧「仅由来源字段推导」候选标 Superseded；配套 SCN-066～068、INV-069～071、[物化状态与首次物化时序](../diagrams/lighttrackeritem-materialization.md)。
+
+**当前推进 T4：跨 BC 公共契约**——TrackerItem 最小能力集、create/extend/resolve/diff/merge 的失败语义、「无权/不存在/已删除/历史不可用」四分、Shared Kernel 版本治理（`QUESTION-014`）；输入为 AC-001、D-007、`QUESTION-013/014`、[Shared Kernel 边界](../domain/shared-kernel-boundary.md)、SCN-002、B01～B12。

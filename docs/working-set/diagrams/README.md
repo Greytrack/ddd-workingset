@@ -57,7 +57,9 @@
 
 - [binding-lifecycle.md](binding-lifecycle.md)：绑定移除、Tracker 删除、ProductSpace 删除、WorkingSet 删除四类操作的区分、拒绝条件与删除时序，Draft / Candidate（阶段 5 T2，配套 [绑定与删除契约](../domain/binding-deletion-contract-v1.md)；K1～K3 已确认）。
 
+- [lighttrackeritem-materialization.md](lighttrackeritem-materialization.md)：`materialized` 状态字段、Source-backed / Local-backed 双态判定与首次物化（COW）三字段同步切换时序，Draft / Candidate（阶段 5 T3，配套 [物化协议契约](../domain/lighttrackeritem-materialization-contract-v1.md)；K1′～K3′ 已确认）。
+
 ## 渲染检查状态（2026-11-10，2026-11-11 更新）
 
-- **静态检查（脚本执行）**：13 个图文件、45 个 `mermaid` 代码块；fence 配对完整（每文件 ``` 数为偶数）；图类型均为 `flowchart`、`classDiagram`、`stateDiagram-v2`、`sequenceDiagram`（通用语法，无专有扩展）。
+- **静态检查（脚本执行）**：14 个图文件、47 个 `mermaid` 代码块；fence 配对完整（每文件 ``` 数为偶数）；图类型均为 `flowchart`、`classDiagram`、`stateDiagram-v2`、`sequenceDiagram`（通用语法，无专有扩展）。
 - **实际渲染：未执行**。当前环境无 `mmdc`；`npx @mermaid-js/mermaid-cli` 在 45 秒内无响应（疑似需联网下载 puppeteer）。按 `AGENTS.md` 4.1 第 6 条，图纳入正式基线与发布前须在可渲染环境完成渲染检查并回填结论；当前状态记为「静态检查通过 / 渲染未验证」，不得据此宣称图已通过渲染评审。
