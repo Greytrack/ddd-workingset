@@ -8,7 +8,7 @@
 
 ```mermaid
 flowchart TD
-    A["Working Set 创建<br/>选择 Tracker 形成工作范围"] --> B["扩展<br/>纳入新 Tracker/Item；绑定后禁止移除"]
+    A["Working Set 创建<br/>选择 Tracker 形成工作范围"] --> B["扩展<br/>纳入新 Tracker/Item；移除遵循 T2 契约"]
     B --> C["Tracker 派生<br/>非共享派生新身份<br/>parentId 组织树 / sourceId 派生链"]
     C --> D["LightTrackerItem 派生<br/>选择 Snapshot/Head 时间基准<br/>固定 Revision，SourceLocalId 直接定位"]
     D --> E["Query<br/>Resolve 定位 + BC 工厂重建<br/>未物化读来源 Revision 当前内容"]

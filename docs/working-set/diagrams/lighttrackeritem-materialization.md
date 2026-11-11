@@ -7,6 +7,8 @@
 - 依据：[LightTrackerItem 物化协议契约 v1](../domain/lighttrackeritem-materialization-contract-v1.md)、D-008～D-019、INV-024～052/069～071、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)、SCN-019～049、SCN-066～068。
 - 不表达：数据库表结构、事件中间件与投递语义、快照序列化格式、并发锁与幂等键实现、物化性能指标。
 
+**内容范围补充（2026-11-11 用户选择 A）**：图中来源快照用于普通字段；目标 BC 构建时须合入目标派生时固定的附件、关系，不能直接用来源快照覆盖它们。完整定义见 T3 §2.1、SCN-072。
+
 ## 图例
 
 - `LightTrackerItem` 与业务 BC 聚合是**双事实**，按 ID 引用，不组合；**不要求同库事务**。

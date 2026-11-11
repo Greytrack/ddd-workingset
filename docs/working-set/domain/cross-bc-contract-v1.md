@@ -48,6 +48,8 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 ### 3.1 `TrackerItemReadPort`（SK 定义，各 BC 实现，**只读**）
 
+**两层接口并存（用户确认，2026-11-11，选择 B）**：业务聚合继续实现领域公共接口 `TrackerItem`（D-007）；BC Adapter 另行实现应用层 `TrackerItemReadPort` 与适用的写入协作 Port。前者表达对象的公共领域能力，后者承接跨 BC 调用、授权与适配；聚合不因此实现应用层 Port，也不向 SK 开放 Repository 或通用 Save。字段/方法的精确签名留实现契约，不从两层接口推导新的业务能力。见[裁定依据](../reviews/2026-11-11-consistency-reconciliation.md)、SCN-073。
+
 | 能力 | 语义 | 归属 |
 | --- | --- | --- |
 | 稳定身份 | 提供 `commonId`、`localId` | BC 实现 → SK 消费 |
@@ -61,8 +63,8 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 ### 3.2 写入协作 Port（SK 定义 Outbound Port，BC 通过 Adapter 实现）
 
 - **每个 BC 一个专用 Port**（如 `RequirementWritePort`），**不是**具有通用 CRUD 权限的 `TrackerItem` 接口。
-- 请求载荷（契约级，非最终 API）：目标身份、期望 `Revision`（乐观锁）、字段与存在性决定、审阅证据引用、操作身份（幂等）、调用者上下文。
-- 返回（契约级）：成功 + 新 `Revision`；或业务拒绝 / 冲突 / 未知结果等（见 §5）。
+- 请求载荷（契约级，非最终 API）：目标身份、业务 `Revision`、独立的并发版本/写入前置证据、字段与存在性决定、审阅证据引用、操作身份（幂等）、调用者上下文。业务 Revision 不充当乐观锁；证据形式留实现契约确定（CONCEPT-009、ADR-0005）。
+- 返回（契约级）：成功 + 提交后的业务 `Revision`（普通编辑不升级版次）；或业务拒绝 / 冲突 / 未知结果等（见 §5）。并发控制不得改变 T1 已确认的决策优先与执行语义。
 - 结构可具有 **SPI 扩展特征**（按能力声明发现可用实现），但**不强制** Java `ServiceLoader` 或动态插件机制。
 
 ```
@@ -100,14 +102,14 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 | 用例 | SK 定义与责任 | BC 责任（Adapter） | 适用失败分类（子集，见 §5.2） |
 | --- | --- | --- | --- |
-| `create` 工作范围 | 定义 outbound port；准备与发布范围，固定来源 | 不自动创建业务对象 | `Denied`、`DependencyUnavailable`、`Unknown`；冲突见 T2 |
-| `create` 业务对象并纳入 | 定义纳入请求；以事实身份去重 | 创建、校验、授权并提交合法对象 | `Denied`、`NotIncluded`、`CapabilityNotSupported`、`DependencyUnavailable`、`Unknown` |
-| `extend` 扩展范围 | 保留稳定身份与 Source Cut 凭据；准备与发布 | 提供准入与固定内容能力 | `Denied`、`NotIncluded`、`CapabilityNotSupported`、`HistoryUnavailable`、`DependencyUnavailable`、`Unknown` |
-| `resolve` 定位与读取 | 按工作集与身份定位有效变体；**不能独立承诺内容可读** | 授权并返回权威内容/生命周期/历史 | `NotFound`、`NotIncluded`、`Denied`、`Deleted`、`HistoryUnavailable`、`Preparing`、`CapabilityNotSupported`、`DependencyUnavailable` |
-| `diff` 有向比较 | 固定方向与冻结证据、组织差异（T1 已定 `ComparisonToken`） | 定义字段语义、相等规则、不可比较与脱敏字段 | `Denied`、`HistoryUnavailable`、`CapabilityNotSupported`、`Preparing`、`Unknown`；执行期见 T1 |
-| `merge` 应用并确认 | 保存决定、编排执行、记录结果与 Checkpoint（T1 已定） | 重新授权、整体校验、提交目标变化 | `Denied`、`Deleted`、`HistoryUnavailable`、`CapabilityNotSupported`、`Preparing`、`DependencyUnavailable`、`Unknown`；执行结果见 T1 |
+| `create` 工作范围 | 定义 outbound port；准备与发布范围，固定来源 | 不自动创建业务对象 | §5.2；具体业务拒绝见 T2 |
+| `create` 业务对象并纳入 | 定义纳入请求；以事实身份去重 | 创建、校验、授权并提交合法对象 | §5.2 |
+| `extend` 扩展范围 | 建立稳定身份与来源 Revision；准备与发布 | 提供普通字段来源读取及派生时附件、关系固定能力，内容范围按 T3 §2.1 | §5.2 |
+| `resolve` 定位与读取 | 按工作集与身份定位有效变体；**不能独立承诺内容可读** | 授权并返回权威内容/生命周期/历史 | §5.2 |
+| `diff` 有向比较 | 固定方向与冻结证据、组织差异（T1 已定 `ComparisonToken`） | 定义字段语义、相等规则、不可比较与脱敏字段 | §5.2；执行期见 T1 |
+| `merge` 应用并确认 | 保存决定、编排执行、记录结果与 Checkpoint（T1 已定） | 重新授权、整体校验、提交目标变化 | §5.2；执行结果见 T1 |
 
-**不要求每个接口统一返回九类**：上表「适用分类」即该用例对外暴露的最大子集；其余分类不出现。
+**不要求每个接口统一返回九类**：§5.2 是适用分类的唯一矩阵。原本节三个创建/扩展用例遗漏 `Preparing` 的摘要按该矩阵及 T4 评审 §3 校正。
 
 ## 5. 九分类公共失败语义（K2″，用户确认）
 

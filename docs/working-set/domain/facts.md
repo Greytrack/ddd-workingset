@@ -21,7 +21,7 @@
 | `FACT-003` | 非共享 Tracker 派生产生新的独立业务身份；sourceId 指向直接父级 Working Set 下的来源 Tracker，逐级追溯，不跳过中间工作集。parentId 另表达同工作集直属结构父子关系，不属于派生维度。 | 用户确认 D-002 身份事实；D-003 澄清双维语义 | 用户 2026-11-10 D-003 正式裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-003) | SCN-013/014；修改规则、组织树继承、同源多派生及 Item 边界待定 |
 | `FACT-004` | VIRTUAL Item 在没有本地业务内容行时仍被描述为已存在的逻辑条目。 | Reported / Pending | `V4-DOMAIN:214/547`、`EXT-ARCH §1` | 以查询、权限、删除和引用场景验证；`QUESTION-004` |
 | `FACT-005` | 历史材料使用 CommonId 关联同族变体、LocalId 标识具体变体，并要求实例化不更换 LocalId。 | 部分 Accepted：R05 身份关系；实例化稳定性待验证 | `V4-OVERVIEW:5`、`V4-DOMAIN:19/30` | 派生与回并的等值关系已由用户确认，见 [身份规则](glossary.md#item-身份规则用户已确认)；CommonId 家族唯一性及雪花 ID 已由用户确认，实例化身份稳定性继续验证；`QUESTION-004` |
-| `FACT-006` | 派生内容读取被要求固定到可回读的 Source Cut，而不是跟随来源最新值。 | Accepted：R07/R19 固定派生内容含附件关系；保留协议待设计 | `V4-DOMAIN:438/463`、`EXT-ARCH §3.1` | 证明历史、附件、关系及删除态均可按切点回读；`QUESTION-006` |
+| `FACT-006` | 普通字段按来源 Revision 当前值读取并在首次 COW 固定；附件与关系固定为派生时状态。来源删除不得破坏所需事实可读性，关系目标内容不递归冻结。 | Accepted 限定范围：R07/R19 经 2026-11-11 用户选择 A 澄清；机制待实现 | [一致性裁定](../reviews/2026-11-11-consistency-reconciliation.md)、[T3 §2.1](lighttrackeritem-materialization-contract-v1.md) | SCN-072；QUESTION-006 保留期限与回读机制 |
 | `FACT-007` | 直接父子工作集支持双向比对、合并；任一方向的新增、删除、修改均可经用户选择应用到接收方。source/target 是本轮角色，不固定为父或子。 | 用户已确认 | 本对话用户明确说明父子双向新增、删除、修改的接收效果 | [双向合并场景](../scenarios/core-scenarios.md#直接父子双向合并新增删除修改)；目标业务 BC 校验并提交 |
 | `FACT-008` | Merge 数据选择、实际 Apply Result 与处理确认被描述为不同事实。 | 部分 Accepted：R08—R11；DEFER 完整条件仍候选 | `MERGE §4.2-4.4`、`EXT-ARCH §1/10` | 用 `KEEP_TARGET/DEFER` 四组合验收；`QUESTION-008` |
 | `FACT-009` | Reference 可在逻辑目标有效但物理端点暂不可解析时保持有效悬空状态。 | Reported / Pending | `REFERENCE CONTEXT:14/25`、`REFERENCE 05 §4` | 访谈用户可见语义及删除守卫；`QUESTION-010` |

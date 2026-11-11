@@ -15,6 +15,8 @@
 - 本基线覆盖：三类核心聚合（Working Set、Tracker、LightTrackerItem）+ 业务 BC 聚合 + TrackerItem 公共契约。
 - 明确不覆盖：Manifest、ItemVariant、历史谱系聚合、具体数据库/技术实现。
 
+普通字段与附件/关系的读取、固定时点按 [T3 §2.1](lighttrackeritem-materialization-contract-v1.md) 的 2026-11-11 裁定区分；下文 D-016 的“不冻结内容”仅适用于普通字段。业务聚合实现 TrackerItem 与 Adapter 实现应用层 Port 并存，见 [T4 §3.1](cross-bc-contract-v1.md)。
+
 ## 2. 首版领域模型
 
 | 聚合/契约 | 类型 | 身份 | 核心职责 |
@@ -50,7 +52,7 @@
 ## 4. 领域主线
 
 1. **Working Set 创建**：选择 Tracker 形成工作范围（FACT-001）。
-2. **扩展**：纳入新 Tracker/Item；Tracker 绑定后禁止移除（POL-006）。
+2. **扩展与移除**：纳入新 Tracker/Item；Shared 解绑与非共享删除遵循 [T2 绑定与删除契约](binding-deletion-contract-v1.md) §4（POL-014 修订 POL-006；INV-064～068）。
 3. **Tracker 派生**：非共享派生新 Tracker 身份；parentId 组织树、sourceId 派生链（D-002/D-003）；组织裁剪（D-004）、默认继承+创建前重组（D-005）、创建后不可变（D-006）。
 4. **LightTrackerItem 派生**：选择时间基准 Snapshot/Head（D-015）；只固定业务 Revision、不复制内容（D-016）；SourceLocalId 直接指向实际拥有内容的来源（D-013）；已有下游不重定向（D-014）。
 5. **Query**：Resolve 定位 LightTrackerItem，业务 BC 工厂重建完整聚合（D-008）；未物化时读来源 Revision 的当前内容（D-016）。
@@ -110,11 +112,11 @@
 - 合并政策（直接父子双向、决策优先、BC 校验提交、KEEP_TARGET）。
 - Diff/Merge 衔接（D-019）：未物化变体可参与 Diff；未物化目标被 Merge 修改时构建业务聚合正常 save；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合；共享 Tracker 不参与 Merge、非共享只允许直接父子准入。
 
-**暂缓批准（需契约层或实施阶段明确）**：
+**阶段 4 当时暂缓的事项及后续去向**：
 
-- Diff/Merge 执行协议：差异冻结/比较令牌、幂等键、乱序确认、MergeCheckpoint「业务 Revision」与 SourceRevision/Revision 的精确字段映射（操作对象与身份/定位衔接待契约层）。
-- Working Set 聚合内部结构（Binding 是内部实体还是独立引用，不阻塞本基线）。
-- LightTrackerItem 完整属性/物化标志/内容指针的具体设计。
+- Diff/Merge 执行协议：行为已由 [T1](merge-execution-contract-v1.md) 与 ADR-0005 收敛；Token 编码、幂等键、乱序实现及 Checkpoint 字段映射仍属实施待办。
+- Working Set 绑定归属：本文件 §9 与 ADR-0004 已确认两个 Binding 为内部 Entity；行为及属性契约见 [T2](binding-deletion-contract-v1.md)。
+- LightTrackerItem 属性、物化标志与内容定位：见已冻结的 [T3](lighttrackeritem-materialization-contract-v1.md)。确认范围见 [BASELINE](../BASELINE.md)。
 
 ## 8. 实施阶段待验证技术前提
 
@@ -145,7 +147,7 @@
 
 **2026-11-11 注（T2 冻结）**：上述摘要中「任意 Tracker 有 TrackerItem → 不允许移除」只约束**聚合删除**，Shared 绑定的解除不受该约束（INV-064）；删除 ProductSpace 须审查**所有** WorkingSet 的 SpaceBinding（INV-066）；Tracker 删除还受组织子级、派生子级约束（K2/INV-065）。详见[绑定与删除契约 v1](binding-deletion-contract-v1.md)、INV-053～068、POL-016。
 
-仍待（实现细节）：绑定 Entity 内部结构、软删/彻底删除机制、级联删除实现。
+仍待（实现细节）：绑定持久化、并发控制与物理清理。软删/归档/恢复不属于 T2 本版范围，不再作为本版待定能力。
 
 ---
 
@@ -162,7 +164,7 @@
 
 追溯：D-019、FACT-027、INV-061～063、SCN-055/056。
 
-仍待（执行协议）：差异冻结/比较令牌、幂等键、乱序确认、MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 精确字段映射。
+后续行为裁定见 [T1](merge-execution-contract-v1.md) 与 [ADR-0005](../adr/0005-merge-execution-model.md)；剩余实现待办见 §7。
 
 ---
 

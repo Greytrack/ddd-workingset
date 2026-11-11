@@ -41,6 +41,8 @@ LightTrackerItem 派生采用 Copy-on-Write：初始不物化完整业务内容�
 
 ## 验证与追溯
 
+2026-11-11 用户选择 A 澄清内容范围：首次来源修改前快照固定普通字段；附件、关系继续使用目标派生时固定事实，不被较新来源快照覆盖。定义见 [T3 §2.1](../domain/lighttrackeritem-materialization-contract-v1.md)，确认与替代范围见[一致性修正记录](../reviews/2026-11-11-consistency-reconciliation.md)，场景 SCN-072。事件驱动、消费时确定目标、首次快照优先的决定保留。
+
 - 事实：FACT-014/015/016/021/022/023。
 - 不变量：INV-037/038/039（快照/唯一性/不可覆盖）、INV-043/044（直接定位/扇出）、INV-050（消费时确定）、INV-052（Revision 升级触发 COW）。
 - 场景：SCN-025～030、SCN-045～049。

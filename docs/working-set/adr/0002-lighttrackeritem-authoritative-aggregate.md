@@ -39,6 +39,8 @@
 
 ## 验证与追溯
 
+2026-11-11 用户选择 B 澄清：本 ADR 的业务聚合实现 TrackerItem 保留；T4 的 Adapter 实现应用层 Port 与之并存。职责见 [T4 §3.1](../domain/cross-bc-contract-v1.md)，确认依据见[一致性修正记录](../reviews/2026-11-11-consistency-reconciliation.md)，验证场景 SCN-073。本澄清未替代原决定。
+
 - 术语：CONCEPT-021（TrackerItem）、CONCEPT-022（LightTrackerItem）。
 - 不变量：INV-040/041/042（身份与来源切换）、INV-051（Revision 分离）。
 - 场景：SCN-021/022/023/024/035/049。

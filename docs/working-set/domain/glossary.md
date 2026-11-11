@@ -232,6 +232,10 @@ D-016 的 Snapshot/Head 只决定 Revision、不复制完整内容的规则保�
 4. **Source Cut 与 SourceRevision 区分**：Source Cut 是物化（COW）时的固定依据（修改前不可变快照）；SourceRevision 是未物化时读取的来源 Revision 引用（Query 读当前内容）。二者不混用。
 5. **历史派生关系（R0→R1）不是业务必需**：不要求保存历史派生链，移除相关的承载方式待裁定与约束。
 
+### 2026-11-11 内容与接口范围澄清
+
+SourceRevision 当前值读取与首次 COW 快照适用于普通字段；附件、关系保留派生时固定事实，完整定义见 [T3 §2.1](lighttrackeritem-materialization-contract-v1.md)。TrackerItem 是业务聚合实现的领域公共接口，TrackerItemReadPort 等是 Adapter 实现的应用层 Port，二者并存，见 [T4 §3.1](cross-bc-contract-v1.md)。确认依据见[一致性修正记录](../reviews/2026-11-11-consistency-reconciliation.md)。
+
 ## ProductSpace、Classification 与绑定（阶段 4 补充）
 
 用户 2026-11-10 补充确认：

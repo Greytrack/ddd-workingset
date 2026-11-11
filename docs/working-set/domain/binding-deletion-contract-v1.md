@@ -97,7 +97,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 
 **业务准入与行为顺序**：`deleteWorkingSet` 定义的是准入条件与解除顺序，不预设跨聚合数据库大事务。
 
-**ProductSpace 删除的引用完整性**：`removeSpace` 之后 SpaceBinding 可能仍残留（SB-3：移除最后一个 Tracker 不删 SpaceBinding）。因此删除 ProductSpace 必须显式审查**所有 WorkingSet 的 SpaceBinding**；只检查 TrackerBinding 会留下指向已删除空间的悬空绑定（INV-066）。
+**ProductSpace 删除的引用完整性**：移除最后一个 Tracker 后 SpaceBinding 仍保留（SB-3）；成功执行 `removeSpace` 才解除对应 SpaceBinding。因此删除 ProductSpace 必须显式审查**所有 WorkingSet 的 SpaceBinding**；只检查 TrackerBinding 会留下指向已删除空间的悬空绑定（INV-066）。
 
 ## 5. 移除 / 删除 / 软删 / 彻底删除（K1，用户确认）
 

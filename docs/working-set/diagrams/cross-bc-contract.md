@@ -15,6 +15,8 @@
 
 ## 1. Port / Adapter 依赖方向（K1″）
 
+2026-11-11 用户选择 B：图中 Adapter 实现应用层 Port；业务聚合另行实现领域公共接口 TrackerItem，两层同时保留。该实现关系见[领域契约图](trackeritem-contract.md)，职责定义见 T4 §3.1。
+
 ```mermaid
 flowchart LR
     subgraph SKAPP["Shared Kernel 应用层"]
