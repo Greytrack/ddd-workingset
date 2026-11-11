@@ -14,7 +14,7 @@
 ## 阶段 5 契约
 
 - [merge-execution-contract-v1.md](merge-execution-contract-v1.md)：Merge 执行行为契约（Reviewed，T1 已关闭；MergeRound / MergeCheckpoint / Diff+ComparisonToken / MergeEntry 生命周期、行为矩阵与轮次终态）。
-- [binding-deletion-contract-v1.md](binding-deletion-contract-v1.md)：绑定与删除契约（Draft，T2；SpaceBinding／TrackerBinding 契约、六个操作、删除与级联边界；待用户裁定 K1～K3）。
+- [binding-deletion-contract-v1.md](binding-deletion-contract-v1.md)：绑定与删除契约（Reviewed，T2 已冻结；SpaceBinding／TrackerBinding 契约、九个操作、四类操作区分；K1～K3 用户确认）。
 - [ADR-0005（Accepted）](../adr/0005-merge-execution-model.md)：Merge 执行模型的结构决策，与 T1 契约配套。
 
 ## 阶段 2 候选知识

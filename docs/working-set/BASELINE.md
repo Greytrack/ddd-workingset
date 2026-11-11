@@ -84,6 +84,8 @@
 
 ## 最近基线变更
 
+- **2026-11-11 阶段 5 T2 冻结**：用户正式确认 K1=A、K2=A、K3=A；[绑定与删除契约 v1](domain/binding-deletion-contract-v1.md) 状态 Draft → Reviewed（冻结）——Shared 解绑不受 Item 限制、非共享解绑三项检查、`deleteProductSpace` 须审查所有 WorkingSet 的 SpaceBinding、`deleteWorkingSet` 受成员关系约束、删除不可恢复且软删/归档/恢复不纳入；新增 SCN-061～065、[绑定与删除生命周期图](diagrams/binding-lifecycle.md)、POL-016、INV-064～068（用户确认）。评审记录见 [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md)。发布仍 Unreleased。
+
 - **2026-11-11 阶段 5 T1 审核关闭**：T1 契约审核结论「通过并关闭」（[记录](reviews/2026-11-11-t1-contract-review.md)）；[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md) 状态 Draft → Reviewed（未 Accepted）；Q1～Q4 全部关闭，**重试与终态不再新增领域问题**；遗留仅实现协议（Token 编码、幂等键、乱序实现、Checkpoint 字段映射）。进入 T2 绑定与删除契约。发布仍 Unreleased。
 
 - **2026-11-11 阶段 5 T1 Q4 裁定（方案 B）**：用户裁定 MergeRound 一次执行结束即进入终态、不提供同轮业务重试；终态不可重开、不可再登记或再执行；未完成项须重新比较并新建 MergeRound（新 `mergeRoundId`、有效 `ComparisonToken`）；`ApplyResult` 为本轮不可变终态快照；部分成功不回滚、旧结果保留。已同步契约 §1/§4/§5/§7/§8、ADR-0005 补充裁定、MergeRound 终态图与 SCN-057～060。发布仍 Unreleased。
@@ -121,4 +123,4 @@
 
 T1 已关闭（2026-11-11）：Q1～Q4 全部关闭，[T1 契约审核](reviews/2026-11-11-t1-contract-review.md) 结论「通过并关闭」；[Merge 执行行为契约 v1](domain/merge-execution-contract-v1.md) 状态 Reviewed（未 Accepted）、[ADR-0005](adr/0005-merge-execution-model.md) 含 2026-11-11 补充裁定、[MergeEntry 生命周期图](diagrams/merge-entry-lifecycle.md) 含 MergeRound 终态图、SCN-057～060 已补。**重试与终态不再新增领域问题。**
 
-T2 进行中（2026-11-11）：[绑定与删除契约 v1](domain/binding-deletion-contract-v1.md)（Draft）已产出——SpaceBinding／TrackerBinding 契约、六个操作及失败语义、删除与级联边界；待用户裁定 K1（软删 vs 彻底删除）、K2（父 Tracker 删除/停用）、K3（子 WorkingSet 删除）。
+T2 已冻结（2026-11-11）：[绑定与删除契约 v1](domain/binding-deletion-contract-v1.md) 状态 Reviewed——K1～K3 用户确认（不可恢复删除、Tracker 删除三条件、子 WS 删除成员约束）；Shared 解绑不受 Item 限制、非共享解绑三项检查、`deleteProductSpace` 须审查所有 WorkingSet 的 SpaceBinding、`deleteWorkingSet` 受成员关系约束。配套 SCN-061～065、[绑定与删除生命周期图](diagrams/binding-lifecycle.md)、POL-016、INV-064～068。评审见 [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md)。T3（LightTrackerItem 物化协议）已启动。

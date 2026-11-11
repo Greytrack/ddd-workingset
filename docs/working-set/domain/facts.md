@@ -58,8 +58,9 @@
 | `POL-008` | SHARED 修改对所有已绑定工作集同时可见；具体读取面的实现与验收指标待设计。 | 业务要求已确认；技术指标待定 | 本对话用户明确确认“所有工作集同时可见” | 不得自行改为允许业务可见延迟；`QUESTION-003` |
 | `POL-012` | 必须先有目标 WorkingSet 的 SpaceBinding 才能建立 TrackerBinding；同一 WorkingSet 同一 ProductSpace 最多一个有效 SpaceBinding；同一 WorkingSet/ProductSpace/Classification 最多一个有效 TrackerBinding；Tracker.productSpaceId 必须等于绑定空间 ID；一个 Tracker 不在同一 WorkingSet 重复纳入。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 绑定生命周期协议、SLA 待定 |
 | `POL-013` | Shared Tracker 纳入子 WorkingSet 复用原 TrackerId、仅建新绑定；非共享 Tracker 纳入创建新 Tracker 聚合、建立直接 sourceId；非共享成功移除后可重新纳入、重新派生新身份；移除空间内最后一个 Tracker 不移除 SpaceBinding；ProductSpace 移出是独立显式操作。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 纳入/移除事务与并发协议待定 |
-| `POL-014` | 删除/移除语义：共享 Tracker 从子 WS 移除仅解除 TrackerBinding；非共享 Tracker 无 TrackerItem 且无派生子 Tracker → 删除并解除绑定；非共享有派生子 Tracker → 不允许删除；任意 Tracker 有 TrackerItem → 不允许移除；非共享有组织子节点但无派生子节点 → 不允许删除（校验提示含子节点）；移除空间内最后一个 Tracker 不触发空间移除（SpaceBinding 保留）；移除 ProductSpace 时仍有 TrackerBinding → 抛异常，有 Tracker 不允许移除空间绑定；默认 WorkingSet 下共享 Tracker 空且无子时可删除。 | 用户确认（2026-11-10，修订 POL-006） | 本对话用户裁定 | 软删/彻底删除机制待定 |
+| `POL-014` | 删除/移除语义：共享 Tracker 从子 WS 移除仅解除 TrackerBinding；非共享 Tracker 无 TrackerItem 且无派生子 Tracker → 删除并解除绑定；非共享有派生子 Tracker → 不允许删除；任意 Tracker 有 TrackerItem → 不允许移除；非共享有组织子节点但无派生子节点 → 不允许删除（校验提示含子节点）；移除空间内最后一个 Tracker 不触发空间移除（SpaceBinding 保留）；移除 ProductSpace 时仍有 TrackerBinding → 抛异常，有 Tracker 不允许移除空间绑定；默认 WorkingSet 下共享 Tracker 空且无子时可删除。 | 用户确认（2026-11-10，修订 POL-006） | 本对话用户裁定 | 软删/彻底删除机制待定；**2026-11-11 边界澄清**：「任意 Tracker 有 TrackerItem 不允许移除」只约束聚合删除，Shared 绑定的解除不受该约束（见 INV-064） |
 | `POL-015` | WorkingSet 负责维护当前工作集中的空间与 Tracker 绑定结构；SpaceBinding、TrackerBinding 是两个 Entity，归属于 WorkingSet 聚合。ProductSpace、Tracker 只维护自身稳定归属身份，不持有绑定。 | 用户确认（2026-11-10） | 本对话用户裁定 | 绑定 Entity 内部结构待定 |
+| `POL-016` | 领域删除不可恢复：当前仅支持删除后不可恢复；软删、归档、恢复不纳入本版契约，未来如需支持作为独立能力设计；领域彻底删除不强制映射为数据库物理 DELETE；必须区分绑定移除、聚合删除与业务 TrackerItem 删除。 | 用户确认（2026-11-11，T2 K1） | 本对话用户裁定 | 实现层的审计副本/延迟清理不得让业务侧产生「可恢复」预期 |
 
 ## POL-009：非共享派生组织裁剪（用户已确认）
 
@@ -127,7 +128,7 @@ D-002 身份独立与生命周期裁定继续有效；其将两个字段一起�
 
 Tracker 新建时确定组织位置，parentId 可为 null。创建完成后 parentId 不可修改，不支持移动、更换父节点或调整为根；允许的裁剪与显式重组须在创建完成前确定。来源为本轮用户 D-006 八项裁定，见 [记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
 
-此限制只针对组织位置，不冻结 Tracker 的其他业务状态、身份生命周期或 Working Set 的成员扩展；也不扩大 POL-002 的原生创建入口。sourceId 直接来源语义不变，但不由此自动批准其所有生命周期可变性规则。父后续删除/停用的子节点处理仍待裁定，不能自动清空 parentId、级联删除或禁止父删除。
+此限制只针对组织位置，不冻结 Tracker 的其他业务状态、身份生命周期或 Working Set 的成员扩展；也不扩大 POL-002 的原生创建入口。sourceId 直接来源语义不变，但不由此自动批准其所有生命周期可变性规则。父后续**删除**已由 2026-11-11 K2 裁定：存在组织子级（其他 Tracker 的 `parentId` 指向它）、派生子级（`sourceId` 指向它）或 TrackerItem 时禁止删除，且不自动清空/重挂 `parentId` 或级联删除（见 INV-065、SCN-062）。「停用」的子节点处理仍待裁定（`QUESTION-009.a` 的停用部分），不得自动清空 `parentId` 或级联删除。
 
 ## D-007：TrackerItem 契约与 LightTrackerItem 候选定位
 

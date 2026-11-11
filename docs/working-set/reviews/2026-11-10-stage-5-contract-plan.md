@@ -57,4 +57,6 @@
 
 **T1 已关闭**（2026-11-11，[T1 契约审核](../reviews/2026-11-11-t1-contract-review.md) 结论「通过并关闭」）：契约状态 `Reviewed`；Q1～Q4 全部关闭，重试与终态不再新增领域问题；遗留仅实现协议（Token 编码、幂等键、乱序实现、Checkpoint 字段映射），不阻塞后续。
 
-**当前推进 T2：绑定与删除契约**——SpaceBinding／TrackerBinding 内部结构与键、软删 vs 彻底删除、级联边界、默认 WorkingSet 约束；输入为 FACT-024～026、POL-012～015、INV-053～060、SCN-050～054、`QUESTION-009`。
+**T2 已冻结**（2026-11-11，[T2 评审](../reviews/2026-11-11-t2-binding-deletion-review.md)）：[绑定与删除契约 v1](../domain/binding-deletion-contract-v1.md) 状态 Draft → Reviewed；K1～K3 用户确认（不可恢复删除、Tracker 删除三条件、子 WS 删除成员约束）；Shared 与非共享解绑前置完全区分；ProductSpace 删除须审查全部 SpaceBinding；配套 SCN-061～065、[绑定与删除生命周期图](../diagrams/binding-lifecycle.md)、POL-016、INV-064～068。遗留「停用」生命周期（QUESTION-009.a）与实现细节，不阻塞。
+
+**当前推进 T3：LightTrackerItem 物化协议**——完整属性（物化标志、内容指针）、LocalId 预分配、跨 BC 首次物化一致性（业务保存成功但索引更新失败）、与 T1 Revision 字段映射衔接；输入为 D-008/D-009/D-010/D-017、INV-024～052、ADR-0002/0003、SCN-019～049。

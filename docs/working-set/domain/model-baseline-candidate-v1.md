@@ -143,6 +143,8 @@
 
 追溯：FACT-024～026、POL-012～015（修订 POL-006）、INV-053～060、SCN-050～054、[关系图](../diagrams/productspace-tracker-workingset.md)、[ADR-0004](../adr/0004-productspace-independent-aggregate.md)（Accepted，2026-11-10）。
 
+**2026-11-11 注（T2 冻结）**：上述摘要中「任意 Tracker 有 TrackerItem → 不允许移除」只约束**聚合删除**，Shared 绑定的解除不受该约束（INV-064）；删除 ProductSpace 须审查**所有** WorkingSet 的 SpaceBinding（INV-066）；Tracker 删除还受组织子级、派生子级约束（K2/INV-065）。详见[绑定与删除契约 v1](binding-deletion-contract-v1.md)、INV-053～068、POL-016。
+
 仍待（实现细节）：绑定 Entity 内部结构、软删/彻底删除机制、级联删除实现。
 
 ---

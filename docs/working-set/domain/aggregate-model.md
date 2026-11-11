@@ -81,7 +81,7 @@ Shared Tracker 可以被多个工作集引用，数据库归属默认工作集�
 
 已确认的 Tracker 独立身份/生命周期、组织位置、工作集组织树、直接来源与工作集成员扩展分别表达。parentId 在完成创建前确定，完成后不再移动；其他状态变化仍由各自规则决定。创建前重组是输入/候选结构确定，不等于先完成创建再更新父字段，不需增加 Draft Tracker 根。
 
-候选跨聚合校验集中于目标父有效范围、创建候选结构无环和来源准入；不能据此合并整树。Tracker 局部不可变性不独自保证跨 Tracker 父有效，仍需创建时的协作协议。创建时父消失的竞态、父后续删除/停用、批次原子性未裁定。
+候选跨聚合校验集中于目标父有效范围、创建候选结构无环和来源准入；不能据此合并整树。Tracker 局部不可变性不独自保证跨 Tracker 父有效，仍需创建时的协作协议。创建时父消失的竞态、批次原子性未裁定；父后续**删除**已由 2026-11-11 K2 裁定（存在组织子级/派生子级/Item 时禁止删除），「停用」仍待裁定（`QUESTION-009.a`）。
 
 成员扩展可继续关联新 Tracker，不移动已有节点。AP-002 获得结构稳定性依据但未获批准；Item 归属当时仍待定，现由 D-007 关闭。见 [生命周期图](../diagrams/tracker-creation-lifecycle.md) 与 SCN-016—018。
 
@@ -205,6 +205,8 @@ LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/So
 **删除/移除语义（已确认）**：共享 Tracker 从子 WS 移除仅解除 TrackerBinding；非共享无 Item 且无派生子 Tracker → 删除并解除绑定；非共享有派生子 Tracker → 不允许删除；任意 Tracker 有 TrackerItem → 不允许移除；非共享有组织子节点但无派生子节点 → 不允许删除；移除最后一个 Tracker 不触发空间移除；移除 ProductSpace 时仍有 TrackerBinding → 抛异常；默认 WorkingSet 共享 Tracker 空且无子时可删除。
 
 绑定与删除不变量见 [INV-053～060](invariants.md)；事实见 FACT-024～026、POL-012～015。图见 [ProductSpace/Tracker/WorkingSet 关系图](../diagrams/productspace-tracker-workingset.md)。
+
+**2026-11-11 注（T2 冻结）**：上述摘要中「任意 Tracker 有 TrackerItem → 不允许移除」只约束**聚合删除**，Shared 绑定的解除不受该约束（INV-064）；删除 ProductSpace 时须审查**所有** WorkingSet 的 SpaceBinding，只检查 TrackerBinding 会留下悬空绑定（INV-066）；Tracker 删除还受组织子级、派生子级约束（K2/INV-065）。详见[绑定与删除契约 v1](binding-deletion-contract-v1.md)、INV-053～068、POL-016。
 
 候选（未直接 Accepted）：绑定 Entity 的内部结构、软删/彻底删除机制。
 

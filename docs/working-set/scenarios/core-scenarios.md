@@ -274,7 +274,8 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then 创建不能以该非法父完成；必须改用合法父或 null 根。父缺失是创建期反例，不是创建后移动的借口。
 - Given 创建候选结构形成组织环（如 A.parent=B 且 B.parent=A，或自环 A.parent=A）。
 - Then 该候选结构非法，创建不能完成。无环检查集中于创建候选结构（INV-015），不批准创建后并发移动。
-- 待确认（QUESTION-009.a）：父 Tracker 后续删除或停用时，仍存在的子 Tracker 如何处理。候选包括拒绝该父生命周期操作、保留有明确历史/停用语义的引用，或另行明确业务处置；本轮不选择。不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
+- 已裁定（删除部分，2026-11-11 K2）：父 Tracker 存在组织子级或派生子级（或自身有 TrackerItem）时**禁止删除**，不自动断链、不重挂 `parentId`/`sourceId`、不级联删除（见 SCN-062）。
+- 仍开放（停用部分，QUESTION-009.a）：父 Tracker 停用时子 Tracker 如何处理；不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
 
 <a id="scn-019"></a>
 ## SCN-019 首次 COW 业务对象与索引身份一致
@@ -706,3 +707,65 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then M2 使用新的 `mergeRoundId` 与有效 `ComparisonToken`；A 不在 M2 的自动重做范围；M1 的 A 成功事实保持不变。
 - 可观察结果：M1 的 `ApplyResult` 不被修改；M2 有独立 ID、比较凭据与执行结果；A 的成功不被重复计算。
 - 边界：不存在「同一 MergeRound 内重试 B/C」；旧轮次结果保留可追溯；消息重复投递的幂等处理不属于业务重试。
+
+<a id="scn-061"></a>
+## SCN-061 绑定移除与聚合删除的区分（Shared / 非共享）
+
+**业务规则：用户确认（2026-11-11，K1/K3；POL-014、INV-058、INV-064/065）。验收表述 Draft。** 关联 [绑定与删除契约](../domain/binding-deletion-contract-v1.md)。
+
+- Given 子 WorkingSet 中纳入 Shared Tracker S 与非共享 Tracker N；S 在默认工作集有 Item，N 存在 Item 或组织子级或派生子级。
+- When 对 S 执行绑定移除（调用者具备解除权限）。
+- Then 仅解除 TrackerBinding，S 聚合保留；**即使 S 拥有 Item 也允许解除子工作集关联**。
+- When 对 N 执行绑定移除。
+- Then 必须同时满足：无 TrackerItem、无组织子级（`parentId` 指向 N）、无派生子级（`sourceId` 指向 N）；任一不满足即拒绝（`TrackerHasItems` / `TrackerHasOrgChildren` / `TrackerHasDerivedChildren`），N 的聚合与绑定保持原样。
+- When N 满足三项条件时执行绑定移除。
+- Then 合法删除 N 聚合并解除 TrackerBinding。
+- 边界：绑定移除不等于业务 TrackerItem 删除；POL-014「有 TrackerItem 不允许移除」只约束**聚合删除**，不约束 Shared 解绑（INV-064）。
+
+<a id="scn-062"></a>
+## SCN-062 Tracker 删除限制（组织子级 / 派生子级 / Item）
+
+**业务规则：用户确认（2026-11-11，K2；POL-014、INV-058/065）。验收表述 Draft。** 关联 D-006。
+
+- Given 非共享 Tracker P 存在组织子节点 C（`parentId` 指向 P）与/或派生子 Tracker D（`sourceId` 指向 P）。
+- When 尝试删除 P。
+- Then 拒绝删除；**不自动级联删除 C/D、不自动断开或重挂 `parentId`/`sourceId`**。
+- When P 无子级但仍有 TrackerItem。
+- Then 同样拒绝（`TrackerHasItems`）。
+- 边界：本轮只裁定删除，不裁定停用；删除契约不混入停用状态与行为。
+
+<a id="scn-063"></a>
+## SCN-063 子 WorkingSet 删除的成员关系约束
+
+**业务规则：用户确认（2026-11-11，K3；FACT-026、INV-059/067）。验收表述 Draft。**
+
+- Given 子 WorkingSet WS1 含多个绑定：Shared S（可解除，即使有 Item）、非共享叶子 N（可删除并解除）、非共享 N2（有 Item 或子级，不可解除）。
+- When 尝试删除 WS1。
+- Then 拒绝（`MemberCannotBeUnbound`），提示不可解除的成员及原因；WS1 及其绑定保持不变；**不允许通过隐式级联绕过**。
+- When 用户使全部成员可合法解除后再次删除。
+- Then 按顺序执行：显式解除全部 TrackerBinding → 显式解除 SpaceBinding → 删除 WS1。
+- 边界：默认 WorkingSet（Id=1）始终不可删除（`DefaultWorkingSetUndeletable`）；上述为业务准入与行为顺序，不预设跨聚合数据库大事务。
+
+<a id="scn-064"></a>
+## SCN-064 ProductSpace 删除须审查残留 SpaceBinding
+
+**业务规则：用户确认（2026-11-11；POL-014、INV-066 引用完整性采纳）。验收表述 Draft。**
+
+- Given ProductSpace P 的 Tracker 已被移除（按 SB-3，移除最后一个 Tracker 不删除 SpaceBinding），某个 WorkingSet 仍残留指向 P 的 SpaceBinding。
+- When 尝试删除 P。
+- Then 拒绝（`SpaceStillBoundInWorkingSet`，列出 WorkingSet），**即使已无任何 TrackerBinding**；P 聚合保留。
+- When 用户先解除残留 SpaceBinding，且 P 下无 Tracker 聚合。
+- Then 允许删除 P。
+- 边界：不得直接清理 TrackerBinding 或级联删除 Tracker；不因删除 P 自动删除其他 WorkingSet 或 Tracker；保留默认 WorkingSet 维护 P 生命周期的既有规则。
+
+<a id="scn-065"></a>
+## SCN-065 删除不可恢复（K1）
+
+**业务规则：用户确认（2026-11-11，K1；POL-016、INV-068）。验收表述 Draft。**
+
+- Given 某非共享叶子 Tracker 已满足全部删除条件（无 Item、无组织子级、无派生子级）。
+- When 执行删除并成功。
+- Then 该聚合不再作为有效业务对象存在，业务上不可访问、**不可恢复**；不提供软删、归档或恢复入口。
+- When 尝试通过任何「恢复」操作找回该聚合。
+- Then 不存在恢复路径（当前领域不提供该能力）。
+- 边界：不强制映射为数据库物理 `DELETE`；实现层可保留审计副本、延迟清理或历史归档，但不得据此让业务侧产生「可恢复」预期。
