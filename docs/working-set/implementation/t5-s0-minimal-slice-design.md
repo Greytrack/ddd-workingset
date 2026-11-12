@@ -204,7 +204,8 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
 | `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件；事件携带修改前/提交后 Revision） |
 | `RequirementAdapter` | 实现 `TrackerItemReadPort`；按变体构造，保留读取职责 |
-| `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，依赖 `RequirementRepository` + `SnapshotStore` |
+| `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，只依赖 `RequirementRepository` + `SnapshotStore`（D4，2026-11-12 已按此边界实现：不注入 `TrackerRepository`/`LightTrackerItemRepository`） |
+| `RequirementLifecycleService` | `delete2` 先经 SK `TrackerItemLifecyclePort.assertPurgeable` 判定 COW 依赖，删除业务行后发布 `RequirementPurged` 由 SK 清理 LTI（D4） |
 | `SnapshotStore` / `RequirementRepository` | 快照存取、聚合存取 |
 
 **共享事件**

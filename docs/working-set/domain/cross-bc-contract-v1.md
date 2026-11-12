@@ -62,6 +62,8 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 **2026-11-12 补充设计（D1 用户裁定；Draft）**：`TrackerItem` 继承顶级公共能力接口 `BusinessObject`；`BusinessObject` 声明所有业务对象共有的 `delete`（软删）、`undelete`（恢复）、`delete2`（永久删除）能力。具体删除规则、guard、编排由各业务 BC 实现；SK 不提供通用删除实现，`TrackerItemReadPort` 仍只读。该扩展改变本节对 `TrackerItem` “只读”的表述，接口签名与 T4 修订方式待评审，详见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
 
+**2026-11-12 D4 用户裁定（方案 A：移回 SK）**：`Tracker` 与 `LightTrackerItem` 两个聚合及其仓储归 SK 独占；业务 BC **不得**注入 `TrackerRepository` / `LightTrackerItemRepository`，也不接收 SK 聚合对象。物化所需的 Tracker 锁定与目标变体读取由 SK 应用层完成，业务 BC 只接收值对象 `TargetIdentity`（localId / trackerId / commonId / revision / materialized）。业务对象永久删除后的 LTI 清理由 SK 定义、业务 BC 发布的 `RequirementPurged` 事件驱动，SK 侧处理幂等。协作接口为 SK 定义的 `TrackerItemLifecyclePort`（`lockMaterializationTarget` / `assertPurgeable` / `removePurged`，由 SK 实现），不走通用 Save 或聚合透传。实现证据见 [S7 验证](../implementation/t5-s7-verification-result.md)与 [D4 边界验证](../implementation/t5-d4-sk-boundary-verification.md)。
+
 ### 3.2 写入协作 Port（SK 定义 Outbound Port，BC 通过 Adapter 实现）
 
 - **每个 BC 一个专用 Port**（如 `RequirementWritePort`），**不是**具有通用 CRUD 权限的 `TrackerItem` 接口。
@@ -164,7 +166,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 - **T1（Merge 执行）**：`diff`/`merge` 的执行与终态由 T1 定义；本契约提供能力声明与失败词汇。
 - **T2（绑定与删除）**：绑定事实由 SK 管理，BC 只读；删除受 `TrackerItem` 存在性约束。
 - **T3（物化）**：BC 保存后由 SK 切换 `materialized`；BC 必须能按稳定 `localId` 定位或创建变体（INV-070）。
-- **权限**：Privilege 提供身份/授权事实，BC 裁决专有业务操作，SK 裁决范围操作；依赖不可用返回 `DependencyUnavailable`。
+- **权限**：Privilege 提供身份/授权事实，BC 裁决专有业务操作，SK 裁决范围操作；依赖不可用返回 `DependencyUnavailable`。**2026-11-12 D11 用户裁定：现阶段不接入权限**——`Caller` 与 `authorize` 仅作占位，不实现身份解析、授权判定或 `Denied` 分类；等权限模型开发完毕后再接入，本版不以权限缺口为由放宽或收紧其他契约。
 
 ## 8. 规则性质
 
@@ -175,6 +177,8 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | 九分类公共失败语义与「跨 BC 词汇表而非生命周期」定位 | **用户确认**（2026-11-11，K2″） |
 | 六个用例的边界划分与适用分类矩阵 | **契约 v1（本文件冻结）** |
 | 版本治理（K3″） | **团队开放项**（`QUESTION-014`，未裁定） |
+| SK 独占 Tracker/LightTrackerItem 聚合与仓储；业务 BC 只经 `TrackerItemLifecyclePort` 与 `RequirementPurged` 事件协作（D4） | **用户确认**（2026-11-12，方案 A：移回 SK，跨聚合用事件） |
+| 权限接入时机：现阶段不接入，待权限模型完成后接入（D11） | **用户确认**（2026-11-12） |
 | 具体 API 签名、包名、模块、传输协议、事务、权限缓存时效 | **不在本契约** |
 
 ## 9. 裁定结果（2026-11-11）

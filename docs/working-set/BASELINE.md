@@ -73,6 +73,7 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-12 | D11：现阶段不接入权限，等权限模型开发完毕后再接入；`Caller`/`authorize` 保持占位，不落地 `Denied`，见 [T4 §7](domain/cross-bc-contract-v1.md)。D4：用户选择方案 A，把 LightTrackerItem 校验与移除移回 SK，业务 BC 不再注入 SK 仓储；跨聚合用 `RequirementPurged` 事件交互，见 [T4 §3.1](domain/cross-bc-contract-v1.md) 与 [D4 边界验证](implementation/t5-d4-sk-boundary-verification.md)（`mvn -B test` 78 项通过） |
 | 2026-11-12 | D5：用户裁定 WorkingSet/Tracker **不存在“停用”概念**，相关表述与代码已清除（`assertDisableAllowed` 移除，`mvn -B test` 77 项通过），[QUESTION-009.a](domain/open-questions.md) 关闭。D8：用户按 A（工作视图/范围清单）收尾关闭 [QUESTION-001](domain/open-questions.md)，与 S1～S7 实现及本 BASELINE 一致。D9：用户裁定关闭 [QUESTION-008](domain/open-questions.md) 已实现部分（登记前/后证据分界、普通字段决策优先、部分成功、新轮次、Checkpoint），剩余并发/重试/结果恢复协议转 `QUESTION-008.a` |
 | 2026-11-12 | D1：`TrackerItem` 继承 `BusinessObject`，`BusinessObject` 声明 delete/undelete/delete2 公共能力，具体规则/guard/编排由各业务 BC 实现；设计见 [business-object-lifecycle-design.md](domain/business-object-lifecycle-design.md)，Draft，接口签名待评审。D2：Requirement 家族唯一性按 WorkingSet 作用域（用户选择 A），schema/索引已修正，见 [D2 验证](implementation/t5-d2-family-scope-verification.md) |
 | 2026-11-12 | [S7 实施裁定](reviews/2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界，登记后普通字段按决策优先；Requirement `delete`/`undelete`/`delete2` 最小生命周期；S7 验证见 [S7 验证结果](implementation/t5-s7-verification-result.md)，未发布 |

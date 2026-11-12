@@ -27,4 +27,4 @@
 - [2026-11-11 T5-S0 设计审核](2026-11-11-t5-s0-design-review.md)：首切片设计、架构/COW 时序图、AT-01～AT-05 映射与 S1～S4 任务清单审核通过；S1 待 P1～P5 确认后交 Codex。
 - [2026-11-12 多级 WorkingSet 谱系评审](2026-11-12-working-set-lineage-review.md)：FACT-028 用户裁定落地（单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 删除约束）；设计 Draft，开放问题见记录。WorkingSet/Tracker 不存在“停用”生命周期（2026-11-12 裁定），本记录中的停用表述为历史记录。
 - [2026-11-12 S7 Merge 实施裁定](2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界、普通字段决策优先、Requirement `delete`/`undelete`/`delete2` 最小生命周期；S7 验证 76 项通过（后续 D2/D5 回归为 77 项）。
-- 2026-11-12 收尾裁定（D5/D8/D9）：不存在“停用”概念，相关表述与 `assertDisableAllowed` 已清除；[QUESTION-001](../domain/open-questions.md) 按工作视图/范围清单关闭；QUESTION-008 已实现部分关闭，剩余转 `QUESTION-008.a`。登记见 [BASELINE](../BASELINE.md)。
+- 2026-11-12 收尾裁定（D4/D5/D8/D9/D11）：不存在“停用”概念，相关表述与 `assertDisableAllowed` 已清除；[QUESTION-001](../domain/open-questions.md) 按工作视图/范围清单关闭；QUESTION-008 已实现部分关闭，剩余转 `QUESTION-008.a`；D4 把 LTI 校验与移除移回 SK、跨聚合用 `RequirementPurged` 事件；D11 现阶段不接入权限、待权限模型完成后接入。登记见 [BASELINE](../BASELINE.md)。
