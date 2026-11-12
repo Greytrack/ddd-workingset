@@ -1,0 +1,52 @@
+server:
+  port: ${SERVER_PORT:7102}
+
+spring:
+  application:
+    name: ddd-workingset
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/ddd-test?reWriteBatchedInserts=true}
+    username: postgres
+    password: 123QWEASD
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: HikariPool-air-dev
+      auto-commit: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:63179}
+      database: ${REDIS_DATABASE:5}
+      password: ${REDIS_PASSWORD:}
+      client-type: lettuce
+      timeout: 5s
+      lettuce:
+        pool:
+          min-idle: 2
+          max-idle: 8
+          max-active: 8
+          max-wait: -1ms
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
+      jdbc:
+        schema-initialization:
+          enabled: ${MODULITH_SCHEMA_INITIALIZATION:true}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+  servlet:
+      multipart:
+        # 单文件最大大小
+        max-file-size: 100MB
+        # 整次请求最大大小
+        max-request-size: 100MB

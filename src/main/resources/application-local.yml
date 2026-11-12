@@ -1,0 +1,6 @@
+spring:
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          enabled: true
