@@ -86,7 +86,7 @@ D-004 已确认裁剪根的 parentId=null、sourceId 仍指直接来源；其他
 
 QUESTION-009.a（**仅「停用」部分仍开放**）：父 Tracker 后续**删除**已由 2026-11-11 K2 裁定——存在组织子级、派生子级或 TrackerItem 时禁止删除，不自动断链、不重挂 `parentId`/`sourceId`、不级联删除（见 INV-065、SCN-062）。仍待裁定的是**停用**：父 Tracker 停用时子 Tracker 如何处理；候选包括拒绝停用、保留有明确历史语义的引用，或另行明确业务处置。不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
 
-多级 WorkingSet 谱系（FACT-028，用户 2026-11-12）已确认单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge 与中间 WS 删除/停用约束；停用状态/命令、空子 WS 的 Compare/Merge、删除顺序与真实平台元数据回填仍待实现，见[多级 WorkingSet 谱系设计](working-set-lineage-design.md) §8。
+多级 WorkingSet 谱系（FACT-028）的剩余问题见[多级 WorkingSet 谱系设计 §8](working-set-lineage-design.md#8-开放问题)。已兑现的准入和回填范围见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。
 
 “创建完成”的可观察时点、与 Working Set 纳入/发布的关系及失败重试属于待细化协议；不预建复杂 Draft Tracker 状态机。组织位置冻结不关闭 Working Set 加入新 Tracker 的能力。
 

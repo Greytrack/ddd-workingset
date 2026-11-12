@@ -29,18 +29,17 @@
 
 [真实 HTTP/JDBC 验收](../../../src/test/java/bootstrap/BindingAcceptanceTest.java) 断言 Shared 有 Item 仍可解绑，Tracker 的三项拒绝条件分别生效，空 SpaceBinding 仍阻止跨工作集空间删除，工作集预检失败保留原有绑定，以及并发创建 Item 与删除 Tracker 后无悬空引用。最终 `mvn -B test` 通过 58 项（0 失败、0 错误、0 跳过），包含 Tomcat、PostgreSQL、Redis、COW 和 ArchUnit 回归。
 
-当前实现使用 PostgreSQL 物理删除与本地事务；T2 允许其他持久化策略。工作集多级谱系、停用、真实 Privilege 授权、规模验证，以及完整的 ProductSpace 创建与分类投影流程仍待推进。
+S5 使用 PostgreSQL 物理删除与本地事务。后续多级谱系见 [S6 验证结果](t5-s6-verification-result.md)。真实 Privilege 授权、规模验证及完整的 ProductSpace 创建与分类投影流程仍待推进。
 
 ## 本地前置数据示例
 
 在服务完成 `schema.sql` 初始化后，向本地数据库登记示例数据。以下 ID 供本地测试使用。
 
 ```sql
-INSERT INTO working_sets (working_set_id) VALUES ('DEMO-WS');
 INSERT INTO product_spaces (product_space_id) VALUES ('DEMO-SPACE');
 INSERT INTO classifications (classification_id, sharing_mode) VALUES ('DEMO-CLASS', 'UNSHARED');
 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
 VALUES ('T1', '1', 'DEMO-SPACE', 'DEMO-CLASS', 'UNSHARED');
 ```
 
-使用 `POST /api/worksets/DEMO-WS/spaces/DEMO-SPACE` 绑定空间。用 `POST /api/requirements` 在 `T1` 创建源 Requirement，再用返回的 LocalId、Revision 和 CommonId 调用 `POST /api/worksets/DEMO-WS/derive`。
+使用 `POST /api/worksets/1/children` 创建 `DEMO-WS`（请求体为 `{"workingSetId":"DEMO-WS"}`），再用 `POST /api/worksets/DEMO-WS/spaces/DEMO-SPACE` 绑定空间。用 `POST /api/requirements` 在 `T1` 创建源 Requirement，再用返回的 LocalId、Revision 和 CommonId 调用 `POST /api/worksets/DEMO-WS/derive`。

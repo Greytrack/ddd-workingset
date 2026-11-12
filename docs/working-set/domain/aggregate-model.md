@@ -218,4 +218,4 @@ LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/So
 
 ## 阶段 5 补充：多级 WorkingSet 谱系（Draft，用户 2026-11-12 确认核心规则）
 
-用户确认：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除或停用，叶子 WS 删除按 T2 K3；不引入 GateFlow 特例。详见 [FACT-028](facts.md)、[多级 WorkingSet 谱系设计](working-set-lineage-design.md)。停用状态/命令、空子 WS 的 Compare/Merge、删除顺序与真实元数据回填仍待实现。
+用户确认：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除或停用，叶子 WS 删除按 T2 K3；不引入 GateFlow 特例。详见 [FACT-028](facts.md)、[多级 WorkingSet 谱系设计](working-set-lineage-design.md)。实施范围和待验证项见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。

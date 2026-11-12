@@ -21,7 +21,7 @@
 | WorkingSet 谱系 | 由 `parentWorkingSetId` 形成的单父树；根为默认 WorkingSet `Id=1` |
 | 直属父 WorkingSet | `parentWorkingSetId` 指向的工作集 |
 | 子 WorkingSet | `parentWorkingSetId` 指向本 WS 的工作集；一个父可以有多个子 |
-| 子工作集范围 | 子 WS 的 TrackerBinding 集合；必须是对父 WS TrackerBinding 集合的子集 |
+| 子工作集范围 | 按 Tracker 来源计算的纳入范围；新绑定必须来自直属父 WS 当前有效范围 |
 | 相邻父子 | `target.parentWorkingSetId == source.id` 或 `source.parentWorkingSetId == target.id` |
 | 派生链 | Tracker 的 `sourceId` 链；与 WorkingSet 谱系是不同维度 |
 
@@ -52,7 +52,7 @@
   - 非共享派生：新 Tracker 的 `sourceId` 指向直属父 WS 的 Tracker；
   - 父级没有的 Tracker，子级不能绑定/派生；
   - 跨级（从祖父或更远）一律拒绝。
-- 子 WS 范围是父 WS 范围的子集（按 TrackerBinding 集合）；空范围是空集。
+- 建立绑定时按来源校验子集。Shared 比较复用的 TrackerId，非共享比较直接 `sourceId`。默认根的有效范围来自原生 Tracker 投影。空范围是空集。
 - 父 WS 解绑某 Tracker 时，已存在的子 WS 绑定不自动级联删除；后续准入与清理按 T2 与独立切片处理。
 
 ### 3.4 Merge 准入
@@ -99,7 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_working_sets_parent
 - 自指与环由应用层校验；数据库可加 `CHECK (parent_working_set_id IS NULL OR parent_working_set_id <> working_set_id)`。
 - 不引入 Flyway/Liquibase；继续 `schema.sql` 的 `IF NOT EXISTS` 风格。
 
-## 6. 场景与测试映射（未来 S6）
+## 6. 场景与测试映射
 
 | 场景 | 断言 |
 | --- | --- |
@@ -125,14 +125,12 @@ CREATE INDEX IF NOT EXISTS idx_working_sets_parent
 ## 8. 开放问题
 
 1. 停用的状态、命令、对子 WS 与 Tracker 的影响（T2 未纳入；QUESTION-009.a）。
-2. 空范围子 WS 的 Merge/Compare 行为（无可比较 Tracker 时返回什么）。
-3. 删除中间 WS 的检查顺序：先拒绝有子 WS，再按 T2 K3；失败语义的名称。
+2. 空范围子 WS 的实际 Merge/Compare 响应。S6 准入策略返回空候选。
+3. 跨工作集的批量删除顺序。单工作集先保护默认根，再拒绝有子 WS（`WorkingSetHasChildren`），叶子按 T2 K3 执行。
 4. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验。
 5. 真实平台元数据中既有 WorkingSet 的父级回填来源与校验方式。
 6. 父 WS 解绑/删除 Tracker 后，子 WS 已存在的绑定是否保留、如何清理。
 
 ## 9. 状态与下一步
 
-- 本文件为 Draft；用户已确认第 1 节的 5 条核心规则，但设计仍需评审后才能进入实现。
-- 不修改 T1～T4 已冻结契约；不发布基线。
-- 下一步：按 S6-A → S6-B → S6-C/S6-D 分片实现，先完成谱系与来源约束，再接入 Merge 准入。
+- 用户已确认第 1 节的核心规则。S6 按明确实施授权完成，实施证据和后续范围见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。

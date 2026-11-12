@@ -27,17 +27,22 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    T0["默认 WS Tracker T0"]
-    TA["A 的 Tracker T0<br/>Shared 绑定"]
-    TA1["A1 的 Tracker T0'<br/>非共享派生 source=T0"]
-    T0 -->|"Shared 复用"| TA
+    S0["默认 WS 的 Shared Tracker S"]
+    SA["A 绑定 S"]
+    SA1["A1 绑定 S"]
+    S0 -->|"Shared 复用"| SA
+    SA -->|"Shared 复用"| SA1
+    T0["默认 WS 的非共享 Tracker T0"]
+    TA["A 的 Tracker T1<br/>source=T0"]
+    TA1["A1 的 Tracker T2<br/>source=T1"]
+    T0 -->|"非共享派生"| TA
     TA -->|"非共享派生"| TA1
-    X["祖先/兄弟 Tracker"] -. "跨级/非直属父：拒绝" .-> TA1
+    T0 -. "跨级拒绝" .-> TA1
 ```
 
 - 子 WS 只能从直属父 WS 获得 Tracker。
 - Shared 复用父 WS 的 TrackerId；非共享创建新 Tracker + `sourceId` 指向父 WS 的 Tracker。
-- 子 WS 的 TrackerBinding 集合必须是父 WS 的子集（按 Tracker 范围）。
+- 新绑定按 Tracker 来源校验直属父级范围。已有绑定的后续清理见[谱系设计](../domain/working-set-lineage-design.md)。
 
 ## 3. Merge 准入
 

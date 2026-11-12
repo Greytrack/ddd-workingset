@@ -180,6 +180,10 @@
 
 分阶段实施结果、运行前置与剩余范围见 [S5 验证结果](t5-s5-verification-result.md)。
 
+## S6 多级 WorkingSet 谱系
+
+四片实施和回归见 [S6 验证结果](t5-s6-verification-result.md)。
+
 ## 交付节奏与门禁
 
 1. 每个任务开始前确认前置已完成（S1 前置为 P1～P5 统一）；
