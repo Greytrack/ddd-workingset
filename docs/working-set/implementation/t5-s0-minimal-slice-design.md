@@ -132,7 +132,7 @@ bootstrap.configuration    → 所有实现（组合根）
 
 - **生产（ALM）**：修改前读取完整内容 → 形成不可变快照（`snapshotRef`）→ 保存 → 发布 `RequirementChanged{eventId, requirementId, sourceLocalId, beforeRevision, afterRevision, snapshotRef, occurredAt}`。
 - **事件信封**：携带来源 `LocalId`、修改前/提交后的业务 `Revision`、事件身份等公共元数据；业务字段由 ALM 定义与解释。普通修改 `beforeRevision == afterRevision`；显式升级（D-018/INV-052）可以不同。
-- **消费（SK，异步）**：来源 Command 保存成功后发布事件，监听器只入队；`CowEventDispatcher` 在独立执行上下文按 `sourceLocalId` 串行执行，来源命令不等待 COW。消费时查询 `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配 **`beforeRevision`** 的目标（D-017）；快照只用于内容构建，**不读来源当前值**（D-011 首次快照优先）。目标聚合自身版次取 `target.revision()`，不以来源 Revision 覆盖（D-018/INV-051）。
+- **消费（SK，异步）**：来源 Command 保存成功后发布事件；Spring Modulith 在业务事务提交后异步调用 `@ApplicationModuleListener`，监听器把事件交给 `SourceSerialCowCoordinator` 按 `sourceLocalId` 串行执行（跨来源并行），来源命令不等待 COW。消费时查询 `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配 **`beforeRevision`** 的目标（D-017）；快照只用于内容构建，**不读来源当前值**（D-011 首次快照优先）。目标聚合自身版次取 `target.revision()`，不以来源 Revision 覆盖（D-018/INV-051）。
 - **事务边界（2026-11-12 澄清）**：Modulith 在业务事务内写入 `event_publication`，与业务保存同提交/回滚；`@ApplicationModuleListener` 在业务提交后以异步新事务消费；监听器失败不回滚业务事务，记录保留未完成供重试。该机制是应用内 Outbox 风格安全边界，不是外部 Outbox/MQ。
 - **禁止**：以来源当前内容或可变 Head Revision 代替修改前快照；连续来源变更必须满足首次相关修改快照优先。
 
@@ -142,8 +142,8 @@ bootstrap.configuration    → 所有实现（组合根）
 来源 Command
   → ALM 保存业务修改 + 修改前快照
   → 发布 RequirementChanged（保存成功后）
-  → 监听器入队（CowEventDispatcher），命令返回（不等待 COW）
-异步执行（按 sourceLocalId 串行，跨来源可并行）
+  → Modulith 提交后异步调用监听器，命令返回（不等待 COW）
+SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
   → Handler 定位目标集合（sourceLocalId + beforeRevision）
   → 每个目标：RequirementWritePort.materialize(MaterializeRequest{
        targetLocalId, targetTrackerId, commonId, sourceLocalId,
@@ -185,12 +185,12 @@ bootstrap.configuration    → 所有实现（组合根）
 | 类型 | 职责 |
 | --- | --- |
 | `WorkingSetApplicationService` | `derive(DeriveCommand)`、`resolve(ResolveQuery)`、`read(ReadQuery)` |
-| `CowEventDispatcher` | `dispatch(RequirementChanged)`：只入队，立即返回；同源串行、跨源并行 |
+| `SourceSerialCowCoordinator` | `runSerial(sourceLocalId, sequence, task)`：按来源串行、按 `afterLockVersion` 排序；不拥有线程池 |
 | `CowFailureLog` | 记录 `MATERIALIZE`/`SWITCH` 失败（事件、目标、来源、版次、异常、时间），供 S4 恢复查询 |
-| `CowEventHandler` | `onRequirementChanged(RequirementChanged)`：由 dispatcher 异步调用；按 `sourceLocalId + beforeRevision` 定位目标，逐目标调用写入 Port 并切换；失败写 `CowFailureLog` |
+| `CowEventHandler` | `onRequirementChanged(RequirementChanged)`：由 Modulith 异步监听器调用；按 `sourceLocalId + beforeRevision` 定位目标，逐目标调用写入 Port 并切换；失败写 `CowFailureLog` 并抛聚合异常 |
 | `TrackerItemReadPort`（port） | `readAt(Revision)`、`revision()`、`capabilities()`、`authorize(Operation, Caller)` |
 | `RequirementWritePort`（port） | `materialize(MaterializeRequest)`；正常返回表示 BC 已确认有效物化写入 |
-| `MaterializeRequest`（port） | 目标身份、目标版次、来源身份、来源修改前版次、事件身份与快照引用；不建构建器框架 |
+| `MaterializeRequest`（port） | 目标身份、目标版次、来源身份、来源修改前后 Revision/LockVersion、事件身份与快照引用；不建构建器框架 |
 | `MaterializationRejectedException`（port） | 表达“拒绝物化”这一事实；不建立九分类异常层次 |
 | `LightTrackerItemRepository`（port） | `findBySource(LocalId, Revision)`、`findById(LocalId)`、`save(LightTrackerItem)` |
 | `EventPublisher`（port） | `publish(DomainEvent)`（进程内实现） |
@@ -211,7 +211,7 @@ bootstrap.configuration    → 所有实现（组合根）
 
 | 类型 | 职责 |
 | --- | --- |
-| `RequirementChanged` | 公共信封：`eventId`、`requirementId`、`sourceLocalId`、`beforeRevision`、`afterRevision`、`snapshotRef`、`occurredAt`；普通修改两版次相等，显式升级可不同 |
+| `RequirementChanged` | 公共信封：`eventId`、`requirementId`、`sourceLocalId`、`beforeRevision`、`afterRevision`、`beforeLockVersion`、`afterLockVersion`、`snapshotRef`、`occurredAt`；普通修改两版次相等，显式升级可不同 |
 | `SnapshotRef` | 不可变快照引用 |
 
 **辅助类型（最小集，不扩展为通用框架）**
@@ -228,13 +228,13 @@ bootstrap.configuration    → 所有实现（组合根）
 
 | 类型 | 职责 |
 | --- | --- |
-| `SerialPerSourceCowEventDispatcher`（`sk.workingset.infrastructure`） | 实现 `CowEventDispatcher`：按 `sourceLocalId` 串行执行、可注入 `Executor`；进程内队列，不提供可靠投递 |
+| `JdbcCowFailureLog`（`sk.workingset.infrastructure`） | 将 `CowFailureLog.Failure` 写入 `cow_failures`；`REQUIRES_NEW` 提交，外层回滚不影响失败证据 |
 | `SnowflakeIdGenerator`（`sk.workingset.infrastructure`） | 实现 `IdentifierGenerator`：雪花算法（用户 2026-11-11 决定；去外部日志/异常/静态 holder 依赖） |
 | `IdGeneratorConfig`（`bootstrap.configuration`） | `@Configuration` + `@Bean IdentifierGenerator`；`DATACENTER_ID=1`、workerId 由本机地址哈希取模 |
 | `WorkingsetApplication`（`bootstrap`） | `@SpringBootApplication` 主类（非 web） |
-| `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配内存仓库、应用服务、读 Adapter 工厂、物化 Adapter、Handler、dispatcher、执行器、失败记录与 Listener |
+| `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配 JDBC/Redis 仓储、应用服务、读 Adapter 工厂、物化 Adapter、Handler、协调器、`REQUIRES_NEW` 事务模板与失败记录 |
 
-`RequirementChanged` 由 **SK 定义、ALM 通过 Spring Event（`ApplicationEventPublisher`）发布**；S3 的 `@EventListener` 只把事件交给 `CowEventDispatcher` 入队，COW 在独立执行上下文按 `sourceLocalId` 串行执行，来源 Command 不等待。S3 的“提交”= 保存成功返回；**不承诺**可靠投递、事务提交后交付、跨进程顺序或多监听器异常隔离；outbox/重试/去重留 S4（见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6）。
+`RequirementChanged` 由 **SK 定义、ALM 通过 `ApplicationEventPublisher` 发布**；Modulith 在来源事务提交后异步调用 `RequirementChangedListener`，监听器交给 `SourceSerialCowCoordinator` 按 `sourceLocalId` 串行执行，来源 Command 不等待。S3 的“提交”由 Modulith 的 `AFTER_COMMIT` 语义保障；**不承诺**跨进程顺序、并发同源交错或自动重试；outbox/重试/去重留 S4（见 [S3 实施契约](t5-s3-codex-task-brief.md)）。
 
 **明确不构建**：通用 CRUD Repository、动态 SPI 注册器、通用 Saga/事务框架、跨 BC 事件总线平台、四 BC 通用适配层。
 
@@ -257,10 +257,10 @@ bootstrap.configuration    → 所有实现（组合根）
 
 | 项 | 最小实现 |
 | --- | --- |
-| LightTrackerItem 存储 | 内存仓库（`save`、`findById`、`findBySource`） |
-| Requirement 存储 | 内存仓库（ALM） |
-| 快照存储 | 内存 `SnapshotStore`（按 `snapshotRef` 取） |
-| 事件派发 | 异步：Spring Event 同步交给 Listener 入队，`CowEventDispatcher` 在可注入执行器中按 `sourceLocalId` 串行执行；来源命令不等待 COW。运行时由 Spring Modulith `event_publication` 记录事件；S3 不新增 outbox/重试/去重；不承诺可靠投递、事务提交或跨进程顺序（见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6） |
+| LightTrackerItem 存储 | PostgreSQL/Spring JDBC；Redis 查询缓存（提交后更新）；内存实现仅供单元测试 |
+| Requirement 存储 | PostgreSQL/Spring JDBC（`lock_version` 条件更新） |
+| 快照存储 | PostgreSQL `requirement_snapshots`（按 `snapshotRef` 取） |
+| 事件派发 | Spring Modulith Event Publication Registry：业务事务内写 `event_publication`，提交后由 `@ApplicationModuleListener` 异步新事务消费；`SourceSerialCowCoordinator` 按 `sourceLocalId` 串行；S3 不新增 outbox/重试/去重；不承诺跨进程顺序（见 [S3 实施契约](t5-s3-codex-task-brief.md)） |
 | 装配 | Spring Boot 组合根（`bootstrap.configuration`） |
 | 外部依赖 | 无数据库、无消息中间件 |
 

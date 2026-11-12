@@ -46,7 +46,7 @@
 | Given | `LTI1` 未物化；来源 `R0` revision=3，`title=A` |
 | When | ALM 执行普通修改 `title: A→B`（不调用显式升级）；来源命令在保存成功后立即返回 |
 | Then | 保存后 `R0.revision` 仍为 `3`；发布 `RequirementChanged{beforeRevision=3, afterRevision=3, snapshotRef→A}` 并进入异步投递；`LTI1` 仍 `materialized=false`；`read(WS1)` 在最终一致性窗口内返回来源当前内容 `B` |
-| When | 异步执行器完成（可控执行器 drain / 完成信号） |
+| When | 异步完成：等待 Modulith `event_publication.completion_date` 或目标 `materialized=true`（Awaitility） |
 | Then | 用 `sourceLocalId=L0` + `beforeRevision=3` 定位目标（`materialized=false`）；调用 `RequirementWritePort.materialize(MaterializeRequest{targetLocalId=L1, sourceLocalId=L0, sourceRevision=3, targetRevision=LTI1.revision, snapshotRef})`；ALM 先核验快照来源身份/版次/commonId，再以**快照 A** 构建 `L1` 聚合并保存；随后 `LTI1.switchToLocalBacked(LTI1.revision)` |
 | 断言 | `R0.revision == 3`；窗口内 `read(WS1)` 为 `B`；异步完成后 `LTI1.materialized == true`、`LTI1.sourceLocalId == L1`、`LTI1.sourceRevision == 3`、`L1` 内容 `title == "A"`（**不是 B**）、`read(WS1)` 返回 `A`、`read(WS0)` 返回 `B`；测试不得用固定 `Thread.sleep` |
 | 反例 | 若实现读取来源当前值，物化内容会是 B；若把命令返回当作 COW 完成，窗口内断言会失败（D-011 首次快照优先 + 异步最终一致性） |

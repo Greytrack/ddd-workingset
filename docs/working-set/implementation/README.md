@@ -15,7 +15,8 @@
 - [t5-s1-verification-result.md](t5-s1-verification-result.md)：S1 验证结果（Verified，2026-11-11；`mvn test` 12 项通过，含 AT-01/AT-02/AC-01/AC-02）。
 - [t5-s2-codex-task-brief.md](t5-s2-codex-task-brief.md)：S2 任务说明（Ready for implementation；Spring Boot 升级、雪花 ID、Spring Event、修改前快照与事件发布）。
 - [t5-s2-verification-result.md](t5-s2-verification-result.md)：S2 验证结果（Verified，2026-11-11；`mvn test` 35 项通过，含 AT-03 前半、事件信封/顺序、并发冲突、Spring 上下文与雪花 ID）。
-- [t5-s3-codex-task-brief.md](t5-s3-codex-task-brief.md)：S3 任务说明（Ready for implementation，2026-11-12 异步投递裁定；首次 COW、异步 dispatcher + 同源串行 + 可查询失败记录、事件 `beforeRevision`/`afterRevision`、`MaterializeRequest`、读/写 Adapter 分离、内存仓储实例隔离、快照来源校验、18 项测试规划）。
+- [t5-s3-codex-task-brief.md](t5-s3-codex-task-brief.md)：S3 实施契约（Reviewed；事件 before/after + lockVersion、Modulith 异步消费、同源协调器、独立事务、失败留档）。
+- [t5-s3-verification-result.md](t5-s3-verification-result.md)：S3 验证结果（Reviewed，2026-11-12；`mvn test` 46 项通过，真实 PostgreSQL/Redis/Tomcat；AT-03/AT-04 与失败前置）。
 - [t5-runtime-verification.md](t5-runtime-verification.md)：运行时骨架验证（Verified，2026-11-12；Spring Boot Web 7102 + PostgreSQL/JdbcTemplate + Redis 缓存 + Spring Modulith Event Publication Registry；`mvn test` 37 项通过，含 API/数据库/缓存与容器验收测试）。
 
 配套：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)、[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)。

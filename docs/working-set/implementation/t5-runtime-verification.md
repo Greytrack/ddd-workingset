@@ -4,7 +4,7 @@
 
 - 范围：把首切片从纯内存单元验证推进到可启动的 Web 运行时：Spring Boot 内嵌 Tomcat、PostgreSQL/Spring JDBC 持久化、Redis 缓存、Spring Modulith 事件发布注册表、yml 配置与最小 REST API
 - 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[S2 验证结果](t5-s2-verification-result.md)、[S3 任务说明](t5-s3-codex-task-brief.md)
-- **不包含**：S3 的 COW Handler/物化切换、Merge、删除、权限、版本治理、生产迁移与鉴权
+- 本记录保留运行时骨架的原始证据。首次 COW 的实施与新增证据见 [S3 验证](t5-s3-verification-result.md)。
 
 ## 1. 启动与测试
 
@@ -84,11 +84,12 @@ ttl     workingset:lti:443628229325089 -> 30
 ## 5. 事件发布证据（Spring Modulith Event Publication Registry）
 
 - `RequirementApplicationService.changeTitle` 使用 `@Transactional`，保存成功后发布 `RequirementChanged`。
-- `bootstrap.RequirementChangedListener` 使用 `@ApplicationModuleListener` 作为最小消费者（占位；S3 将替换为 COW dispatcher）。
+- `bootstrap.RequirementChangedListener` 使用 `@ApplicationModuleListener` 接收事件，并交给 `CowEventHandler` / `SourceSerialCowCoordinator`；S3 已接入首次 COW，证据见 [S3 验证](t5-s3-verification-result.md)。
 - **业务事务内写入事件记录**：`@Transactional` 覆盖业务保存、快照写入与 Modulith 的 `event_publication` 记录；业务回滚时事件记录一并回滚（应用内 Outbox 风格原子性，不是外部 Outbox/MQ）。
 - **提交后独立事务消费**：`@ApplicationModuleListener` 组合 `@TransactionalEventListener(AFTER_COMMIT)`、`@Async` 与新事务；监听器在业务提交后由异步线程执行，失败不回滚业务事务，记录保持未完成，可通过 `IncompleteEventPublications.resubmitIncompletePublications(...)` 或启动时自动重提恢复。
 - `@ApplicationModuleListener` 默认异步执行；验收测试使用 Awaitility 等待 `completion_date` 更新，避免竞态。
 - **不再手写 `JdbcRequirementEventStore`**；事件持久化完全由 Modulith 注册表负责。
+- S3 的失败注入场景会让 `@ApplicationModuleListener` 抛出 `CowMaterializationFailedException`，测试日志出现 `SimpleAsyncUncaughtExceptionHandler` ERROR 属预期；事件保留未完成，见 [S3 验证](t5-s3-verification-result.md)。
 
 实测 `event_publication`：
 
@@ -121,13 +122,13 @@ completion_date   = 2026-11-12 11:09:53.33948+08
 
 | 编号 | 项 | 说明 |
 | --- | --- | --- |
-| R1 | S3 尚未实现 | 事件已由 Modulith 持久化并由占位监听器消费，但没有 `CowEventHandler`/`RequirementWritePort`/物化切换；`read` 对 Source-backed 仍读来源当前内容 |
+| R1 | S3 已接入 | 原运行时基线只验证事件发布。首次 COW、失败留档与状态切换已补齐，见 [S3 验证](t5-s3-verification-result.md) |
 | R2 | Spring Modulith 关闭告警 | 测试上下文关闭时出现 `PersistentApplicationEventMulticaster` 的 `ClassCastException` 日志；测试通过，未影响运行；后续应评估排除 Modulith 事件 JDBC 自动配置或升级版本 |
 | R3 | 缓存范围 | 仅 LightTrackerItem 元数据；Requirement 内容不缓存，避免普通修改不升级 revision 导致旧内容 |
 | R4 | schema 管理 | 当前用 `schema.sql` 自动建表，无 Flyway/Liquibase 版本迁移 |
 | R5 | 凭据 | `application.yml` 当前包含本地数据库口令；提交/部署前应改为环境变量或外部配置，不进入版本库 |
 | R6 | 鉴权 | REST 使用固定 `Caller.of("web")`，未接入权限平台 |
-| R7 | 事件消费者仍是占位 | Modulith 已自动持久化并标记完成；`RequirementChangedListener` 目前只记录日志，尚未接入 S3 的异步 dispatcher/COW。失败事件保留未完成与启动重提机制尚未在验收测试中覆盖。 |
+| R7 | 事件消费与完成状态 | 占位监听器已接入 COW。成功标记完成，单目标失败仍可完成其他目标，失败事件保持未完成。重启重提与跨实例恢复待 S4 验证 |
 
 ## 8. 复现
 

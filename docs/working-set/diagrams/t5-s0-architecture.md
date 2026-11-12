@@ -92,7 +92,7 @@ sequenceDiagram
     participant SNAP as SnapshotStore
     participant RAGG as Requirement 聚合
     participant EV as 事件总线（同步发布）
-    participant DISP as CowEventDispatcher（异步队列）
+    participant DISP as SourceSerialCowCoordinator（按来源串行）
     participant COW as SK CowEventHandler
     participant LTI as LightTrackerItem
     participant WP as RequirementWritePort（ALM Adapter）
@@ -102,9 +102,9 @@ sequenceDiagram
     AAPP->>SNAP: 读取修改前完整内容，保存不可变快照
     AAPP->>RAGG: 保存修改（lock_version 自动 +1，Revision 与发布 version 不变）
     AAPP->>EV: 发布 RequirementChanged（snapshotRef + beforeRevision/afterRevision）
-    EV->>DISP: Listener 只入队，立即返回
+    EV->>DISP: Modulith 提交后异步调用监听器
     AAPP-->>U: 命令返回（COW 尚未完成；read 仍走 Source-backed）
-    Note over DISP: 异步执行器（按 sourceLocalId 串行，跨来源可并行）
+    Note over DISP: 按 sourceLocalId 串行，跨来源可并行
     DISP->>COW: onRequirementChanged(event)
     COW->>LTI: 查询 materialized=false 且 sourceLocalId/beforeRevision 匹配
     LTI-->>COW: 目标变体（扇出）
