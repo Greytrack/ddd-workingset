@@ -132,6 +132,8 @@ completion_date   = 2026-11-12 11:09:53.33948+08
 
 ## 8. 复现
 
+当前版本创建 Requirement 前需登记 Tracker。使用 [S5 本地前置数据示例](t5-s5-verification-result.md#本地前置数据示例) 准备下例中的 `T1`。
+
 ```text
 # 1. 测试（需要本机 PostgreSQL ddd-test 与 Redis 63179）
 mvn -B test
