@@ -133,6 +133,7 @@ bootstrap.configuration    → 所有实现（组合根）
 - **生产（ALM）**：修改前读取完整内容 → 形成不可变快照（`snapshotRef`）→ 保存 → 发布 `RequirementChanged{eventId, requirementId, sourceLocalId, beforeRevision, afterRevision, snapshotRef, occurredAt}`。
 - **事件信封**：携带来源 `LocalId`、修改前/提交后的业务 `Revision`、事件身份等公共元数据；业务字段由 ALM 定义与解释。普通修改 `beforeRevision == afterRevision`；显式升级（D-018/INV-052）可以不同。
 - **消费（SK，异步）**：来源 Command 保存成功后发布事件，监听器只入队；`CowEventDispatcher` 在独立执行上下文按 `sourceLocalId` 串行执行，来源命令不等待 COW。消费时查询 `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配 **`beforeRevision`** 的目标（D-017）；快照只用于内容构建，**不读来源当前值**（D-011 首次快照优先）。目标聚合自身版次取 `target.revision()`，不以来源 Revision 覆盖（D-018/INV-051）。
+- **事务边界（2026-11-12 澄清）**：Modulith 在业务事务内写入 `event_publication`，与业务保存同提交/回滚；`@ApplicationModuleListener` 在业务提交后以异步新事务消费；监听器失败不回滚业务事务，记录保留未完成供重试。该机制是应用内 Outbox 风格安全边界，不是外部 Outbox/MQ。
 - **禁止**：以来源当前内容或可变 Head Revision 代替修改前快照；连续来源变更必须满足首次相关修改快照优先。
 
 ## 9. 保存与切换顺序（A3 + T3）

@@ -199,18 +199,18 @@ final class RequirementChangedListener {
 - `CowEventDispatcher` 是应用能力接口；`SerialPerSourceCowEventDispatcher` 按 `sourceLocalId` 串行执行任务，不同来源可并行，**不引入全局串行**。
 - 执行器由构造注入，组合根提供有界线程池（非 web）；测试替换为可控 `ManualExecutor`（入队 + 显式 drain/有界等待），**不以固定 `Thread.sleep` 作为正确性依据**。
 
-**“事务提交后交付”的 S3 语义**：
+**事务边界（运行时已具备）**：
 
-- S3 无事务管理器与数据库；“来源事务成功提交”在 S3 中表现为 `repository.save` 成功返回后才发布事件；
-- 引入持久化后**必须**改为事务提交后触发（`TransactionSynchronization.afterCommit` 或 `@TransactionalEventListener(AFTER_COMMIT)` + 异步执行器）；
-- 不得把 S3 的“保存成功后发布”表述为已具备事务提交语义。
+- `RequirementApplicationService.changeTitle` 的 `@Transactional` 使业务保存、快照写入与 Modulith 的 `event_publication` 记录在同一事务中提交或回滚（应用内 Outbox 风格安全边界，不是外部 Outbox/MQ）；
+- `@ApplicationModuleListener` 组合 `@TransactionalEventListener(AFTER_COMMIT)`、`@Async` 与新事务：业务提交后才异步消费，监听器失败不回滚业务事务，事件记录保持未完成供重试；
+- 不得把 S3 的进程内 dispatcher/队列表述为可靠投递或外部 Outbox；重试、死信、去重与跨进程顺序仍由 S4 完善。
 
 **S2 机制复用与缺口**：
 
 | 可复用 | 缺口（S4 或持久化任务） |
 | --- | --- |
 | `RequirementChanged` 公共信封与 `SnapshotStore` 修改前快照 | 运行时已有 Spring Modulith `event_publication` 自动持久化；S3 不新增 outbox，仍无重试/死信/去重 |
-| `ApplicationEventPublisher` 发布点（保存成功后发布） | 无事务提交后触发（S3 无事务） |
+| `ApplicationEventPublisher` 发布点（保存成功后发布） | 运行时已由 `@Transactional` + Modulith `AFTER_COMMIT` 保障同事务写入/提交后消费；S3 消费在独立异步事务中 |
 | S2 连续修改测试的顺序证据（同线程、`eventId` 递增、快照顺序） | 无跨线程/跨进程有序投递 |
 | Spring 同步事件 → 监听器只入队 | 无执行器故障隔离与事件可恢复性 |
 
@@ -317,7 +317,7 @@ S3 仅覆盖正常首次 COW 闭环 + 进程内异步执行边界；以下由 S4
 
 | 编号 | 项 | 处理 |
 | --- | --- | --- |
-| O1 | 异步投递仅进程内；不承诺可靠投递、事务提交后交付、跨进程顺序或多监听器异常隔离 | 按 §3.6 表述；执行器可注入；不以 `@Async`、线程池或日志冒充可靠投递 |
+| O1 | 异步投递仅进程内；不承诺可靠投递、跨进程顺序或多监听器异常隔离 | 事务提交后交付由 Modulith `@TransactionalEventListener(AFTER_COMMIT)` 保障；执行器可注入；不以 `@Async`、线程池或日志冒充可靠投递 |
 | O2 | 保存与切换无跨聚合事务（双事实） | S3 接受部分提交；S4 补齐恢复；不得宣称已完成 |
 | O3 | `RequirementAdapter.readAt` 非当前版次仍抛异常 | S3 不需要历史回读；留后续专项 |
 | O4 | `authorize` 恒 `true` | 权限切片再处理 |

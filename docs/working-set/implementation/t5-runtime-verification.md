@@ -85,7 +85,8 @@ ttl     workingset:lti:443628229325089 -> 30
 
 - `RequirementApplicationService.changeTitle` 使用 `@Transactional`，保存成功后发布 `RequirementChanged`。
 - `bootstrap.RequirementChangedListener` 使用 `@ApplicationModuleListener` 作为最小消费者（占位；S3 将替换为 COW dispatcher）。
-- Modulith 在监听器执行前自动把事件写入 `event_publication`；监听器成功返回后更新 `completion_date`；监听器抛异常时记录保持未完成，可通过 `IncompleteEventPublications.resubmitIncompletePublications(...)` 或启动时自动重提恢复。
+- **业务事务内写入事件记录**：`@Transactional` 覆盖业务保存、快照写入与 Modulith 的 `event_publication` 记录；业务回滚时事件记录一并回滚（应用内 Outbox 风格原子性，不是外部 Outbox/MQ）。
+- **提交后独立事务消费**：`@ApplicationModuleListener` 组合 `@TransactionalEventListener(AFTER_COMMIT)`、`@Async` 与新事务；监听器在业务提交后由异步线程执行，失败不回滚业务事务，记录保持未完成，可通过 `IncompleteEventPublications.resubmitIncompletePublications(...)` 或启动时自动重提恢复。
 - `@ApplicationModuleListener` 默认异步执行；验收测试使用 Awaitility 等待 `completion_date` 更新，避免竞态。
 - **不再手写 `JdbcRequirementEventStore`**；事件持久化完全由 Modulith 注册表负责。
 
@@ -108,7 +109,7 @@ completion_date   = 2026-11-12 11:09:53.33948+08
 | `application.yml` | `server.port=7102`、Hikari、Redis `63179/db5`、`spring.sql.init.mode=always`、`spring.profiles.active=${SPRING_PROFILES_ACTIVE:default}` |
 | `schema.sql` | 三张业务表 + 来源索引，全部 `IF NOT EXISTS` |
 | 组合根 | JDBC 仓储 + Redis 缓存装饰器 + Adapter 工厂 + Spring Event 发布器 + Modulith 事件监听器 |
-| 事件 | Spring Modulith Event Publication Registry 自动持久化；`@ApplicationModuleListener` 消费者成功标记完成，失败保留未完成供重提 |
+| 事件 | Spring Modulith Event Publication Registry：事件记录与业务写入同事务提交/回滚；`@ApplicationModuleListener` 在提交后异步新事务消费，成功标记完成，失败保留未完成供重提 |
 
 修复记录：
 
