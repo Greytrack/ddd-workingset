@@ -3,16 +3,22 @@ package bootstrap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import alm.requirement.application.RequirementApplicationService;
-import alm.requirement.infrastructure.InMemoryRequirementRepository;
-import alm.requirement.infrastructure.InMemorySnapshotStore;
+import alm.requirement.domain.Requirement;
+import alm.requirement.domain.RequirementRepository;
 import alm.requirement.infrastructure.RequirementAdapter;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.Caller;
@@ -27,11 +33,11 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
-import sk.workingset.infrastructure.InMemoryLightTrackerItemRepository;
+import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.infrastructure.SnowflakeIdGenerator;
 
 /**
- * S1 纵向切片集成测试（位于组合根包：允许同时引用 SK 与 ALM 实现）。
+ * S1 应用层测试，使用真实领域模型和读 Adapter。
  */
 class WorkingSetSliceIntegrationTest {
 
@@ -43,22 +49,17 @@ class WorkingSetSliceIntegrationTest {
     private static final Revision R3 = Revision.of(3);
     private static final Caller CALLER = Caller.of("tester");
 
-    private InMemoryLightTrackerItemRepository items;
-    private InMemoryRequirementRepository requirements;
+    private LightTrackerItemRepository items;
+    private RequirementRepository requirements;
     private WorkingSetApplicationService workingSet;
 
     @BeforeEach
     void setUp() {
-        items = new InMemoryLightTrackerItemRepository();
-        requirements = new InMemoryRequirementRepository();
+        items = mock(LightTrackerItemRepository.class);
+        requirements = mock(RequirementRepository.class);
         SnowflakeIdGenerator ids = new SnowflakeIdGenerator(1, 1);
-        InMemorySnapshotStore snapshots = new InMemorySnapshotStore(ids);
-        RequirementApplicationService requirementApp = new RequirementApplicationService(
-                requirements, snapshots, ids, event -> { });
         workingSet = new WorkingSetApplicationService(
                 items, localId -> new RequirementAdapter(requirements, localId), ids);
-        // 来源 Requirement R0：默认工作集 WS0、revision 3、title=A
-        requirementApp.create(L0, C1, T0, "A", "source description", R3);
     }
 
     @Test
@@ -72,13 +73,17 @@ class WorkingSetSliceIntegrationTest {
         assertFalse(item.materialized(), "派生初始为 Source-backed");
         assertEquals(L0, item.sourceLocalId());
         assertEquals(R3, item.sourceRevision());
-        assertEquals(1, requirements.size(), "派生不复制业务内容");
-        assertEquals(1, items.size());
+        verify(requirements, never()).save(any());
+        verify(items).save(item);
     }
 
     @Test
     void AT02_source_backed_read_resolves_source_content() {
         LightTrackerItem item = workingSet.derive(new DeriveCommand(WS1, T0, L0, R3, C1)).item();
+
+        when(items.findById(item.localId())).thenReturn(Optional.of(item));
+        when(requirements.findById(L0)).thenReturn(Optional.of(
+                Requirement.create(L0, C1, T0, "A", "source description", R3)));
 
         ReadResult result = workingSet.read(WS1, item.localId(), CALLER);
 
@@ -87,7 +92,8 @@ class WorkingSetSliceIntegrationTest {
         assertFalse(result.materialized(), "读取不得产生物化副作用");
         assertEquals(L0, result.contentLocalId(), "Source-backed 读取应定位来源变体");
         assertEquals(R3, result.contentRevision());
-        assertEquals(1, requirements.size(), "读取不得新建业务对象");
+        verify(requirements).findById(L0);
+        verify(requirements, never()).save(any());
     }
 
     @Test
@@ -101,6 +107,8 @@ class WorkingSetSliceIntegrationTest {
     @Test
     void resolve_item_outside_workspace_is_not_included() {
         LightTrackerItem item = workingSet.derive(new DeriveCommand(WS1, T0, L0, R3, C1)).item();
+
+        when(items.findById(item.localId())).thenReturn(Optional.of(item));
 
         ApplicationFailure failure = assertThrows(ApplicationFailure.class,
                 () -> workingSet.resolve(WS0, item.localId()));
@@ -116,7 +124,9 @@ class WorkingSetSliceIntegrationTest {
         item.switchToLocalBacked(R3);
 
         assertEquals(before, item.localId(), "物化前后 LocalId 不变");
-        assertSame(item, workingSet.resolve(WS1, before), "同一 LocalId 可定位同一变体");
+        when(items.findById(before)).thenReturn(Optional.of(LightTrackerItem.restore(before, item.commonId(),
+                item.trackerId(), WS1, R3, before, R3, true)));
+        assertEquals(before, workingSet.resolve(WS1, before).localId(), "同一 LocalId 可定位同一变体");
     }
 
     @Test

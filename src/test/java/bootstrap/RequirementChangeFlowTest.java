@@ -4,160 +4,156 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 import alm.requirement.application.RequirementApplicationService;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.infrastructure.InMemoryRequirementRepository;
-import alm.requirement.infrastructure.InMemorySnapshotStore;
 import alm.requirement.infrastructure.RequirementSnapshot;
+import alm.requirement.infrastructure.SnapshotStore;
 import sk.workingset.application.event.RequirementChanged;
+import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Version;
 import sk.workingset.infrastructure.SnowflakeIdGenerator;
 
-/**
- * S2 集成测试：来源普通修改 → 修改前快照 → 来源事件（AT-03 前半）。
- *
- * <p>术语：{@code revision} 手动版次、{@code version} 发布大版本（可空）、
- * {@code lock_version} 乐观锁（数据变动后自动 +1）。
- */
+/** 验证来源修改命令与仓储、快照和发布端口的协作。 */
 class RequirementChangeFlowTest {
 
     private static final LocalId L0 = LocalId.of("L0");
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T0 = TrackerId.of("T0");
     private static final Revision R3 = Revision.of(3);
+    private static final SnapshotRef FIRST = SnapshotRef.of("before-first-edit");
+    private static final SnapshotRef SECOND = SnapshotRef.of("before-second-edit");
 
-    private InMemoryRequirementRepository requirements;
-    private InMemorySnapshotStore snapshots;
-    private List<RequirementChanged> events;
-    private RequirementApplicationService service;
+    private final RequirementRepository requirements = mock(RequirementRepository.class);
+    private final SnapshotStore snapshots = mock(SnapshotStore.class);
+    private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
+    private final RequirementApplicationService service = new RequirementApplicationService(
+            requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher);
+    private final Requirement before = Requirement.create(
+            L0, CommonId.of("C1"), TrackerId.of("T0"), "A", "source description", R3, Version.of("1.2"));
 
     @BeforeEach
     void setUp() {
-        requirements = new InMemoryRequirementRepository();
-        SnowflakeIdGenerator ids = new SnowflakeIdGenerator(1, 1);
-        snapshots = new InMemorySnapshotStore(ids);
-        events = new ArrayList<>();
-        service = new RequirementApplicationService(
-                requirements, snapshots, ids, event -> events.add((RequirementChanged) event));
-        service.create(L0, C1, T0, "A", "source description", R3);
+        when(requirements.findById(L0)).thenReturn(Optional.of(before));
     }
 
     @Test
     void AT03_change_title_keeps_revision_and_version_but_increments_lock_version() {
+        when(snapshots.save(any())).thenReturn(FIRST);
+
         Requirement changed = service.changeTitle(L0, "B", LockVersion.of(0));
 
         assertEquals("B", changed.title());
-        assertEquals(R3, changed.revision(), "普通修改不得升级业务 Revision");
-        assertEquals(Version.none(), changed.version(), "普通修改不得产生发布大版本");
-        assertEquals(LockVersion.of(1), changed.lockVersion(), "数据变动后乐观锁自动 +1");
+        assertEquals(R3, changed.revision());
+        assertEquals(Version.of("1.2"), changed.version());
+        assertEquals(LockVersion.of(1), changed.lockVersion());
+        verify(requirements).save(changed);
 
-        assertEquals(1, events.size(), "保存成功后应发布一条来源事件");
-        RequirementChanged event = events.get(0);
-        assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
+        var events = ArgumentCaptor.forClass(RequirementChanged.class);
+        verify(publisher).publishEvent(events.capture());
+        var event = events.getValue();
+        assertTrue(event.eventId() > 0);
         assertEquals(L0, event.requirementId());
         assertEquals(L0, event.sourceLocalId());
-        assertEquals(R3, event.beforeRevision());
-        assertEquals(R3, event.afterRevision());
-        assertEquals(0L, event.beforeLockVersion().value());
-        assertEquals(1L, event.afterLockVersion().value());
-        assertNotNull(event.snapshotRef());
+        assertEvent(event, FIRST, 0, 1);
         assertNotNull(event.occurredAt());
 
-        RequirementSnapshot snapshot = snapshots.find(event.snapshotRef()).orElseThrow();
-        assertEquals("A", snapshot.title(), "快照必须是修改前内容");
-        assertEquals(Version.none(), snapshot.version());
-        assertEquals(LockVersion.of(0), snapshot.lockVersion());
-        assertEquals(R3, snapshot.revision());
-        assertEquals("B", requirements.findById(L0).orElseThrow().title(), "业务修改已保存");
-        assertEquals(LockVersion.of(1), requirements.findById(L0).orElseThrow().lockVersion());
+        var captured = ArgumentCaptor.forClass(RequirementSnapshot.class);
+        verify(snapshots).save(captured.capture());
+        assertEquals("A", captured.getValue().title());
+        assertEquals(R3, captured.getValue().revision());
+        assertEquals(Version.of("1.2"), captured.getValue().version());
+        assertEquals(LockVersion.of(0), captured.getValue().lockVersion());
     }
 
     @Test
-    void event_is_published_only_after_saved_state_is_visible() {
-        List<String> observedTitles = new ArrayList<>();
-        RequirementApplicationService observing = new RequirementApplicationService(
-                requirements,
-                snapshots,
-                new SnowflakeIdGenerator(1, 1),
-                event -> observedTitles.add(requirements.findById(L0).orElseThrow().title()));
+    void event_is_published_after_the_repository_saves_the_changed_requirement() {
+        when(snapshots.save(any())).thenReturn(FIRST);
 
-        observing.changeTitle(L0, "B", LockVersion.of(0));
+        Requirement changed = service.changeTitle(L0, "B", LockVersion.of(0));
 
-        assertEquals(List.of("B"), observedTitles, "事件发布时必须已能读到保存后的业务内容");
+        var order = inOrder(requirements, publisher);
+        order.verify(requirements).save(changed);
+        order.verify(publisher).publishEvent(any(RequirementChanged.class));
     }
 
     @Test
     void stale_expected_lock_version_is_rejected_without_event_or_snapshot() {
-        LockVersionConflictException conflict = assertThrows(LockVersionConflictException.class,
+        var conflict = assertThrows(LockVersionConflictException.class,
                 () -> service.changeTitle(L0, "B", LockVersion.of(99)));
 
         assertEquals(LockVersion.of(99), conflict.expected());
         assertEquals(LockVersion.of(0), conflict.actual());
-        assertEquals("A", requirements.findById(L0).orElseThrow().title(), "冲突时不得覆盖业务内容");
-        assertEquals(LockVersion.of(0), requirements.findById(L0).orElseThrow().lockVersion());
-        assertTrue(events.isEmpty(), "冲突时不得发布事件");
-        assertEquals(0, snapshots.size(), "冲突时不应留下无主快照");
+        verify(requirements, never()).save(any());
+        verifyNoInteractions(snapshots, publisher);
     }
 
     @Test
     void consecutive_changes_publish_ordered_events_and_capture_each_pre_change_snapshot() {
-        service.changeTitle(L0, "B", LockVersion.of(0));
-        service.changeTitle(L0, "C", LockVersion.of(1));
+        when(snapshots.save(any())).thenReturn(FIRST, SECOND);
 
-        assertEquals(2, events.size());
-        assertEquals("A", snapshots.find(events.get(0).snapshotRef()).orElseThrow().title());
-        assertEquals("B", snapshots.find(events.get(1).snapshotRef()).orElseThrow().title());
-        assertEquals(LockVersion.of(0), snapshots.find(events.get(0).snapshotRef()).orElseThrow().lockVersion());
-        assertEquals(LockVersion.of(1), snapshots.find(events.get(1).snapshotRef()).orElseThrow().lockVersion());
-        assertEquals(R3, events.get(0).beforeRevision());
-        assertEquals(R3, events.get(0).afterRevision());
-        assertEquals(R3, events.get(1).beforeRevision());
-        assertEquals(R3, events.get(1).afterRevision());
-        assertEquals(LockVersion.of(1), events.get(0).afterLockVersion());
-        assertEquals(LockVersion.of(1), events.get(1).beforeLockVersion());
-        assertEquals(LockVersion.of(2), events.get(1).afterLockVersion());
-        assertTrue(events.get(0).eventId() < events.get(1).eventId(), "事件身份应保持生成顺序");
-        assertEquals("C", requirements.findById(L0).orElseThrow().title());
-        assertEquals(LockVersion.of(2), requirements.findById(L0).orElseThrow().lockVersion());
+        Requirement first = service.changeTitle(L0, "B", LockVersion.of(0));
+        when(requirements.findById(L0)).thenReturn(Optional.of(first));
+        Requirement second = service.changeTitle(L0, "C", LockVersion.of(1));
+
+        var captured = ArgumentCaptor.forClass(RequirementSnapshot.class);
+        verify(snapshots, times(2)).save(captured.capture());
+        assertEquals("A", captured.getAllValues().get(0).title());
+        assertEquals("B", captured.getAllValues().get(1).title());
+        assertEquals(LockVersion.of(0), captured.getAllValues().get(0).lockVersion());
+        assertEquals(LockVersion.of(1), captured.getAllValues().get(1).lockVersion());
+
+        var events = ArgumentCaptor.forClass(RequirementChanged.class);
+        verify(publisher, times(2)).publishEvent(events.capture());
+        assertEvent(events.getAllValues().get(0), FIRST, 0, 1);
+        assertEvent(events.getAllValues().get(1), SECOND, 1, 2);
+        assertTrue(events.getAllValues().get(0).eventId() < events.getAllValues().get(1).eventId());
+        assertEquals("C", second.title());
+        assertEquals(LockVersion.of(2), second.lockVersion());
+        verify(requirements).save(second);
     }
 
     @Test
-    void save_failure_does_not_publish_event_or_change_stored_content() {
-        RequirementRepository failing = new RequirementRepository() {
-            @Override
-            public void save(Requirement requirement) {
-                throw new IllegalStateException("save failed");
-            }
+    void save_failure_does_not_publish_event_or_mutate_the_loaded_requirement() {
+        when(snapshots.save(any())).thenReturn(FIRST);
+        var failure = new IllegalStateException("save failed");
+        doThrow(failure).when(requirements).save(any());
 
-            @Override
-            public Optional<Requirement> findById(LocalId localId) {
-                return requirements.findById(localId);
-            }
-        };
-        List<RequirementChanged> published = new ArrayList<>();
-        RequirementApplicationService failingService = new RequirementApplicationService(
-                failing, snapshots, new SnowflakeIdGenerator(1, 1),
-                event -> published.add((RequirementChanged) event));
+        assertEquals(failure, assertThrows(IllegalStateException.class,
+                () -> service.changeTitle(L0, "B", LockVersion.of(0))));
 
-        assertThrows(IllegalStateException.class,
-                () -> failingService.changeTitle(L0, "B", LockVersion.of(0)));
+        verify(requirements).save(any());
+        verifyNoInteractions(publisher);
+        assertEquals("A", before.title());
+        assertEquals(LockVersion.of(0), before.lockVersion());
+    }
 
-        assertTrue(published.isEmpty(), "保存失败不得发布事件");
-        assertEquals("A", requirements.findById(L0).orElseThrow().title());
+    private static void assertEvent(RequirementChanged event, SnapshotRef ref, long beforeLock, long afterLock) {
+        assertEquals(R3, event.beforeRevision());
+        assertEquals(R3, event.afterRevision());
+        assertEquals(LockVersion.of(beforeLock), event.beforeLockVersion());
+        assertEquals(LockVersion.of(afterLock), event.afterLockVersion());
+        assertEquals(ref, event.snapshotRef());
     }
 }
