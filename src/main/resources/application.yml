@@ -1,6 +1,10 @@
 server:
   port: ${SERVER_PORT:7102}
 
+workingset:
+  cow:
+    order-gap-wait: ${COW_ORDER_GAP_WAIT:1s}
+
 spring:
   application:
     name: ddd-workingset
@@ -37,8 +41,8 @@ spring:
           max-active: 8
           max-wait: -1ms
   modulith:
+    republish-outstanding-events-on-restart: true
     events:
-      republish-outstanding-events-on-restart: true
       jdbc:
         schema-initialization:
           enabled: ${MODULITH_SCHEMA_INITIALIZATION:true}
