@@ -43,6 +43,7 @@
 | `FACT-025` | 系统有三层分类元模型，元数据在启动前初始化到平台元数据库、常驻内存；Tracker 是 Classification 在某 ProductSpace/WorkingSet 中的具体投影，遵守其属性/共享策略/规则约束；一个 Classification 可对应多个 Tracker；Tracker 不随元数据初始化自动创建，而在创建 ProductSpace 时按分类集合投影生成。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 分类版本/变更协议仍待 |
 | `FACT-026` | 默认 WorkingSet 由平台元数据预初始化，固定 ID=1，不可删除/隐藏；用户创建子 WorkingSet 前，业务数据均在默认 WorkingSet；Tracker 只能在默认 WorkingSet 创建原始聚合，子 WorkingSet 只能通过纳入直接上游 Tracker（共享绑定或非共享派生）维持来源链完整。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 默认 WorkingSet 归档等生命周期维度待定 |
 | `FACT-027` | Diff/Merge 衔接裁定：① 未物化变体可以参与 Diff；② 未物化目标被 Merge 修改时，在 merge 过程中构建业务聚合正常 save（物化与修改一体）；③ 合并决策是用户决策、command 入参，可作为 ValueObject 归属 MergeRound 聚合；④ MergeCheckpoint 是独立聚合；⑤ MergeRound 是合并载体（LRO 发起后记录参数、进度、成功/失败信息）；⑥ 共享 Tracker 不参与 Merge，非共享只允许直接父子准入。 | 用户确认（2026-11-10 阶段 4 补充） | 本对话用户裁定 | 差异冻结/令牌、幂等与乱序协议仍候选 |
+| `FACT-028` | 多级 WorkingSet 谱系（用户 2026-11-12）：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除或停用（有派生子级就不允许），叶子 WS 删除按 T2 K3；设计不引入 GateFlow 特例。 | 用户确认（2026-11-12） | 本对话用户裁定 | 停用状态/命令、空子 WS 的 Compare/Merge、删除顺序、真实平台元数据回填待实现 |
 
 ## Business Policy（逐条标注确认范围）
 

@@ -62,4 +62,4 @@
 
 **T5-S5 已通过首层范围验收**：WorkingSet 聚合、SpaceBinding/TrackerBinding、Shared/非共享绑定、解绑/删除/级联校验；`mvn test` 58 项通过。证据见 [S5 验证结果](../implementation/t5-s5-verification-result.md)。该切片只覆盖已登记的首层 WorkingSet，直接上游固定为默认 WorkingSet；该限定是实施范围裁定，不改变 T2 契约对多级谱系与停用的开放状态。
 
-**下一步候选**：T1 Merge 首层纵向切片（默认 WS ↔ 直接子 WS）；多级 WorkingSet 谱系、停用、真实 Privilege、ProductSpace 创建与分类投影留后续。
+**T5-S6 多级 WorkingSet 谱系（设计完成，待评审/实施）**：FACT-028 已确认单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 删除/停用约束；设计见 [working-set-lineage-design.md](../domain/working-set-lineage-design.md)，图为 [working-set-lineage.md](../diagrams/working-set-lineage.md)。实施切片：S6-A 谱系与创建子 WS、S6-B Tracker 来源与范围、S6-C Merge 准入、S6-D 删除/停用约束。

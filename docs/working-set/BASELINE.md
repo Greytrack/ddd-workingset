@@ -73,6 +73,7 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-12 | [FACT-028](domain/facts.md) 多级 WorkingSet 谱系核心规则：单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 不允许删除/停用；设计见 [working-set-lineage-design.md](domain/working-set-lineage-design.md)，Draft，未发布 |
 | 2026-11-11 | T1 关闭、T2～T4 冻结：见下方契约登记及各议题评审；T1 Q4 见 ADR-0005 补充裁定 |
 | 2026-11-10 | [阶段 4 收尾与 D-019](reviews/2026-11-10-stage-4-productspace-classification-review.md)、[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)；ADR-0001～0005 接受依据见各 ADR |
 | 2026-11-09～10 | [阶段 3.1 规则确认](reviews/2026-11-09-stage-3-1-rule-convergence.md)、[分主题接受与 INV 审查](reviews/2026-11-10-invariant-evidence-review.md) |

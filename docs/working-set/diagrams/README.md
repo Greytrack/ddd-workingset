@@ -26,6 +26,7 @@
 8. Accepted 图必须被 `BASELINE.md` 明确列出；Git 提交或 Mermaid 可渲染本身都不代表设计已接受。
 
 - [三套候选类图与聚合边界](aggregate-candidates.md)：保留仍有辨析价值的候选视图，已弃用方案链接历史权衡。
+- [WorkingSet 谱系与相邻父子 Merge](working-set-lineage.md)：多级 WorkingSet 单父谱系、子 WS Tracker 来源与 Merge 准入（Draft）。
 - [Checkpoint 适用性与 GateFlow 内容切换](collaboration-behavior.md)：保留确认规则和仍待细化的切换协议。
 
 - [Tracker 双维关系](tracker-dual-relations.md)：D-003 同工作集组织树与跨直接父子工作集派生链，Draft；替代旧 D-002 字段未定图。
