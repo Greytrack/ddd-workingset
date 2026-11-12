@@ -58,4 +58,4 @@
 
 **T5-S3 已实施**。Modulith 提交后异步消费，业务物化、状态切换和失败记录独立提交。以 [S3 验证记录](../implementation/t5-s3-verification-result.md)为当前证据，具体边界见 [S3 实施契约](../implementation/t5-s3-codex-task-brief.md)。
 
-**S4 下一步**：AT-05 完整恢复（重提只补切换、不覆盖业务内容）、`eventId + targetLocalId` 幂等键、重复事件/乱序回归、跨实例与并发同源顺序、Revision 升级端到端、失败记录消费与告警、重启重提验证。
+**T5-S4 已通过单实例验收**。恢复、手动与启动重提、顺序边界、Revision 升级及剩余验证范围统一见 [S4 验证结果](../implementation/t5-s4-verification-result.md)。

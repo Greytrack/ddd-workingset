@@ -29,11 +29,25 @@
 
 修改事件字段前查询本地 `ddd-test.event_publication`，未完成记录为 **0**。自动审查拦截了批量删除命令，本次未删除既有事件。业务表结构和 Modulith 注册表结构沿用运行时基线。
 
-S3 依赖单实例顺序投递来保障首次快照。协调器按当前队列中已有的序号排序并记录缺口，等待缺失序号、跨实例排序、并发同源交错、自动重试、去重、跨聚合恢复及 Revision 升级端到端留 S4。既有目标按身份、内容及发布版本比对，精确物化来源凭据仍留 S4。附件、关系、历史回读、Merge、删除、权限和版本治理按相应后续切片处理。
+本记录保留 S3 的原始验证范围。顺序、幂等、恢复、升级及其剩余边界见 [S4 验证结果](t5-s4-verification-result.md)。
 
 ## 收尾核对
 
 - `mvn -B test` 实测 46 项通过（2026-11-12），与实施记录一致。
 - 失败注入场景（物化拒绝、切换回滚）会让 `@ApplicationModuleListener` 抛出 `CowMaterializationFailedException`，日志出现 `SimpleAsyncUncaughtExceptionHandler` ERROR 属预期；对应 `event_publication.completion_date` 为空。
-- 偏离：`InMemoryLightTrackerItemRepository` 未做实例隔离（S3 原 A 裁定）；生产路径使用 JDBC，内存实现仅供测试。`CowEventHandlerTest` 因此仍依赖同一实例；S3 收尾决定补隔离或改按身份断言。
-- 待办：`ApplicationContextTest` 方法名仍写 `synchronously`，应改为“发布后同步监听器可见”，避免与 Modulith 异步消费混淆。
+- 内存持久化实现已删除。应用层测试用 Mockito 仓储和事件端口验证协作，保留真实领域对象。快照测试直接使用 PostgreSQL JDBC，HTTP 验收继续使用真实 Tomcat、PostgreSQL、Redis 和 Modulith。
+- 已完成：`ApplicationContextTest` 方法名已改为 `...published_and_visible_to_synchronous_listeners`，不再宣称 Modulith 同步消费。
+- 收尾已增补 `cow_failures.before_lock_version`、`after_lock_version`、`attempts`、`resolved_at`。旧记录允许缺少锁版本。收尾后 `mvn -B test` 仍为 **46 项通过**。
+
+## 移除内存持久化后的回归
+
+本次改造前已包含 S4，`mvn -B test` 实测 50 项通过。S3 的 46 项为历史结果。改造后 `mvn -B clean test` 与 `mvn -B test` 均实测 **Tests run: 50, Failures: 0, Errors: 0, Skipped: 0**，用例总数保持不变。
+
+| 测试 | 改造与覆盖 |
+| --- | --- |
+| `JdbcSnapshotStoreTest`（原 `SnapshotStoreTest`） | 4 项真实 PostgreSQL 测试验证修改前字段、发布大版本、后续修改隔离和未知引用。每例按唯一 LocalId 清理。 |
+| `RequirementChangeFlowTest` | 5 项 Mockito 应用层测试验证版次与锁版本、保存后发布、过期锁拒绝、连续快照和保存失败。真实事务与事件状态由 HTTP 验收覆盖。 |
+| `CowEventHandlerTest` | 使用 Mockito 模拟仓储查询结果，验证按 beforeRevision 匹配、三字段切换及跳过已物化目标。 |
+| `WorkingSetSliceIntegrationTest` | Mockito 仓储与真实 RequirementAdapter 验证 AT-01、AT-02、AC-02、范围拒绝与雪花 ID。 |
+
+真实 HTTP 验收、缓存与 ArchUnit 回归均通过。`rg -n "InMemory" src` 无匹配。

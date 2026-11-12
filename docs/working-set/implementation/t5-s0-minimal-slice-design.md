@@ -70,10 +70,10 @@ ddd-workingset/
 ├── src/main/java/
 │   ├── sk/workingset/domain/                # LightTrackerItem、TrackerItem、值对象
 │   ├── sk/workingset/application/           # 应用服务、CowEventHandler、port/、event/
-│   ├── sk/workingset/infrastructure/        # 内存仓库、SnowflakeIdGenerator
+│   ├── sk/workingset/infrastructure/        # JDBC 仓储、Redis 缓存、SnowflakeIdGenerator
 │   ├── alm/requirement/domain/              # Requirement 聚合（实现 TrackerItem）
 │   ├── alm/requirement/application/         # RequirementApplicationService
-│   ├── alm/requirement/infrastructure/      # Adapter、内存仓库、快照存储
+│   ├── alm/requirement/infrastructure/      # Adapter、JDBC 仓储与快照存储
 │   └── bootstrap/                           # 主类（@SpringBootApplication）+ configuration/（组合根、IdGeneratorConfig）
 └── src/test/java/                           # 与主代码同构的包
 ```
@@ -83,7 +83,7 @@ ddd-workingset/
 ```
 sk.workingset.domain        → 仅 JDK（纯 Java）
 sk.workingset.application  → sk.workingset.domain + 自身 port
-sk.workingset.infrastructure→ application/domain（内存实现）
+sk.workingset.infrastructure→ application/domain（JDBC 实现与缓存装饰）
 alm.requirement.domain     → sk.workingset.domain 的公共契约（实现 TrackerItem；单向）
 alm.requirement.application→ 自身 domain（+ 必要时 SK 公共值对象）
 alm.requirement.infrastructure → sk.workingset.application.port（实现 Port）
@@ -200,12 +200,12 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 
 | 类型 | 职责 |
 | --- | --- |
-| `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, LockVersion)`、`upgradeRevision()`（预留，不触发 COW）、访问器；`version` 发布大版本可空、`lockVersion` 乐观锁 |
+| `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, LockVersion)`、`upgradeRevision()`（S4 实现；升级触发 COW，D-018/INV-052）、访问器；`version` 发布大版本可空、`lockVersion` 乐观锁 |
 | `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
 | `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件；事件携带修改前/提交后 Revision） |
 | `RequirementAdapter` | 实现 `TrackerItemReadPort`；按变体构造，保留读取职责 |
 | `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，依赖 `RequirementRepository` + `SnapshotStore` |
-| `SnapshotStore` / `RequirementRepository`（内存） | 快照存取、聚合存取 |
+| `SnapshotStore` / `RequirementRepository` | 快照存取、聚合存取 |
 
 **共享事件**
 
@@ -257,14 +257,14 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 
 | 项 | 最小实现 |
 | --- | --- |
-| LightTrackerItem 存储 | PostgreSQL/Spring JDBC；Redis 查询缓存（提交后更新）；内存实现仅供单元测试 |
+| LightTrackerItem 存储 | PostgreSQL/Spring JDBC，Redis 查询缓存在提交后更新 |
 | Requirement 存储 | PostgreSQL/Spring JDBC（`lock_version` 条件更新） |
 | 快照存储 | PostgreSQL `requirement_snapshots`（按 `snapshotRef` 取） |
 | 事件派发 | Spring Modulith Event Publication Registry：业务事务内写 `event_publication`，提交后由 `@ApplicationModuleListener` 异步新事务消费；`SourceSerialCowCoordinator` 按 `sourceLocalId` 串行；S3 不新增 outbox/重试/去重；不承诺跨进程顺序（见 [S3 实施契约](t5-s3-codex-task-brief.md)） |
 | 装配 | Spring Boot 组合根（`bootstrap.configuration`） |
-| 外部依赖 | 无数据库、无消息中间件 |
+| 外部依赖 | PostgreSQL、Redis |
 
-**测试层次**：聚合单元测试（LTI 不变量）；应用服务集成测试（derive/resolve/read）；事件-物化集成测试（AT-03/04/05）；**架构检查**（AC-01 编译依赖、AC-02 身份稳定）。
+**测试层次**：已删除内存持久化实现。聚合单元测试使用真实领域对象，应用层测试用 Mockito 替代持久化端口，快照测试用真实 PostgreSQL JDBC。HTTP AcceptanceTest 覆盖 Tomcat、PostgreSQL、Redis 与 Modulith 的实际运行路径。AC-01 由架构测试检查，AC-02 按 LocalId 验证身份稳定。
 
 ## 14. 工程风险与尚未确定项
 

@@ -240,7 +240,7 @@ light_tracker_items 的乐观锁留 S4，不在 S3 加。
   如能构造事务回滚，增加“回滚后缓存不出现已物化状态”的断言。
 
 ## 11. 测试计划与实施结果（真实 PG/Redis/Tomcat）
-等待一律用 Awaitility（已随 spring-boot-starter-test 提供），不要用 Thread.sleep。实施后 `mvn test` 46 项通过；除内存仓储隔离外，以下 A～D 已落地。
+等待一律用 Awaitility（已随 spring-boot-starter-test 提供），不要用 Thread.sleep。S3 实施与收尾均通过 46 项测试，见 [S3 验证结果](t5-s3-verification-result.md)。
 
 A. 应用层测试（不启动 Web）
 1) CowEventHandlerTest：
@@ -259,8 +259,7 @@ A. 应用层测试（不启动 Web）
 3) 事件字段测试：RequirementChangeFlowTest 改为断言 before/after Revision 与 before/after LockVersion；
    ApplicationContextTest 同步。
 4) WorkingSetSliceIntegrationTest：
-   - 若 InMemoryLightTrackerItemRepository 做了实例隔离，AC02 的 assertSame 改为按 localId 的身份断言；
-   - 当前 `InMemoryLightTrackerItemRepository` 未做实例隔离；S3 生产路径使用 JDBC。S3 收尾补隔离，或明确该内存实现仅作测试替身并改用按身份断言。
+   - 应用层使用 Mockito 仓储端口与真实读 Adapter，AC-02 按 LocalId 断言身份。
 
 B. HTTP 验收（@SpringBootTest(webEnvironment=RANDOM_PORT)）
 新增 CowAcceptanceTest：
@@ -321,7 +320,7 @@ D. 回归
 - ArchUnit 通过；SK 不依赖 ALM；Handler 只经 RequirementWritePort。
 - 事件字段 before/after 与 lockVersion 在发布端、消费端、测试断言一致。
 - 未实现：自动重试 daemon、去重、跨实例顺序、并发同源交错、Revision 升级端到端、Merge/删除/权限。
-- **S3 收尾待办**：`InMemoryLightTrackerItemRepository` 实例隔离（A 裁定）；`ApplicationContextTest` 方法名/注释从 synchronously 改为“发布后同步监听器可见”；旧文档符号已在本轮清理。
+- 内存持久化实现已删除，应用层使用 Mockito，快照验证使用真实 JDBC。收尾及回归见 [S3 验证结果](t5-s3-verification-result.md)，恢复见 [S4 验证结果](t5-s4-verification-result.md)。
 
 ## 14. 禁止事项
 - 不引入 Kafka/RabbitMQ/Redis Stream/自建 outbox/分布式事务/通用 Saga。

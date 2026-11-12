@@ -125,7 +125,7 @@
 
 **测试**：AT-03/AT-04、首次快照优先、扇出、失败前置、缓存回滚、同源协调器、事件字段与 ArchUnit；详见 [S3 验证结果](t5-s3-verification-result.md)。
 
-**S3 收尾待办**：内存仓储实例隔离（A 裁定）尚未落地；`ApplicationContextTest` 方法名仍写 synchronously。
+**S3 收尾**：内存持久化实现已删除，测试改用 Mockito 与真实 JDBC。当前测试范围见 [最小持久化与测试适配](t5-s0-minimal-slice-design.md#13-最小持久化与测试适配)。
 
 **排除范围**：自动重试、去重、跨实例/并发同源顺序、跨聚合恢复、Revision 升级端到端、Merge/删除/权限/版本治理（S4+）。
 
@@ -133,34 +133,46 @@
 
 ## S4 一致性恢复与回归
 
+实施证据与剩余边界见 [S4 验证结果](t5-s4-verification-result.md)。
+
 **允许修改的代码范围**
 
-- `sk.workingset.application`：`CowEventHandler` 的幂等与恢复处理；
-- 测试：故障注入（`LightTrackerItemRepository.save` 首次失败）、重复事件、连续修改顺序回归。
+- `sk.workingset.application`：`CowEventHandler` 的幂等/恢复编排、`CowRecoveryService`、`SourceSerialCowCoordinator` 的有界等待；
+- `sk.workingset.infrastructure`：`JdbcCowMaterializationStore`、`JdbcCowFailureLog` 增列；
+- `alm.requirement.domain` / `application`：`upgradeRevision()` 与升级事件；
+- `bootstrap` / `bootstrap.configuration`：恢复入口与事务装配；
+- `src/main/resources/schema.sql`：`cow_materializations`、`cow_failures` 增列；
+- `src/test/java/**`：AT-05、重复事件、乱序、升级、重提。
 
-**输入依赖**：S3 完成；A3（部分提交 → 正向恢复）。
+**输入依赖**：S3 完成（46 项通过）；Modulith `event_publication` 未完成记录可重提。
 
 **需要建立的接口与行为**
 
 | 项 | 最小行为 |
 | --- | --- |
-| 幂等键 | `eventId + targetLocalId`；同一键重复处理不产生第二个业务对象 |
-| 恢复 | 保存成功但切换失败 → 重试**只执行切换**，不重建/覆盖已保存内容（即使来源已有后续合法修改） |
-| 重复事件 | 已 `materialized=true` 的变体直接跳过（INV-038） |
-| 首次快照顺序 | 连续修改 `A→B→C`，目标物化内容为 `A`（首次相关修改前快照） |
+| 幂等键 | `eventId + targetLocalId` 记录到 `cow_materializations`；重复处理不产生第二个业务对象 |
+| 恢复 | 业务保存成功但切换失败 → 重试**只执行切换**，不重建/覆盖已保存内容（即使来源已有后续合法修改） |
+| 重复事件 | 已 `materialized=true` 的变体直接跳过（INV-038）；未完成记录可重提 |
+| 顺序 | 同源按 `afterLockVersion` 有界等待缺失序号；跨实例用 advisory lock（可选）；ORDER_GAP 记录 |
+| 升级 | `upgradeRevision()` 递增 `revision`/`lock_version`；事件 before/after 不同；目标按 `beforeRevision` 匹配 |
+| 失败消费 | `cow_failures` 可查询/标记恢复；不引入告警平台 |
 
 **可执行测试**
 
-- AT-05：业务对象数量仍为 1、只补切换、最终三字段一致；
-- 重复事件不产生对象；连续修改顺序回归（SCN-030/067）。
+- AT-05：业务保存成功、切换失败 → 恢复只补切换；业务内容不变；LTI 最终 Local-backed；
+- 重复事件/重提：不产生第二对象；`completion_date` 更新；
+- 乱序：序号 2 先于 1，有界等待/ORDER_GAP；首次快照边界；
+- 升级：`before=3/after=4`，目标 revision 保持自身值；
+- 扇出：失败目标恢复不影响成功目标；
+- 回归：46 项全绿；ArchUnit。
 
 **完成定义**
 
-- AT-05 通过；重复事件与顺序回归测试通过；
-- 不引入生产级重试队列、死信队列或监控平台；
+- AT-05 通过；重提只补切换；重复事件幂等；顺序缺口有确定行为；升级事件端到端可验证；
+- 不引入 MQ/分布式事务/全局串行/常驻重试 daemon；
 - 恢复路径不改变 T3 的「不覆盖已保存内容」语义。
 
-**排除范围**：跨进程重试、分布式事务、告警平台、版本治理。
+**排除范围**：跨进程分布式锁（若未实现）、告警平台、Merge/删除/权限/版本治理。
 
 ---
 
