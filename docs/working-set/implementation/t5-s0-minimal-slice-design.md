@@ -130,22 +130,31 @@ bootstrap.configuration    → 所有实现（组合根）
 
 ## 8. 来源事件与快照（P4）
 
-- **生产（ALM）**：修改前读取完整内容 → 形成不可变快照（`snapshotRef`）→ 保存 → 发布 `RequirementChanged{eventId, requirementId, sourceLocalId, revision, snapshotRef, occurredAt}`。
-- **事件信封**：携带来源 `LocalId`、业务 `Revision`、事件身份等公共元数据；业务字段由 ALM 定义与解释。
-- **消费（SK）**：按顺序消费；在消费时查询 `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配的目标（D-017）；快照只用于内容构建，**不读来源当前值**（D-011 首次快照优先）。
+- **生产（ALM）**：修改前读取完整内容 → 形成不可变快照（`snapshotRef`）→ 保存 → 发布 `RequirementChanged{eventId, requirementId, sourceLocalId, beforeRevision, afterRevision, snapshotRef, occurredAt}`。
+- **事件信封**：携带来源 `LocalId`、修改前/提交后的业务 `Revision`、事件身份等公共元数据；业务字段由 ALM 定义与解释。普通修改 `beforeRevision == afterRevision`；显式升级（D-018/INV-052）可以不同。
+- **消费（SK，异步）**：来源 Command 保存成功后发布事件，监听器只入队；`CowEventDispatcher` 在独立执行上下文按 `sourceLocalId` 串行执行，来源命令不等待 COW。消费时查询 `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配 **`beforeRevision`** 的目标（D-017）；快照只用于内容构建，**不读来源当前值**（D-011 首次快照优先）。目标聚合自身版次取 `target.revision()`，不以来源 Revision 覆盖（D-018/INV-051）。
 - **禁止**：以来源当前内容或可变 Head Revision 代替修改前快照；连续来源变更必须满足首次相关修改快照优先。
 
 ## 9. 保存与切换顺序（A3 + T3）
 
 ```
-事件 → Handler 定位目标集合
-  → 每个目标：RequirementWritePort.materialize(targetLocalId, snapshotRef, revision)
-       ALM：以快照构建 Requirement 聚合 → 整体校验（含 lock_version 并发）→ 保存（幂等键 eventId + targetLocalId）
-  → 保存成功 → LightTrackerItem.switchToLocalBacked(revision)（单聚合事务）
-  → 记录物化完成
+来源 Command
+  → ALM 保存业务修改 + 修改前快照
+  → 发布 RequirementChanged（保存成功后）
+  → 监听器入队（CowEventDispatcher），命令返回（不等待 COW）
+异步执行（按 sourceLocalId 串行，跨来源可并行）
+  → Handler 定位目标集合（sourceLocalId + beforeRevision）
+  → 每个目标：RequirementWritePort.materialize(MaterializeRequest{
+       targetLocalId, targetTrackerId, commonId, sourceLocalId,
+       sourceRevision = beforeRevision, targetRevision, eventId, snapshotRef })
+       ALM：核验快照来源身份/版次/commonId → 以快照构建 Requirement 聚合 → 整体校验 → 保存
+            既有目标必须与本次物化证据一致才视为完成，不得直接当成功
+            （完整幂等键 eventId + targetLocalId 由 S4 落地）
+  → 正常返回 → LightTrackerItem.switchToLocalBacked(target.revision())（单聚合事务）
+  → 记录物化完成（不得早于保存成功）
 失败分支：
-  保存失败        → 不切换，重试（幂等）
-  保存成功切换失败 → 不回滚业务内容；重试只补切换（A3/T3 §7、SCN-067）
+  物化未正常返回   → 不切换，保持 Source-backed；写入 CowFailureLog；S4 重试
+  保存成功切换失败 → 不回滚业务内容；重新读取仍为 Source-backed；写入 CowFailureLog；S4 只补切换（A3/T3 §7、SCN-067）
 ```
 
 **内容固定范围（T3 §2.1 选择 A）**：首切片仅普通字段（`title`）；派生仅选定业务 Revision；附件与关系固定为派生时状态（R19），首切片不涉及，但实现不得用较新附件/关系覆盖派生基准（SCN-072）。
@@ -175,9 +184,13 @@ bootstrap.configuration    → 所有实现（组合根）
 | 类型 | 职责 |
 | --- | --- |
 | `WorkingSetApplicationService` | `derive(DeriveCommand)`、`resolve(ResolveQuery)`、`read(ReadQuery)` |
-| `CowEventHandler` | `onRequirementChanged(RequirementChanged)` |
+| `CowEventDispatcher` | `dispatch(RequirementChanged)`：只入队，立即返回；同源串行、跨源并行 |
+| `CowFailureLog` | 记录 `MATERIALIZE`/`SWITCH` 失败（事件、目标、来源、版次、异常、时间），供 S4 恢复查询 |
+| `CowEventHandler` | `onRequirementChanged(RequirementChanged)`：由 dispatcher 异步调用；按 `sourceLocalId + beforeRevision` 定位目标，逐目标调用写入 Port 并切换；失败写 `CowFailureLog` |
 | `TrackerItemReadPort`（port） | `readAt(Revision)`、`revision()`、`capabilities()`、`authorize(Operation, Caller)` |
-| `RequirementWritePort`（port） | `materialize(LocalId, SnapshotRef, Revision)` |
+| `RequirementWritePort`（port） | `materialize(MaterializeRequest)`；正常返回表示 BC 已确认有效物化写入 |
+| `MaterializeRequest`（port） | 目标身份、目标版次、来源身份、来源修改前版次、事件身份与快照引用；不建构建器框架 |
+| `MaterializationRejectedException`（port） | 表达“拒绝物化”这一事实；不建立九分类异常层次 |
 | `LightTrackerItemRepository`（port） | `findBySource(LocalId, Revision)`、`findById(LocalId)`、`save(LightTrackerItem)` |
 | `EventPublisher`（port） | `publish(DomainEvent)`（进程内实现） |
 | `IdentifierGenerator`（port） | `long nextId()`：雪花 ID 生成（P1/用户 2026-11-11）；`LocalId` 由其产生 |
@@ -188,15 +201,16 @@ bootstrap.configuration    → 所有实现（组合根）
 | --- | --- |
 | `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, LockVersion)`、`upgradeRevision()`（预留，不触发 COW）、访问器；`version` 发布大版本可空、`lockVersion` 乐观锁 |
 | `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
-| `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件） |
-| `RequirementAdapter` | 实现 `TrackerItemReadPort`、`RequirementWritePort` |
+| `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件；事件携带修改前/提交后 Revision） |
+| `RequirementAdapter` | 实现 `TrackerItemReadPort`；按变体构造，保留读取职责 |
+| `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，依赖 `RequirementRepository` + `SnapshotStore` |
 | `SnapshotStore` / `RequirementRepository`（内存） | 快照存取、聚合存取 |
 
 **共享事件**
 
 | 类型 | 职责 |
 | --- | --- |
-| `RequirementChanged` | 公共信封：`eventId`、`requirementId`、`sourceLocalId`、`revision`、`snapshotRef`、`occurredAt` |
+| `RequirementChanged` | 公共信封：`eventId`、`requirementId`、`sourceLocalId`、`beforeRevision`、`afterRevision`、`snapshotRef`、`occurredAt`；普通修改两版次相等，显式升级可不同 |
 | `SnapshotRef` | 不可变快照引用 |
 
 **辅助类型（最小集，不扩展为通用框架）**
@@ -213,12 +227,13 @@ bootstrap.configuration    → 所有实现（组合根）
 
 | 类型 | 职责 |
 | --- | --- |
+| `SerialPerSourceCowEventDispatcher`（`sk.workingset.infrastructure`） | 实现 `CowEventDispatcher`：按 `sourceLocalId` 串行执行、可注入 `Executor`；进程内队列，不提供可靠投递 |
 | `SnowflakeIdGenerator`（`sk.workingset.infrastructure`） | 实现 `IdentifierGenerator`：雪花算法（用户 2026-11-11 决定；去外部日志/异常/静态 holder 依赖） |
 | `IdGeneratorConfig`（`bootstrap.configuration`） | `@Configuration` + `@Bean IdentifierGenerator`；`DATACENTER_ID=1`、workerId 由本机地址哈希取模 |
 | `WorkingsetApplication`（`bootstrap`） | `@SpringBootApplication` 主类（非 web） |
-| `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配内存仓库、应用服务、Adapter 工厂 |
+| `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配内存仓库、应用服务、读 Adapter 工厂、物化 Adapter、Handler、dispatcher、执行器、失败记录与 Listener |
 
-`RequirementChanged` 由 **SK 定义、ALM 通过 Spring Event（`ApplicationEventPublisher`）发布**；S3 以 `@EventListener` 消费（默认同步、同线程顺序）。
+`RequirementChanged` 由 **SK 定义、ALM 通过 Spring Event（`ApplicationEventPublisher`）发布**；S3 的 `@EventListener` 只把事件交给 `CowEventDispatcher` 入队，COW 在独立执行上下文按 `sourceLocalId` 串行执行，来源 Command 不等待。S3 的“提交”= 保存成功返回；**不承诺**可靠投递、事务提交后交付、跨进程顺序或多监听器异常隔离；outbox/重试/去重留 S4（见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6）。
 
 **明确不构建**：通用 CRUD Repository、动态 SPI 注册器、通用 Saga/事务框架、跨 BC 事件总线平台、四 BC 通用适配层。
 
@@ -244,7 +259,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | LightTrackerItem 存储 | 内存仓库（`save`、`findById`、`findBySource`） |
 | Requirement 存储 | 内存仓库（ALM） |
 | 快照存储 | 内存 `SnapshotStore`（按 `snapshotRef` 取） |
-| 事件派发 | 进程内同步、顺序（满足 D-018 顺序消费前提） |
+| 事件派发 | 异步：Spring Event 同步交给 Listener 入队，`CowEventDispatcher` 在可注入执行器中按 `sourceLocalId` 串行执行；来源命令不等待 COW。进程内队列，无 outbox/重试/去重；不承诺可靠投递、事务提交或跨进程顺序（见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6） |
 | 装配 | Spring Boot 组合根（`bootstrap.configuration`） |
 | 外部依赖 | 无数据库、无消息中间件 |
 
@@ -256,7 +271,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | --- | --- | --- |
 | R1 | 仓库**无构建系统**（无 `pom.xml`，`src/` 为空，0 Java 文件） | 已确认；S1 第一件事为建骨架 |
 | R2 | 部署/CI 运行环境未验证（仅本地 JDK 21 + Maven 3.9.11 证据） | 未验证；CI 接入时复核 P1 |
-| R3 | 快照序列化与可靠投递 | 概念级已定（P4），实现留专项 |
+| R3 | 快照序列化与可靠投递 | S3 采用进程内异步队列，不提供可靠投递；outbox/持久化事件日志、重试、去重由 S4 完成 |
 | R4 | ~~`RequirementId` 与 `LocalId` 的映射~~ | **已裁定（用户 2026-11-11）：LocalId 是所有业务对象聚合的唯一标识，RequirementId = LocalId；S1 直接以 `LocalId` 作为聚合主键，不需要映射** |
 | R5 | Mermaid 渲染未验证（无 `mmdc`） | 发布前复核 |
 

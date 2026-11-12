@@ -44,24 +44,25 @@
 | 项 | 内容 |
 | --- | --- |
 | Given | `LTI1` 未物化；来源 `R0` revision=3，`title=A` |
-| When | ALM 执行普通修改 `title: A→B`（不调用显式升级） |
-| Then | 保存后 `R0.revision` 仍为 `3`；发布 `RequirementChanged{revision=3, snapshotRef→A}` |
-| When | `CowEventHandler` 按顺序消费事件 |
-| Then | 定位目标（`materialized=false` 且 `sourceLocalId=L0`、`sourceRevision=3`）；调用 `RequirementWritePort.materialize(L1, snapshotRef)`；ALM 以**快照 A** 构建 `L1` 聚合并保存；随后 `LTI1.switchToLocalBacked(3)` |
-| 断言 | `R0.revision == 3`；`LTI1.materialized == true`；`LTI1.sourceLocalId == L1`；`LTI1.sourceRevision == 3`；`L1` 的内容 `title == "A"`（**不是 B**）；`read(WS1)` 返回 A；`read(WS0)` 返回 B |
-| 反例 | 若实现读取来源当前值，物化内容会是 B，AT-03 失败（这正是 D-011 首次快照优先的反例） |
+| When | ALM 执行普通修改 `title: A→B`（不调用显式升级）；来源命令在保存成功后立即返回 |
+| Then | 保存后 `R0.revision` 仍为 `3`；发布 `RequirementChanged{beforeRevision=3, afterRevision=3, snapshotRef→A}` 并进入异步投递；`LTI1` 仍 `materialized=false`；`read(WS1)` 在最终一致性窗口内返回来源当前内容 `B` |
+| When | 异步执行器完成（可控执行器 drain / 完成信号） |
+| Then | 用 `sourceLocalId=L0` + `beforeRevision=3` 定位目标（`materialized=false`）；调用 `RequirementWritePort.materialize(MaterializeRequest{targetLocalId=L1, sourceLocalId=L0, sourceRevision=3, targetRevision=LTI1.revision, snapshotRef})`；ALM 先核验快照来源身份/版次/commonId，再以**快照 A** 构建 `L1` 聚合并保存；随后 `LTI1.switchToLocalBacked(LTI1.revision)` |
+| 断言 | `R0.revision == 3`；窗口内 `read(WS1)` 为 `B`；异步完成后 `LTI1.materialized == true`、`LTI1.sourceLocalId == L1`、`LTI1.sourceRevision == 3`、`L1` 内容 `title == "A"`（**不是 B**）、`read(WS1)` 返回 `A`、`read(WS0)` 返回 `B`；测试不得用固定 `Thread.sleep` |
+| 反例 | 若实现读取来源当前值，物化内容会是 B；若把命令返回当作 COW 完成，窗口内断言会失败（D-011 首次快照优先 + 异步最终一致性） |
 | 关联 | D-009/D-011、INV-034/037、SCN-025/030 |
 
 ## AT-04 物化后三字段一致与本地内容独立
 
 | 项 | 内容 |
 | --- | --- |
-| Given | AT-03 已完成（`LTI1` 为 Local-backed） |
-| When | `read(WS1, LTI1)`；随后来源 `R0` 再次普通修改 `title: B→C` |
-| Then | `LTI1` 的三字段满足 `materialized=true`、`sourceLocalId==localId`、`sourceRevision==revision`；`read(WS1)` 返回本地内容 A；来源修改为 C 后 `read(WS1)` 仍返回 A，`read(WS0)` 返回 C |
-| 断言 | 三字段一致（聚合后置条件）；`read(WS1).title == "A"`；来源再改后 `read(WS1).title == "A"`；`LTI1.revision` 未因来源普通修改而变化 |
+| Given | AT-03 已异步完成（`LTI1` 为 Local-backed） |
+| When | `read(WS1, LTI1)`；随后来源 `R0` 再次普通修改 `title: B→C`，命令返回并异步完成 |
+| Then | `LTI1` 的三字段满足 `materialized=true`、`sourceLocalId==localId`、`sourceRevision==revision`；`read(WS1)` 返回本地内容 A；来源修改为 C 后 `read(WS1)` 仍返回 A，`read(WS0)` 返回 C；异步窗口内 `LTI1` 不会回退为 Source-backed |
+| 断言 | 三字段一致（聚合后置条件）；`read(WS1).title == "A"`；来源再改后 `read(WS1).title == "A"`；`LTI1.revision` 未因来源普通修改而变化；读取不依赖异步完成顺序 |
 | 反例 | 若物化后仍被来源事件覆盖，违反 INV-039；若三字段不一致，违反 INV-069 |
 | 关联 | T3 §6/§7、INV-039/069、SCN-032 |
+| 实现级补充 | 来源/目标版次分离、快照缺失、来源身份/commonId 不匹配、既有目标证据不一致、切换失败可读回、Spring 装配与异常不冒泡等用例见 [S3 任务说明](t5-s3-codex-task-brief.md) §5 |
 
 ## AT-05 业务保存成功但 LightTrackerItem 切换失败
 

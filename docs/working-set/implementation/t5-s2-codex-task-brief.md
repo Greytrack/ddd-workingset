@@ -52,10 +52,10 @@ src/test/java/**
 
 ### 3.3 Spring Event 作为事件框架
 
-- 事件类型 `RequirementChanged`（SK 定义公共信封，不可变）：`eventId`（雪花 ID）、`requirementId`、`sourceLocalId`、`revision`、`snapshotRef`、`occurredAt`。
+- 事件类型 `RequirementChanged`（SK 定义公共信封，不可变）：`eventId`（雪花 ID）、`requirementId`、`sourceLocalId`、`revision`、`snapshotRef`、`occurredAt`。**S3 修订（2026-11-12）**：拆分为 `beforeRevision`/`afterRevision`，见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.1。
 - 发布：ALM 应用服务注入 `ApplicationEventPublisher`，保存成功后 `publishEvent(...)`。
 - **S2 不实现消费**（S3 才加 `@EventListener` 的 COW Handler）。
-- 顺序语义记录：Spring Event 默认同线程同步派发 → 满足 D-018 顺序消费前提；**若后续引入 `@Async`，必须显式排序**（S3 约束）。
+- 顺序语义记录：Spring Event 默认同线程同步派发；**若后续引入 `@Async`，必须显式排序**（S3 约束）。**2026-11-12 澄清**：该事实仅支持“同一调用线程内同步调用、保存后可见、同线程按发布顺序到达”，不承诺事务提交或跨线程顺序。**S3 已裁定采用异步投递**（Listener 只入队 + 按来源串行执行器），见 S3 任务说明 §3.6。
 
 ## 4. 执行步骤（Red → Green）
 
@@ -99,7 +99,7 @@ COW Handler 与物化切换、Local-backed Query、Merge、绑定/删除、权�
 | 编号 | 项 | 处理 |
 | --- | --- | --- |
 | O1 | 雪花位宽 `3+3+5` → 单机每毫秒 32 ID（约 32k ID/s） | 按用户给定参数实现；若压测不足再评估位宽，不擅自修改算法 |
-| O2 | Spring Event 默认同步顺序 | 作为 S3 消费顺序前提记录；引入异步必须显式排序 |
+| O2 | Spring Event 默认同步顺序 | 作为 S3 消费顺序前提记录；引入异步必须显式排序。**2026-11-12 澄清**：仅指同线程同步调用顺序，不承诺事务提交或跨线程顺序 |
 | O3 | `RequirementAdapter.readAt` 对非当前版次抛异常（S1 遗留） | **S3** 需改为按快照读取；S2 不改 |
 | O4 | `authorize` 恒 true（S1 遗留） | 权限切片再处理；S2 不改 |
 | O5 | Spring Boot 依赖下载可用性 | 若离线/镜像缺失，回退到 `spring-context` 并记录偏离，不阻塞 S2 业务行为 |

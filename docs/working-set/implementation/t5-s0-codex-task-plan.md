@@ -84,7 +84,7 @@
 | 雪花 ID | `IdentifierGenerator` + `SnowflakeIdGenerator` + `IdGeneratorConfig`；`LocalId` 由其生成，删除 UUID 路径 |
 | 普通修改 | `title: A→B`，`lock_version` 自动 +1，**`revision` 不升级、`version` 不变**；`expectedLockVersion` 乐观锁 |
 | 修改前快照 | 保存前读取完整内容写入 `SnapshotStore`，返回 `snapshotRef` |
-| 来源事件 | `RequirementChanged{eventId, requirementId, sourceLocalId, revision, snapshotRef, occurredAt}`；经 `ApplicationEventPublisher` 发布（S2 不消费） |
+| 来源事件 | `RequirementChanged{eventId, requirementId, sourceLocalId, revision, snapshotRef, occurredAt}`；经 `ApplicationEventPublisher` 发布（S2 不消费）。**S3 修订**：拆分为 `beforeRevision`/`afterRevision`，见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.1 |
 | 并发证据 | 写入以 `lock_version` 作乐观锁前置（`Revision` 与发布 `version` 不参与并发判定） |
 
 **可执行测试**
@@ -105,10 +105,12 @@
 
 **允许修改的代码范围**
 
-- `sk.workingset.domain`：`LightTrackerItem.switchToLocalBacked(Revision)`（三字段一次更新）；
-- `sk.workingset.application`：`CowEventHandler`（消费事件、定位目标、编排）、`RequirementWritePort` 接口；
-- `alm.requirement.infrastructure`：`RequirementAdapter` 实现 `RequirementWritePort.materialize(LocalId, SnapshotRef, Revision)`；
-- `bootstrap.configuration`：注册 Handler 与事件订阅。
+- `sk.workingset.domain`：沿用 S1 的 `LightTrackerItem.switchToLocalBacked(Revision)`（三字段一次更新，不新增领域行为）；
+- `sk.workingset.application`：`CowEventHandler`、`CowEventDispatcher`、`CowFailureLog`、`RequirementWritePort`、`MaterializeRequest`、`MaterializationRejectedException`；`RequirementChanged` 拆分为 `beforeRevision`/`afterRevision` 的最小接口调整；
+- `sk.workingset.infrastructure`：`InMemoryLightTrackerItemRepository` 读写实例隔离；`SerialPerSourceCowEventDispatcher`（同源串行 + 可注入执行器）；
+- `alm.requirement.application`：`RequirementApplicationService` 发布修改前/提交后版次；
+- `alm.requirement.infrastructure`：新增 `RequirementMaterializationAdapter` 实现 `RequirementWritePort.materialize(MaterializeRequest)`；`RequirementAdapter` 保留读取职责与构造方式；
+- `bootstrap` / `bootstrap.configuration`：Listener 只入队；注册 Handler、dispatcher、执行器与失败记录；读取/物化 Adapter 分别装配。
 
 **输入依赖**：S2 完成。
 
@@ -116,25 +118,37 @@
 
 | 项 | 最小行为 |
 | --- | --- |
-| 目标定位 | `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配（消费时确定，D-017） |
-| 业务保存 | 以**快照**构建 `Requirement`（复用预分配 `localId`，`lock_version` 并发校验），整体校验后保存 |
-| 状态切换 | 保存成功后，单聚合事务内一次更新 `materialized=true`、`sourceLocalId=localId`、`sourceRevision=revision` |
-| Local-backed Query | `read` 返回本地内容（`readAt(revision)`） |
-| 失败分支 | 保存失败不切换；切换失败不回滚业务内容（S4 补恢复） |
+| 目标定位 | `materialized=false` 且 `sourceLocalId`/`sourceRevision` 匹配 **`beforeRevision`**（消费时确定，D-017）；`afterRevision` 不参与定位 |
+| 异步投递 | 来源 Command 保存成功后发布事件并立即返回；Listener 只入队；COW 在独立执行上下文执行（S3 的“提交”= 保存成功返回） |
+| 同源顺序 | 按 `sourceLocalId` 串行执行、跨来源并行；顺序调用下首次快照优先；并发同源交错与跨进程顺序留 S4 |
+| 业务保存 | 以**快照**构建 `Requirement`（复用预分配 `localId`；目标 `revision` 取自身版次，`version` 继承快照，`lock_version=0`）；先核验快照来源身份/版次/commonId，整体校验后保存 |
+| 既有目标 | 不得直接当成功；内容与身份同本次物化证据一致才正常返回，否则拒绝且不覆盖 |
+| 状态切换 | 正常返回后，单聚合事务内一次更新 `materialized=true`、`sourceLocalId=localId`、`sourceRevision=revision`（`revision` 为 `target.revision()`） |
+| Local-backed Query | `read` 返回本地内容（`readAt(revision)`）；异步窗口内仍走 Source-backed |
+| 失败可观察 | 物化/切换失败写入 `CowFailureLog`（事件、目标、来源、版次、阶段、异常、时间），不只日志 |
+| 失败分支 | 物化未正常返回不切换；切换失败不回滚业务内容；内存仓储隔离保证重新读取仍为 Source-backed（S4 补恢复） |
 
 **可执行测试**
 
-- AT-03（完整）：物化内容为 `A`（非 `B`）；三字段一致；
-- AT-04：来源再改为 `C` 后，`read(WS1)` 仍为 `A`，`read(WS0)` 为 `C`；
-- 保存失败不切换（注入保存异常）；
-- **AC-02（物化部分）**：物化前后 `localId` 相同，ALM 可按它定位同一变体。
+- AT-03（异步最终状态）：命令返回时目标未物化、`read(WS1)` 为来源当前值 `B`；异步完成后物化内容为修改前 `A`（非 `B`）；三字段一致；
+- AT-04：物化后来源再改为 `C` 并异步完成后，`read(WS1)` 仍为 `A`，`read(WS0)` 为 `C`；
+- 异步窗口与完成信号使用可控执行器，不用固定 `Thread.sleep`；
+- 同源顺序：连续 `A→B` 按序入队，首次快照 `A` 生效；跨来源互不阻塞；
+- 保存失败不切换；切换失败后重新读取仍为 Source-backed；失败均可从 `CowFailureLog` 查询；
+- 快照缺失、来源身份/commonId 不匹配、既有目标证据不一致：拒绝且不切换；
+- 来源/目标版次分离：来源 `beforeRevision=3`、目标 `revision=1`，物化后目标仍为 1；
+- 升级型事件（直接构造 `before=3/after=4`）用 `beforeRevision` 定位；
+- Spring 上下文：Listener/Dispatcher/Handler/Port/Executor 可装配，失败不冒泡到来源命令；
+- **AC-02（物化部分）**：物化前后 `localId` 相同，按身份断言。
 
 **完成定义**
 
-- AT-03、AT-04 通过；三字段只有一个写入入口；保存失败不切换有测试；
-- Handler 不直接操作 ALM Repository（只经 `RequirementWritePort`）。
+- AT-03/AT-04 以异步最终状态通过；三字段只有一个写入入口；保存失败不切换、切换失败可读回 Source-backed 有测试；
+- Handler 不直接操作 ALM Repository（只经 `RequirementWritePort`）；读/写 Adapter 分离；
+- 事件 before/after 语义在发布端与消费端一致，未把 `afterRevision` 用于目标定位或快照核验；
+- 来源命令不等待 COW；同源串行、跨来源并行；失败写入可查询记录；异步测试无固定 sleep。
 
-**排除范围**：切换失败的幂等恢复、重试队列、生产消息中间件、Merge。
+**排除范围**：可靠投递（outbox/重试/死信/去重）、跨进程顺序、并发同源交错、切换失败的幂等恢复、生产消息中间件、Merge。
 
 ---
 

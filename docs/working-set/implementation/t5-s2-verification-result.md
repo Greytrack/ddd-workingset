@@ -48,7 +48,7 @@ BUILD SUCCESS
 | --- | --- |
 | Spring Boot | `spring-boot-dependencies` 3.3.5 BOM + `spring-boot-starter`（非 web）；`WorkingsetApplication` 启动类；领域层仍为纯 Java |
 | 雪花 ID | `START_STAMP=1577836800000L`；`DATACENTER_BIT=3`、`MACHINE_BIT=3`、`SEQUENCE_BIT=5`；`IdGeneratorConfig` 使用 `DATACENTER_ID=1`、workerId 为本机地址哈希取模；`LocalId.newId()` 的 UUID 路径已删除 |
-| Spring Event | ALM 应用服务注入 `ApplicationEventPublisher`，保存成功后发布 `RequirementChanged`；默认同线程同步派发，满足 D-018 顺序消费前提 |
+| Spring Event | ALM 应用服务注入 `ApplicationEventPublisher`，保存成功后发布 `RequirementChanged`；默认同线程同步派发。**2026-11-12 澄清**：已验证范围仅限同线程同步调用、事件在保存之后发布且监听器可观察到保存后状态、同一线程内按发布顺序到达；**不承诺**事务提交语义、异步/跨线程顺序或多监听器异常隔离。**S3 已裁定采用异步投递**（Listener 只入队 + 按来源串行执行器），见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6。 |
 
 ## 5. 与设计的偏离（已记录，不改变契约）
 
@@ -65,14 +65,14 @@ BUILD SUCCESS
 | 编号 | 项 | 状态 |
 | --- | --- | --- |
 | O1 | 位宽 3+3+5 → 单机每毫秒 32 个 ID | 按给定参数实现；压测不足时再评估 |
-| O2 | Spring Event 默认同步顺序 | 已记录；S3 若引入 `@Async` 必须显式排序 |
+| O2 | Spring Event 默认同步顺序 | 已记录；S3 若引入 `@Async` 必须显式排序。**2026-11-12 澄清**：上述“顺序”仅指同一调用线程内的同步调用顺序，不构成事务提交或跨线程顺序承诺（见 S3 任务说明 §3.6） |
 | O3 | `RequirementAdapter.readAt` 对非当前版次抛异常 | **S3** 改为按快照读取 |
 | O4 | `authorize` 恒 `true` | 权限切片再处理 |
 | O5 | Spring Boot 依赖下载 | 本机镜像可用，升级成功；未回退 `spring-context` |
 
 ## 7. 未做（后续任务）
 
-S3：`CowEventHandler`、`RequirementWritePort.materialize`、`switchToLocalBacked`、Local-backed Query；S4：保存成功但切换失败的幂等恢复、重复事件与顺序回归。Merge、删除、权限、版本治理不在首切片。
+S3：`CowEventHandler`、`RequirementWritePort.materialize`、`switchToLocalBacked`、Local-backed Query；S4：保存成功但切换失败的幂等恢复、并发重复投递、重复事件与顺序回归。Merge、删除、权限、版本治理不在首切片。
 
 ## 8. 复现
 

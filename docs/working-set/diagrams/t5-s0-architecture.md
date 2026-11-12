@@ -91,7 +91,8 @@ sequenceDiagram
     participant AAPP as ALM RequirementApplicationService
     participant SNAP as SnapshotStore
     participant RAGG as Requirement 聚合
-    participant EV as 事件总线（同步顺序）
+    participant EV as 事件总线（同步发布）
+    participant DISP as CowEventDispatcher（异步队列）
     participant COW as SK CowEventHandler
     participant LTI as LightTrackerItem
     participant WP as RequirementWritePort（ALM Adapter）
@@ -100,22 +101,25 @@ sequenceDiagram
     U->>AAPP: 修改 title A→B（普通修改）
     AAPP->>SNAP: 读取修改前完整内容，保存不可变快照
     AAPP->>RAGG: 保存修改（lock_version 自动 +1，Revision 与发布 version 不变）
-    AAPP->>EV: 发布 RequirementChanged（snapshotRef + revision）
-    EV->>COW: 顺序派发
-    COW->>LTI: 查询 materialized=false 且 sourceLocalId/sourceRevision 匹配
+    AAPP->>EV: 发布 RequirementChanged（snapshotRef + beforeRevision/afterRevision）
+    EV->>DISP: Listener 只入队，立即返回
+    AAPP-->>U: 命令返回（COW 尚未完成；read 仍走 Source-backed）
+    Note over DISP: 异步执行器（按 sourceLocalId 串行，跨来源可并行）
+    DISP->>COW: onRequirementChanged(event)
+    COW->>LTI: 查询 materialized=false 且 sourceLocalId/beforeRevision 匹配
     LTI-->>COW: 目标变体（扇出）
-    COW->>WP: materialize(targetLocalId, snapshotRef, revision)
-    WP->>RAGG: 以快照构建聚合 → 整体校验（含 lock_version 并发）→ 保存（幂等键）
+    COW->>WP: materialize(MaterializeRequest)
+    WP->>RAGG: 核验快照来源 → 以快照构建聚合 → 整体校验 → 保存（幂等键留 S4）
     alt 保存失败
         RAGG-->>WP: 拒绝
         WP-->>COW: 失败
-        COW->>COW: 不切换状态，重试（幂等）
+        COW->>COW: 不切换状态，保持 Source-backed；写 CowFailureLog（S4 重试）
     else 保存成功
         RAGG-->>WP: 成功
         WP-->>COW: 成功
-        COW->>LTI: switchToLocalBacked(revision)（单聚合事务，三字段同步）
+        COW->>LTI: switchToLocalBacked(target.revision())（单聚合事务，三字段同步）
         alt 切换失败
-            COW->>COW: 不回滚业务内容，重试只补切换
+            COW->>COW: 不回滚业务内容；重新读取仍为 Source-backed；写 CowFailureLog（S4 只补切换）
         else 切换成功
             COW->>COW: 记录物化完成
         end
