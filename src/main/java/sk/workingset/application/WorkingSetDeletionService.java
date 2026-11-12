@@ -95,13 +95,6 @@ public class WorkingSetDeletionService {
         workingSets.deleteWorkingSet(id);
     }
 
-    /** 停用的前置规则。后续停用命令须在同一事务内调用并执行状态变更。 */
-    @Transactional
-    public void assertDisableAllowed(WorkingSetId id) {
-        lockWorkingSet(id);
-        assertNoChildren(id);
-    }
-
     private void assertNoChildren(WorkingSetId id) {
         var children = workingSets.findChildren(id).stream().map(WorkingSetId::value).toList();
         if (!children.isEmpty()) {

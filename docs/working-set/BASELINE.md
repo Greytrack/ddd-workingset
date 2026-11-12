@@ -73,8 +73,10 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-12 | D5：用户裁定 WorkingSet/Tracker **不存在“停用”概念**，相关表述与代码已清除（`assertDisableAllowed` 移除，`mvn -B test` 77 项通过），[QUESTION-009.a](domain/open-questions.md) 关闭。D8：用户按 A（工作视图/范围清单）收尾关闭 [QUESTION-001](domain/open-questions.md)，与 S1～S7 实现及本 BASELINE 一致。D9：用户裁定关闭 [QUESTION-008](domain/open-questions.md) 已实现部分（登记前/后证据分界、普通字段决策优先、部分成功、新轮次、Checkpoint），剩余并发/重试/结果恢复协议转 `QUESTION-008.a` |
+| 2026-11-12 | D1：`TrackerItem` 继承 `BusinessObject`，`BusinessObject` 声明 delete/undelete/delete2 公共能力，具体规则/guard/编排由各业务 BC 实现；设计见 [business-object-lifecycle-design.md](domain/business-object-lifecycle-design.md)，Draft，接口签名待评审。D2：Requirement 家族唯一性按 WorkingSet 作用域（用户选择 A），schema/索引已修正，见 [D2 验证](implementation/t5-d2-family-scope-verification.md) |
 | 2026-11-12 | [S7 实施裁定](reviews/2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界，登记后普通字段按决策优先；Requirement `delete`/`undelete`/`delete2` 最小生命周期；S7 验证见 [S7 验证结果](implementation/t5-s7-verification-result.md)，未发布 |
-| 2026-11-12 | [FACT-028](domain/facts.md) 多级 WorkingSet 谱系核心规则：单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 不允许删除/停用；设计见 [working-set-lineage-design.md](domain/working-set-lineage-design.md)，Draft，未发布 |
+| 2026-11-12 | [FACT-028](domain/facts.md) 多级 WorkingSet 谱系核心规则：单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 不允许删除；WorkingSet/Tracker 不存在“停用”生命周期（同日裁定）；设计见 [working-set-lineage-design.md](domain/working-set-lineage-design.md)，Draft，未发布 |
 | 2026-11-11 | T1 关闭、T2～T4 冻结：见下方契约登记及各议题评审；T1 Q4 见 ADR-0005 补充裁定 |
 | 2026-11-10 | [阶段 4 收尾与 D-019](reviews/2026-11-10-stage-4-productspace-classification-review.md)、[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)；ADR-0001～0005 接受依据见各 ADR |
 | 2026-11-09～10 | [阶段 3.1 规则确认](reviews/2026-11-09-stage-3-1-rule-convergence.md)、[分主题接受与 INV 审查](reviews/2026-11-10-invariant-evidence-review.md) |

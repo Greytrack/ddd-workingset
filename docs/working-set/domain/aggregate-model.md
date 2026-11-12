@@ -8,9 +8,9 @@
 
 | 概念 | 独立身份／生命周期 | 候选内部不变量 | 事务与并发关注 | 反例／未决问题 |
 | --- | --- | --- | --- | --- |
-| Working Set | 有长期身份；准备、发布、归档等状态维度尚未确认 | 发布 revision 与当前范围一致；发布／取消不互相覆盖 | 巨量 Binding 会造成加载与版本热点 | 改名不应加载十万 Item；`QUESTION-001/012` |
+| Working Set | 有长期身份；业务身份已按“工作视图/范围清单”关闭（QUESTION-001，2026-11-12）；准备、发布、归档等状态维度尚未确认 | 发布 revision 与当前范围一致；发布／取消不互相覆盖 | 巨量 Binding 会造成加载与版本热点 | 改名不应加载十万 Item；`QUESTION-012` |
 | Tracker | D-001/D-002：独立聚合及非共享派生新身份 | D-003：parentId 为同工作集结构父，sourceId 为直接父级工作集来源；禁止跳级 | 结构范围校验与来源准入分别分析；不组合整树或整链 | D-006 已禁止创建后 parentId 修改；Shared 父级一致性、sourceId 可变性、同源多派生及 Item 归属待定 |
-| TrackerItem（公共契约） | 无自身聚合；是 Working Set 与业务 BC 的公共 Item 能力接口（D-007） | 公共身份与工作集语义，不拥有业务状态 | 跨 BC 协作的公共语言，不承载业务不变量 | CommonId/LocalId/Revision/Version 的分配待定 |
+| TrackerItem（公共契约） | 无自身聚合；继承 `BusinessObject`，是 Working Set 与业务 BC 的公共 Item 能力接口（D-007）；`BusinessObject` 声明 delete/undelete/delete2 能力 | 公共身份、Revision 与生命周期能力声明；不拥有业务状态、删除规则或编排 | 跨 BC 协作的公共语言，不承载业务不变量；具体删除规则、guard、编排由 BC 实现 | CommonId/LocalId/Revision/Version 的分配待定；接口签名待评审 |
 | LightTrackerItem（已确认独立聚合） | Working Set 专属独立聚合（D-008）；身份、来源与有效变体定位权威 | 当前 LocalId、保留 CommonId、SourceLocalId/SourceRevision、自身 Revision（D-018，与 SourceRevision 分离）、`materialized` 物化状态（K1′）、TrackerId/WorkingSetId | 与业务对象身份一致性、双事实收敛、物化并发 | 属性集与物化协议见 [T3 契约](lighttrackeritem-materialization-contract-v1.md)（已冻结）；非查询投影 |
 | Business Item | 各业务上下文独立聚合（Requirement/Part/Process 等），实现 TrackerItem | 内容、状态机、revision、字段组合合法性 | Merge/COW 必须走其公开写能力 | 不能用通用字段 Map 绕过规则；SK 不拥有其完整状态 |
 | Merge Round | 轮次身份和可恢复生命周期 | 命令冻结、状态转换、进度与唯一终态结果 | 不持有所有业务对象；部分成功需保留 | 把整轮设为大事务会掩盖已提交结果 |
@@ -29,7 +29,7 @@
 - 若 Working Set 规模小且发布需要整体原子，`AP-001` 更简单。
 - 原 `AP-002` 的独立 Branch 根与 D-001 不兼容；修订建议仍 Draft，不自动成为获批方案。
 - 若既要混合共享／派生又要支持巨大范围与稳定历史，`AP-003` 更有解释力，但双事实和历史成本最高。
-- 最终选择被 `QUESTION-001/002/004/006/012` 阻塞。
+- 最终选择被 `QUESTION-002/004/006/012` 阻塞（`QUESTION-001` 已按工作视图/范围清单关闭，不再阻塞方案选择）。
 
 ## 阶段 3：逐概念一致性审查
 
@@ -81,7 +81,7 @@ Shared Tracker 可以被多个工作集引用，数据库归属默认工作集�
 
 已确认的 Tracker 独立身份/生命周期、组织位置、工作集组织树、直接来源与工作集成员扩展分别表达。parentId 在完成创建前确定，完成后不再移动；其他状态变化仍由各自规则决定。创建前重组是输入/候选结构确定，不等于先完成创建再更新父字段，不需增加 Draft Tracker 根。
 
-候选跨聚合校验集中于目标父有效范围、创建候选结构无环和来源准入；不能据此合并整树。Tracker 局部不可变性不独自保证跨 Tracker 父有效，仍需创建时的协作协议。创建时父消失的竞态、批次原子性未裁定；父后续**删除**已由 2026-11-11 K2 裁定（存在组织子级/派生子级/Item 时禁止删除），「停用」仍待裁定（`QUESTION-009.a`）。
+候选跨聚合校验集中于目标父有效范围、创建候选结构无环和来源准入；不能据此合并整树。Tracker 局部不可变性不独自保证跨 Tracker 父有效，仍需创建时的协作协议。创建时父消失的竞态、批次原子性未裁定；父后续**删除**已由 2026-11-11 K2 裁定（存在组织子级/派生子级/Item 时禁止删除）；WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定）。
 
 成员扩展可继续关联新 Tracker，不移动已有节点。AP-002 获得结构稳定性依据但未获批准；Item 归属当时仍待定，现由 D-007 关闭。见 [生命周期图](../diagrams/tracker-creation-lifecycle.md) 与 SCN-016—018。
 
@@ -218,4 +218,4 @@ LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/So
 
 ## 阶段 5 补充：多级 WorkingSet 谱系（Draft，用户 2026-11-12 确认核心规则）
 
-用户确认：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除或停用，叶子 WS 删除按 T2 K3；不引入 GateFlow 特例。详见 [FACT-028](facts.md)、[多级 WorkingSet 谱系设计](working-set-lineage-design.md)。实施范围和待验证项见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。
+用户确认：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除，叶子 WS 删除按 T2 K3；WorkingSet/Tracker 不存在“停用”生命周期；不引入 GateFlow 特例。详见 [FACT-028](facts.md)、[多级 WorkingSet 谱系设计](working-set-lineage-design.md)。实施范围和待验证项见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。

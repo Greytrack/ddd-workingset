@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS requirements (
 );
 
 ALTER TABLE requirements ADD COLUMN IF NOT EXISTS delete_flag BOOLEAN NOT NULL DEFAULT FALSE;
+-- D2: WorkingSet-scoped Requirement family uniqueness. The column is derived from trackers.
+ALTER TABLE requirements ADD COLUMN IF NOT EXISTS working_set_id VARCHAR(128);
 
 CREATE TABLE IF NOT EXISTS light_tracker_items (
     local_id         VARCHAR(64) PRIMARY KEY,
@@ -127,6 +129,50 @@ CREATE TABLE IF NOT EXISTS trackers (
         OR (source_id IS NOT NULL AND working_set_id <> '1' AND sharing_mode = 'UNSHARED'))
 );
 
+-- D2: Requirement family uniqueness is scoped by WorkingSet, not by Tracker (POL-005).
+UPDATE requirements r
+SET working_set_id = t.working_set_id
+FROM trackers t
+WHERE r.tracker_id = t.tracker_id AND r.working_set_id IS NULL;
+
+DO '
+DECLARE conflict TEXT;
+BEGIN
+    SELECT string_agg(working_set_id || ''/'' || common_id, '', '')
+    INTO conflict
+    FROM (
+        SELECT working_set_id, common_id
+        FROM requirements
+        WHERE working_set_id IS NOT NULL
+        GROUP BY working_set_id, common_id
+        HAVING count(*) > 1
+    ) duplicates;
+    IF conflict IS NOT NULL THEN
+        RAISE EXCEPTION ''D2 requires resolving duplicate Requirement families in the same WorkingSet: %'', conflict;
+    END IF;
+END';
+
+CREATE OR REPLACE FUNCTION set_requirement_working_set() RETURNS trigger AS '
+BEGIN
+    SELECT t.working_set_id INTO NEW.working_set_id
+    FROM trackers t WHERE t.tracker_id = NEW.tracker_id;
+    IF NEW.working_set_id IS NULL THEN
+        RAISE EXCEPTION ''tracker % not found for requirement %'', NEW.tracker_id, NEW.local_id
+            USING ERRCODE = ''23503'';
+    END IF;
+    RETURN NEW;
+END;
+' LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_requirements_working_set ON requirements;
+CREATE TRIGGER trg_requirements_working_set
+    BEFORE INSERT OR UPDATE OF tracker_id ON requirements
+    FOR EACH ROW EXECUTE FUNCTION set_requirement_working_set();
+
+DROP INDEX IF EXISTS uq_requirements_tracker_family;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_requirements_working_set_family
+    ON requirements (working_set_id, common_id);
+
 CREATE TABLE IF NOT EXISTS space_bindings (
     working_set_id VARCHAR(128) NOT NULL REFERENCES working_sets (working_set_id),
     product_space_id VARCHAR(64) NOT NULL REFERENCES product_spaces (product_space_id),
@@ -166,7 +212,6 @@ DO 'BEGIN
 END';
 
 CREATE INDEX IF NOT EXISTS idx_requirements_tracker ON requirements (tracker_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_requirements_tracker_family ON requirements (tracker_id, common_id);
 CREATE INDEX IF NOT EXISTS idx_lti_tracker ON light_tracker_items (tracker_id, working_set_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_org_parent ON trackers (parent_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_source ON trackers (source_id);

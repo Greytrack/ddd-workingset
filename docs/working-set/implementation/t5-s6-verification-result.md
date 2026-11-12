@@ -26,12 +26,12 @@
 
 [策略测试](../../../src/test/java/sk/workingset/domain/WorkingSetLineagePolicyTest.java) 和持久化空范围验收通过。**66 项通过**。
 
-## S6-D · 删除与停用准入
+## S6-D · 删除准入
 
-[删除服务](../../../src/main/java/sk/workingset/application/WorkingSetDeletionService.java) 先保护默认根，再拒绝存在直属子级的工作集并返回 `WorkingSetHasChildren`。叶子按 T2 K3 预检成员，再依次解除 TrackerBinding、SpaceBinding 并删除 WorkingSet。停用只提供 `assertDisableAllowed`，供后续命令在同一事务内调用。
+[删除服务](../../../src/main/java/sk/workingset/application/WorkingSetDeletionService.java) 先保护默认根，再拒绝存在直属子级的工作集并返回 `WorkingSetHasChildren`。叶子按 T2 K3 预检成员，再依次解除 TrackerBinding、SpaceBinding 并删除 WorkingSet。WorkingSet 与 Tracker 不存在“停用”生命周期（2026-11-12 用户裁定），服务中不提供停用状态、命令或前置校验。
 
 [真实 HTTP/JDBC 验收](../../../src/test/java/bootstrap/BindingAcceptanceTest.java) 验证中间节点拒绝后保留绑定和子级、叶子删除，以及创建子级与删除父级并发时无悬空父引用。最终结果为 **68 项通过，0 失败、0 错误、0 跳过**。
 
 ## 仍待验证
 
-停用状态与命令、空范围的实际 Compare/Merge 响应、跨工作集的批量删除顺序、父级解绑后的既有子绑定清理，以及依真实平台元数据进行的多级历史回填。S6 已验证单工作集的删除顺序和 S5 首层回填。
+空范围的实际 Compare/Merge 响应、跨工作集的批量删除顺序、父级解绑后的既有子绑定清理，以及依真实平台元数据进行的多级历史回填。S6 已验证单工作集的删除顺序和 S5 首层回填。

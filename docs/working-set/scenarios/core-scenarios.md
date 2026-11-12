@@ -279,7 +279,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Given 创建候选结构形成组织环（如 A.parent=B 且 B.parent=A，或自环 A.parent=A）。
 - Then 该候选结构非法，创建不能完成。无环检查集中于创建候选结构（INV-015），不批准创建后并发移动。
 - 已裁定（删除部分，2026-11-11 K2）：父 Tracker 存在组织子级或派生子级（或自身有 TrackerItem）时**禁止删除**，不自动断链、不重挂 `parentId`/`sourceId`、不级联删除（见 SCN-062）。
-- 仍开放（停用部分，QUESTION-009.a）：父 Tracker 停用时子 Tracker 如何处理；不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
+- 已关闭（停用部分，QUESTION-009.a）：WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），因此不涉及父 Tracker 停用时子级的处理；不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
 
 <a id="scn-019"></a>
 ## SCN-019 首次 COW 业务对象与索引身份一致
@@ -736,7 +736,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then 拒绝删除；**不自动级联删除 C/D、不自动断开或重挂 `parentId`/`sourceId`**。
 - When P 无子级但仍有 TrackerItem。
 - Then 同样拒绝（`TrackerHasItems`）。
-- 边界：本轮只裁定删除，不裁定停用；删除契约不混入停用状态与行为。
+- 边界：本场景只裁定删除；WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），删除契约不引入停用状态与行为。
 
 <a id="scn-063"></a>
 ## SCN-063 子 WorkingSet 删除的成员关系约束

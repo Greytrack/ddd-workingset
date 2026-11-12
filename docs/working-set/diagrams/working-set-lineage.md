@@ -57,15 +57,16 @@ flowchart TD
 - 只允许直属父子双向；`source/target` 是角色，不改变谱系方向。
 - 兄弟、跨代一律拒绝；共享 Tracker 不参与 Merge。
 
-## 4. 删除/停用边界
+## 4. 删除边界
 
 ```mermaid
 flowchart TD
-    M["中间 WS（有直属子 WS）"] -->|"delete / disable"| R["拒绝"]
+    M["中间 WS（有直属子 WS）"] -->|"delete"| R["拒绝（WorkingSetHasChildren）"]
     L["叶子 WS"] -->|"delete"| D["按 T2 K3：解绑 → 解空间 → 删除"]
-    L -->|"disable"| P["停用行为待设计"]
     Root["默认 WS"] -->|"delete"| RR["始终拒绝"]
 ```
+
+- WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），故不表达停用状态或命令。
 
 ## 5. 未表达内容
 

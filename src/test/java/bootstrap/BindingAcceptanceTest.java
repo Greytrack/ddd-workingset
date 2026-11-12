@@ -2,7 +2,6 @@ package bootstrap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,15 +26,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.application.WorkingSetDeletionService;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.WorkingSetId;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BindingAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestRestTemplate rest;
-    @Autowired private WorkingSetDeletionService deletions;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String ws = "WS-" + suffix;
@@ -271,7 +266,7 @@ class BindingAcceptanceTest {
     }
 
     @Test
-    void middleWorksetRejectsDeleteAndDisableBeforeRemovingAnyBindings() {
+    void middleWorksetRejectsDeleteBeforeRemovingAnyBindings() {
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
         String grandchild = "GRAND-" + suffix;
@@ -280,15 +275,12 @@ class BindingAcceptanceTest {
         var blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "WorkingSetHasChildren");
         assertEquals(List.of(grandchild), blocked.getBody().get("childWorkingSetIds"));
-        var disable = assertThrows(BindingFailure.class, () -> deletions.assertDisableAllowed(WorkingSetId.of(ws)));
-        assertEquals(BindingFailure.Reason.WorkingSetHasChildren, disable.reason());
 
         assertEquals(ws, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
         var bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertEquals(shared, bindings.trackers().getFirst().trackerId());
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
 
-        deletions.assertDisableAllowed(WorkingSetId.of(grandchild));
         assertEquals(HttpStatus.NO_CONTENT, delete(path(grandchild)).getStatusCode());
         assertEquals(HttpStatus.NO_CONTENT, delete(path(ws)).getStatusCode());
         assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
@@ -356,7 +348,7 @@ class BindingAcceptanceTest {
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
                 VALUES (?, ?, ?, 'A', 'test', 3, 0)
-                """, id, "C-" + suffix, tracker);
+                """, id, "C-" + id, tracker);
     }
 
     private int count(String sql, String parameter) {
@@ -394,7 +386,7 @@ class BindingAcceptanceTest {
 
     private Map<String, Object> deriveBody(String tracker) {
         return Map.of("sourceTrackerId", tracker, "sourceLocalId", sourceItem,
-                "sourceRevision", 3, "commonId", "C-" + suffix);
+                "sourceRevision", 3, "commonId", "C-" + sourceItem);
     }
 
     private String spacePath(String id) {

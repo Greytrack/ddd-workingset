@@ -119,14 +119,14 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 - **删 Tracker（K2）**：存在组织子级（其他 Tracker 的 `parentId` 指向它）、存在派生子级（其他 Tracker 的 `sourceId` 指向它）、或存在 TrackerItem 时，**禁止删除**；**不自动级联删除子 Tracker、不自动断开或重挂 `parentId`/`sourceId`**。
 - **删 ProductSpace**：不得存在任何 WorkingSet 的有效 SpaceBinding（即使该 WS 已无 TrackerBinding）；如仍有 TrackerBinding，必须先按 Tracker 的解除规则处理，不得直接清理绑定或级联删 Tracker；不因删除 ProductSpace 自动删除其他 WorkingSet 或 Tracker；保留 ProductSpace 在默认 WorkingSet 维护生命周期的既有规则。
 - **删 WorkingSet（K3）**：默认 WorkingSet（Id=1）始终不可删除；删除前须能合法解除全部 TrackerBinding 与 SpaceBinding（Shared 解绑不受 Item 限制，非共享须三项检查）；解除顺序为 TrackerBinding → SpaceBinding → WorkingSet；存在任何不能合法解除的关系即拒绝，不允许隐式级联绕过。
-- **停用**：本轮**只裁定删除，不裁定停用**；删除契约中不混入停用状态及其行为。停用作为独立生命周期另行设计。
+- **不存在“停用”生命周期**：WorkingSet 与 Tracker 都没有停用状态或停用命令（用户 2026-11-12 裁定）；删除契约中不引入任何停用状态及其行为。
 
 ## 7. K1～K3 最终裁定（用户确认，2026-11-11）
 
 | 编号 | 用户裁定 | 状态 |
 | --- | --- | --- |
 | K1 | 仅支持不可恢复的领域删除；软删、归档、恢复不纳入本版契约；不将领域彻底删除强制映射为数据库物理 DELETE；区分绑定移除、聚合删除与业务 TrackerItem 删除 | **用户已确认** |
-| K2 | Tracker 有组织子级、派生子级或 TrackerItem 时禁止删除；不自动级联删除子 Tracker、不断开或重挂 `parentId`/`sourceId`；本轮只裁定删除，不裁定停用 | **用户已确认** |
+| K2 | Tracker 有组织子级、派生子级或 TrackerItem 时禁止删除；不自动级联删除子 Tracker、不断开或重挂 `parentId`/`sourceId` | **用户已确认** |
 | K3 | 默认 WorkingSet 始终不可删除；子 WorkingSet 删除前须能合法解除全部 TrackerBinding 与 SpaceBinding（Shared 解绑不受 Item 限制，非共享须三项检查）；解除顺序 TrackerBinding → SpaceBinding → WorkingSet；任一不可解除即拒绝 | **用户已确认** |
 
 以上为已批准的业务裁定，不再作为候选方案反复讨论。
@@ -141,7 +141,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | K3 子 WorkingSet 删除的成员关系约束与解除顺序 | **用户确认**（2026-11-11，INV-067） |
 | `deleteProductSpace` 的引用完整性（所有 WorkingSet 的 SpaceBinding 均须为空） | **用户确认**（2026-11-11，INV-066） |
 | 绑定 Entity 属性集、身份键命名、操作签名与失败分类 | **契约 v1（本文件冻结）**；实现细节留后续 |
-| 数据库表、唯一约束实现、并发锁、物理清理策略、软删字段、停用状态机 | **不在本契约** |
+| 数据库表、唯一约束实现、并发锁、物理清理策略、软删字段 | **不在本契约** |
 
 ## 9. 与 Merge／COW 的边界
 

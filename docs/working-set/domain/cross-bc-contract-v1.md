@@ -60,6 +60,8 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 **明确不属于 `TrackerItemReadPort`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见 §3.3），不是只读契约的方法。
 
+**2026-11-12 补充设计（D1 用户裁定；Draft）**：`TrackerItem` 继承顶级公共能力接口 `BusinessObject`；`BusinessObject` 声明所有业务对象共有的 `delete`（软删）、`undelete`（恢复）、`delete2`（永久删除）能力。具体删除规则、guard、编排由各业务 BC 实现；SK 不提供通用删除实现，`TrackerItemReadPort` 仍只读。该扩展改变本节对 `TrackerItem` “只读”的表述，接口签名与 T4 修订方式待评审，详见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
+
 ### 3.2 写入协作 Port（SK 定义 Outbound Port，BC 通过 Adapter 实现）
 
 - **每个 BC 一个专用 Port**（如 `RequirementWritePort`），**不是**具有通用 CRUD 权限的 `TrackerItem` 接口。

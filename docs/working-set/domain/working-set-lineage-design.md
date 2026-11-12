@@ -3,15 +3,15 @@
 **状态：Reviewed（2026-11-12；FACT-028 用户确认，S6 已实施并验证；未发布基线）**
 
 - 依据：[FACT-026 / FACT-028](facts.md)、[POL-004](facts.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[WorkingSet/Tracker 聚合](aggregate-model.md)
-- 范围：多级 WorkingSet 谱系、子工作集创建、Tracker 来源约束、相邻父子 Merge 准入、删除/停用边界
-- 不包含：Merge 执行契约本身（T1）、停用状态实现、Privilege 授权、ProductSpace/Classification 完整生命周期
+- 范围：多级 WorkingSet 谱系、子工作集创建、Tracker 来源约束、相邻父子 Merge 准入、删除边界
+- 不包含：Merge 执行契约本身（T1）、Privilege 授权、ProductSpace/Classification 完整生命周期
 
 ## 1. 用户裁定（2026-11-12）
 
 1. **子工作集只能有一个父工作集。**
 2. **允许空范围子工作集**（可先创建、后纳入 Tracker）。
 3. **WorkingSet 的谱系由 WorkingSet 自身属性维护**：新增 `parentWorkingSetId` 追溯直属上级；默认 WorkingSet 为空。
-4. **有直属子工作集的中间 WorkingSet 不允许删除或停用**；叶子 WorkingSet 才允许删除，并继续受 T2 K3 成员关系约束。停用的状态与命令仍待实现。
+4. **有直属子工作集的中间 WorkingSet 不允许删除**；叶子 WorkingSet 才允许删除，并继续受 T2 K3 成员关系约束。WorkingSet 与 Tracker 不存在“停用”生命周期（同日裁定），不设停用状态或命令。
 5. **设计不引入 GateFlow 特例**：只描述通用 WorkingSet 谱系，不以 GateFlow 版次链作为模型依据。
 
 ## 2. 术语
@@ -62,15 +62,14 @@
 - 共享 Tracker 不参与 Merge（T1）。
 - Merge 的 source/target 是角色，不改变谱系方向。
 
-### 3.5 删除与停用
+### 3.5 删除
 
 - 有直属子 WS 的 WorkingSet：
-  - 不允许 `deleteWorkingSet`；
-  - 不允许停用（停用状态/命令待实现，规则先登记）。
+  - 不允许 `deleteWorkingSet`（返回 `WorkingSetHasChildren`）。
 - 叶子 WorkingSet：
-  - 删除继续按 T2 K3：默认 WS 始终拒绝；全部 TrackerBinding 可合法解除 → SpaceBinding → WorkingSet；
-  - 停用的具体行为待独立设计。
+  - 删除继续按 T2 K3：默认 WS 始终拒绝；全部 TrackerBinding 可合法解除 → SpaceBinding → WorkingSet。
 - 删除中间 WS 不得隐式级联删除子 WS 或重挂 `parentWorkingSetId`。
+- WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），不设停用状态、命令或前置校验。
 
 ## 4. 与现有规则的关系
 
@@ -110,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_working_sets_parent
 | 子 WS Tracker 来源 | 只能绑定/派生直属父 WS 的 Tracker；跨级/父级没有的 Tracker 拒绝 |
 | 空范围 | 空子 WS 可创建；纳入后范围是父级子集 |
 | Merge 准入 | 直属父子双向通过；兄弟/跨代拒绝；共享 Tracker 拒绝 |
-| 中间 WS 删除/停用 | 有子 WS 时拒绝；叶子按 T2 K3；默认 WS 拒绝 |
+| 中间 WS 删除 | 有子 WS 时拒绝；叶子按 T2 K3；默认 WS 拒绝 |
 | 回归 | S1～S5 58 项、ArchUnit、真实 PG/Redis/Tomcat |
 
 ## 7. 实施切片（计划）
@@ -120,16 +119,15 @@ CREATE INDEX IF NOT EXISTS idx_working_sets_parent
 | S6-A | `WorkingSet.parentWorkingSetId`、schema/回填、`createChildWorkingSet`、谱系查询、防环 | S5 |
 | S6-B | Tracker 来源改为直属父 WS；空范围；范围子集；绑定/派生改造 | S6-A |
 | S6-C | Merge 相邻父子准入（双向、兄弟/跨代拒绝） | S6-A + T1 Merge |
-| S6-D | 删除/停用中间 WS 约束；停用状态与命令另立设计 | S6-A + T2 |
+| S6-D | 删除中间 WS 约束 | S6-A + T2 |
 
 ## 8. 开放问题
 
-1. 停用的状态、命令、对子 WS 与 Tracker 的影响（T2 未纳入；QUESTION-009.a）。
-2. 空范围子 WS 的实际 Merge/Compare 响应。S6 准入策略返回空候选。
-3. 跨工作集的批量删除顺序。单工作集先保护默认根，再拒绝有子 WS（`WorkingSetHasChildren`），叶子按 T2 K3 执行。
-4. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验。
-5. 真实平台元数据中既有 WorkingSet 的父级回填来源与校验方式。
-6. 父 WS 解绑/删除 Tracker 后，子 WS 已存在的绑定是否保留、如何清理。
+1. 空范围子 WS 的实际 Merge/Compare 响应。S6 准入策略返回空候选。
+2. 跨工作集的批量删除顺序。单工作集先保护默认根，再拒绝有子 WS（`WorkingSetHasChildren`），叶子按 T2 K3 执行。
+3. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验。
+4. 真实平台元数据中既有 WorkingSet 的父级回填来源与校验方式。
+5. 父 WS 解绑/删除 Tracker 后，子 WS 已存在的绑定是否保留、如何清理。
 
 ## 9. 状态与下一步
 

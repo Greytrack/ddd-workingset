@@ -16,7 +16,7 @@
 
 | 编号 | 陈述 | 确认状态 | 来源 | 关联／验证方式 |
 | --- | --- | --- | --- | --- |
-| `FACT-001` | 历史资料把 Working Set 描述为选择 Tracker 并形成有效工作范围，而非拥有全部 Item。 | Reported / Pending | `EXT-ARCH §0`、`V4-UL:10` | 访谈工作集创建、发布、归档的业务负责人；关联 `QUESTION-001` |
+| `FACT-001` | 历史资料把 Working Set 描述为选择 Tracker 并形成有效工作范围，而非拥有全部 Item。 | Reported / Pending | `EXT-ARCH §0`、`V4-UL:10` | 访谈工作集创建、发布、归档的业务负责人；关联 `QUESTION-001`（已按工作视图/范围清单关闭） |
 | `FACT-002` | SHARED Tracker 及其 Item 的新增、修改实际归属默认工作集，所有已绑定工作集同时可见，不产生子工作集独有副本。 | 用户已确认 | 本对话用户对共享修改归属的明确说明 | [SCN-002](../scenarios/core-scenarios.md#scn-002-引用-shared-tracker)；权限与可见性实现继续设计 |
 | `FACT-003` | 非共享 Tracker 派生产生新的独立业务身份；sourceId 指向直接父级 Working Set 下的来源 Tracker，逐级追溯，不跳过中间工作集。parentId 另表达同工作集直属结构父子关系，不属于派生维度。 | 用户确认 D-002 身份事实；D-003 澄清双维语义 | 用户 2026-11-10 D-003 正式裁定；[评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-003) | SCN-013/014；修改规则、组织树继承、同源多派生及 Item 边界待定 |
 | `FACT-004` | VIRTUAL Item 在没有本地业务内容行时仍被描述为已存在的逻辑条目。 | Reported / Pending | `V4-DOMAIN:214/547`、`EXT-ARCH §1` | 以查询、权限、删除和引用场景验证；`QUESTION-004` |
@@ -43,7 +43,7 @@
 | `FACT-025` | 系统有三层分类元模型，元数据在启动前初始化到平台元数据库、常驻内存；Tracker 是 Classification 在某 ProductSpace/WorkingSet 中的具体投影，遵守其属性/共享策略/规则约束；一个 Classification 可对应多个 Tracker；Tracker 不随元数据初始化自动创建，而在创建 ProductSpace 时按分类集合投影生成。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 分类版本/变更协议仍待 |
 | `FACT-026` | 默认 WorkingSet 由平台元数据预初始化，固定 ID=1，不可删除/隐藏；用户创建子 WorkingSet 前，业务数据均在默认 WorkingSet；Tracker 只能在默认 WorkingSet 创建原始聚合，子 WorkingSet 只能通过纳入直接上游 Tracker（共享绑定或非共享派生）维持来源链完整。 | 用户确认（2026-11-10 补充） | 本对话用户裁定 | 默认 WorkingSet 归档等生命周期维度待定 |
 | `FACT-027` | Diff/Merge 衔接裁定：① 未物化变体可以参与 Diff；② 未物化目标被 Merge 修改时，在 merge 过程中构建业务聚合正常 save（物化与修改一体）；③ 合并决策是用户决策、command 入参，可作为 ValueObject 归属 MergeRound 聚合；④ MergeCheckpoint 是独立聚合；⑤ MergeRound 是合并载体（LRO 发起后记录参数、进度、成功/失败信息）；⑥ 共享 Tracker 不参与 Merge，非共享只允许直接父子准入。 | 用户确认（2026-11-10 阶段 4 补充） | 本对话用户裁定 | 差异冻结/令牌、幂等与乱序协议仍候选 |
-| `FACT-028` | 多级 WorkingSet 谱系（用户 2026-11-12）：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除或停用（有派生子级就不允许），叶子 WS 删除按 T2 K3；设计不引入 GateFlow 特例。 | 用户确认（2026-11-12） | 本对话用户裁定 | 停用状态/命令、空子 WS 的 Compare/Merge、删除顺序、真实平台元数据回填待实现 |
+| `FACT-028` | 多级 WorkingSet 谱系（用户 2026-11-12）：子 WS 只能有一个直属父 WS；WorkingSet 以自身 `parentWorkingSetId` 追溯直属上级，默认 WS 为根且为空；允许空范围子 WS；子 WS 的 Tracker 只能来自直属父 WS（Shared 复用/非共享派生），父级没有的 Tracker 子级不能有，子 WS 范围是父级范围的子级；Merge 只允许直属父子双向，兄弟/跨代拒绝；有直属子 WS 的中间 WS 不允许删除（有派生子级就不允许），叶子 WS 删除按 T2 K3；WorkingSet/Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定）；设计不引入 GateFlow 特例。 | 用户确认（2026-11-12） | 本对话用户裁定 | 空子 WS 的 Compare/Merge、删除顺序、真实平台元数据回填待实现 |
 
 ## Business Policy（逐条标注确认范围）
 
@@ -80,7 +80,7 @@
 | `HYP-005` | History/Snapshot 是 COW、Compare 和审计的共同上游能力。 | `FACT-006` | 做历史可读性 spike；`QUESTION-006` |
 | `HYP-006` | Compare & Merge 应是独立模型边界，通过业务对象公开能力写目标。 | `FACT-007/008` | 验证各业务对象字段规则与失败语义；`QUESTION-008` |
 | `HYP-007` | Reference 与 Association 需要不同生命周期和缺端点语义。 | `FACT-009` | 业务访谈关系方向、删除、恢复；`QUESTION-010` |
-| `HYP-008` | 超大 Working Set 需要 Manifest revision／分片准备，而不是加载全部 Binding 的单聚合。 | `EXT-ARCH §5.1/11.18` | 收集 Binding 规模和并发指标；`QUESTION-001` |
+| `HYP-008` | 超大 Working Set 需要 Manifest revision／分片准备，而不是加载全部 Binding 的单聚合。 | `EXT-ARCH §5.1/11.18` | 收集 Binding 规模和并发指标；`QUESTION-012` |
 
 ## Technical Constraint／现有实现事实
 
@@ -129,7 +129,7 @@ D-002 身份独立与生命周期裁定继续有效；其将两个字段一起�
 
 Tracker 新建时确定组织位置，parentId 可为 null。创建完成后 parentId 不可修改，不支持移动、更换父节点或调整为根；允许的裁剪与显式重组须在创建完成前确定。来源为本轮用户 D-006 八项裁定，见 [记录](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
 
-此限制只针对组织位置，不冻结 Tracker 的其他业务状态、身份生命周期或 Working Set 的成员扩展；也不扩大 POL-002 的原生创建入口。sourceId 直接来源语义不变，但不由此自动批准其所有生命周期可变性规则。父后续**删除**已由 2026-11-11 K2 裁定：存在组织子级（其他 Tracker 的 `parentId` 指向它）、派生子级（`sourceId` 指向它）或 TrackerItem 时禁止删除，且不自动清空/重挂 `parentId` 或级联删除（见 INV-065、SCN-062）。「停用」的子节点处理仍待裁定（`QUESTION-009.a` 的停用部分），不得自动清空 `parentId` 或级联删除。
+此限制只针对组织位置，不冻结 Tracker 的其他业务状态、身份生命周期或 Working Set 的成员扩展；也不扩大 POL-002 的原生创建入口。sourceId 直接来源语义不变，但不由此自动批准其所有生命周期可变性规则。父后续**删除**已由 2026-11-11 K2 裁定：存在组织子级（其他 Tracker 的 `parentId` 指向它）、派生子级（`sourceId` 指向它）或 TrackerItem 时禁止删除，且不自动清空/重挂 `parentId` 或级联删除（见 INV-065、SCN-062）。WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），因此不涉及停用时的子节点处理；`QUESTION-009.a` 已关闭。
 
 ## D-007：TrackerItem 契约与 LightTrackerItem 候选定位
 

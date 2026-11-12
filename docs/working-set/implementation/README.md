@@ -19,6 +19,7 @@
 - [t5-s5-verification-result.md](t5-s5-verification-result.md)：S5 绑定与删除验证（Reviewed，2026-11-12；`mvn test` 58 项通过，真实 PostgreSQL/Redis/Tomcat；首层 WorkingSet 范围）。
 - [t5-s6-verification-result.md](t5-s6-verification-result.md)：S6 多级 WorkingSet 谱系验证（Reviewed，2026-11-12；`mvn test` 68 项通过；S6-A～D、真实 PostgreSQL/Redis/Tomcat）。
 - [S7 Merge 执行验证](t5-s7-verification-result.md)记录 Compare、MergeRound、Checkpoint 和 Requirement 删除生命周期的真实验收。
+- [t5-d2-family-scope-verification.md](t5-d2-family-scope-verification.md)：D2 Requirement 家族唯一性按 WorkingSet 作用域（Reviewed，2026-11-12；`mvn test` 77 项通过；真实 PostgreSQL）。
 - [t5-runtime-verification.md](t5-runtime-verification.md)：运行时骨架验证（Verified，2026-11-12；Spring Boot Web 7102 + PostgreSQL/JdbcTemplate + Redis 缓存 + Spring Modulith Event Publication Registry；`mvn test` 37 项通过，含 API/数据库/缓存与容器验收测试）。
 
 配套：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)、[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)。

@@ -20,6 +20,7 @@
 - [物化协议](lighttrackeritem-materialization-contract-v1.md)：身份、状态转换与失败恢复。
 - [跨 BC 公共契约](cross-bc-contract-v1.md)：Port、用例边界、失败分类与治理待办。
 - [多级 WorkingSet 谱系](working-set-lineage-design.md)：单父谱系、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge（Draft）。
+- [BusinessObject 生命周期能力](business-object-lifecycle-design.md)：`TrackerItem` 继承 `BusinessObject`，delete/undelete/delete2 能力声明由各 BC 实现（Draft）。
 
 ## 阶段 2 候选知识
 
