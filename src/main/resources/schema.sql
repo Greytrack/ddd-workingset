@@ -52,3 +52,24 @@ CREATE TABLE IF NOT EXISTS cow_failures (
 
 CREATE INDEX IF NOT EXISTS idx_cow_failures_source ON cow_failures (source_local_id);
 CREATE INDEX IF NOT EXISTS idx_cow_failures_target ON cow_failures (target_local_id);
+
+ALTER TABLE cow_failures ADD COLUMN IF NOT EXISTS before_lock_version BIGINT;
+ALTER TABLE cow_failures ADD COLUMN IF NOT EXISTS after_lock_version BIGINT;
+ALTER TABLE cow_failures ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE cow_failures ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS cow_materializations (
+    event_id BIGINT NOT NULL,
+    target_local_id VARCHAR(64) NOT NULL,
+    source_local_id VARCHAR(64) NOT NULL,
+    source_revision INTEGER NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    business_saved BOOLEAN NOT NULL DEFAULT FALSE,
+    last_error TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (event_id, target_local_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cow_materializations_target ON cow_materializations (target_local_id);
+CREATE INDEX IF NOT EXISTS idx_cow_materializations_status ON cow_materializations (status);
