@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Transactional;
 
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
@@ -57,6 +58,7 @@ public class RequirementApplicationService {
      *
      * <p>业务 {@code revision} 不升级；发布大版本 {@code version} 不变；仅乐观锁自动 +1。
      */
+    @Transactional
     public Requirement changeTitle(LocalId localId, String newTitle, LockVersion expectedLockVersion) {
         Objects.requireNonNull(localId, "localId");
         Requirement current = repository.findById(localId)
@@ -70,13 +72,16 @@ public class RequirementApplicationService {
 
         repository.save(changed);
 
-        eventPublisher.publishEvent(new RequirementChanged(
+        RequirementChanged event = new RequirementChanged(
                 identifierGenerator.nextId(),
                 changed.localId(),
                 changed.localId(),
                 changed.revision(),
                 snapshotRef,
-                Instant.now()));
+                Instant.now());
+
+        // 事务提交后由 Spring Modulith Event Publication Registry 持久化并派发给监听器
+        eventPublisher.publishEvent(event);
         return changed;
     }
 }
