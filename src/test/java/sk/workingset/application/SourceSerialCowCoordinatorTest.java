@@ -53,8 +53,22 @@ class SourceSerialCowCoordinatorTest {
     }
 
     @Test
+    void sequence_two_waits_for_one_without_blocking_another_source() throws InterruptedException {
+        var coordinator = new SourceSerialCowCoordinator(Duration.ofSeconds(3));
+        var source = LocalId.of("late-first");
+        var order = new CopyOnWriteArrayList<Integer>();
+        Thread second = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
+        await().atMost(Duration.ofSeconds(2)).until(() -> second.getState() == Thread.State.TIMED_WAITING);
+        coordinator.runSerial(LocalId.of("unrelated"), 1, () -> order.add(0));
+        assertEquals(List.of(0), order);
+        coordinator.runSerial(source, 1, () -> order.add(1));
+        assertTrue(second.join(Duration.ofSeconds(2)));
+        assertEquals(List.of(0, 1, 2), order);
+    }
+
+    @Test
     void reports_gap_and_propagates_failure_without_stalling_source(CapturedOutput output) {
-        var coordinator = new SourceSerialCowCoordinator();
+        var coordinator = new SourceSerialCowCoordinator(Duration.ofMillis(100));
         LocalId source = LocalId.of("gap");
         var failure = new IllegalStateException("target failed");
         coordinator.runSerial(source, 1, () -> {});

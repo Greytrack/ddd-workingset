@@ -22,6 +22,7 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Version;
 
 class RequirementMaterializationAdapterTest {
+    private final Runnable recordBusinessSave = mock(Runnable.class);
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
     private final TransactionTemplate transaction = mock(TransactionTemplate.class);
@@ -36,7 +37,7 @@ class RequirementMaterializationAdapterTest {
     @Test
     void refuses_missing_or_mismatched_snapshot_without_writing_target() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.empty());
-        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request));
+        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
 
         var invalid = java.util.List.of(
                 snapshot("other", "family", 3, 1),
@@ -45,9 +46,9 @@ class RequirementMaterializationAdapterTest {
                 snapshot("source", "other", 3, 1));
         for (var evidence : invalid) {
             when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(evidence));
-            assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request));
+            assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
         }
-        verifyNoInteractions(repository);
+        verifyNoInteractions(repository, recordBusinessSave);
     }
 
     @Test
@@ -61,10 +62,11 @@ class RequirementMaterializationAdapterTest {
         when(repository.findById(request.targetLocalId())).thenReturn(Optional.of(target("different", "v1")),
                 Optional.of(target("A", "v2")), Optional.of(target("A", "v1")));
 
-        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request));
-        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request));
-        assertDoesNotThrow(() -> adapter.materialize(request));
+        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
+        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
+        assertDoesNotThrow(() -> adapter.materialize(request, recordBusinessSave));
         verify(repository, never()).save(any());
+        verify(recordBusinessSave).run();
     }
 
     private Requirement target(String title, String version) {

@@ -117,19 +117,22 @@ public final class Requirement implements TrackerItem {
      */
     public Requirement changeTitle(String newTitle, LockVersion expectedLockVersion) {
         Objects.requireNonNull(newTitle, "title");
+        verifyLockVersion(expectedLockVersion);
+        return new Requirement(localId, commonId, trackerId, newTitle, description, revision, version,
+                lockVersion.next());
+    }
+
+    public Requirement upgradeRevision(LockVersion expectedLockVersion) {
+        verifyLockVersion(expectedLockVersion);
+        return new Requirement(localId, commonId, trackerId, title, description,
+                Revision.of(Math.incrementExact(revision.value())), version, lockVersion.next());
+    }
+
+    private void verifyLockVersion(LockVersion expectedLockVersion) {
         Objects.requireNonNull(expectedLockVersion, "expectedLockVersion");
         if (!lockVersion.equals(expectedLockVersion)) {
             throw new LockVersionConflictException(expectedLockVersion, lockVersion);
         }
-        return new Requirement(
-                localId,
-                commonId,
-                trackerId,
-                newTitle,
-                description,
-                revision,
-                version,
-                lockVersion.next());
     }
 
     @Override

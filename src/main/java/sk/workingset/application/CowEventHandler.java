@@ -16,13 +16,18 @@ public final class CowEventHandler {
     private final RequirementWritePort writePort;
     private final CowFailureLog failureLog;
     private final TargetTransactionRunner transactionRunner;
+    private final CowMaterializationStore store;
+    private final CowRecoveryService recovery;
 
     public CowEventHandler(LightTrackerItemRepository items, RequirementWritePort writePort,
-                           CowFailureLog failureLog, TargetTransactionRunner transactionRunner) {
+                           CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+                           CowMaterializationStore store, CowRecoveryService recovery) {
         this.items = items;
         this.writePort = writePort;
         this.failureLog = failureLog;
         this.transactionRunner = transactionRunner;
+        this.store = store;
+        this.recovery = recovery;
     }
 
     public void onRequirementChanged(RequirementChanged event) {
@@ -33,22 +38,37 @@ public final class CowEventHandler {
                 continue;
             }
             String stage = "MATERIALIZE";
+            int attempts = 1;
             try {
-                writePort.materialize(new MaterializeRequest(target.localId(), target.trackerId(),
-                        target.commonId(), event.sourceLocalId(), event.beforeRevision(), event.afterRevision(),
-                        event.beforeLockVersion(), event.afterLockVersion(), target.revision(),
-                        event.eventId(), event.snapshotRef()));
+                transactionRunner.inNewTransaction(() -> store.markPending(event.eventId(), target.localId(),
+                        event.sourceLocalId(), event.beforeRevision()));
+                var receipt = store.findByEventAndTarget(event.eventId(), target.localId()).orElseThrow();
+                attempts = receipt.attempts();
+                if (receipt.status() == CowMaterializationStore.Status.SWITCHED) {
+                    continue;
+                }
+                if (!receipt.businessSaved()) {
+                    writePort.materialize(new MaterializeRequest(target.localId(), target.trackerId(),
+                            target.commonId(), event.sourceLocalId(), event.beforeRevision(), event.afterRevision(),
+                            event.beforeLockVersion(), event.afterLockVersion(), target.revision(),
+                            event.eventId(), event.snapshotRef()),
+                            () -> store.markMaterialized(event.eventId(), target.localId()));
+                }
                 stage = "SWITCH";
-                transactionRunner.inNewTransaction(() -> {
-                    target.switchToLocalBacked(target.revision());
-                    items.save(target);
-                });
+                recovery.recoverSwitchOnly(event.eventId(), target.localId());
             } catch (RuntimeException error) {
                 var failure = new CowFailureLog.Failure(event.eventId(), target.localId(), event.sourceLocalId(),
-                        event.beforeRevision(), event.afterRevision(), stage, error.getClass().getName(),
+                        event.beforeRevision(), event.afterRevision(), event.beforeLockVersion(),
+                        event.afterLockVersion(), attempts, null, stage, error.getClass().getName(),
                         error.getMessage(), Instant.now());
                 failures.add(failure);
                 causes.add(error);
+                try {
+                    transactionRunner.inNewTransaction(() ->
+                            store.markFailed(event.eventId(), target.localId(), error.getMessage()));
+                } catch (RuntimeException recordingError) {
+                    causes.add(recordingError);
+                }
                 try {
                     failureLog.record(failure);
                 } catch (RuntimeException recordingError) {

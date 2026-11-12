@@ -10,24 +10,32 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import bootstrap.web.DeriveView;
 import bootstrap.web.ReadView;
 import bootstrap.web.RequirementView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.CowFailureLog;
+import alm.requirement.application.RequirementApplicationService;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CowAcceptanceTest {
@@ -35,6 +43,7 @@ class CowAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private StringRedisTemplate redis;
     @Autowired private CowFailureLog failures;
+    @Autowired private RequirementApplicationService requirements;
     @SpyBean private LightTrackerItemRepository items;
 
     private final List<String> targets = new ArrayList<>();
@@ -49,6 +58,7 @@ class CowAcceptanceTest {
         }
         jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", eventPattern());
         jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", source);
+        jdbc.update("DELETE FROM cow_materializations WHERE source_local_id = ?", source);
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", source);
         for (String target : targets) {
             redis.delete("workingset:lti:" + target);
@@ -96,15 +106,11 @@ class CowAcceptanceTest {
     }
 
     @Test
-    void switch_rollback_preserves_business_content_and_other_targets_and_leaves_event_incomplete() {
+    void at05_switch_only_preserves_edited_business_content_and_is_idempotent() {
         createSource();
         Target rejected = derive();
         Target successful = derive();
-        doAnswer(invocation -> {
-            invocation.callRealMethod();
-            throw new IllegalStateException("injected failure after LTI write");
-        }).when(items).save(argThat(item -> item != null && item.materialized()
-                && item.localId().value().equals(rejected.id())));
+        failNextSwitch(rejected);
 
         change("B", 0);
 
@@ -122,8 +128,96 @@ class CowAcceptanceTest {
                 "SELECT materialized FROM light_tracker_items WHERE local_id = ?", Boolean.class, rejected.id()));
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE serialized_event LIKE ?"
                 + " AND completion_date IS NULL", Integer.class, eventPattern()));
-        System.out.printf("SWITCH rollback source=%s target=%s DB title=A materialized=false failure=SWITCH completion_date=NULL%n",
-                source, rejected.id());
+        var failure = failures.findBySource(LocalId.of(source)).getFirst();
+        assertEquals(LockVersion.of(0), failure.beforeLockVersion());
+        assertEquals(LockVersion.of(1), failure.afterLockVersion());
+        assertEquals("FAILED", receiptStatus(rejected));
+        jdbc.update("UPDATE requirements SET title = ?, lock_version = 1 WHERE local_id = ?",
+                "edited locally", rejected.id());
+        String recovery = "/api/cow/recover/switch/" + failure.eventId() + "/" + rejected.id();
+        assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(recovery, null, Void.class).getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(recovery, null, Void.class).getStatusCode());
+        assertLocalContent(rejected, "edited locally");
+        assertEquals("SWITCHED", receiptStatus(rejected));
+        assertNotNull(failures.findBySource(LocalId.of(source)).getFirst().resolvedAt());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+                Integer.class, rejected.id()));
+        assertEquals(HttpStatus.ACCEPTED, rest.postForEntity("/api/cow/recover/incomplete",
+                null, Void.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+        assertLocalContent(rejected, "edited locally");
+        assertEquals(1, attempts(rejected));
+        assertEquals(1, attempts(successful));
+        System.out.printf("AT-05 target=%s FAILED/SWITCH and incomplete → SWITCHED, edited locally, one target row, completed=%d%n",
+                rejected.id(), completedEvents());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void republication_retries_only_unfinished_target(boolean restart) {
+        createSource();
+        Target failed = derive();
+        Target successful = derive();
+        failNextSwitch(failed);
+        change("B", 0);
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertEquals("FAILED", receiptStatus(failed));
+            assertEquals("SWITCHED", receiptStatus(successful));
+            assertFalse(failures.findBySource(LocalId.of(source)).isEmpty());
+        });
+        if (restart) {
+            try (var restarted = new SpringApplicationBuilder(WorkingsetApplication.class)
+                    .web(WebApplicationType.NONE).run()) {
+                await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+            }
+        } else {
+            assertEquals(HttpStatus.ACCEPTED, rest.postForEntity("/api/cow/recover/incomplete",
+                    null, Void.class).getStatusCode());
+            await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+        }
+        assertEquals("SWITCHED", receiptStatus(failed));
+        assertEquals(2, attempts(failed));
+        assertEquals(1, attempts(successful));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+                Integer.class, failed.id()));
+        assertLocalContent(failed, "A");
+    }
+
+    @Test
+    void revision_upgrade_materializes_from_before_revision_and_preserves_target_revision() {
+        createSource();
+        Target target = derive();
+        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
+        var upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
+        assertEquals(Revision.of(4), upgraded.revision());
+        assertEquals(LockVersion.of(1), upgraded.lockVersion());
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+        assertLocalContent(target, "A");
+        assertEquals(1, read(target).contentRevision());
+        assertEquals(3, jdbc.queryForObject("SELECT revision FROM requirement_snapshots WHERE local_id = ?",
+                Integer.class, source));
+    }
+
+    private void failNextSwitch(Target target) {
+        var first = new AtomicBoolean(true);
+        doAnswer(invocation -> {
+            invocation.callRealMethod();
+            if (first.getAndSet(false)) {
+                throw new IllegalStateException("injected failure after LTI write");
+            }
+            return null;
+        }).when(items).save(argThat(item -> item != null && item.materialized()
+                && item.localId().value().equals(target.id())));
+    }
+
+    private String receiptStatus(Target target) {
+        return jdbc.queryForList("SELECT status FROM cow_materializations WHERE target_local_id = ?",
+                String.class, target.id()).stream().findFirst().orElse("");
+    }
+
+    private int attempts(Target target) {
+        return jdbc.queryForObject("SELECT attempts FROM cow_materializations WHERE target_local_id = ?",
+                Integer.class, target.id());
     }
 
     private void createSource() {

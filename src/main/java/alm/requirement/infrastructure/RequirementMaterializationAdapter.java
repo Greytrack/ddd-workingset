@@ -9,6 +9,7 @@ import alm.requirement.domain.RequirementRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.application.port.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
+import sk.workingset.domain.LightTrackerItem;
 
 public final class RequirementMaterializationAdapter implements RequirementWritePort {
     private final RequirementRepository repository;
@@ -23,7 +24,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     }
 
     @Override
-    public void materialize(MaterializeRequest request) {
+    public void materialize(MaterializeRequest request, Runnable recordBusinessSave) {
         var snapshot = snapshotStore.find(request.snapshotRef())
                 .orElseThrow(() -> new MaterializationRejectedException("Source snapshot is missing"));
         if (!snapshot.localId().equals(request.sourceLocalId())
@@ -37,12 +38,24 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
             var existing = repository.findById(request.targetLocalId());
             if (existing.isPresent()) {
                 verifyExisting(existing.get(), request, snapshot);
-                return;
+            } else {
+                repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
+                        request.targetTrackerId(), snapshot.title(), snapshot.description(),
+                        request.targetRevision(), snapshot.version()));
             }
-            repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
-                    request.targetTrackerId(), snapshot.title(), snapshot.description(),
-                    request.targetRevision(), snapshot.version()));
+            recordBusinessSave.run();
         });
+    }
+
+    @Override
+    public void verifyMaterializedTarget(LightTrackerItem target) {
+        var existing = repository.findById(target.localId())
+                .orElseThrow(() -> new MaterializationRejectedException("Target business object is missing"));
+        if (!existing.commonId().equals(target.commonId())
+                || !existing.trackerId().equals(target.trackerId())
+                || !existing.revision().equals(target.revision())) {
+            throw new MaterializationRejectedException("Target business identity does not match the receipt");
+        }
     }
 
     private static void verifyExisting(Requirement existing, MaterializeRequest request,

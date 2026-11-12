@@ -61,6 +61,9 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
 
     @Override
     public Optional<LightTrackerItem> findById(LocalId localId) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            return delegate.findById(localId);
+        }
         LightTrackerItem cached = readCache(localId);
         if (cached != null) {
             return Optional.of(cached);

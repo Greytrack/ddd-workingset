@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.modulith.events.IncompleteEventPublications;
+import java.time.Duration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -18,6 +21,9 @@ import alm.requirement.infrastructure.RequirementAdapter;
 import alm.requirement.infrastructure.RequirementMaterializationAdapter;
 import sk.workingset.application.CowEventHandler;
 import sk.workingset.application.CowFailureLog;
+import sk.workingset.application.CowMaterializationStore;
+import sk.workingset.application.CowRecoveryService;
+import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.port.IdentifierGenerator;
@@ -27,12 +33,13 @@ import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.infrastructure.CachingLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcCowFailureLog;
+import sk.workingset.infrastructure.JdbcCowMaterializationStore;
 
 /**
  * 组合根（Composition Root）：唯一允许同时引用 SK 与 ALM 实现的位置（A1）。
  *
  * <p>当前装配 PostgreSQL/Spring JDBC 仓储、Adapter 工厂、雪花 ID 生成器、快照存储与 Spring Event 发布器；
- * 内存实现仅保留给单元测试，不再作为运行时 Bean。
+ * 持久化验收使用同一套 JDBC 装配。
  */
 @Configuration
 public class ApplicationConfiguration {
@@ -61,14 +68,29 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public SourceSerialCowCoordinator sourceSerialCowCoordinator() {
-        return new SourceSerialCowCoordinator();
+    public SourceSerialCowCoordinator sourceSerialCowCoordinator(
+            @Value("${workingset.cow.order-gap-wait:1s}") Duration orderGapWait) {
+        return new SourceSerialCowCoordinator(orderGapWait);
+    }
+
+    @Bean
+    public CowMaterializationStore cowMaterializationStore(JdbcTemplate jdbc) {
+        return new JdbcCowMaterializationStore(jdbc);
+    }
+
+    @Bean
+    public CowRecoveryService cowRecoveryService(CowMaterializationStore store, LightTrackerItemRepository items,
+            RequirementWritePort writePort, CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+            IncompleteEventPublications publications) {
+        return new CowRecoveryService(store, items, writePort, failureLog, transactionRunner,
+                () -> publications.resubmitIncompletePublications(p -> p.getEvent() instanceof RequirementChanged));
     }
 
     @Bean
     public CowEventHandler cowEventHandler(LightTrackerItemRepository items, RequirementWritePort writePort,
-            CowFailureLog failureLog, TargetTransactionRunner transactionRunner) {
-        return new CowEventHandler(items, writePort, failureLog, transactionRunner);
+            CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+            CowMaterializationStore store, CowRecoveryService recovery) {
+        return new CowEventHandler(items, writePort, failureLog, transactionRunner, store, recovery);
     }
 
     @Bean

@@ -60,13 +60,23 @@ public class RequirementApplicationService {
      */
     @Transactional
     public Requirement changeTitle(LocalId localId, String newTitle, LockVersion expectedLockVersion) {
+        Requirement current = load(localId);
+        return saveChange(current, current.changeTitle(newTitle, expectedLockVersion));
+    }
+
+    @Transactional
+    public Requirement upgradeRevision(LocalId localId, LockVersion expectedLockVersion) {
+        Requirement current = load(localId);
+        return saveChange(current, current.upgradeRevision(expectedLockVersion));
+    }
+
+    private Requirement load(LocalId localId) {
         Objects.requireNonNull(localId, "localId");
-        Requirement current = repository.findById(localId)
+        return repository.findById(localId)
                 .orElseThrow(() -> new IllegalArgumentException("requirement not found: " + localId.value()));
+    }
 
-        // 先做乐观锁校验：聚合不可变，失败时 current 不变，也不会留下无主快照
-        Requirement changed = current.changeTitle(newTitle, expectedLockVersion);
-
+    private Requirement saveChange(Requirement current, Requirement changed) {
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
         SnapshotRef snapshotRef = snapshotStore.save(snapshot);
 
