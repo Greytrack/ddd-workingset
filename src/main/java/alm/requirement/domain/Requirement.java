@@ -82,6 +82,27 @@ public final class Requirement implements TrackerItem {
                 localId, commonId, trackerId, title, description, revision, version, LockVersion.initial());
     }
 
+    /** 从持久化重建聚合（保留发布大版本与乐观锁，不用当前值冒充）。 */
+    public static Requirement restore(LocalId localId,
+                                      CommonId commonId,
+                                      TrackerId trackerId,
+                                      String title,
+                                      String description,
+                                      Revision revision,
+                                      Version version,
+                                      LockVersion lockVersion) {
+        Objects.requireNonNull(localId, "localId");
+        Objects.requireNonNull(commonId, "commonId");
+        Objects.requireNonNull(trackerId, "trackerId");
+        Objects.requireNonNull(title, "title");
+        Objects.requireNonNull(description, "description");
+        Objects.requireNonNull(revision, "revision");
+        Objects.requireNonNull(version, "version");
+        Objects.requireNonNull(lockVersion, "lockVersion");
+        return new Requirement(
+                localId, commonId, trackerId, title, description, revision, version, lockVersion);
+    }
+
     @Override
     public LocalId localId() {
         return localId;

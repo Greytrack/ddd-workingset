@@ -1,0 +1,91 @@
+package sk.workingset.infrastructure;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+
+/**
+ * LightTrackerItem 查询缓存装饰器（Redis，TTL + 写后更新）。
+ *
+ * <p>SK 应用层仍只依赖 {@link LightTrackerItemRepository}；本类位于 infrastructure，隔离 Redis/Jackson。
+ * 缓存只保存聚合元数据；{@code findBySource} 不做缓存，避免来源列表变化后的失效复杂度。
+ * Redis 不可用时降级到下游仓储，不影响业务正确性。
+ */
+public class CachingLightTrackerItemRepository implements LightTrackerItemRepository {
+
+    private static final Logger log = LoggerFactory.getLogger(CachingLightTrackerItemRepository.class);
+    private static final String KEY_PREFIX = "workingset:lti:";
+    private static final Duration TTL = Duration.ofSeconds(30);
+
+    private final LightTrackerItemRepository delegate;
+    private final StringRedisTemplate redis;
+    private final ObjectMapper objectMapper;
+
+    public CachingLightTrackerItemRepository(LightTrackerItemRepository delegate,
+                                             StringRedisTemplate redis,
+                                             ObjectMapper objectMapper) {
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
+        this.redis = Objects.requireNonNull(redis, "redis");
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
+    }
+
+    @Override
+    public void save(LightTrackerItem item) {
+        delegate.save(item);
+        writeCache(item);
+    }
+
+    @Override
+    public Optional<LightTrackerItem> findById(LocalId localId) {
+        LightTrackerItem cached = readCache(localId);
+        if (cached != null) {
+            return Optional.of(cached);
+        }
+        Optional<LightTrackerItem> found = delegate.findById(localId);
+        found.ifPresent(this::writeCache);
+        return found;
+    }
+
+    @Override
+    public List<LightTrackerItem> findBySource(LocalId sourceLocalId, Revision sourceRevision) {
+        return delegate.findBySource(sourceLocalId, sourceRevision);
+    }
+
+    private LightTrackerItem readCache(LocalId localId) {
+        try {
+            String json = redis.opsForValue().get(key(localId));
+            if (json == null) {
+                return null;
+            }
+            return objectMapper.readValue(json, CachedLightTrackerItem.class).toDomain();
+        } catch (Exception failure) {
+            log.warn("Redis cache read failed for localId={}, falling back to repository", localId.value(), failure);
+            return null;
+        }
+    }
+
+    private void writeCache(LightTrackerItem item) {
+        try {
+            String json = objectMapper.writeValueAsString(CachedLightTrackerItem.from(item));
+            redis.opsForValue().set(key(item.localId()), json, TTL);
+        } catch (Exception failure) {
+            log.warn("Redis cache write failed for localId={}, continuing without cache", item.localId().value(), failure);
+        }
+    }
+
+    private static String key(LocalId localId) {
+        return KEY_PREFIX + localId.value();
+    }
+}

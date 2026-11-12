@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * 应用启动类（非 web）：Spring Boot 仅承担启动、依赖装配与进程内事件派发。
+ * Web 应用启动类：Spring Boot 承担内嵌容器启动、依赖装配与事件集成。
  *
  * <p>领域层（{@code sk.workingset.domain}、{@code alm.requirement.domain}）保持纯 Java，不依赖 Spring。
  */

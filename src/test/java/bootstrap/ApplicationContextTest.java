@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.Test;
@@ -29,9 +30,6 @@ import sk.workingset.domain.TrackerId;
  */
 class ApplicationContextTest {
 
-    private static final LocalId L0 = LocalId.of("L0");
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T0 = TrackerId.of("T0");
     private static final Revision R3 = Revision.of(3);
 
     @Test
@@ -51,14 +49,17 @@ class ApplicationContextTest {
                     (ApplicationListener<PayloadApplicationEvent<RequirementChanged>>)
                             event -> received.add(event.getPayload()));
             RequirementApplicationService service = context.getBean(RequirementApplicationService.class);
+            LocalId localId = LocalId.of("ctx-" + UUID.randomUUID());
+            CommonId commonId = CommonId.of("ctx-c-" + UUID.randomUUID());
+            TrackerId trackerId = TrackerId.of("ctx-t-" + UUID.randomUUID());
 
-            service.create(L0, C1, T0, "A", "source description", R3);
-            service.changeTitle(L0, "B", LockVersion.of(0));
+            service.create(localId, commonId, trackerId, "A", "source description", R3);
+            service.changeTitle(localId, "B", LockVersion.of(0));
 
             assertEquals(1, received.size(), "Spring Event 应同步派发一条来源事件");
             RequirementChanged event = received.get(0);
-            assertEquals(L0, event.requirementId());
-            assertEquals(L0, event.sourceLocalId());
+            assertEquals(localId, event.requirementId());
+            assertEquals(localId, event.sourceLocalId());
             assertEquals(R3, event.revision());
             assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
             assertNotNull(event.snapshotRef());
