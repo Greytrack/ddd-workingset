@@ -259,7 +259,7 @@ bootstrap.configuration    → 所有实现（组合根）
 | LightTrackerItem 存储 | 内存仓库（`save`、`findById`、`findBySource`） |
 | Requirement 存储 | 内存仓库（ALM） |
 | 快照存储 | 内存 `SnapshotStore`（按 `snapshotRef` 取） |
-| 事件派发 | 异步：Spring Event 同步交给 Listener 入队，`CowEventDispatcher` 在可注入执行器中按 `sourceLocalId` 串行执行；来源命令不等待 COW。进程内队列，无 outbox/重试/去重；不承诺可靠投递、事务提交或跨进程顺序（见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6） |
+| 事件派发 | 异步：Spring Event 同步交给 Listener 入队，`CowEventDispatcher` 在可注入执行器中按 `sourceLocalId` 串行执行；来源命令不等待 COW。运行时由 Spring Modulith `event_publication` 记录事件；S3 不新增 outbox/重试/去重；不承诺可靠投递、事务提交或跨进程顺序（见 [S3 任务说明](t5-s3-codex-task-brief.md) §3.6） |
 | 装配 | Spring Boot 组合根（`bootstrap.configuration`） |
 | 外部依赖 | 无数据库、无消息中间件 |
 

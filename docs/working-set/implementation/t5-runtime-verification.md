@@ -1,8 +1,8 @@
-# T5 运行时骨架验证结果（PostgreSQL + Redis + Web）
+# T5 运行时骨架验证结果（PostgreSQL + Redis + Web + Modulith 事件）
 
 **状态：Verified（2026-11-12）**
 
-- 范围：把首切片从纯内存单元验证推进到可启动的 Web 运行时：Spring Boot 内嵌 Tomcat、PostgreSQL/Spring JDBC 持久化、Redis 缓存、Spring Modulith 依赖、yml 配置与最小 REST API
+- 范围：把首切片从纯内存单元验证推进到可启动的 Web 运行时：Spring Boot 内嵌 Tomcat、PostgreSQL/Spring JDBC 持久化、Redis 缓存、Spring Modulith 事件发布注册表、yml 配置与最小 REST API
 - 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[S2 验证结果](t5-s2-verification-result.md)、[S3 任务说明](t5-s3-codex-task-brief.md)
 - **不包含**：S3 的 COW Handler/物化切换、Merge、删除、权限、版本治理、生产迁移与鉴权
 
@@ -10,7 +10,7 @@
 
 ```text
 mvn -B test
-Tests run: 36, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 37, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 
 mvn -B spring-boot:run
@@ -45,6 +45,8 @@ CHANGE: {"localId":"443628133134624","title":"B","revision":3,"version":null,"lo
 DERIVE: {"trackerId":"443628133265696","item":{"localId":"443628133265697","sourceLocalId":"443628133134624","sourceRevision":3,"materialized":false}}
 READ:   {"fields":{"title":"B","description":"demo"},"contentRevision":3,"contentLocalId":"443628133134624","materialized":false}
 CONFLICT: HTTP 409 {"reason":"LOCK_VERSION_CONFLICT","expectedLockVersion":0,"actualLockVersion":1}
+EVENT:    listener_id=bootstrap.RequirementChangedListener.on(sk.workingset.application.event.RequirementChanged)
+          publication_date=2026-11-12 11:09:53.332481+08, completion_date=2026-11-12 11:09:53.33948+08
 ```
 
 ## 3. PostgreSQL 持久化证据
@@ -79,15 +81,34 @@ exists workingset:lti:443628229325089 -> 1
 ttl     workingset:lti:443628229325089 -> 30
 ```
 
-## 5. 配置与工程变更
+## 5. 事件发布证据（Spring Modulith Event Publication Registry）
+
+- `RequirementApplicationService.changeTitle` 使用 `@Transactional`，保存成功后发布 `RequirementChanged`。
+- `bootstrap.RequirementChangedListener` 使用 `@ApplicationModuleListener` 作为最小消费者（占位；S3 将替换为 COW dispatcher）。
+- Modulith 在监听器执行前自动把事件写入 `event_publication`；监听器成功返回后更新 `completion_date`；监听器抛异常时记录保持未完成，可通过 `IncompleteEventPublications.resubmitIncompletePublications(...)` 或启动时自动重提恢复。
+- `@ApplicationModuleListener` 默认异步执行；验收测试使用 Awaitility 等待 `completion_date` 更新，避免竞态。
+- **不再手写 `JdbcRequirementEventStore`**；事件持久化完全由 Modulith 注册表负责。
+
+实测 `event_publication`：
+
+```text
+listener_id       = bootstrap.RequirementChangedListener.on(sk.workingset.application.event.RequirementChanged)
+event_type        = sk.workingset.application.event.RequirementChanged
+publication_date  = 2026-11-12 11:09:53.332481+08
+completion_date   = 2026-11-12 11:09:53.33948+08
+```
+
+容器验收测试 `bootstrap.RequirementAcceptanceTest` 使用 `@SpringBootTest(webEnvironment = RANDOM_PORT)` 启动真实 Tomcat，通过 `TestRestTemplate` 创建需求、修改标题，并直查 `event_publication` 断言监听器身份、事件类型、发布时间、完成时间与需求身份。
+
+## 6. 配置与工程变更
 
 | 项 | 内容 |
 | --- | --- |
-| `pom.xml` | Spring Boot Web/JDBC/Redis、Spring Modulith、PostgreSQL 驱动、`spring-boot-maven-plugin`；编译保留参数名（`-parameters`） |
+| `pom.xml` | Spring Boot Web/JDBC/Redis、Spring Modulith（starter-jdbc + events-jdbc）、PostgreSQL 驱动、`spring-boot-maven-plugin`；编译保留参数名（`-parameters`） |
 | `application.yml` | `server.port=7102`、Hikari、Redis `63179/db5`、`spring.sql.init.mode=always`、`spring.profiles.active=${SPRING_PROFILES_ACTIVE:default}` |
 | `schema.sql` | 三张业务表 + 来源索引，全部 `IF NOT EXISTS` |
-| 组合根 | JDBC 仓储 + Redis 缓存装饰器 + Adapter 工厂 + Spring Event 发布器 |
-| 事件 | 仍使用 Spring Event 同步派发；Spring Modulith 依赖已引入，事件持久化未作为业务依赖 |
+| 组合根 | JDBC 仓储 + Redis 缓存装饰器 + Adapter 工厂 + Spring Event 发布器 + Modulith 事件监听器 |
+| 事件 | Spring Modulith Event Publication Registry 自动持久化；`@ApplicationModuleListener` 消费者成功标记完成，失败保留未完成供重提 |
 
 修复记录：
 
@@ -95,19 +116,19 @@ ttl     workingset:lti:443628229325089 -> 30
 2. `spring.profiles.active=@profiles.active@` 是 Maven 占位符，Spring 直接读取报 YAML 扫描错误 → 改为 `${SPRING_PROFILES_ACTIVE:default}`。
 3. `@PathVariable` 未显式命名且编译未保留参数名 → 显式写 `@PathVariable("...")`，并启用 `-parameters`。
 
-## 6. 限制与风险
+## 7. 限制与风险
 
 | 编号 | 项 | 说明 |
 | --- | --- | --- |
-| R1 | S3 尚未实现 | 事件已发布，但没有 `CowEventHandler`/`RequirementWritePort`/物化切换；`read` 对 Source-backed 仍读来源当前内容 |
+| R1 | S3 尚未实现 | 事件已由 Modulith 持久化并由占位监听器消费，但没有 `CowEventHandler`/`RequirementWritePort`/物化切换；`read` 对 Source-backed 仍读来源当前内容 |
 | R2 | Spring Modulith 关闭告警 | 测试上下文关闭时出现 `PersistentApplicationEventMulticaster` 的 `ClassCastException` 日志；测试通过，未影响运行；后续应评估排除 Modulith 事件 JDBC 自动配置或升级版本 |
 | R3 | 缓存范围 | 仅 LightTrackerItem 元数据；Requirement 内容不缓存，避免普通修改不升级 revision 导致旧内容 |
 | R4 | schema 管理 | 当前用 `schema.sql` 自动建表，无 Flyway/Liquibase 版本迁移 |
 | R5 | 凭据 | `application.yml` 当前包含本地数据库口令；提交/部署前应改为环境变量或外部配置，不进入版本库 |
 | R6 | 鉴权 | REST 使用固定 `Caller.of("web")`，未接入权限平台 |
-| R7 | 事件持久化 | Spring Modulith 事件表与业务事件未建立正式契约；当前业务事件由 Spring Event 直接派发。S3 任务说明已按异步投递修订，但本运行时尚未实现异步 dispatcher/COW。 |
+| R7 | 事件消费者仍是占位 | Modulith 已自动持久化并标记完成；`RequirementChangedListener` 目前只记录日志，尚未接入 S3 的异步 dispatcher/COW。失败事件保留未完成与启动重提机制尚未在验收测试中覆盖。 |
 
-## 7. 复现
+## 8. 复现
 
 ```text
 # 1. 测试（需要本机 PostgreSQL ddd-test 与 Redis 63179）
