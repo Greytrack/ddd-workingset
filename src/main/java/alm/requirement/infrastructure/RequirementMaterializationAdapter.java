@@ -3,38 +3,34 @@ package alm.requirement.infrastructure;
 import java.util.List;
 import java.util.Objects;
 
-import org.springframework.transaction.support.TransactionTemplate;
-
 import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
-import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.MaterializeRequest;
-import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.RequirementMergeCommand;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.application.port.RequirementWritePort;
+import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
+/**
+ * ALM 写入协作 Adapter（D4 方案 A）。
+ *
+ * <p>只负责业务对象：重建来源快照、校验身份证据、保存或校验 Requirement。
+ * Tracker 锁定与 LightTrackerItem 读取由 SK 承担，本类不依赖任何 SK 仓储。
+ * 事务边界由调用方（SK 的 COW 流程）提供。
+ */
 public final class RequirementMaterializationAdapter implements RequirementWritePort {
     private final RequirementRepository repository;
     private final SnapshotStore snapshotStore;
-    private final TransactionTemplate newTransactionTemplate;
     private final RequirementMergeWriter mergeWriter;
-    private final TrackerRepository trackers;
-    private final LightTrackerItemRepository items;
 
     public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotStore snapshotStore,
-                                             TransactionTemplate newTransactionTemplate, RequirementMergeWriter mergeWriter,
-                                             TrackerRepository trackers, LightTrackerItemRepository items) {
+                                             RequirementMergeWriter mergeWriter) {
         this.repository = repository;
         this.snapshotStore = snapshotStore;
-        this.newTransactionTemplate = newTransactionTemplate;
         this.mergeWriter = mergeWriter;
-        this.trackers = trackers;
-        this.items = items;
     }
 
     @Override
@@ -48,7 +44,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     }
 
     @Override
-    public void materialize(MaterializeRequest request, Runnable recordBusinessSave) {
+    public void materialize(MaterializeRequest request, TargetIdentity target, Runnable recordBusinessSave) {
         var snapshot = snapshotStore.find(request.snapshotRef())
                 .orElseThrow(() -> new MaterializationRejectedException("Source snapshot is missing"));
         if (!snapshot.localId().equals(request.sourceLocalId())
@@ -57,30 +53,30 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
                 || !snapshot.commonId().equals(request.commonId())) {
             throw new MaterializationRejectedException("Source snapshot does not match event evidence");
         }
+        if (!target.localId().equals(request.targetLocalId())
+                || !target.trackerId().equals(request.targetTrackerId())
+                || !target.commonId().equals(request.commonId())) {
+            throw new MaterializationRejectedException("Target identity does not match materialization evidence");
+        }
 
-        newTransactionTemplate.executeWithoutResult(status -> {
-            trackers.lockTracker(request.targetTrackerId());
-            var target = items.findById(request.targetLocalId()).orElseThrow(
-                    () -> new MaterializationRejectedException("Target variant is missing"));
-            if (target.materialized()) {
-                verifyMaterializedTarget(target);
-                recordBusinessSave.run();
-                return;
-            }
-            var existing = repository.findById(request.targetLocalId());
-            if (existing.isPresent()) {
-                verifyExisting(existing.get(), request, snapshot);
-            } else {
-                repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
-                        request.targetTrackerId(), snapshot.title(), snapshot.description(),
-                        request.targetRevision(), snapshot.version()));
-            }
+        if (target.materialized()) {
+            verifyMaterializedTarget(target);
             recordBusinessSave.run();
-        });
+            return;
+        }
+        var existing = repository.findById(request.targetLocalId());
+        if (existing.isPresent()) {
+            verifyExisting(existing.get(), request, snapshot);
+        } else {
+            repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
+                    request.targetTrackerId(), snapshot.title(), snapshot.description(),
+                    request.targetRevision(), snapshot.version()));
+        }
+        recordBusinessSave.run();
     }
 
     @Override
-    public void verifyMaterializedTarget(LightTrackerItem target) {
+    public void verifyMaterializedTarget(TargetIdentity target) {
         var existing = repository.findById(target.localId())
                 .orElseThrow(() -> new MaterializationRejectedException("Target business object is missing"));
         if (!existing.commonId().equals(target.commonId())

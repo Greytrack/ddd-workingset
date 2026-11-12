@@ -28,6 +28,7 @@ import sk.workingset.application.CowMaterializationStore;
 import sk.workingset.application.CowRecoveryService;
 import sk.workingset.application.MergeComparisonService;
 import sk.workingset.application.MergeExecutionService;
+import sk.workingset.application.TrackerItemLifecycleService;
 import sk.workingset.application.port.RequirementCatalog;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.infrastructure.JdbcMergeStore;
@@ -42,6 +43,7 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.infrastructure.CachingLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcBindingRepositories;
 import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
@@ -66,11 +68,9 @@ public class ApplicationConfiguration {
 
     @Bean
     public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
-            JdbcSnapshotStore snapshots, TransactionTemplate newTransactionTemplate,
-            RequirementApplicationService requirements, JdbcBindingRepositories trackers,
-            LightTrackerItemRepository items) {
-        return new RequirementMaterializationAdapter(repository, snapshots, newTransactionTemplate,
-                new RequirementMergeWriter(repository, requirements), trackers, items);
+            JdbcSnapshotStore snapshots, RequirementApplicationService requirements) {
+        return new RequirementMaterializationAdapter(repository, snapshots,
+                new RequirementMergeWriter(repository, requirements));
     }
 
     @Bean
@@ -103,10 +103,11 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public CowEventHandler cowEventHandler(LightTrackerItemRepository items, RequirementWritePort writePort,
+    public CowEventHandler cowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
+            RequirementWritePort writePort,
             CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
             CowMaterializationStore store, CowRecoveryService recovery) {
-        return new CowEventHandler(items, writePort, failureLog, transactionRunner, store, recovery);
+        return new CowEventHandler(items, lifecycle, writePort, failureLog, transactionRunner, store, recovery);
     }
 
     @Bean
@@ -144,8 +145,14 @@ public class ApplicationConfiguration {
 
     @Bean
     public RequirementLifecycleService requirementLifecycleService(JdbcRequirementRepository requirements,
-            JdbcBindingRepositories bindings, LightTrackerItemRepository items) {
-        return new RequirementLifecycleService(requirements, bindings, items);
+            TrackerItemLifecyclePort lifecycle, ApplicationEventPublisher events) {
+        return new RequirementLifecycleService(requirements, lifecycle, events);
+    }
+
+    @Bean
+    public TrackerItemLifecyclePort trackerItemLifecyclePort(JdbcBindingRepositories trackers,
+            LightTrackerItemRepository items) {
+        return new TrackerItemLifecycleService(trackers, items);
     }
 
     @Bean

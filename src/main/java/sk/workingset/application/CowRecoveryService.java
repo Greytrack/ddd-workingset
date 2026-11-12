@@ -4,6 +4,7 @@ import java.util.List;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.application.port.RequirementWritePort;
+import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.domain.LocalId;
 
@@ -46,7 +47,7 @@ public final class CowRecoveryService {
                     || !target.sourceRevision().equals(receipt.sourceRevision()))) {
                 throw new MaterializationRejectedException("LightTrackerItem no longer matches the receipt");
             }
-            writePort.verifyMaterializedTarget(target);
+            writePort.verifyMaterializedTarget(TargetIdentity.of(target));
             if (!target.materialized()) {
                 target.switchToLocalBacked(target.revision());
                 items.save(target);

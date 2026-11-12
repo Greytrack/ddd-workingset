@@ -3,6 +3,7 @@ package sk.workingset.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -18,6 +19,8 @@ import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.application.port.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
+import sk.workingset.application.port.TargetIdentity;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
@@ -50,21 +53,27 @@ class CowEventHandlerTest {
         when(store.lockByEventAndTarget(42, eligible.localId())).thenReturn(Optional.of(
                 new CowMaterializationStore.Entry(42, eligible.localId(), source, before,
                         CowMaterializationStore.Status.MATERIALIZED, 1, true, null)));
+        var lifecycle = mock(TrackerItemLifecyclePort.class);
+        when(lifecycle.lockMaterializationTarget(eligible.trackerId(), eligible.localId()))
+                .thenReturn(TargetIdentity.of(eligible));
         var writePort = mock(RequirementWritePort.class);
         doAnswer(call -> {
-            call.getArgument(1, Runnable.class).run();
+            call.getArgument(2, Runnable.class).run();
             return null;
-        }).when(writePort).materialize(any(), any());
+        }).when(writePort).materialize(any(), any(), any());
         var recovery = new CowRecoveryService(store, items, writePort, failures, Runnable::run, () -> {});
-        var handler = new CowEventHandler(items, writePort, failures, Runnable::run, store, recovery);
+        var handler = new CowEventHandler(items, lifecycle, writePort, failures, Runnable::run, store, recovery);
 
         handler.onRequirementChanged(event);
         handler.onRequirementChanged(event);
 
         var request = ArgumentCaptor.forClass(MaterializeRequest.class);
-        verify(writePort).materialize(request.capture(), any());
+        var identity = ArgumentCaptor.forClass(TargetIdentity.class);
+        verify(writePort).materialize(request.capture(), identity.capture(), any());
         assertEquals(before, request.getValue().beforeRevision());
         assertEquals(own, request.getValue().targetRevision());
+        assertEquals(eligible.localId(), identity.getValue().localId());
+        verify(lifecycle).lockMaterializationTarget(eligible.trackerId(), eligible.localId());
         var saved = ArgumentCaptor.forClass(LightTrackerItem.class);
         verify(items).save(saved.capture());
         var materialized = saved.getValue();

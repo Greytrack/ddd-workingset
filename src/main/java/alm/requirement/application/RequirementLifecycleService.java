@@ -1,38 +1,43 @@
 package alm.requirement.application;
 
+import java.time.Instant;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import alm.requirement.infrastructure.JdbcRequirementRepository;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.LightTrackerItemRepository;
-import sk.workingset.application.port.TrackerRepository;
+import sk.workingset.application.event.RequirementPurged;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.LocalId;
 
-/** 协调永久删除与仍依赖该内容的工作集变体。 */
+/**
+ * 协调永久删除与仍依赖该内容的工作集变体。
+ *
+ * <p>D4 方案 A：Tracker 锁定、COW 依赖判定与 LTI 移除均由 SK 承担（{@link TrackerItemLifecyclePort}）；
+ * 本服务只删除业务对象，并在提交后通过 {@link RequirementPurged} 事件通知 SK 清理 LTI。
+ */
 public class RequirementLifecycleService {
     private final JdbcRequirementRepository requirements;
-    private final TrackerRepository trackers;
-    private final LightTrackerItemRepository items;
+    private final TrackerItemLifecyclePort lifecycle;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public RequirementLifecycleService(JdbcRequirementRepository requirements, TrackerRepository trackers,
-                                       LightTrackerItemRepository items) {
+    public RequirementLifecycleService(JdbcRequirementRepository requirements,
+                                       TrackerItemLifecyclePort lifecycle,
+                                       ApplicationEventPublisher eventPublisher) {
         this.requirements = requirements;
-        this.trackers = trackers;
-        this.items = items;
+        this.lifecycle = lifecycle;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
     public void delete2(LocalId id) {
         var candidate = requirements.findById(id).orElseThrow(() -> missing(id));
-        trackers.lockTracker(candidate.trackerId());
+        lifecycle.assertPurgeable(candidate.trackerId(), id);
         var current = requirements.lockById(id).orElseThrow(() -> missing(id));
-        if (items.hasSourceBackedDependents(id)
-                || items.findById(id).filter(item -> !item.materialized()).isPresent()) {
-            throw new ApplicationFailure(FailureReason.PREPARING, "Requirement content is still needed by COW");
-        }
-        items.remove(id);
         requirements.purge(current);
+        eventPublisher.publishEvent(new RequirementPurged(id, candidate.trackerId(), Instant.now()));
     }
 
     private static ApplicationFailure missing(LocalId id) {

@@ -9,20 +9,24 @@ import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.LightTrackerItem;
 
 public final class CowEventHandler {
     private final LightTrackerItemRepository items;
+    private final TrackerItemLifecyclePort lifecycle;
     private final RequirementWritePort writePort;
     private final CowFailureLog failureLog;
     private final TargetTransactionRunner transactionRunner;
     private final CowMaterializationStore store;
     private final CowRecoveryService recovery;
 
-    public CowEventHandler(LightTrackerItemRepository items, RequirementWritePort writePort,
+    public CowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
+                           RequirementWritePort writePort,
                            CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
                            CowMaterializationStore store, CowRecoveryService recovery) {
         this.items = items;
+        this.lifecycle = lifecycle;
         this.writePort = writePort;
         this.failureLog = failureLog;
         this.transactionRunner = transactionRunner;
@@ -48,11 +52,15 @@ public final class CowEventHandler {
                     continue;
                 }
                 if (!receipt.businessSaved()) {
-                    writePort.materialize(new MaterializeRequest(target.localId(), target.trackerId(),
-                            target.commonId(), event.sourceLocalId(), event.beforeRevision(), event.afterRevision(),
-                            event.beforeLockVersion(), event.afterLockVersion(), target.revision(),
-                            event.eventId(), event.snapshotRef()),
-                            () -> store.markMaterialized(event.eventId(), target.localId()));
+                    transactionRunner.inNewTransaction(() -> {
+                        var targetIdentity = lifecycle.lockMaterializationTarget(
+                                target.trackerId(), target.localId());
+                        writePort.materialize(new MaterializeRequest(target.localId(), target.trackerId(),
+                                target.commonId(), event.sourceLocalId(), event.beforeRevision(), event.afterRevision(),
+                                event.beforeLockVersion(), event.afterLockVersion(), target.revision(),
+                                event.eventId(), event.snapshotRef()), targetIdentity,
+                                () -> store.markMaterialized(event.eventId(), target.localId()));
+                    });
                 }
                 stage = "SWITCH";
                 recovery.recoverSwitchOnly(event.eventId(), target.localId());

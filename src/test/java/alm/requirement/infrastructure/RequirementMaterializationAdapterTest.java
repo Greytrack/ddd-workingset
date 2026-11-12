@@ -4,22 +4,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.application.event.SnapshotRef;
-import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.application.port.MaterializeRequest;
-import sk.workingset.application.port.TrackerRepository;
+import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
@@ -30,20 +24,22 @@ class RequirementMaterializationAdapterTest {
     private final Runnable recordBusinessSave = mock(Runnable.class);
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
-    private final TransactionTemplate transaction = mock(TransactionTemplate.class);
-    private final LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
     private final RequirementMaterializationAdapter adapter = new RequirementMaterializationAdapter(
-            repository, snapshots, transaction, mock(RequirementMergeWriter.class), mock(TrackerRepository.class), items);
+            repository, snapshots, mock(RequirementMergeWriter.class));
 
     private final MaterializeRequest request = new MaterializeRequest(
             LocalId.of("target"), TrackerId.of("target-tracker"), CommonId.of("family"), LocalId.of("source"),
             Revision.of(3), Revision.of(4), LockVersion.of(1), LockVersion.of(2), Revision.of(1),
             10, new SnapshotRef("snapshot"));
 
+    private final TargetIdentity target = new TargetIdentity(request.targetLocalId(), request.targetTrackerId(),
+            request.commonId(), request.targetRevision(), false);
+
     @Test
     void refuses_missing_or_mismatched_snapshot_without_writing_target() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.empty());
-        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
+        assertThrows(MaterializationRejectedException.class,
+                () -> adapter.materialize(request, target, recordBusinessSave));
 
         var invalid = java.util.List.of(
                 snapshot("other", "family", 3, 1),
@@ -52,34 +48,40 @@ class RequirementMaterializationAdapterTest {
                 snapshot("source", "other", 3, 1));
         for (var evidence : invalid) {
             when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(evidence));
-            assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
+            assertThrows(MaterializationRejectedException.class,
+                    () -> adapter.materialize(request, target, recordBusinessSave));
         }
-        verifyNoInteractions(repository, recordBusinessSave);
+        verifyNoInteractions(repository);
+        verifyNoInteractions(recordBusinessSave);
+    }
+
+    @Test
+    void target_identity_must_match_the_request_evidence() {
+        when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("source", "family", 3, 1)));
+        var mismatched = new TargetIdentity(LocalId.of("other"), request.targetTrackerId(),
+                request.commonId(), request.targetRevision(), false);
+        assertThrows(MaterializationRejectedException.class,
+                () -> adapter.materialize(request, mismatched, recordBusinessSave));
+        verifyNoInteractions(repository);
+        verifyNoInteractions(recordBusinessSave);
     }
 
     @Test
     void existing_target_must_match_evidence_including_release_version() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("source", "family", 3, 1)));
-        doAnswer(call -> {
-            Consumer<TransactionStatus> work = call.getArgument(0);
-            work.accept(mock(TransactionStatus.class));
-            return null;
-        }).when(transaction).executeWithoutResult(any());
-        var variant = LightTrackerItem.derive(request.targetLocalId(), request.commonId(),
-                request.targetTrackerId(), WorkingSetId.of("target-workset"), request.targetRevision(),
-                request.sourceLocalId(), request.beforeRevision());
-        when(items.findById(variant.localId())).thenReturn(Optional.of(variant));
-        when(repository.findById(request.targetLocalId())).thenReturn(Optional.of(target("different", "v1")),
-                Optional.of(target("A", "v2")), Optional.of(target("A", "v1")));
+        when(repository.findById(request.targetLocalId())).thenReturn(Optional.of(existing("different", "v1")),
+                Optional.of(existing("A", "v2")), Optional.of(existing("A", "v1")));
 
-        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
-        assertThrows(MaterializationRejectedException.class, () -> adapter.materialize(request, recordBusinessSave));
-        assertDoesNotThrow(() -> adapter.materialize(request, recordBusinessSave));
+        assertThrows(MaterializationRejectedException.class,
+                () -> adapter.materialize(request, target, recordBusinessSave));
+        assertThrows(MaterializationRejectedException.class,
+                () -> adapter.materialize(request, target, recordBusinessSave));
+        assertDoesNotThrow(() -> adapter.materialize(request, target, recordBusinessSave));
         verify(repository, never()).save(any());
         verify(recordBusinessSave).run();
     }
 
-    private Requirement target(String title, String version) {
+    private Requirement existing(String title, String version) {
         return Requirement.create(request.targetLocalId(), request.commonId(), request.targetTrackerId(),
                 title, "description", request.targetRevision(), Version.of(version));
     }
