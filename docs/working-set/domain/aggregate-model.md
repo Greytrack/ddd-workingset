@@ -174,15 +174,7 @@ LightTrackerItem 保持身份/来源/有效变体定位权威：SourceLocalId/So
 
 ## D-016：派生仅固定版次与 COW 保护边界（Draft 设计影响）
 
-已确认：派生仅固定业务版次（SourceRevision），不复制或固定完整业务数据。完整派生操作完成（Derivation Completion）是新派生 LightTrackerItem 开始受到来源变更 COW 保护的业务边界：派生完成前来源修改不为该变体触发 COW，派生完成后首次相关来源修改触发 COW。
-
-关键区分：
-
-- **Derivation Time Basis**（派生时间基准，选 Revision）≠ **Derivation Completion**（完整派生完成，COW 保护边界）。
-- SourceRevision 只表达业务版次，不等于不可变内容快照。
-- D-011 首次快照优先限定为「派生完成之后首次需要保护的相关来源修改」。
-
-候选协作协议：如何表达和判定 Derivation Completion 与 Source Mutation 的实际先后（场景 A/B 判定依据）；场景 C 竞态（来源修改已开始 → 派生完成 → 来源修改提交）标记为待裁定，不自行决定以开始时间还是提交时间判断。不直接确定新数据库字段、全局锁或新聚合。（此候选协作协议现由 D-017 关闭，见下节）
+普通字段的派生时间基准只选择业务版次。派生完成时间门槛已被 D-017 取代，历史依据见 [D-016 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-016)。附件与关系的固定范围见 [T3 §2.1](lighttrackeritem-materialization-contract-v1.md)。
 
 ## D-017：COW 目标集合在事件消费时确定（Draft 设计影响）
 

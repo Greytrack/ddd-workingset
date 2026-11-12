@@ -1,61 +1,8 @@
-# 合并、共享与 COW 的候选行为
+# Checkpoint 适用性与 GateFlow 内容切换
 
-**状态：Draft / Candidate**
+**状态：Draft / Candidate。** 业务结果与候选实施范围分别见下节。
 
-目的：验证提交、结果和确认的区分。依据 [责任与契约](../domain/shared-kernel-boundary.md)、[B01—B12](../scenarios/shared-kernel-boundary-scenarios.md)、[评审](../reviews/2026-11-09-stage-3-architecture-review.md)。假设 BC 支持提交去重和结果回读；不表示整轮事务、传输协议或最终接口。预校验不是提交许可；B09 已确认接受字段在执行时读取源最新值。目标同一接受字段在提交前被修改时，合法提交会覆盖该字段。用户进一步确认接收方各种变动均不能推翻用户合并决策或引发合并冲突提示，删除覆盖目标新修改同样适用；业务 BC 合法性校验仍保留。若极端情况下某个已选源字段不可读，则本条 Requirement 保持未完成，批次继续下一条。图中展示源字段可读的执行路径，执行中竞态处理待定。
-
-已确认适用方向为直接父子双向，source/target 随本轮选择确定；存在性决定可产生目标新增或删除，字段决定可产生目标修改，见 [六种接收场景](../scenarios/core-scenarios.md#直接父子双向合并新增删除修改)。下图读取源字段的步骤展示修改路径，不要求删除操作读取已不存在的源内容；新增、删除的详细执行协议仍待设计。
-
-```mermaid
-sequenceDiagram
-    actor U as 审阅者
-    participant W as Working Set
-    participant B as 业务 BC 适配能力
-    participant K as Checkpoint
-    U->>W: diff 双侧固定证据与方向
-    W->>B: 经授权读取并语义比较
-    B-->>W: Difference 或不可读原因
-    U->>W: decision 字段及存在性选择
-    W->>W: 保存决定版本和审阅证据
-    W->>B: 执行时读取已选字段的权威源最新值
-    B-->>W: 返回本次源值及版本
-    W->>B: validation / apply 同一操作身份与执行所读字段值
-    B->>B: 基于当前目标重授权、整体校验、提交期并发控制
-    alt 业务规则拒绝
-        B-->>W: 拒绝回执 无业务变化
-        W-->>U: 未完成 可修改决定或重新比较
-    else 提交成功
-        B->>B: 提交内容与可恢复结果
-        B-->>W: result 实际版本与操作身份
-        W->>W: 保存真实 Apply Result
-        W->>K: 证据完整才 CAS 推进 checkpoint
-        K-->>W: 已确认或更新冲突
-    else 结果未知
-        W->>B: 按原操作身份查询结果
-        B-->>W: 原结果或仍在处理中
-    end
-```
-
-KEEP_TARGET 已确认可通过 markAsMerged 记录处理决定而保留目标内容，决定写入 MergeCheckpoint。双侧业务版次未变时下次比对不再显示该差异，普通编辑只增加乐观锁 `lock_version` 也继续隐藏。该无内容变更路径直接记录决定与确认，图中业务内容提交分支适用于存在数据变更的情况。DEFER 保留未处理状态。部分对象失败不改变其他对象的成功事实。
-
-```mermaid
-flowchart TB
-    A["WS A Binding"] --> S["SHARED 权威 Tracker"]
-    B["WS B Binding"] --> S
-    S --> I["同一 Variant / 业务内容"]
-    I --> P["BC 合法提交后 权威点查可见"]
-    P -.-> Q["列表投影异步 SLA 待定"]
-    S --> C["UNSHARED 派生 - 新 Tracker 和稳定目标 LocalId"]
-    C --> V["VIRTUAL - 固定 Source Cut 保留历史"]
-    V --> W["首次写入 由目标 BC 校验并 CAS"]
-    W --> L["本地权威内容已提交"]
-    L -.-> M["物化确认最终一致 不改身份或复活删除"]
-    W --> F["冲突 / 历史不可用 / 拒绝"]
-```
-
-派生箭头表示业务动作而非复制同步。源后续变/删不改变目标固定切点；若保留能力不可用，必须阻止依赖该切点的成功发布或写入。异步标记滞后时本地提交与墓碑优先，不能读取旧来源覆盖目标。
-
-B08 已确认批次允许部分成功。重试只进入未完成项的执行流程，已成功项保留结果并跳过，即使其源端再次变化。结果未知项先查回原提交结果的恢复协议仍为候选。
+早期 Merge Session 与 VIRTUAL 固定来源图已退出本页。当前合并时序见 [T1 MergeEntry 生命周期](merge-entry-lifecycle.md)，首次 COW 见 [T3 物化图](lighttrackeritem-materialization.md)。原场景、反例及裁定仍见 [B01～B12](../scenarios/shared-kernel-boundary-scenarios.md)和[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)。共享权威点查与列表投影时效仍见 [QUESTION-003](../domain/open-questions.md)。
 
 ## 用户主动比对与 Checkpoint 适用性
 

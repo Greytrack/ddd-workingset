@@ -234,7 +234,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `WorkingsetApplication`（`bootstrap`） | `@SpringBootApplication` 主类（非 web） |
 | `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配 JDBC/Redis 仓储、应用服务、读 Adapter 工厂、物化 Adapter、Handler、协调器、`REQUIRES_NEW` 事务模板与失败记录 |
 
-`RequirementChanged` 由 **SK 定义、ALM 通过 `ApplicationEventPublisher` 发布**；Modulith 在来源事务提交后异步调用 `RequirementChangedListener`，监听器交给 `SourceSerialCowCoordinator` 按 `sourceLocalId` 串行执行，来源 Command 不等待。S3 的“提交”由 Modulith 的 `AFTER_COMMIT` 语义保障；**不承诺**跨进程顺序、并发同源交错或自动重试；outbox/重试/去重留 S4（见 [S3 实施契约](t5-s3-codex-task-brief.md)）。
+来源提交、异步消费和恢复的实施路径见 [T5 架构图](../diagrams/t5-s0-architecture.md)。同源有界等待、重提与验证限制见 [S4 验证结果](t5-s4-verification-result.md)。
 
 **明确不构建**：通用 CRUD Repository、动态 SPI 注册器、通用 Saga/事务框架、跨 BC 事件总线平台、四 BC 通用适配层。
 
@@ -260,7 +260,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | LightTrackerItem 存储 | PostgreSQL/Spring JDBC，Redis 查询缓存在提交后更新 |
 | Requirement 存储 | PostgreSQL/Spring JDBC（`lock_version` 条件更新） |
 | 快照存储 | PostgreSQL `requirement_snapshots`（按 `snapshotRef` 取） |
-| 事件派发 | Spring Modulith Event Publication Registry：业务事务内写 `event_publication`，提交后由 `@ApplicationModuleListener` 异步新事务消费；`SourceSerialCowCoordinator` 按 `sourceLocalId` 串行；S3 不新增 outbox/重试/去重；不承诺跨进程顺序（见 [S3 实施契约](t5-s3-codex-task-brief.md)） |
+| 事件派发 | Spring Modulith 提交后异步消费。事务与恢复流程见 [T5 架构图](../diagrams/t5-s0-architecture.md) |
 | 装配 | Spring Boot 组合根（`bootstrap.configuration`） |
 | 外部依赖 | PostgreSQL、Redis |
 
@@ -272,7 +272,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | --- | --- | --- |
 | R1 | 仓库**无构建系统**（无 `pom.xml`，`src/` 为空，0 Java 文件） | 已确认；S1 第一件事为建骨架 |
 | R2 | 部署/CI 运行环境未验证（仅本地 JDK 21 + Maven 3.9.11 证据） | 未验证；CI 接入时复核 P1 |
-| R3 | 快照序列化与可靠投递 | S3 采用进程内异步队列，不提供可靠投递；outbox/持久化事件日志、重试、去重由 S4 完成 |
+| R3 | 快照序列化与可靠投递 | 已使用 Modulith 持久化发布记录。重提和剩余风险见 [S4 验证结果](t5-s4-verification-result.md) |
 | R4 | ~~`RequirementId` 与 `LocalId` 的映射~~ | **已裁定（用户 2026-11-11）：LocalId 是所有业务对象聚合的唯一标识，RequirementId = LocalId；S1 直接以 `LocalId` 作为聚合主键，不需要映射** |
 | R5 | Mermaid 渲染未验证（无 `mmdc`） | 发布前复核 |
 

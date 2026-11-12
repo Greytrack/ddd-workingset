@@ -44,7 +44,7 @@
 
 ## 相关验收标准
 
-已接受规则关联的业务结果见阶段 3.1 矩阵所列 SCN/B 场景。新增 [SCN-011/012](scenarios/core-scenarios.md) 分别验证单工作集唯一性及派生附件/关系固定；其验收表述仍 Draft，未运行测试。场景文档内其余候选预期和协议不整体接受；[implementation](implementation/README.md) 尚无实现证据。
+已接受规则关联的业务结果见阶段 3.1 矩阵所列 SCN/B 场景。新增 [SCN-011/012](scenarios/core-scenarios.md) 分别验证单工作集唯一性及派生附件/关系固定；其验收表述仍 Draft，未运行测试。场景文档内其余候选预期和协议不整体接受。首切片的实际覆盖范围与证据见 [实施索引](implementation/README.md)。
 
 ## 已整理但未确认的候选知识
 
@@ -105,4 +105,4 @@
 
 术语沿用 2026-11-11 裁定。`version` 为可空的发布大版本，`revision` 为手动推进的业务版次，`lock_version` 为提交时递增的乐观锁版本。
 
-SCN-057～071 与配套图表由各契约链接。进度、下一步及门禁统一见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。
+SCN-057～073 与配套图表由各契约链接。进度、下一步及门禁统一见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。

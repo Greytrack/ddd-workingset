@@ -4,8 +4,7 @@
 
 - 日期：2026-11-11
 - 依据：[T5-S0 最小纵向切片设计](t5-s0-minimal-slice-design.md)、T3（物化协议）、T4（Port/Adapter、九分类）、T2（非共享派生）
-- 测试层次：① 聚合单元测试；② 应用服务集成测试（内存仓库）；③ 事件-物化集成测试
-- 测试方式：JUnit 5 + 内存实现（`InMemory*Repository`、`SnapshotStore`、进程内顺序事件总线）；**不引入 Spring 与数据库**
+- 测试层次：① 真实领域对象单测；② Mockito 应用层测试；③ 真实 PostgreSQL、Redis、Tomcat 与 Modulith 验收。证据见 [S3](t5-s3-verification-result.md)及 [S4](t5-s4-verification-result.md)。
 
 ## 映射总表
 

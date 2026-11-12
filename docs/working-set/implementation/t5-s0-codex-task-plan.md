@@ -46,7 +46,7 @@
 
 **可执行测试**
 
-- `mvn test`：AT-01、AT-02 集成测试（内存仓库 / 内存 Adapter）；
+- `mvn test`：AT-01、AT-02 集成测试，当前回归采用 Mockito 仓储与真实读 Adapter；
 - `resolve` 的 `NotFound`、`NotIncluded` 各一测试；
 - **AC-01**：ArchUnit 规则（`sk.workingset..` 不依赖 `alm.requirement..`）；
 - **AC-02（派生部分）**：派生后 `localId` 已分配且稳定、`commonId` 继承、`materialized=false`。
@@ -72,7 +72,7 @@
 - `sk.workingset.application`：`RequirementChanged` 事件类型（公共信封）；
 - `alm.requirement.domain`：`Requirement` 增加 `changeTitle(String, LockVersion)`（推进 `lock_version`，不升级 `revision`、不改变发布 `version`）；
 - `alm.requirement.application`：`changeTitle(...)` 编排（先取快照、再保存、再发事件）；
-- `alm.requirement.infrastructure`：`SnapshotStore`（内存）。
+- `alm.requirement.infrastructure`：`SnapshotStore`。当前快照回归使用 PostgreSQL JDBC。
 
 **输入依赖**：S1 完成；P4（信封 + BC 自有快照）；用户 2026-11-11 决定（Spring Boot 升级、Spring Event、雪花 ID）。
 

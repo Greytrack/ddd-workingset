@@ -12,16 +12,7 @@
 
 前两张图为 `Draft / Candidate`。Shared Kernel 外框图为 `Reviewed`，其中 `AC-001` 约束已 Confirmed，但它不是 Accepted 内部领域模型，也未发布为正式设计基线。
 
-## 渐进交付清单
-
-| 设计阶段／触发条件 | 最小图表 | 当前状态 |
-| --- | --- | --- |
-| 领域发现出现多个核心概念及歧义 | 概念关系图 | 已创建 Candidate |
-| 出现多个候选模型所有者和跨边界协作 | 候选 Context Map | 已创建 Candidate |
-| 战略上下文获评审 | 正式 Context Map，含上下游和集成模式 | candidate-context-map 已创建（Candidate），正式 Context Map 仍待阶段 3 评审 |
-| 某聚合方案进入正式比较 | 该方案的领域类图与聚合边界图 | [aggregate-candidates](aggregate-candidates.md) 已创建（Candidate）；D-001 已排除 AP-002 Branch 根，当前方案为 Tracker 独立聚合 |
-| 生命周期或长流程进入契约评审 | 状态图／时序图／事件流程图 | 已创建 tracker-creation-lifecycle、tracker-dual-relations、lighttrackeritem-lifecycle、productspace-tracker-workingset、domain-mainline（均 Draft） |
-| Shared、COW、Merge、并发设计拟接受 | 能解释行为、证据与一致性边界的专项图 | COW 与绑定专项图已创建；Merge 执行协议图待契约层（差异冻结/幂等/Checkpoint） |
+图表交付与状态规则见 [AGENTS.md §4.1](../../../AGENTS.md)。以下按主题索引现行和历史视图。
 
 ## Mermaid 约定
 
@@ -34,10 +25,8 @@
 7. 修改关联设计时同步更新图；无法同步时先把图标记为 `Superseded`，不得让旧图继续充当当前模型。
 8. Accepted 图必须被 `BASELINE.md` 明确列出；Git 提交或 Mermaid 可渲染本身都不代表设计已接受。
 
-- [三套候选类图与聚合边界](aggregate-candidates.md)：AP-001/002/003 正式比较视图，均 Candidate。
-- [合并与共享/COW 行为](collaboration-behavior.md)：候选提交、回执与 Checkpoint 责任。
-
-以上补齐本轮候选评审视图；此前渐进清单中的“待创建”是阶段 2 历史进度，当前三方案图已创建，尚待业务裁定及正式渲染检查。
+- [三套候选类图与聚合边界](aggregate-candidates.md)：保留仍有辨析价值的候选视图，已弃用方案链接历史权衡。
+- [Checkpoint 适用性与 GateFlow 内容切换](collaboration-behavior.md)：保留确认规则和仍待细化的切换协议。
 
 - [Tracker 双维关系](tracker-dual-relations.md)：D-003 同工作集组织树与跨直接父子工作集派生链，Draft；替代旧 D-002 字段未定图。
 
@@ -61,9 +50,8 @@
 
 - [cross-bc-contract.md](cross-bc-contract.md)：Port/Adapter 依赖方向（只读 `TrackerItemReadPort` + 写入协作 Port）、能力声明、九分类适用矩阵、resolve 决策路径，以及 K3″ 版本治理讨论稿，Draft / Candidate（阶段 5 T4；K1″/K2″ 已确认、K3″ 团队开放项，配套 [跨 BC 公共契约](../domain/cross-bc-contract-v1.md)）。
 
-- [t5-s0-architecture.md](t5-s0-architecture.md)：T5-S0 首切片的最小目录/包依赖、组件依赖方向、首次 COW 时序、读取路径判定与五个检查点（含 AC-01/AC-02），Draft / Candidate（阶段 5 T5-S0，配套 [最小纵向切片设计](../implementation/t5-s0-minimal-slice-design.md)）。
+- [T5 架构与 COW](t5-s0-architecture.md)：当前组件依赖、提交后消费与切换恢复，Draft。
 
-## 渲染检查状态（2026-11-10，2026-11-11 更新）
+## 渲染状态
 
-- **静态检查（脚本执行）**：16 个图文件、56 个 `mermaid` 代码块；fence 配对完整（每文件 ``` 数为偶数）；图类型均为 `flowchart`、`classDiagram`、`stateDiagram-v2`、`sequenceDiagram`（通用语法，无专有扩展）。
-- **实际渲染：未执行**。当前环境无 `mmdc`；`npx @mermaid-js/mermaid-cli` 在 45 秒内无响应（疑似需联网下载 puppeteer）。按 `AGENTS.md` 4.1 第 6 条，图纳入正式基线与发布前须在可渲染环境完成渲染检查并回填结论；当前状态记为「静态检查通过 / 渲染未验证」，不得据此宣称图已通过渲染评审。
+图表仍待实际 Mermaid 渲染检查。基线纳入条件见 [AGENTS.md §4.1](../../../AGENTS.md)。

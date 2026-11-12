@@ -218,15 +218,6 @@ QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具�
 
 仍保留：事件同步细节、幂等去重留待实施；Source Cut（物化固定依据）与 SourceRevision（未物化读取来源 Revision）的区分已由 D-018 澄清。
 
-## D-019 后的待定执行协议（2026-11-10）
+## D-019 后的执行协议（QUESTION-015）
 
-D-019 已确认 Diff/Merge 的业务规则与聚合定位（FACT-027、INV-061～063、SCN-055/056），执行协议仍待契约层裁定，登记为 `QUESTION-015`：
-
-1. **差异冻结与比较令牌**：一次 Diff 结果如何绑定比较上下文与双侧证据，避免把分页差异或过期清单当作实时差异。
-2. **幂等键**：重复提交同一轮 Merge 请求（网络重试、消息重投）如何识别为同一轮而不重复应用决定。
-3. **乱序确认**：撤销事件晚于确认事件到达时，Checkpoint 的确认/撤销因果单调如何保证（旧确认不得覆盖新撤销）。
-4. **字段映射**：MergeCheckpoint 的「业务 Revision」与 LightTrackerItem 的 `SourceRevision`／`Revision` 的精确对应关系；`KEEP_TARGET` 时 Revision 是否变化。
-
-边界：本问题不重新开放 D-019 已确认的业务规则，也不改变 MergeRound／MergeCheckpoint 的聚合定位；只裁定执行协议与字段映射。
-
-**2026-11-11 更新**：重试与终态已裁定（方案 B）——MergeRound 一次执行即终态、不可重开；未完成条目（`Rejected`/`StaleEvidence`/`Deferred`）须重新比较并新建 MergeRound；`ApplyResult` 为本轮不可变快照（见 [ADR-0005](../adr/0005-merge-execution-model.md) 补充裁定、契约 §8、SCN-059/060）。剩余待定：差异冻结/比较令牌的证据形式、幂等键、乱序确认、Checkpoint 字段映射细化。
+领域裁定见 [T1 执行契约](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)与[关闭评审](../reviews/2026-11-11-t1-contract-review.md)。剩余实施项为双侧内容证据的表示与持久化、幂等键、乱序确认和 Checkpoint 字段映射。原备选方案与轮次重试裁定由 ADR 和评审保留。

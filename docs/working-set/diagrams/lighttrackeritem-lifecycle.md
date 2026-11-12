@@ -271,53 +271,7 @@ flowchart TD
 
 ## 派生完成边界与 COW 保护（D-016 时序对比）
 
-已确认：完整派生完成（Derivation Completion）是新变体开始受 COW 保护的边界；派生完成前来源修改不触发 COW。
-
-场景 A：派生完成 → 来源修改 → 触发 COW。
-
-```mermaid
-sequenceDiagram
-    participant W as Working Set
-    participant R1 as LightTrackerItem R1
-    participant SBC as 来源业务 BC
-    participant H as COW Handler
-
-    W->>R1: 完整派生完成（Derivation Completion）
-    SBC->>SBC: R0 修改 B→C，形成修改前快照 B
-    SBC->>H: 来源变更事件（快照 B）
-    H->>R1: 检查派生已完成 → 触发 COW
-    H->>H: R1 据快照 B 物化
-```
-
-场景 B：来源修改 → 派生完成 → 不因该修改触发 COW。
-
-```mermaid
-sequenceDiagram
-    participant SBC as 来源业务 BC
-    participant W as Working Set
-    participant R1 as LightTrackerItem R1
-
-    SBC->>SBC: R0 修改 B→C（事件携带快照 B）
-    Note over R1: R1 派生尚未完成，不触发 COW
-    W->>R1: 完整派生完成（Derivation Completion）
-    Note over R1: R1 仍 Source-backed，Query 得到 R0 Revision 3 当前内容 C
-```
-
-场景 C：来源修改已开始 → 派生完成 → 来源修改成功提交（竞态，待裁定）。
-
-```mermaid
-sequenceDiagram
-    participant SBC as 来源业务 BC
-    participant W as Working Set
-    participant R1 as LightTrackerItem R1
-
-    SBC->>SBC: 来源修改开始（B→C）
-    W->>R1: R1 派生完成（Derivation Completion）
-    SBC->>SBC: 来源修改成功提交
-    Note over SBC,R1: 待裁定竞态：以修改开始还是提交时间判断 R1 是否受 COW 保护
-```
-
-说明：如何表达和判定 Derivation Completion 与 Source Mutation 的实际先后属候选协作协议，不直接确定新数据库字段、全局锁或新聚合。（此时间边界判定现由 D-017 修订，见下节）
+**Superseded。** D-016 的派生完成时间门槛由 D-017 的消费时匹配取代。旧时序从本页移除，原裁定与反例仍可在[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-016)和 SCN-044～047 查阅。D-016 的普通字段只选定业务版次规则继续有效，附件与关系见 T3 §2.1。
 
 ## COW 目标集合消费时确定（D-017 主流程时序）
 
