@@ -2,12 +2,13 @@ package sk.workingset.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +31,6 @@ class CowEventHandlerTest {
     @Test
     void an_upgrade_shaped_event_matches_the_before_revision_and_keeps_the_targets_own_revision() {
         var items = mock(LightTrackerItemRepository.class);
-        var requests = new ArrayList<MaterializeRequest>();
         var failures = mock(CowFailureLog.class);
         var source = LocalId.of("source");
         var before = Revision.of(3);
@@ -50,25 +50,21 @@ class CowEventHandlerTest {
         when(store.lockByEventAndTarget(42, eligible.localId())).thenReturn(Optional.of(
                 new CowMaterializationStore.Entry(42, eligible.localId(), source, before,
                         CowMaterializationStore.Status.MATERIALIZED, 1, true, null)));
-        var writePort = new RequirementWritePort() {
-            @Override
-            public void materialize(MaterializeRequest request, Runnable recordBusinessSave) {
-                requests.add(request);
-                recordBusinessSave.run();
-            }
-
-            @Override
-            public void verifyMaterializedTarget(LightTrackerItem target) {}
-        };
+        var writePort = mock(RequirementWritePort.class);
+        doAnswer(call -> {
+            call.getArgument(1, Runnable.class).run();
+            return null;
+        }).when(writePort).materialize(any(), any());
         var recovery = new CowRecoveryService(store, items, writePort, failures, Runnable::run, () -> {});
         var handler = new CowEventHandler(items, writePort, failures, Runnable::run, store, recovery);
 
         handler.onRequirementChanged(event);
         handler.onRequirementChanged(event);
 
-        assertEquals(1, requests.size());
-        assertEquals(before, requests.getFirst().beforeRevision());
-        assertEquals(own, requests.getFirst().targetRevision());
+        var request = ArgumentCaptor.forClass(MaterializeRequest.class);
+        verify(writePort).materialize(request.capture(), any());
+        assertEquals(before, request.getValue().beforeRevision());
+        assertEquals(own, request.getValue().targetRevision());
         var saved = ArgumentCaptor.forClass(LightTrackerItem.class);
         verify(items).save(saved.capture());
         var materialized = saved.getValue();

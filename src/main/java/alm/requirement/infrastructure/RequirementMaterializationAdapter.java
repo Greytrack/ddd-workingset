@@ -27,11 +27,6 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     private final LightTrackerItemRepository items;
 
     public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotStore snapshotStore,
-                                             TransactionTemplate newTransactionTemplate) {
-        this(repository, snapshotStore, newTransactionTemplate, null, null, null);
-    }
-
-    public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotStore snapshotStore,
                                              TransactionTemplate newTransactionTemplate, RequirementMergeWriter mergeWriter,
                                              TrackerRepository trackers, LightTrackerItemRepository items) {
         this.repository = repository;
@@ -64,15 +59,13 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
         }
 
         newTransactionTemplate.executeWithoutResult(status -> {
-            if (items != null) {
-                trackers.lockTracker(request.targetTrackerId());
-                var target = items.findById(request.targetLocalId()).orElseThrow(
-                        () -> new MaterializationRejectedException("Target variant is missing"));
-                if (target.materialized()) {
-                    verifyMaterializedTarget(target);
-                    recordBusinessSave.run();
-                    return;
-                }
+            trackers.lockTracker(request.targetTrackerId());
+            var target = items.findById(request.targetLocalId()).orElseThrow(
+                    () -> new MaterializationRejectedException("Target variant is missing"));
+            if (target.materialized()) {
+                verifyMaterializedTarget(target);
+                recordBusinessSave.run();
+                return;
             }
             var existing = repository.findById(request.targetLocalId());
             if (existing.isPresent()) {

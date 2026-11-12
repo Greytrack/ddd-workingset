@@ -71,7 +71,7 @@ public class WorkingSetController {
 
     @GetMapping("/{workingSetId}/bindings")
     public BindingsView listBindings(@PathVariable String workingSetId) {
-        var workingSet = applicationService.listBindings(WorkingSetId.of(workingSetId));
+        var workingSet = applicationService.findWorkingSet(WorkingSetId.of(workingSetId));
         return new BindingsView(workingSet.spaces().stream().map(SpaceBindingView::from).toList(),
                 workingSet.trackers().stream().map(TrackerBindingView::from).toList());
     }

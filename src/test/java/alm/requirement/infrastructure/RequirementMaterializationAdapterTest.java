@@ -6,15 +6,20 @@ import static org.mockito.Mockito.*;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.application.port.MaterializeRequest;
+import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
@@ -26,8 +31,9 @@ class RequirementMaterializationAdapterTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
     private final TransactionTemplate transaction = mock(TransactionTemplate.class);
-    private final RequirementMaterializationAdapter adapter =
-            new RequirementMaterializationAdapter(repository, snapshots, transaction);
+    private final LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
+    private final RequirementMaterializationAdapter adapter = new RequirementMaterializationAdapter(
+            repository, snapshots, transaction, mock(RequirementMergeWriter.class), mock(TrackerRepository.class), items);
 
     private final MaterializeRequest request = new MaterializeRequest(
             LocalId.of("target"), TrackerId.of("target-tracker"), CommonId.of("family"), LocalId.of("source"),
@@ -59,6 +65,10 @@ class RequirementMaterializationAdapterTest {
             work.accept(mock(TransactionStatus.class));
             return null;
         }).when(transaction).executeWithoutResult(any());
+        var variant = LightTrackerItem.derive(request.targetLocalId(), request.commonId(),
+                request.targetTrackerId(), WorkingSetId.of("target-workset"), request.targetRevision(),
+                request.sourceLocalId(), request.beforeRevision());
+        when(items.findById(variant.localId())).thenReturn(Optional.of(variant));
         when(repository.findById(request.targetLocalId())).thenReturn(Optional.of(target("different", "v1")),
                 Optional.of(target("A", "v2")), Optional.of(target("A", "v1")));
 

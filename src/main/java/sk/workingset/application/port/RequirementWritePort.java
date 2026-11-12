@@ -12,11 +12,7 @@ public interface RequirementWritePort {
 
     void verifyMaterializedTarget(LightTrackerItem target);
 
-    default void lockMergeEvidence(List<LocalId> ids) {
-        throw new UnsupportedOperationException("Merge is unavailable");
-    }
+    void lockMergeEvidence(List<LocalId> ids);
 
-    default Revision applyMerge(RequirementMergeCommand command) {
-        throw new UnsupportedOperationException("Merge is unavailable");
-    }
+    Revision applyMerge(RequirementMergeCommand command);
 }

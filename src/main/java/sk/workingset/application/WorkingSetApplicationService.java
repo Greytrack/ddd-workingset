@@ -65,11 +65,6 @@ public class WorkingSetApplicationService {
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 
-    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public WorkingSet listBindings(WorkingSetId id) {
-        return findWorkingSet(id);
-    }
-
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
         if (newId.equals(parentId)) {
