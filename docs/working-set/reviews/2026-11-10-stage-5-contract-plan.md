@@ -64,4 +64,6 @@
 
 **T5-S6 已通过四片验收**：S6-A 谱系/创建/回填、S6-B 直属父来源与范围、S6-C Merge 准入 seam、S6-D 删除/停用准入；`mvn test` **68 项通过**。证据见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。S6-C 只提供 Compare/Merge 准入，实际执行待 T1。
 
-**下一步**：T1 Merge 执行纵向切片（Compare/MergeRound/Entry/Checkpoint/ApplyResult），复用 S6 多级谱系与 `WorkingSetLineagePolicy`；S6 未覆盖项（停用实现、空范围实际 Compare/Merge、父级解绑后的子绑定清理、真实平台元数据回填）作为后续边界。
+**T5-S7 已通过 T1 Merge 执行验收**：Compare/ComparisonToken、MergeRound/Entry/ApplyResult、Checkpoint、Requirement 删除/恢复/永久删除，以及直属父子准入；`mvn test` **76 项通过**。证据见 [S7 验证结果](../implementation/t5-s7-verification-result.md)、[S7 实施裁定](2026-11-12-s7-merge-implementation-decisions.md)。
+
+**下一轮候选**：T3 附件/关系设计（物化与 Merge 目前只普通字段）；权限/Privilege 最小接入；停用、批量删除顺序、规模与保留策略、真实平台元数据回填作为后续切片。

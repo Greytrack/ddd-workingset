@@ -73,6 +73,7 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-12 | [S7 实施裁定](reviews/2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界，登记后普通字段按决策优先；Requirement `delete`/`undelete`/`delete2` 最小生命周期；S7 验证见 [S7 验证结果](implementation/t5-s7-verification-result.md)，未发布 |
 | 2026-11-12 | [FACT-028](domain/facts.md) 多级 WorkingSet 谱系核心规则：单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 不允许删除/停用；设计见 [working-set-lineage-design.md](domain/working-set-lineage-design.md)，Draft，未发布 |
 | 2026-11-11 | T1 关闭、T2～T4 冻结：见下方契约登记及各议题评审；T1 Q4 见 ADR-0005 补充裁定 |
 | 2026-11-10 | [阶段 4 收尾与 D-019](reviews/2026-11-10-stage-4-productspace-classification-review.md)、[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)；ADR-0001～0005 接受依据见各 ADR |
@@ -102,7 +103,7 @@
 | T2 | [绑定与删除](domain/binding-deletion-contract-v1.md)，Reviewed | K1～K3；POL-016、INV-064～068 | [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md) |
 | T3 | [物化协议](domain/lighttrackeritem-materialization-contract-v1.md)，Reviewed | K1′～K3′；INV-069～071 | [T3 评审](reviews/2026-11-11-t3-materialization-review.md) |
 | T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
-| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S6 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级 WorkingSet 谱系、直属父来源与相邻父子准入 | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[运行时验证](implementation/t5-runtime-verification.md)、[S1 验证](implementation/t5-s1-verification-result.md)、[S2 验证](implementation/t5-s2-verification-result.md)、[S3 验证](implementation/t5-s3-verification-result.md)、[S4 验证](implementation/t5-s4-verification-result.md)、[S5 验证](implementation/t5-s5-verification-result.md)、[S6 验证](implementation/t5-s6-verification-result.md) |
+| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S7 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级谱系与相邻父子准入；S7 直属父子 Compare/Merge 与 Requirement 最小生命周期 | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[运行时验证](implementation/t5-runtime-verification.md)、[S1 验证](implementation/t5-s1-verification-result.md)、[S2 验证](implementation/t5-s2-verification-result.md)、[S3 验证](implementation/t5-s3-verification-result.md)、[S4 验证](implementation/t5-s4-verification-result.md)、[S5 验证](implementation/t5-s5-verification-result.md)、[S6 验证](implementation/t5-s6-verification-result.md)、[S7 验证](implementation/t5-s7-verification-result.md) |
 
 术语沿用 2026-11-11 裁定。`version` 为可空的发布大版本，`revision` 为手动推进的业务版次，`lock_version` 为提交时递增的乐观锁版本。
 
