@@ -82,7 +82,7 @@
 | D-013 | 直接有效来源定位+扇出 | 用户确认 | 是 | FACT-018、INV-043/044、评审 #d-013 |
 | D-014 | 已有下游不重定向 | 用户确认 | 是 | FACT-019、INV-045、评审 #d-014 |
 | D-015 | 派生时间基准 Snapshot/Head | 用户确认 | 是 | FACT-020、INV-046~048、评审 #d-015 |
-| D-016 | 派生仅固定版次+Derivation Completion | 用户确认 | 是 | FACT-021、INV-049（Superseded）、评审 #d-016 |
+| D-016 | 普通字段派生选定版次；原完成时间门槛由 D-017 替代 | 原裁定及后续替代 | 按 T3 §2.1、D-017 | FACT-021、INV-049（Superseded）、INV-050、评审 #d-016 |
 | D-017 | COW 目标消费时确定 | 用户确认 | 是 | FACT-022、INV-050、评审 #d-017 |
 | D-018 | Revision 字段+事件顺序+Revision 升级触发 COW | 用户确认 | 是 | FACT-023、INV-051/052、SCN-049、评审 #d-018 |
 | D-019 | Diff/Merge 衔接：未物化参与 Diff；Merge 修改未物化目标构建聚合并 save；决策 VO 归 MergeRound；Checkpoint 独立；共享 Tracker 不参与 Merge | 用户确认 | 是 | FACT-027、INV-061~063、SCN-055/056、[阶段 4 评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md) #7 |

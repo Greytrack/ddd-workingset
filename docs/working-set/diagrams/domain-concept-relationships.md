@@ -1,9 +1,9 @@
 # Working Set 候选领域概念关系图
 
-- **状态**：Draft / Candidate
+- **状态**：Historical（阶段 2 探索图）
 - **设计阶段**：领域发现
 - **依据**：[候选统一领域语言](../domain/glossary.md)、[事实与假设](../domain/facts.md)、[开放问题](../domain/open-questions.md)
-- **用途**：暴露概念关系、身份层次和当前歧义，不表达最终聚合边界、事务边界或部署结构。
+- **用途**：保留阶段 2 的概念关系和原始歧义。现行模型入口见[基线](../BASELINE.md)与[领域主线](domain-mainline.md)，未决议题见[开放问题](../domain/open-questions.md)。
 
 ```mermaid
 flowchart LR

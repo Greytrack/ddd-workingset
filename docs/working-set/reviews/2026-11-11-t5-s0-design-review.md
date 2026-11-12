@@ -1,6 +1,6 @@
 # T5-S0 设计审核记录
 
-**状态：Reviewed（2026-11-11）；结论：P1～P5 已统一、A1～A3 已确认，S1 具备立即启动条件。**
+**评审当时**，P1～P5 已统一、A1～A3 已确认，S1 具备启动条件。实施结果见 [S1 验证](../implementation/t5-s1-verification-result.md)。
 
 审核对象：
 
@@ -8,7 +8,6 @@
 - [T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)（Draft / Candidate）
 - [AT-01～AT-05、AC-01～AC-02 场景-期望-测试映射](../implementation/t5-s0-scenario-test-mapping.md)（Draft）
 - [S1～S4 Codex 实施任务清单](../implementation/t5-s0-codex-task-plan.md)（Draft）
-- [S1 任务说明（交付 Codex）](../implementation/t5-s1-codex-task-brief.md)（Ready for implementation）
 
 审核方式：对照 T1～T4 已冻结契约、INV-069～071、SCN-066～068/072/073 与仓库实际条件（JDK 21.0.7、Maven 3.9.11、`src/` 为空）逐项核对；**未做**实现验证与 Mermaid 实际渲染。
 
@@ -65,6 +64,5 @@
 ## 5. 结论
 
 - S0 交付物齐备：设计（含 P1～P5、A1～A3、目录/依赖、接口清单、冲突检查）、架构与 COW 时序图、AT/AC 映射、S1～S4 任务清单、S1 任务说明、本审核记录。
-- **P1～P5 已统一、A1～A3 已确认；S1 具备立即启动条件**，可直接使用 [S1 任务说明](../implementation/t5-s1-codex-task-brief.md) 交付 Codex。
 - 唯一未验证项是部署/CI 环境的 JDK 版本（不阻塞本地 S1 实施）。
 - 未做：生产代码、基线发布、ADR 批准、Git Commit/Tag。

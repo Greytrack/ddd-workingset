@@ -3,7 +3,7 @@
 **状态：Verified（S1 完成，2026-11-11）**
 
 - 范围：工程骨架与派生/查询链路（AT-01、AT-02、AC-01、AC-02 的 S1 适用部分）
-- 依据：[S1 任务说明](t5-s1-codex-task-brief.md)、[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)
+- 依据：[原任务清单](t5-s0-codex-task-plan.md)、[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)
 
 ## 1. 验证命令与结果
 
@@ -53,7 +53,7 @@ BUILD SUCCESS
 | 升级 Spring Boot | 由 `spring-context` 升级为 Spring Boot（BOM + starter，非 web） | S1 的 `@Configuration` 保留；升级后须回归 12 项测试 |
 | 单体部署 | `IdGeneratorConfig` 用 `@Configuration` + 固定 `DATACENTER_ID=1`、workerId 由本机地址哈希取模 | 无 |
 
-详见 [S2 任务说明](t5-s2-codex-task-brief.md)。
+后续实施证据见 [S2 验证结果](t5-s2-verification-result.md)。
 
 ## 4.2 S2 前置观察项
 

@@ -6,7 +6,7 @@
 
 ## 用户主动比对与 Checkpoint 适用性
 
-以下分支表达 SCN-009 已确认的业务规则。图表文件的整体候选状态仍用于其余执行协议，Checkpoint 存储结构待设计。
+以下分支表达 SCN-009 已确认的业务规则。S7 中的 Checkpoint 映射及验证见 [S7 记录](../implementation/t5-s7-verification-result.md)。
 
 ```mermaid
 flowchart TD

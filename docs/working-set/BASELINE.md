@@ -63,9 +63,9 @@
 - [核心候选场景](scenarios/core-scenarios.md)
 - [阶段 2 设计审查](reviews/2026-11-09-stage-2-domain-discovery-review.md)
 
-## 尚未确认的关键问题
+## 一致性裁定与开放问题
 
-本轮两项冲突已由用户于 2026-11-11 裁定：内容固定选择 A（普通字段按 COW，附件与关系派生时固定）；接口责任选择 B（业务聚合实现 TrackerItem，Adapter 另行实现应用层 Port）。确认来源为本聊天的两项明确答复，范围及替代关系见[一致性修正记录](reviews/2026-11-11-consistency-reconciliation.md)，定义见 T3 §2.1、T4 §3.1；关联 SCN-072/073。未接受具体存储、API 签名或实现验证结论；其他主题与发布状态不变。
+2026-11-11 的内容固定和接口责任裁定见[一致性修正记录](reviews/2026-11-11-consistency-reconciliation.md)，契约入口为 T3 §2.1 与 T4 §3.1。接受范围仅限用户确认的规则，关联 SCN-072/073。
 
 剩余问题统一见[开放问题](domain/open-questions.md)；首切片门禁与实施待办见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。已确认规则与待验证的技术前提应分别读取。
 
@@ -103,7 +103,7 @@
 | T2 | [绑定与删除](domain/binding-deletion-contract-v1.md)，Reviewed | K1～K3；POL-016、INV-064～068 | [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md) |
 | T3 | [物化协议](domain/lighttrackeritem-materialization-contract-v1.md)，Reviewed | K1′～K3′；INV-069～071 | [T3 评审](reviews/2026-11-11-t3-materialization-review.md) |
 | T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
-| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S7 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级谱系与相邻父子准入；S7 直属父子 Compare/Merge 与 Requirement 最小生命周期 | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[运行时验证](implementation/t5-runtime-verification.md)、[S1 验证](implementation/t5-s1-verification-result.md)、[S2 验证](implementation/t5-s2-verification-result.md)、[S3 验证](implementation/t5-s3-verification-result.md)、[S4 验证](implementation/t5-s4-verification-result.md)、[S5 验证](implementation/t5-s5-verification-result.md)、[S6 验证](implementation/t5-s6-verification-result.md)、[S7 验证](implementation/t5-s7-verification-result.md) |
+| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S7 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级谱系与相邻父子准入；S7 直属父子 Compare/Merge 与 Requirement 最小生命周期 | [实施证据索引](implementation/README.md) |
 
 术语沿用 2026-11-11 裁定。`version` 为可空的发布大版本，`revision` 为手动推进的业务版次，`lock_version` 为提交时递增的乐观锁版本。
 

@@ -20,7 +20,7 @@
 | P2 `QUESTION-012` | **Working Set 与 Binding 的规模和并发上限是多少？** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备+发布指针。 | 决定 `AP-001` 与 `AP-003` 的可行性及热点。 | 采集 P95/P99 数量、写并发、发布频率和允许时延。 | 物理聚合伸缩，不阻塞术语确认 |
 | Working Set 侧已收敛 `QUESTION-013` | **跨 BC 责任与公共契约**：T4 K1″/K2″ 已冻结；用户选择 B，业务聚合接口与 Adapter 并存。 | 当前定义见 [T4](cross-bc-contract-v1.md)；BC 专有能力仍由各 BC 确认。 | 不重开提交权与两层接口责任。 | SCN-069/070/073；单 BC 首切片验证。 | 版本治理转 QUESTION-014；不阻塞首切片准备 |
 | **团队开放项（待访）** `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本和兼容性？** | A 共同发布；B 版本化 Published Language（讨论推荐）；C 适配器／ACL 隔离演进。 | 决定共享模型范围、契约版本、弃用策略和团队协作方式。 | 访谈发布责任、升级节奏、兼容期限和变更审批者。 | **不作为当前实现重点**；不阻塞 T4 的 K1″/K2″ 与 T5；需四 BC 访谈后裁定（讨论稿见[跨 BC 契约图 §6](../diagrams/cross-bc-contract.md)） |
-| 已关闭（实施待验证） `QUESTION-015` | **Diff/Merge 行为契约已关闭**：Q1～Q4 已裁定。 | [T1](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)；不重开原 A/B/C 选择。 | Token 编码、幂等键、乱序实现及 Checkpoint 字段映射待兑现。 | SCN-057～060；[T1 关闭评审](../reviews/2026-11-11-t1-contract-review.md)。 | 对应 Merge 实施切片，不阻塞 T5 首切片准备 |
+| 已关闭（S7 范围已验证） `QUESTION-015` | **Diff/Merge 行为契约已关闭**：Q1～Q4 已裁定。 | [T1](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)；不重开原 A/B/C 选择。 | Token、幂等、因果更新及字段映射见 [S7 验证](../implementation/t5-s7-verification-result.md)。 | SCN-057～060；[T1 关闭评审](../reviews/2026-11-11-t1-contract-review.md)。 | 保留 S7 切片边界 |
 
 ## 建议确认顺序（阶段 3 历史规划）
 
@@ -222,4 +222,4 @@ QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具�
 
 ## D-019 后的执行协议（QUESTION-015）
 
-领域裁定见 [T1 执行契约](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)与[关闭评审](../reviews/2026-11-11-t1-contract-review.md)。剩余实施项为双侧内容证据的表示与持久化、幂等键、乱序确认和 Checkpoint 字段映射。原备选方案与轮次重试裁定由 ADR 和评审保留。
+领域裁定见 [T1 执行契约](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)与[关闭评审](../reviews/2026-11-11-t1-contract-review.md)。证据、幂等和 Checkpoint 的落地及未覆盖范围见 [S7 验证](../implementation/t5-s7-verification-result.md)。原备选方案与轮次重试裁定由 ADR 和评审保留。

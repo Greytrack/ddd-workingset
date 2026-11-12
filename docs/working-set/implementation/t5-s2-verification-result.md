@@ -3,7 +3,7 @@
 **状态：Verified（S2 完成，2026-11-11）**
 
 - 范围：来源 Requirement 普通修改 → 修改前不可变快照 → 来源事件发布（AT-03 前半），以及 Spring Boot、Spring Event、雪花 ID 三项工程前置
-- 依据：[S2 任务说明](t5-s2-codex-task-brief.md)、[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)、[S1 验证结果](t5-s1-verification-result.md)
+- 依据：[原任务清单](t5-s0-codex-task-plan.md)、[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)、[S1 验证结果](t5-s1-verification-result.md)
 
 ## 1. 验证命令与结果
 

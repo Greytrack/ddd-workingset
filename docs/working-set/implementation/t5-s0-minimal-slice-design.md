@@ -283,5 +283,5 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 - 裁定记录：[2026-11-11 一致性修正](../reviews/2026-11-11-consistency-reconciliation.md)
 - 图：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)
 - 映射：[场景-期望-测试映射](t5-s0-scenario-test-mapping.md)
-- 任务：[Codex 分阶段实施任务](t5-s0-codex-task-plan.md)；[S1 任务说明](t5-s1-codex-task-brief.md)
+- 实施证据见[实施索引](README.md)。
 - 审核：[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)
