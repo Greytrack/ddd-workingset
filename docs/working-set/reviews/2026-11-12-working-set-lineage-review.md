@@ -1,6 +1,6 @@
 # 多级 WorkingSet 谱系设计评审记录
 
-**状态：Draft（2026-11-12；记录用户裁定与设计提案，待评审；不构成基线发布）**
+**状态：Reviewed（2026-11-12；用户裁定 + S6 实施验证；开放问题见 §4；不构成基线发布）**
 
 - 依据：[FACT-028](../domain/facts.md)、[FACT-026/POL-004](../domain/facts.md)、[T2 绑定与删除](../domain/binding-deletion-contract-v1.md)、[多级 WorkingSet 谱系设计](../domain/working-set-lineage-design.md)
 - 范围：WorkingSet 单父谱系、子 WS 创建、Tracker 来源约束、相邻父子 Merge 准入、删除/停用边界

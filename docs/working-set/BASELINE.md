@@ -102,7 +102,7 @@
 | T2 | [绑定与删除](domain/binding-deletion-contract-v1.md)，Reviewed | K1～K3；POL-016、INV-064～068 | [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md) |
 | T3 | [物化协议](domain/lighttrackeritem-materialization-contract-v1.md)，Reviewed | K1′～K3′；INV-069～071 | [T3 评审](reviews/2026-11-11-t3-materialization-review.md) |
 | T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
-| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S5 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层 WorkingSet 绑定与删除（直接上游固定默认 WS，属实施范围限定） | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[运行时验证](implementation/t5-runtime-verification.md)、[S1 验证](implementation/t5-s1-verification-result.md)、[S2 验证](implementation/t5-s2-verification-result.md)、[S3 验证](implementation/t5-s3-verification-result.md)、[S4 验证](implementation/t5-s4-verification-result.md)、[S5 验证](implementation/t5-s5-verification-result.md) |
+| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S6 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级 WorkingSet 谱系、直属父来源与相邻父子准入 | [S0 审核](reviews/2026-11-11-t5-s0-design-review.md)、[运行时验证](implementation/t5-runtime-verification.md)、[S1 验证](implementation/t5-s1-verification-result.md)、[S2 验证](implementation/t5-s2-verification-result.md)、[S3 验证](implementation/t5-s3-verification-result.md)、[S4 验证](implementation/t5-s4-verification-result.md)、[S5 验证](implementation/t5-s5-verification-result.md)、[S6 验证](implementation/t5-s6-verification-result.md) |
 
 术语沿用 2026-11-11 裁定。`version` 为可空的发布大版本，`revision` 为手动推进的业务版次，`lock_version` 为提交时递增的乐观锁版本。
 

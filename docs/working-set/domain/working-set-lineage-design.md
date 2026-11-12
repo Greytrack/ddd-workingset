@@ -1,6 +1,6 @@
 # 多级 WorkingSet 谱系设计
 
-**状态：Draft（2026-11-12；核心谱系规则由用户确认，设计待评审；不构成正式基线）**
+**状态：Reviewed（2026-11-12；FACT-028 用户确认，S6 已实施并验证；未发布基线）**
 
 - 依据：[FACT-026 / FACT-028](facts.md)、[POL-004](facts.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[WorkingSet/Tracker 聚合](aggregate-model.md)
 - 范围：多级 WorkingSet 谱系、子工作集创建、Tracker 来源约束、相邻父子 Merge 准入、删除/停用边界
