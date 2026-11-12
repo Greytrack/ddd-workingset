@@ -37,3 +37,18 @@ CREATE TABLE IF NOT EXISTS requirement_snapshots (
     version      VARCHAR(64),
     lock_version BIGINT      NOT NULL
 );
+CREATE TABLE IF NOT EXISTS cow_failures (
+    id BIGSERIAL PRIMARY KEY,
+    event_id BIGINT NOT NULL,
+    target_local_id VARCHAR(64) NOT NULL,
+    source_local_id VARCHAR(64) NOT NULL,
+    before_revision INTEGER NOT NULL,
+    after_revision INTEGER NOT NULL,
+    stage VARCHAR(32) NOT NULL,
+    error_type VARCHAR(255) NOT NULL,
+    message TEXT,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cow_failures_source ON cow_failures (source_local_id);
+CREATE INDEX IF NOT EXISTS idx_cow_failures_target ON cow_failures (target_local_id);
