@@ -26,7 +26,7 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 
 /**
- * Spring Boot 上下文与 Spring Event 派发检查（S2 DoD：上下文可加载、事件经 Spring Event 发布）。
+ * Spring Boot 上下文与事件发布检查（S2/S3：上下文可加载、事件发布；Modulith 在提交后异步消费）。
  */
 class ApplicationContextTest {
 
@@ -42,7 +42,7 @@ class ApplicationContextTest {
     }
 
     @Test
-    void requirement_changed_is_delivered_through_spring_event_synchronously() {
+    void requirement_changed_is_published_and_visible_to_synchronous_listeners() {
         try (ConfigurableApplicationContext context = start()) {
             List<RequirementChanged> received = new CopyOnWriteArrayList<>();
             context.addApplicationListener(
@@ -56,11 +56,14 @@ class ApplicationContextTest {
             service.create(localId, commonId, trackerId, "A", "source description", R3);
             service.changeTitle(localId, "B", LockVersion.of(0));
 
-            assertEquals(1, received.size(), "Spring Event 应同步派发一条来源事件");
+            assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
             RequirementChanged event = received.get(0);
             assertEquals(localId, event.requirementId());
             assertEquals(localId, event.sourceLocalId());
-            assertEquals(R3, event.revision());
+            assertEquals(R3, event.beforeRevision());
+            assertEquals(R3, event.afterRevision());
+            assertEquals(0L, event.beforeLockVersion().value());
+            assertEquals(1L, event.afterLockVersion().value());
             assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
             assertNotNull(event.snapshotRef());
             assertNotNull(event.occurredAt());

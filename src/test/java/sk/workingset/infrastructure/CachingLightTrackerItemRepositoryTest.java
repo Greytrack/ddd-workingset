@@ -13,6 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -68,6 +70,25 @@ class CachingLightTrackerItemRepositoryTest {
     void tearDown() {
         if (factory != null) {
             factory.destroy();
+        }
+    }
+
+    @Test
+    void rolled_back_write_never_publishes_local_backed_state_to_redis() {
+        LocalId id = LocalId.of("cache-" + UUID.randomUUID());
+        var item = LightTrackerItem.derive(id, C1, T1, WS1, R3, L0);
+        repository.save(item);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            item.switchToLocalBacked(R3);
+            repository.save(item);
+            assertFalse(repository.findById(id).orElseThrow().materialized());
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                    synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+            assertFalse(repository.findById(id).orElseThrow().materialized());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+            redis.delete("workingset:lti:" + id.value());
         }
     }
 

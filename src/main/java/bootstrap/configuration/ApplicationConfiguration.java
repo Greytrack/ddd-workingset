@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -12,11 +15,18 @@ import alm.requirement.application.RequirementApplicationService;
 import alm.requirement.infrastructure.JdbcRequirementRepository;
 import alm.requirement.infrastructure.JdbcSnapshotStore;
 import alm.requirement.infrastructure.RequirementAdapter;
+import alm.requirement.infrastructure.RequirementMaterializationAdapter;
+import sk.workingset.application.CowEventHandler;
+import sk.workingset.application.CowFailureLog;
+import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.application.port.RequirementWritePort;
+import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.infrastructure.CachingLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
+import sk.workingset.infrastructure.JdbcCowFailureLog;
 
 /**
  * 组合根（Composition Root）：唯一允许同时引用 SK 与 ALM 实现的位置（A1）。
@@ -26,6 +36,40 @@ import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
  */
 @Configuration
 public class ApplicationConfiguration {
+
+    @Bean
+    public TransactionTemplate newTransactionTemplate(PlatformTransactionManager transactionManager) {
+        var template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return template;
+    }
+
+    @Bean
+    public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
+            JdbcSnapshotStore snapshots, TransactionTemplate newTransactionTemplate) {
+        return new RequirementMaterializationAdapter(repository, snapshots, newTransactionTemplate);
+    }
+
+    @Bean
+    public CowFailureLog cowFailureLog(JdbcTemplate jdbc, TransactionTemplate newTransactionTemplate) {
+        return new JdbcCowFailureLog(jdbc, newTransactionTemplate);
+    }
+
+    @Bean
+    public TargetTransactionRunner targetTransactionRunner(TransactionTemplate newTransactionTemplate) {
+        return new SpringTargetTransactionRunner(newTransactionTemplate);
+    }
+
+    @Bean
+    public SourceSerialCowCoordinator sourceSerialCowCoordinator() {
+        return new SourceSerialCowCoordinator();
+    }
+
+    @Bean
+    public CowEventHandler cowEventHandler(LightTrackerItemRepository items, RequirementWritePort writePort,
+            CowFailureLog failureLog, TargetTransactionRunner transactionRunner) {
+        return new CowEventHandler(items, writePort, failureLog, transactionRunner);
+    }
 
     @Bean
     public LightTrackerItemRepository lightTrackerItemRepository(JdbcTemplate jdbc,

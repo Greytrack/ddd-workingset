@@ -71,7 +71,10 @@ class RequirementChangeFlowTest {
         assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
         assertEquals(L0, event.requirementId());
         assertEquals(L0, event.sourceLocalId());
-        assertEquals(R3, event.revision());
+        assertEquals(R3, event.beforeRevision());
+        assertEquals(R3, event.afterRevision());
+        assertEquals(0L, event.beforeLockVersion().value());
+        assertEquals(1L, event.afterLockVersion().value());
         assertNotNull(event.snapshotRef());
         assertNotNull(event.occurredAt());
 
@@ -121,8 +124,13 @@ class RequirementChangeFlowTest {
         assertEquals("B", snapshots.find(events.get(1).snapshotRef()).orElseThrow().title());
         assertEquals(LockVersion.of(0), snapshots.find(events.get(0).snapshotRef()).orElseThrow().lockVersion());
         assertEquals(LockVersion.of(1), snapshots.find(events.get(1).snapshotRef()).orElseThrow().lockVersion());
-        assertEquals(R3, events.get(0).revision());
-        assertEquals(R3, events.get(1).revision());
+        assertEquals(R3, events.get(0).beforeRevision());
+        assertEquals(R3, events.get(0).afterRevision());
+        assertEquals(R3, events.get(1).beforeRevision());
+        assertEquals(R3, events.get(1).afterRevision());
+        assertEquals(LockVersion.of(1), events.get(0).afterLockVersion());
+        assertEquals(LockVersion.of(1), events.get(1).beforeLockVersion());
+        assertEquals(LockVersion.of(2), events.get(1).afterLockVersion());
         assertTrue(events.get(0).eventId() < events.get(1).eventId(), "事件身份应保持生成顺序");
         assertEquals("C", requirements.findById(L0).orElseThrow().title());
         assertEquals(LockVersion.of(2), requirements.findById(L0).orElseThrow().lockVersion());

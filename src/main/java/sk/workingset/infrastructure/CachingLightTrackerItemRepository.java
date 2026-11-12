@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -17,7 +19,7 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
 /**
- * LightTrackerItem 查询缓存装饰器（Redis，TTL + 写后更新）。
+ * LightTrackerItem 查询缓存装饰器（Redis，TTL + 提交后更新）。
  *
  * <p>SK 应用层仍只依赖 {@link LightTrackerItemRepository}；本类位于 infrastructure，隔离 Redis/Jackson。
  * 缓存只保存聚合元数据；{@code findBySource} 不做缓存，避免来源列表变化后的失效复杂度。
@@ -44,7 +46,17 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
     @Override
     public void save(LightTrackerItem item) {
         delegate.save(item);
-        writeCache(item);
+        var snapshot = CachedLightTrackerItem.from(item);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    writeCache(snapshot);
+                }
+            });
+        } else {
+            writeCache(snapshot);
+        }
     }
 
     @Override
@@ -54,7 +66,10 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
             return Optional.of(cached);
         }
         Optional<LightTrackerItem> found = delegate.findById(localId);
-        found.ifPresent(this::writeCache);
+        if (!TransactionSynchronizationManager.isActualTransactionActive()
+                && !TransactionSynchronizationManager.isSynchronizationActive()) {
+            found.map(CachedLightTrackerItem::from).ifPresent(this::writeCache);
+        }
         return found;
     }
 
@@ -76,12 +91,12 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
         }
     }
 
-    private void writeCache(LightTrackerItem item) {
+    private void writeCache(CachedLightTrackerItem item) {
         try {
-            String json = objectMapper.writeValueAsString(CachedLightTrackerItem.from(item));
-            redis.opsForValue().set(key(item.localId()), json, TTL);
+            String json = objectMapper.writeValueAsString(item);
+            redis.opsForValue().set(KEY_PREFIX + item.localId(), json, TTL);
         } catch (Exception failure) {
-            log.warn("Redis cache write failed for localId={}, continuing without cache", item.localId().value(), failure);
+            log.warn("Redis cache write failed for localId={}, continuing without cache", item.localId(), failure);
         }
     }
 

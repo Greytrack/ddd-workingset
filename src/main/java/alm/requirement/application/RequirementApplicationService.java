@@ -76,11 +76,14 @@ public class RequirementApplicationService {
                 identifierGenerator.nextId(),
                 changed.localId(),
                 changed.localId(),
+                current.revision(),
                 changed.revision(),
+                current.lockVersion(),
+                changed.lockVersion(),
                 snapshotRef,
                 Instant.now());
 
-        // 事务提交后由 Spring Modulith Event Publication Registry 持久化并派发给监听器
+        // 发布记录随来源事务提交，监听器在提交后异步处理。
         eventPublisher.publishEvent(event);
         return changed;
     }
