@@ -12,7 +12,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
+
+import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.port.ProductSpaceRepository;
+import sk.workingset.application.port.TrackerRepository;
+import sk.workingset.application.port.WorkingSetRepository;
+import sk.workingset.domain.Classification;
+import sk.workingset.domain.ProductSpace;
+import sk.workingset.domain.Tracker;
+import sk.workingset.domain.WorkingSet;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,8 +68,23 @@ class WorkingSetSliceIntegrationTest {
         items = mock(LightTrackerItemRepository.class);
         requirements = mock(RequirementRepository.class);
         SnowflakeIdGenerator ids = new SnowflakeIdGenerator(1, 1);
+        var sets = mock(WorkingSetRepository.class);
+        var trackers = mock(TrackerRepository.class);
+        var spaces = mock(ProductSpaceRepository.class);
+        var space = new ProductSpace("space");
+        var classification = new Classification("class", Classification.SharingMode.UNSHARED);
+        when(sets.lockWorkingSet(WS1)).thenAnswer(invocation -> {
+            var workset = new WorkingSet(WS1, List.of(), List.of());
+            workset.bindSpace(space);
+            return Optional.of(workset);
+        });
+        when(trackers.lockTracker(T0)).thenReturn(Optional.of(Tracker.original(T0, space, classification, null)));
+        when(spaces.findClassification(classification.id())).thenReturn(Optional.of(classification));
+        var businessItems = mock(BusinessTrackerItems.class);
+        when(businessItems.findIdentity(L0)).thenReturn(Optional.of(new BusinessTrackerItems.SourceIdentity(T0, C1)));
         workingSet = new WorkingSetApplicationService(
-                items, localId -> new RequirementAdapter(requirements, localId), ids);
+                items, localId -> new RequirementAdapter(requirements, localId), ids, sets, trackers, spaces,
+                businessItems);
     }
 
     @Test

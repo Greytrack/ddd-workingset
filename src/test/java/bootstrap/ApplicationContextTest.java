@@ -14,6 +14,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.PayloadApplicationEvent;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import alm.requirement.application.RequirementApplicationService;
 import sk.workingset.application.WorkingSetApplicationService;
@@ -53,21 +54,33 @@ class ApplicationContextTest {
             CommonId commonId = CommonId.of("ctx-c-" + UUID.randomUUID());
             TrackerId trackerId = TrackerId.of("ctx-t-" + UUID.randomUUID());
 
-            service.create(localId, commonId, trackerId, "A", "source description", R3);
-            service.changeTitle(localId, "B", LockVersion.of(0));
-
-            assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
-            RequirementChanged event = received.get(0);
-            assertEquals(localId, event.requirementId());
-            assertEquals(localId, event.sourceLocalId());
-            assertEquals(R3, event.beforeRevision());
-            assertEquals(R3, event.afterRevision());
-            assertEquals(0L, event.beforeLockVersion().value());
-            assertEquals(1L, event.afterLockVersion().value());
-            assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
-            assertNotNull(event.snapshotRef());
-            assertNotNull(event.occurredAt());
+            var fixture = new RootTrackerFixture(context.getBean(JdbcTemplate.class), trackerId.value());
+            fixture.provision();
+            try {
+                verifyPublishedChange(service, received, localId, commonId, trackerId);
+            } finally {
+                fixture.removeRequirement(localId.value());
+                fixture.remove();
+            }
         }
+    }
+
+    private void verifyPublishedChange(RequirementApplicationService service, List<RequirementChanged> received,
+                                       LocalId localId, CommonId commonId, TrackerId trackerId) {
+        service.create(localId, commonId, trackerId, "A", "source description", R3);
+        service.changeTitle(localId, "B", LockVersion.of(0));
+
+        assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
+        RequirementChanged event = received.getFirst();
+        assertEquals(localId, event.requirementId());
+        assertEquals(localId, event.sourceLocalId());
+        assertEquals(R3, event.beforeRevision());
+        assertEquals(R3, event.afterRevision());
+        assertEquals(0L, event.beforeLockVersion().value());
+        assertEquals(1L, event.afterLockVersion().value());
+        assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
+        assertNotNull(event.snapshotRef());
+        assertNotNull(event.occurredAt());
     }
 
     private ConfigurableApplicationContext start() {

@@ -2,21 +2,46 @@ package sk.workingset.domain;
 
 import java.util.Objects;
 
-/**
- * 最小 Tracker 聚合（首切片仅需非共享派生的身份与来源）。
- *
- * <p>{@code sourceId} 为空表示默认工作集中创建的原始聚合；派生的 Tracker 一定有来源。
- */
-public record Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId) {
+import sk.workingset.domain.Classification.SharingMode;
+
+/** sourceId 表示直接派生来源，parentId 表示同工作集内的组织父级。 */
+public record Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId,
+                      String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
 
     public Tracker {
         Objects.requireNonNull(trackerId, "trackerId");
         Objects.requireNonNull(workingSetId, "workingSetId");
+        Objects.requireNonNull(productSpaceId, "productSpaceId");
+        Objects.requireNonNull(classificationId, "classificationId");
+        Objects.requireNonNull(sharingMode, "sharingMode");
+        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId)) {
+            throw new IllegalArgumentException("original Tracker must belong to the default Working Set");
+        }
+        if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
+            throw new IllegalArgumentException("derived Tracker must be unshared and belong to a child Working Set");
+        }
     }
 
-    public static Tracker derived(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId) {
-        Objects.requireNonNull(sourceId, "sourceId");
-        return new Tracker(trackerId, sourceId, workingSetId);
+    public static Tracker original(TrackerId id, ProductSpace space, Classification classification, TrackerId parentId) {
+        return new Tracker(id, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
+                classification.sharingMode(), parentId);
+    }
+
+    public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target) {
+        return new Tracker(id, source.trackerId(), target, source.productSpaceId(),
+                source.classificationId(), source.sharingMode(), null);
+    }
+
+    public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {
+        if (hasItems) {
+            throw new BindingFailure(BindingFailure.Reason.TrackerHasItems, trackerId.value());
+        }
+        if (hasOrgChildren) {
+            throw new BindingFailure(BindingFailure.Reason.TrackerHasOrgChildren, trackerId.value());
+        }
+        if (hasDerivedChildren) {
+            throw new BindingFailure(BindingFailure.Reason.TrackerHasDerivedChildren, trackerId.value());
+        }
     }
 
     public boolean isDerived() {

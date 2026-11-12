@@ -47,25 +47,36 @@ class CowAcceptanceTest {
     @SpyBean private LightTrackerItemRepository items;
 
     private final List<String> targets = new ArrayList<>();
+    private final List<String> worksets = new ArrayList<>();
     private String source;
     private final String common = "C-" + UUID.randomUUID();
     private final String tracker = "T-" + UUID.randomUUID();
+    private final String space = "S-" + UUID.randomUUID();
+    private final String classification = "CL-" + UUID.randomUUID();
 
     @AfterEach
     void cleanUp() {
-        if (source == null) {
-            return;
+        if (source != null) {
+            jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", eventPattern());
+            jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", source);
+            jdbc.update("DELETE FROM cow_materializations WHERE source_local_id = ?", source);
+            jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", source);
         }
-        jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", eventPattern());
-        jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", source);
-        jdbc.update("DELETE FROM cow_materializations WHERE source_local_id = ?", source);
-        jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", source);
         for (String target : targets) {
             redis.delete("workingset:lti:" + target);
             jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
         }
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", source);
+        for (String ws : worksets) {
+            jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
+            jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", ws);
+            jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", ws);
+            jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws);
+        }
+        jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
+        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
+        jdbc.update("DELETE FROM classifications WHERE classification_id = ?", classification);
     }
 
     @Test
@@ -92,7 +103,11 @@ class CowAcceptanceTest {
     @Test
     void invalid_snapshot_evidence_is_recorded_without_writing_or_switching_target() {
         createSource();
-        Target invalid = derive("C-" + UUID.randomUUID());
+        Target invalid = derive();
+        // 模拟早期数据的家族身份损坏，直接验证 COW 对持久化证据的防护。
+        jdbc.update("UPDATE light_tracker_items SET common_id = ? WHERE local_id = ?",
+                "INVALID-" + UUID.randomUUID(), invalid.id());
+        redis.delete("workingset:lti:" + invalid.id());
 
         change("B", 0);
 
@@ -221,6 +236,12 @@ class CowAcceptanceTest {
     }
 
     private void createSource() {
+        jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
+        jdbc.update("INSERT INTO classifications VALUES (?, 'UNSHARED')", classification);
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
+                VALUES (?, '1', ?, ?, 'UNSHARED')
+                """, tracker, space, classification);
         var result = rest.postForEntity("/api/requirements", Map.of("commonId", common, "trackerId", tracker,
                 "title", "A", "description", "COW", "revision", 3), RequirementView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
@@ -228,13 +249,13 @@ class CowAcceptanceTest {
     }
 
     private Target derive() {
-        return derive(common);
-    }
-
-    private Target derive(String family) {
         String ws = "WS-" + UUID.randomUUID();
+        jdbc.update("INSERT INTO working_sets VALUES (?)", ws);
+        worksets.add(ws);
+        assertEquals(HttpStatus.CREATED,
+                rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());
         var result = rest.postForEntity("/api/worksets/" + ws + "/derive", Map.of(
-                "sourceLocalId", source, "sourceTrackerId", tracker, "sourceRevision", 3, "commonId", family),
+                "sourceLocalId", source, "sourceTrackerId", tracker, "sourceRevision", 3, "commonId", common),
                 DeriveView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         String id = result.getBody().item().localId();

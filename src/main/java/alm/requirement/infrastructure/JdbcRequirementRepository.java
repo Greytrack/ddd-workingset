@@ -81,6 +81,11 @@ public class JdbcRequirementRepository implements RequirementRepository {
                 localId.value()).stream().findFirst();
     }
 
+    public boolean existsInTracker(TrackerId trackerId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ?)", Boolean.class, trackerId.value()));
+    }
+
     private LockVersion currentLockVersion(LocalId localId) {
         Long value = jdbc.query(
                 "SELECT lock_version FROM requirements WHERE local_id = ?",

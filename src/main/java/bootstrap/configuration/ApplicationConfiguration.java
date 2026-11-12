@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.modulith.events.IncompleteEventPublications;
 import java.time.Duration;
+import java.util.Optional;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -26,11 +27,16 @@ import sk.workingset.application.CowRecoveryService;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
+import sk.workingset.application.WorkingSetDeletionService;
+import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.IdentifierGenerator;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.TrackerId;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.infrastructure.CachingLightTrackerItemRepository;
+import sk.workingset.infrastructure.JdbcBindingRepositories;
 import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcCowFailureLog;
 import sk.workingset.infrastructure.JdbcCowMaterializationStore;
@@ -122,14 +128,43 @@ public class ApplicationConfiguration {
     }
 
     @Bean
+    public JdbcBindingRepositories bindingRepositories(JdbcTemplate jdbc) {
+        return new JdbcBindingRepositories(jdbc);
+    }
+
+    @Bean
+    public BusinessTrackerItems businessTrackerItems(JdbcRequirementRepository requirements) {
+        return new BusinessTrackerItems() {
+            @Override
+            public Optional<SourceIdentity> findIdentity(LocalId localId) {
+                return requirements.findById(localId)
+                        .map(item -> new SourceIdentity(item.trackerId(), item.commonId()));
+            }
+
+            @Override
+            public boolean existsInTracker(TrackerId trackerId) {
+                return requirements.existsInTracker(trackerId);
+            }
+        };
+    }
+
+    @Bean
+    public WorkingSetDeletionService workingSetDeletionService(JdbcBindingRepositories bindings,
+            LightTrackerItemRepository items, BusinessTrackerItems businessItems) {
+        return new WorkingSetDeletionService(bindings, bindings, bindings, items, businessItems);
+    }
+
+    @Bean
     public WorkingSetApplicationService workingSetApplicationService(
             LightTrackerItemRepository items,
             JdbcRequirementRepository requirements,
-            IdentifierGenerator identifierGenerator) {
+            IdentifierGenerator identifierGenerator,
+            JdbcBindingRepositories bindings,
+            BusinessTrackerItems businessItems) {
         // SK 只依赖 TrackerItemReadPort 接口；Adapter 由组合根按变体身份构造
         return new WorkingSetApplicationService(
                 items,
                 localId -> new RequirementAdapter(requirements, localId),
-                identifierGenerator);
+                identifierGenerator, bindings, bindings, bindings, businessItems);
     }
 }

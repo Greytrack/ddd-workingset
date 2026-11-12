@@ -59,6 +59,11 @@ class CachingLightTrackerItemRepositoryTest {
             }
 
             @Override
+            public boolean existsInTracker(TrackerId trackerId) {
+                return false;
+            }
+
+            @Override
             public List<LightTrackerItem> findBySource(LocalId sourceLocalId, Revision sourceRevision) {
                 return List.of();
             }

@@ -78,6 +78,12 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
     }
 
     @Override
+    public boolean existsInTracker(TrackerId trackerId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE tracker_id = ?)", Boolean.class, trackerId.value()));
+    }
+
+    @Override
     public List<LightTrackerItem> findBySource(LocalId sourceLocalId, Revision sourceRevision) {
         return jdbc.query(
                 "SELECT " + COLUMNS + " FROM light_tracker_items "

@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,10 +33,25 @@ class RequirementAcceptanceTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    private RootTrackerFixture fixture;
+    private String localId;
+
+    @AfterEach
+    void cleanUp() {
+        if (localId != null) {
+            fixture.removeRequirement(localId);
+        }
+        if (fixture != null) {
+            fixture.remove();
+        }
+    }
+
     @Test
     void create_then_modify_emits_event_persisted_in_event_publication() {
         String commonId = "C-" + UUID.randomUUID();
         String trackerId = "T-" + UUID.randomUUID();
+        fixture = new RootTrackerFixture(jdbc, trackerId);
+        fixture.provision();
         Map<String, Object> createBody = Map.of(
                 "commonId", commonId,
                 "trackerId", trackerId,
@@ -45,7 +61,7 @@ class RequirementAcceptanceTest {
 
         ResponseEntity<Map> created = rest.postForEntity("/api/requirements", createBody, Map.class);
         assertEquals(HttpStatus.CREATED, created.getStatusCode(), String.valueOf(created.getBody()));
-        String localId = String.valueOf(created.getBody().get("localId"));
+        localId = String.valueOf(created.getBody().get("localId"));
 
         Map<String, Object> changeBody = Map.of(
                 "title", "B",

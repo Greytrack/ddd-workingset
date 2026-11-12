@@ -17,6 +17,7 @@ import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.TrackerId;
 
 /**
  * LightTrackerItem 查询缓存装饰器（Redis，TTL + 提交后更新）。
@@ -74,6 +75,11 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
             found.map(CachedLightTrackerItem::from).ifPresent(this::writeCache);
         }
         return found;
+    }
+
+    @Override
+    public boolean existsInTracker(TrackerId trackerId) {
+        return delegate.existsInTracker(trackerId);
     }
 
     @Override

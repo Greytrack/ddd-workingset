@@ -20,6 +20,9 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.WorkingSet;
+
+import java.util.List;
 
 /**
  * Working Set 的最小 REST 入口：非共享派生、解析与读取。
@@ -40,12 +43,51 @@ public class WorkingSetController {
     @ResponseStatus(HttpStatus.CREATED)
     public DeriveView derive(@PathVariable("workingSetId") String workingSetId,
                              @RequestBody DeriveRequest request) {
-        DeriveResult result = applicationService.derive(new DeriveCommand(
-                WorkingSetId.of(workingSetId),
+        return deriveView(applicationService.derive(command(workingSetId, request)));
+    }
+
+    @GetMapping("/{workingSetId}")
+    public WorkingSetView find(@PathVariable String workingSetId) {
+        var workingSet = applicationService.findWorkingSet(WorkingSetId.of(workingSetId));
+        return new WorkingSetView(workingSet.id().value(), WorkingSet.DEFAULT_ID.equals(workingSet.id()));
+    }
+
+    @GetMapping("/{workingSetId}/bindings")
+    public BindingsView listBindings(@PathVariable String workingSetId) {
+        var workingSet = applicationService.listBindings(WorkingSetId.of(workingSetId));
+        return new BindingsView(workingSet.spaces().stream().map(SpaceBindingView::from).toList(),
+                workingSet.trackers().stream().map(TrackerBindingView::from).toList());
+    }
+
+    @PostMapping("/{workingSetId}/spaces/{spaceId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SpaceBindingView bindSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
+        return SpaceBindingView.from(applicationService.bindSpace(WorkingSetId.of(workingSetId), spaceId));
+    }
+
+    @PostMapping("/{workingSetId}/trackers/shared/{trackerId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TrackerBindingView bindTrackerShared(@PathVariable String workingSetId, @PathVariable String trackerId) {
+        return TrackerBindingView.from(applicationService.bindTrackerShared(
+                WorkingSetId.of(workingSetId), TrackerId.of(trackerId)));
+    }
+
+    @PostMapping("/{workingSetId}/spaces/{spaceId}/classifications/{classificationId}/derive")
+    @ResponseStatus(HttpStatus.CREATED)
+    public DeriveView bindTrackerDerived(@PathVariable String workingSetId, @PathVariable String spaceId,
+                                        @PathVariable String classificationId, @RequestBody DeriveRequest request) {
+        return deriveView(applicationService.bindTrackerDerived(
+                spaceId, classificationId, command(workingSetId, request)));
+    }
+
+    private static DeriveCommand command(String workingSetId, DeriveRequest request) {
+        return new DeriveCommand(WorkingSetId.of(workingSetId),
                 TrackerId.of(requireText(request.sourceTrackerId(), "sourceTrackerId")),
                 LocalId.of(requireText(request.sourceLocalId(), "sourceLocalId")),
-                Revision.of(request.sourceRevision()),
-                CommonId.of(requireText(request.commonId(), "commonId"))));
+                Revision.of(request.sourceRevision()), CommonId.of(requireText(request.commonId(), "commonId")));
+    }
+
+    private static DeriveView deriveView(DeriveResult result) {
         return new DeriveView(
                 result.tracker().trackerId().value(),
                 result.tracker().sourceId().value(),
@@ -67,6 +109,24 @@ public class WorkingSetController {
                 WorkingSetId.of(workingSetId), LocalId.of(localId), WEB_CALLER);
         return ReadView.from(result);
     }
+
+    public record WorkingSetView(String workingSetId, boolean defaultWorkingSet) {}
+
+    public record SpaceBindingView(String productSpaceId, String origin, String state) {
+        static SpaceBindingView from(WorkingSet.SpaceBinding binding) {
+            return new SpaceBindingView(binding.productSpaceId(), binding.origin().name(), binding.state().name());
+        }
+    }
+
+    public record TrackerBindingView(String trackerId, String productSpaceId, String classificationId,
+                                     String sharingMode, String origin) {
+        static TrackerBindingView from(WorkingSet.TrackerBinding binding) {
+            return new TrackerBindingView(binding.trackerId().value(), binding.productSpaceId(),
+                    binding.classificationId(), binding.sharingMode().name(), binding.origin().name());
+        }
+    }
+
+    public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {}
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {
