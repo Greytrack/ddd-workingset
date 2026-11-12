@@ -42,13 +42,15 @@ public final class CowRecoveryService {
             }
             var target = items.findById(targetId)
                     .orElseThrow(() -> new MaterializationRejectedException("LightTrackerItem is missing"));
-            if (target.materialized() || !target.sourceLocalId().equals(receipt.sourceLocalId())
-                    || !target.sourceRevision().equals(receipt.sourceRevision())) {
+            if (!target.materialized() && (!target.sourceLocalId().equals(receipt.sourceLocalId())
+                    || !target.sourceRevision().equals(receipt.sourceRevision()))) {
                 throw new MaterializationRejectedException("LightTrackerItem no longer matches the receipt");
             }
             writePort.verifyMaterializedTarget(target);
-            target.switchToLocalBacked(target.revision());
-            items.save(target);
+            if (!target.materialized()) {
+                target.switchToLocalBacked(target.revision());
+                items.save(target);
+            }
             store.markSwitched(eventId, targetId);
             failures.resolve(eventId, targetId);
         });

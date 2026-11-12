@@ -116,11 +116,21 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     @Override
+    public Optional<Tracker> findTracker(TrackerId id) {
+        return loadTracker(id, false);
+    }
+
+    @Override
     public Optional<Tracker> lockTracker(TrackerId id) {
-        return jdbc.query("""
+        return loadTracker(id, true);
+    }
+
+    private Optional<Tracker> loadTracker(TrackerId id, boolean lock) {
+        String sql = """
                 SELECT tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
-                       parent_id FROM trackers WHERE tracker_id = ? FOR UPDATE
-                """, (rs, row) -> new Tracker(TrackerId.of(rs.getString("tracker_id")), optionalId(rs, "source_id"),
+                       parent_id FROM trackers WHERE tracker_id = ?
+                """;
+        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, (rs, row) -> new Tracker(TrackerId.of(rs.getString("tracker_id")), optionalId(rs, "source_id"),
                 WorkingSetId.of(rs.getString("working_set_id")), rs.getString("product_space_id"),
                 rs.getString("classification_id"), SharingMode.valueOf(rs.getString("sharing_mode")),
                 optionalId(rs, "parent_id")), id.value()).stream().findFirst();

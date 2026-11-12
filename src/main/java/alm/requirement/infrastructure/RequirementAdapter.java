@@ -33,11 +33,28 @@ public class RequirementAdapter implements TrackerItemReadPort {
     @Override
     public TrackerItemContent readAt(Revision revision) {
         Requirement requirement = find();
+        if (requirement.deleted()) {
+            throw new ApplicationFailure(FailureReason.DELETED, "requirement deleted: " + localId.value());
+        }
+        return contentAt(requirement, revision);
+    }
+
+    @Override
+    public TrackerItemContent readInheritedAt(Revision revision) {
+        return contentAt(find(), revision);
+    }
+
+    @Override
+    public ContentEvidence evidence() {
+        Requirement item = find();
+        return new ContentEvidence(item.commonId(), item.revision(), item.version().value(),
+                item.lockVersion().value(), item.deleted());
+    }
+
+    private TrackerItemContent contentAt(Requirement requirement, Revision revision) {
         if (!requirement.revision().equals(revision)) {
-            // S1 不实现历史回读；不得用当前值冒充历史值（T4 HistoryUnavailable 语义留后续切片）
-            throw new IllegalStateException(
-                    "S1 does not implement history: requested revision " + revision.value()
-                            + " but current is " + requirement.revision().value());
+            throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE,
+                    "required revision is unavailable: " + revision.value());
         }
         Map<String, Object> fields = Map.of(
                 "title", requirement.title(),

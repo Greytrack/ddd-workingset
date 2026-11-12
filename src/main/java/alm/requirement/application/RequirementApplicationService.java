@@ -10,6 +10,8 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.infrastructure.RequirementSnapshot;
 import alm.requirement.infrastructure.SnapshotStore;
+import sk.workingset.application.ApplicationFailure;
+import sk.workingset.application.FailureReason;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;
@@ -61,22 +63,43 @@ public class RequirementApplicationService {
     @Transactional
     public Requirement changeTitle(LocalId localId, String newTitle, LockVersion expectedLockVersion) {
         Requirement current = load(localId);
+        requireActive(current);
         return saveChange(current, current.changeTitle(newTitle, expectedLockVersion));
     }
 
     @Transactional
     public Requirement upgradeRevision(LocalId localId, LockVersion expectedLockVersion) {
         Requirement current = load(localId);
+        requireActive(current);
         return saveChange(current, current.upgradeRevision(expectedLockVersion));
+    }
+
+    @Transactional
+    public void delete(LocalId id) {
+        Requirement current = load(id);
+        requireActive(current);
+        saveChange(current, current.delete(current.lockVersion()));
+    }
+
+    @Transactional
+    public void undelete(LocalId id) {
+        Requirement current = load(id);
+        saveChange(current, current.undelete(current.lockVersion()));
+    }
+
+    private static void requireActive(Requirement requirement) {
+        if (requirement.deleted()) {
+            throw new ApplicationFailure(FailureReason.DELETED, requirement.localId().value());
+        }
     }
 
     private Requirement load(LocalId localId) {
         Objects.requireNonNull(localId, "localId");
         return repository.findById(localId)
-                .orElseThrow(() -> new IllegalArgumentException("requirement not found: " + localId.value()));
+                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
     }
 
-    private Requirement saveChange(Requirement current, Requirement changed) {
+    Requirement saveChange(Requirement current, Requirement changed) {
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
         SnapshotRef snapshotRef = snapshotStore.save(snapshot);
 

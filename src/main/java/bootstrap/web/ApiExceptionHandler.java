@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import alm.requirement.domain.LockVersionConflictException;
 import sk.workingset.application.ApplicationFailure;
-import sk.workingset.application.FailureReason;
 import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.merge.MergeFailure;
 
 /**
  * 最小 REST 错误映射：保留 NotFound 与 NotIncluded 的区分，乐观锁冲突显式返回 409。
@@ -22,10 +22,28 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ApplicationFailure.class)
     public ResponseEntity<Map<String, Object>> handleApplicationFailure(ApplicationFailure failure) {
-        int status = failure.reason() == FailureReason.NOT_FOUND ? 404 : 403;
+        int status = switch (failure.reason()) {
+            case NOT_FOUND -> 404;
+            case NOT_INCLUDED, DENIED -> 403;
+            case DELETED -> 410;
+            case HISTORY_UNAVAILABLE, PREPARING -> 409;
+            case CAPABILITY_NOT_SUPPORTED -> 422;
+            case DEPENDENCY_UNAVAILABLE, UNKNOWN -> 503;
+        };
         return ResponseEntity.status(status).body(Map.of(
                 "reason", failure.reason().name(),
                 "message", failure.getMessage()));
+    }
+
+    @ExceptionHandler(MergeFailure.class)
+    public ResponseEntity<Map<String, Object>> handleMergeFailure(MergeFailure failure) {
+        int status = switch (failure.reason()) {
+            case ComparisonNotFound, RoundNotFound -> 404;
+            case InvalidDecision, Rejected -> 422;
+            default -> 409;
+        };
+        return ResponseEntity.status(status).body(Map.of("reason", failure.reason().name(),
+                "message", failure.getMessage() == null ? failure.reason().name() : failure.getMessage()));
     }
 
     @ExceptionHandler(BindingFailure.class)

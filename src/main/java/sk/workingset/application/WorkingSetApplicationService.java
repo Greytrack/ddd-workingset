@@ -190,7 +190,14 @@ public class WorkingSetApplicationService {
                     || !command.sourceRevision().equals(variant.revision())) {
                 throw new BindingFailure(Reason.SourceItemMismatch, sourceId.value());
             }
-            return new ContentSource(variant.effectiveContentSource(), variant.effectiveContentRevision());
+            LocalId contentId = variant.effectiveContentSource();
+            if (!businessItems.lockContentSource(contentId)) {
+                throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE, contentId.value());
+            }
+            if (variant.materialized() && businessItems.isDeleted(sourceId)) {
+                throw new ApplicationFailure(FailureReason.DELETED, sourceId.value());
+            }
+            return new ContentSource(contentId, variant.effectiveContentRevision());
         }
 
         var sourceItem = businessItems.findIdentity(sourceId).orElseThrow(
@@ -215,6 +222,9 @@ public class WorkingSetApplicationService {
                     FailureReason.NOT_INCLUDED,
                     "item " + localId.value() + " is not included in working set " + workingSetId.value());
         }
+        if (item.materialized() && businessItems.isDeleted(localId)) {
+            throw new ApplicationFailure(FailureReason.DELETED, localId.value());
+        }
         return item;
     }
 
@@ -232,7 +242,8 @@ public class WorkingSetApplicationService {
         if (!port.authorize(Operation.READ, caller)) {
             throw new UnsupportedOperationException("authorization is not enforced in S1");
         }
-        TrackerItemContent content = port.readAt(contentRevision);
+        TrackerItemContent content = item.materialized() ? port.readAt(contentRevision)
+                : port.readInheritedAt(contentRevision);
         return new ReadResult(content, item.materialized(), contentLocalId, contentRevision);
     }
 }

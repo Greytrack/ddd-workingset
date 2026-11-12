@@ -16,6 +16,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import alm.requirement.application.RequirementApplicationService;
+import alm.requirement.application.RequirementLifecycleService;
+import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.infrastructure.JdbcRequirementRepository;
 import alm.requirement.infrastructure.JdbcSnapshotStore;
 import alm.requirement.infrastructure.RequirementAdapter;
@@ -24,6 +26,11 @@ import sk.workingset.application.CowEventHandler;
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.application.CowMaterializationStore;
 import sk.workingset.application.CowRecoveryService;
+import sk.workingset.application.MergeComparisonService;
+import sk.workingset.application.MergeExecutionService;
+import sk.workingset.application.port.RequirementCatalog;
+import sk.workingset.application.port.MergeStore;
+import sk.workingset.infrastructure.JdbcMergeStore;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
@@ -59,8 +66,11 @@ public class ApplicationConfiguration {
 
     @Bean
     public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
-            JdbcSnapshotStore snapshots, TransactionTemplate newTransactionTemplate) {
-        return new RequirementMaterializationAdapter(repository, snapshots, newTransactionTemplate);
+            JdbcSnapshotStore snapshots, TransactionTemplate newTransactionTemplate,
+            RequirementApplicationService requirements, JdbcBindingRepositories trackers,
+            LightTrackerItemRepository items) {
+        return new RequirementMaterializationAdapter(repository, snapshots, newTransactionTemplate,
+                new RequirementMergeWriter(repository, requirements), trackers, items);
     }
 
     @Bean
@@ -133,12 +143,28 @@ public class ApplicationConfiguration {
     }
 
     @Bean
+    public RequirementLifecycleService requirementLifecycleService(JdbcRequirementRepository requirements,
+            JdbcBindingRepositories bindings, LightTrackerItemRepository items) {
+        return new RequirementLifecycleService(requirements, bindings, items);
+    }
+
+    @Bean
     public BusinessTrackerItems businessTrackerItems(JdbcRequirementRepository requirements) {
         return new BusinessTrackerItems() {
             @Override
             public Optional<SourceIdentity> findIdentity(LocalId localId) {
-                return requirements.findById(localId)
+                return requirements.findById(localId).filter(item -> !item.deleted())
                         .map(item -> new SourceIdentity(item.trackerId(), item.commonId()));
+            }
+
+            @Override
+            public boolean isDeleted(LocalId localId) {
+                return requirements.findById(localId).filter(item -> item.deleted()).isPresent();
+            }
+
+            @Override
+            public boolean lockContentSource(LocalId localId) {
+                return requirements.lockById(localId).isPresent();
             }
 
             @Override
@@ -146,6 +172,30 @@ public class ApplicationConfiguration {
                 return requirements.existsInTracker(trackerId);
             }
         };
+    }
+
+    @Bean
+    public MergeStore mergeStore(JdbcTemplate jdbc, ObjectMapper mapper) {
+        return new JdbcMergeStore(jdbc, mapper);
+    }
+
+    @Bean
+    public MergeComparisonService mergeComparisonService(JdbcBindingRepositories bindings,
+            LightTrackerItemRepository items, JdbcRequirementRepository requirements, MergeStore store) {
+        RequirementCatalog catalog = requirements::findIdentitiesByTracker;
+        return new MergeComparisonService(bindings, bindings, items, catalog,
+                id -> new RequirementAdapter(requirements, id), store);
+    }
+
+    @Bean
+    public MergeExecutionService mergeExecutionService(MergeStore store, MergeComparisonService comparisons,
+            RequirementWritePort writer, JdbcBindingRepositories trackers, LightTrackerItemRepository items,
+            IdentifierGenerator ids, TransactionTemplate newTransactionTemplate,
+            PlatformTransactionManager transactionManager) {
+        var savepoint = new TransactionTemplate(transactionManager);
+        savepoint.setPropagationBehavior(TransactionDefinition.PROPAGATION_NESTED);
+        return new MergeExecutionService(store, comparisons, writer, trackers, items, ids,
+                newTransactionTemplate, savepoint);
     }
 
     @Bean

@@ -52,7 +52,14 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    writeCache(snapshot);
+                    // A nested merge operation can roll back while its outer transaction still commits.
+                    try {
+                        delegate.findById(item.localId()).map(CachedLightTrackerItem::from)
+                                .ifPresentOrElse(CachingLightTrackerItemRepository.this::writeCache,
+                                        () -> invalidate(item.localId()));
+                    } catch (RuntimeException failure) {
+                        invalidate(item.localId());
+                    }
                 }
             });
         } else {
@@ -75,6 +82,39 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
             found.map(CachedLightTrackerItem::from).ifPresent(this::writeCache);
         }
         return found;
+    }
+
+    @Override
+    public List<LightTrackerItem> findInTracker(TrackerId trackerId) {
+        return delegate.findInTracker(trackerId);
+    }
+
+    @Override
+    public boolean hasSourceBackedDependents(LocalId id) {
+        return delegate.hasSourceBackedDependents(id);
+    }
+
+    @Override
+    public void remove(LocalId id) {
+        delegate.remove(id);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidate(id);
+                }
+            });
+        } else {
+            invalidate(id);
+        }
+    }
+
+    private void invalidate(LocalId id) {
+        try {
+            redis.delete(key(id));
+        } catch (Exception failure) {
+            log.warn("Redis cache eviction failed for localId={}", id.value(), failure);
+        }
     }
 
     @Override

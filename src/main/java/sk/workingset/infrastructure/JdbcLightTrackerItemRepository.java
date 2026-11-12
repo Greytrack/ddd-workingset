@@ -78,6 +78,24 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
     }
 
     @Override
+    public List<LightTrackerItem> findInTracker(TrackerId trackerId) {
+        return jdbc.query("SELECT " + COLUMNS + " FROM light_tracker_items WHERE tracker_id = ? ORDER BY local_id",
+                MAPPER, trackerId.value());
+    }
+
+    @Override
+    public boolean hasSourceBackedDependents(LocalId id) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE source_local_id = ? AND NOT materialized)
+                """, Boolean.class, id.value()));
+    }
+
+    @Override
+    public void remove(LocalId id) {
+        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", id.value());
+    }
+
+    @Override
     public boolean existsInTracker(TrackerId trackerId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE tracker_id = ?)", Boolean.class, trackerId.value()));

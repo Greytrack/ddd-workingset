@@ -1,26 +1,55 @@
 package alm.requirement.infrastructure;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.transaction.support.TransactionTemplate;
 
+import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
+import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
+import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
+import sk.workingset.application.port.RequirementMergeCommand;
 import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 
 public final class RequirementMaterializationAdapter implements RequirementWritePort {
     private final RequirementRepository repository;
     private final SnapshotStore snapshotStore;
     private final TransactionTemplate newTransactionTemplate;
+    private final RequirementMergeWriter mergeWriter;
+    private final TrackerRepository trackers;
+    private final LightTrackerItemRepository items;
 
     public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotStore snapshotStore,
                                              TransactionTemplate newTransactionTemplate) {
+        this(repository, snapshotStore, newTransactionTemplate, null, null, null);
+    }
+
+    public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotStore snapshotStore,
+                                             TransactionTemplate newTransactionTemplate, RequirementMergeWriter mergeWriter,
+                                             TrackerRepository trackers, LightTrackerItemRepository items) {
         this.repository = repository;
         this.snapshotStore = snapshotStore;
         this.newTransactionTemplate = newTransactionTemplate;
+        this.mergeWriter = mergeWriter;
+        this.trackers = trackers;
+        this.items = items;
+    }
+
+    @Override
+    public void lockMergeEvidence(List<LocalId> ids) {
+        mergeWriter.lockEvidence(ids);
+    }
+
+    @Override
+    public Revision applyMerge(RequirementMergeCommand command) {
+        return mergeWriter.apply(command);
     }
 
     @Override
@@ -35,6 +64,16 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
         }
 
         newTransactionTemplate.executeWithoutResult(status -> {
+            if (items != null) {
+                trackers.lockTracker(request.targetTrackerId());
+                var target = items.findById(request.targetLocalId()).orElseThrow(
+                        () -> new MaterializationRejectedException("Target variant is missing"));
+                if (target.materialized()) {
+                    verifyMaterializedTarget(target);
+                    recordBusinessSave.run();
+                    return;
+                }
+            }
             var existing = repository.findById(request.targetLocalId());
             if (existing.isPresent()) {
                 verifyExisting(existing.get(), request, snapshot);

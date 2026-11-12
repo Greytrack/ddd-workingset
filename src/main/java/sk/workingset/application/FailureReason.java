@@ -1,10 +1,7 @@
 package sk.workingset.application;
 
-/**
- * 首切片适用的公共失败分类子集（T4 §5.2）：NotFound / NotIncluded。
- * <p>其余分类（Denied/Deleted/HistoryUnavailable/Preparing/CapabilityNotSupported/DependencyUnavailable/Unknown）在后续切片实现。
- */
+/** 跨 BC 公共失败分类（T4 §5）。 */
 public enum FailureReason {
-    NOT_FOUND,
-    NOT_INCLUDED
+    NOT_FOUND, NOT_INCLUDED, DENIED, DELETED, HISTORY_UNAVAILABLE, PREPARING,
+    CAPABILITY_NOT_SUPPORTED, DEPENDENCY_UNAVAILABLE, UNKNOWN
 }

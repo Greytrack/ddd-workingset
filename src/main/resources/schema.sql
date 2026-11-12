@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS requirements (
     lock_version BIGINT      NOT NULL
 );
 
+ALTER TABLE requirements ADD COLUMN IF NOT EXISTS delete_flag BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS light_tracker_items (
     local_id         VARCHAR(64) PRIMARY KEY,
     common_id        VARCHAR(64) NOT NULL,
@@ -164,9 +166,37 @@ DO 'BEGIN
 END';
 
 CREATE INDEX IF NOT EXISTS idx_requirements_tracker ON requirements (tracker_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_requirements_tracker_family ON requirements (tracker_id, common_id);
 CREATE INDEX IF NOT EXISTS idx_lti_tracker ON light_tracker_items (tracker_id, working_set_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_org_parent ON trackers (parent_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_source ON trackers (source_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_product_space ON trackers (product_space_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_bindings_tracker ON tracker_bindings (tracker_id);
 CREATE INDEX IF NOT EXISTS idx_space_bindings_space ON space_bindings (product_space_id);
+
+CREATE TABLE IF NOT EXISTS merge_comparisons (
+    token VARCHAR(64) PRIMARY KEY,
+    evidence JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS merge_rounds (
+    id VARCHAR(64) PRIMARY KEY,
+    token VARCHAR(64) NOT NULL REFERENCES merge_comparisons (token),
+    state JSONB NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_token ON merge_rounds (token);
+
+CREATE SEQUENCE IF NOT EXISTS merge_decision_version;
+
+CREATE TABLE IF NOT EXISTS merge_checkpoints (
+    source_id VARCHAR(128) NOT NULL,
+    target_id VARCHAR(128) NOT NULL,
+    common_id VARCHAR(64) NOT NULL,
+    decision_version BIGINT NOT NULL,
+    source_revision INTEGER,
+    target_revision INTEGER,
+    token VARCHAR(64) NOT NULL,
+    revoked BOOLEAN NOT NULL,
+    PRIMARY KEY (source_id, target_id, common_id)
+);

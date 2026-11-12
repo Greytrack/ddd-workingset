@@ -19,6 +19,12 @@ public interface LightTrackerItemRepository {
 
     boolean existsInTracker(TrackerId trackerId);
 
+    List<LightTrackerItem> findInTracker(TrackerId trackerId);
+
+    boolean hasSourceBackedDependents(LocalId id);
+
+    void remove(LocalId id);
+
     /**
      * 按来源定位候选变体（D-017 消费时确定目标）：返回 {@code sourceLocalId}/{@code sourceRevision}
      * 匹配的变体；是否已物化由调用方判断（不得在仓储层暗含业务判断）。

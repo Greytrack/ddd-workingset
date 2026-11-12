@@ -59,6 +59,15 @@ class CachingLightTrackerItemRepositoryTest {
             }
 
             @Override
+            public List<LightTrackerItem> findInTracker(TrackerId trackerId) { return List.of(); }
+
+            @Override
+            public boolean hasSourceBackedDependents(LocalId id) { return false; }
+
+            @Override
+            public void remove(LocalId id) {}
+
+            @Override
             public boolean existsInTracker(TrackerId trackerId) {
                 return false;
             }

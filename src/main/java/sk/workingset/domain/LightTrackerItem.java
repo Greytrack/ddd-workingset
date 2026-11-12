@@ -77,6 +77,11 @@ public final class LightTrackerItem {
         return item;
     }
 
+    public static LightTrackerItem local(LocalId id, CommonId commonId, TrackerId trackerId,
+                                         WorkingSetId workingSetId, Revision revision) {
+        return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true);
+    }
+
     /** 从持久化/事件恢复时重建（调用方必须保证字段一致）。 */
     public static LightTrackerItem restore(LocalId localId,
                                            CommonId commonId,

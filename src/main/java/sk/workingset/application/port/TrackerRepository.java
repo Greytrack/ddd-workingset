@@ -5,6 +5,7 @@ import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
 
 public interface TrackerRepository {
+    Optional<Tracker> findTracker(TrackerId id);
     Optional<Tracker> lockTracker(TrackerId id);
     void insertTracker(Tracker tracker);
     boolean hasOrgChildren(TrackerId id);

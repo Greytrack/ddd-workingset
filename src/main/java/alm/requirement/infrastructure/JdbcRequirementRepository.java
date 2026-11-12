@@ -1,5 +1,6 @@
 package alm.requirement.infrastructure;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -8,6 +9,9 @@ import org.springframework.jdbc.core.RowMapper;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
+import sk.workingset.application.ApplicationFailure;
+import sk.workingset.application.FailureReason;
+import sk.workingset.application.port.RequirementCatalog.Identity;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -23,19 +27,16 @@ import sk.workingset.domain.Version;
  */
 public class JdbcRequirementRepository implements RequirementRepository {
 
-    private static final String UPSERT = """
+    private static final String INSERT = """
             INSERT INTO requirements
-                (local_id, common_id, tracker_id, title, description, revision, version, lock_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (local_id) DO UPDATE SET
-                common_id = EXCLUDED.common_id,
-                tracker_id = EXCLUDED.tracker_id,
-                title = EXCLUDED.title,
-                description = EXCLUDED.description,
-                revision = EXCLUDED.revision,
-                version = EXCLUDED.version,
-                lock_version = EXCLUDED.lock_version
-            WHERE requirements.lock_version = EXCLUDED.lock_version - 1
+                (local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+    private static final String UPDATE = """
+            UPDATE requirements
+            SET title = ?, description = ?, revision = ?, version = ?, delete_flag = ?, lock_version = ?
+            WHERE local_id = ? AND lock_version = ?
             """;
 
     private static final RowMapper<Requirement> MAPPER = (rs, rowNum) -> Requirement.restore(
@@ -46,7 +47,7 @@ public class JdbcRequirementRepository implements RequirementRepository {
             rs.getString("description"),
             Revision.of(rs.getInt("revision")),
             rs.getString("version") == null ? Version.none() : Version.of(rs.getString("version")),
-            LockVersion.of(rs.getLong("lock_version")));
+            LockVersion.of(rs.getLong("lock_version")), rs.getBoolean("delete_flag"));
 
     private final JdbcTemplate jdbc;
 
@@ -56,29 +57,43 @@ public class JdbcRequirementRepository implements RequirementRepository {
 
     @Override
     public void save(Requirement requirement) {
-        int affected = jdbc.update(UPSERT,
-                requirement.localId().value(),
-                requirement.commonId().value(),
-                requirement.trackerId().value(),
-                requirement.title(),
-                requirement.description(),
-                requirement.revision().value(),
-                requirement.version().value(),
-                requirement.lockVersion().value());
+        long lockVersion = requirement.lockVersion().value();
+        if (lockVersion == 0) {
+            jdbc.update(INSERT, requirement.localId().value(), requirement.commonId().value(),
+                    requirement.trackerId().value(), requirement.title(), requirement.description(),
+                    requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted());
+            return;
+        }
+        long expected = lockVersion - 1;
+        int affected = jdbc.update(UPDATE, requirement.title(), requirement.description(), requirement.revision().value(),
+                requirement.version().value(), requirement.deleted(), lockVersion, requirement.localId().value(), expected);
         if (affected == 0) {
-            LockVersion actual = currentLockVersion(requirement.localId());
-            long expectedValue = Math.max(0L, requirement.lockVersion().value() - 1L);
-            throw new LockVersionConflictException(LockVersion.of(expectedValue), actual);
+            throw new LockVersionConflictException(LockVersion.of(expected), currentLockVersion(requirement.localId()));
         }
     }
 
     @Override
     public Optional<Requirement> findById(LocalId localId) {
         return jdbc.query(
-                "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version "
+                "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag "
                         + "FROM requirements WHERE local_id = ?",
                 MAPPER,
                 localId.value()).stream().findFirst();
+    }
+
+    public List<Identity> findIdentitiesByTracker(TrackerId trackerId) {
+        return jdbc.query("SELECT local_id, common_id FROM requirements WHERE tracker_id = ? ORDER BY local_id",
+                (rs, row) -> new Identity(LocalId.of(rs.getString(1)), CommonId.of(rs.getString(2))), trackerId.value());
+    }
+
+    public Optional<Requirement> lockById(LocalId id) {
+        return jdbc.query("SELECT * FROM requirements WHERE local_id = ? FOR UPDATE",
+                MAPPER, id.value()).stream().findFirst();
+    }
+
+    public void purge(Requirement requirement) {
+        jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", requirement.localId().value());
+        jdbc.update("DELETE FROM requirements WHERE local_id = ?", requirement.localId().value());
     }
 
     public boolean existsInTracker(TrackerId trackerId) {
@@ -92,7 +107,7 @@ public class JdbcRequirementRepository implements RequirementRepository {
                 rs -> rs.next() ? rs.getLong(1) : null,
                 localId.value());
         if (value == null) {
-            throw new IllegalStateException("requirement not found after conflict: " + localId.value());
+            throw new ApplicationFailure(FailureReason.NOT_FOUND, "Requirement no longer exists: " + localId.value());
         }
         return LockVersion.of(value);
     }

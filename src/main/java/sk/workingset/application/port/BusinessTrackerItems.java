@@ -11,6 +11,10 @@ public interface BusinessTrackerItems {
     Optional<SourceIdentity> findIdentity(LocalId localId);
 
     boolean existsInTracker(TrackerId trackerId);
+    boolean isDeleted(LocalId localId);
+
+    /** 事务内保护既有派生依赖的实际内容来源，直到新变体提交。 */
+    boolean lockContentSource(LocalId localId);
 
     record SourceIdentity(TrackerId trackerId, CommonId commonId) {}
 }

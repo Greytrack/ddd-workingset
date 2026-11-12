@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import alm.requirement.application.RequirementApplicationService;
+import alm.requirement.application.RequirementLifecycleService;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.workingset.application.ApplicationFailure;
@@ -33,13 +34,16 @@ public class RequirementController {
 
     private final RequirementApplicationService applicationService;
     private final RequirementRepository repository;
+    private final RequirementLifecycleService lifecycle;
     private final IdentifierGenerator identifierGenerator;
 
     public RequirementController(RequirementApplicationService applicationService,
                                  RequirementRepository repository,
+                                 RequirementLifecycleService lifecycle,
                                  IdentifierGenerator identifierGenerator) {
         this.applicationService = applicationService;
         this.repository = repository;
+        this.lifecycle = lifecycle;
         this.identifierGenerator = identifierGenerator;
     }
 
@@ -66,10 +70,33 @@ public class RequirementController {
         return RequirementView.from(changed);
     }
 
+    @PostMapping("/{localId}/delete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable String localId) {
+        applicationService.delete(LocalId.of(localId));
+    }
+
+    @PostMapping("/{localId}/delete2")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete2(@PathVariable String localId) {
+        lifecycle.delete2(LocalId.of(localId));
+    }
+
+    @PostMapping("/{localId}/undelete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void undelete(@PathVariable String localId) {
+        applicationService.undelete(LocalId.of(localId));
+    }
+
     @GetMapping("/{localId}")
     public RequirementView find(@PathVariable("localId") String localId) {
         return repository.findById(LocalId.of(localId))
-                .map(RequirementView::from)
+                .map(item -> {
+                    if (item.deleted()) {
+                        throw new ApplicationFailure(FailureReason.DELETED, item.localId().value());
+                    }
+                    return RequirementView.from(item);
+                })
                 .orElseThrow(() -> new ApplicationFailure(
                         FailureReason.NOT_FOUND, "requirement not found: " + localId));
     }
