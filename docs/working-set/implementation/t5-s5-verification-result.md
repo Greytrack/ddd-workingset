@@ -4,6 +4,8 @@
 
 依据 [T2 绑定与删除契约](../domain/binding-deletion-contract-v1.md)。用户裁定 A 将本次纳入范围限定为已登记的首层 WorkingSet，直接上游固定为默认 WorkingSet。
 
+范围限定说明：首层范围属于实施范围裁定，不改变 T2 契约对多级谱系、停用与权限的开放状态；不得据此把“直接上游只能是默认 WorkingSet”写成通用业务不变量。
+
 ## S5-A 绑定与派生
 
 - `WorkingSet` 持有 `SpaceBinding` 与 `TrackerBinding`。身份键分别是 `(workingSetId, productSpaceId)` 和 `(workingSetId, trackerId)`，Tracker 槽位由 `(workingSetId, productSpaceId, classificationId)` 唯一约束。
