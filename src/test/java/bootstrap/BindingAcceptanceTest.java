@@ -2,7 +2,9 @@ package bootstrap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,11 +27,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.workingset.application.WorkingSetDeletionService;
+import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.WorkingSetId;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BindingAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestRestTemplate rest;
+    @Autowired private WorkingSetDeletionService deletions;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String ws = "WS-" + suffix;
@@ -40,10 +46,13 @@ class BindingAcceptanceTest {
     private final String shared = "SH-" + suffix;
     private final String unshared = "UN-" + suffix;
     private final String sourceItem = "SOURCE-" + suffix;
+    private final List<String> worksets = new ArrayList<>();
 
     @BeforeEach
     void provision() {
-        jdbc.update("INSERT INTO working_sets VALUES (?), (?)", ws, other);
+        for (String child : List.of(ws, other)) {
+            createChild("1", child);
+        }
         jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED'), (?, 'UNSHARED')", sharedClass, unsharedClass);
         original(shared, sharedClass, "SHARED", null);
@@ -54,14 +63,16 @@ class BindingAcceptanceTest {
     @AfterEach
     void cleanUp() {
         jdbc.update("DELETE FROM requirements WHERE tracker_id IN (?, ?)", shared, unshared);
-        jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id IN (?, ?)", ws, other);
-        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", ws, other);
-        jdbc.update("DELETE FROM trackers WHERE working_set_id IN (?, ?)", ws, other);
-        jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", ws, other);
+        for (String id : worksets.reversed()) {
+            jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", id);
+        }
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM classifications WHERE classification_id IN (?, ?)", sharedClass, unsharedClass);
-        jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", ws, other);
     }
 
     @Test
@@ -127,6 +138,39 @@ class BindingAcceptanceTest {
                 HttpStatus.CONFLICT, "WorkingSetNotWritable");
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id IN (?, ?)",
                 Integer.class, ws, other));
+    }
+
+    @Test
+    void grandchildRequiresItsDirectParentsRangeAndSharedReuseKeepsTheOriginalId() {
+        String grandchild = "GRAND-" + suffix;
+        createChild(ws, grandchild);
+        bindSpace(grandchild);
+
+        assertFailure(rest.postForEntity(sharedPath(grandchild, shared), null, Map.class),
+                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
+        assertFailure(rest.postForEntity(path(grandchild) + "/derive", deriveBody(unshared), Map.class),
+                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
+
+        bindSpace(other);
+        var sibling = rest.postForEntity(path(other) + "/derive", deriveBody(unshared), DeriveView.class);
+        assertEquals(HttpStatus.CREATED, sibling.getStatusCode());
+        assertFailure(rest.postForEntity(path(grandchild) + "/derive", deriveBody(sibling.getBody().trackerId()), Map.class),
+                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
+
+        bindSpace(ws);
+        assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
+        var sharedAgain = rest.postForEntity(sharedPath(grandchild, shared), null, TrackerBindingView.class);
+        assertEquals(HttpStatus.CREATED, sharedAgain.getStatusCode());
+        assertEquals(shared, sharedAgain.getBody().trackerId());
+
+        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
+        assertEquals(shared, rest.getForObject(path(grandchild) + "/bindings", BindingsView.class)
+                .trackers().getFirst().trackerId());
+        String laterChild = "LATER-" + suffix;
+        createChild(ws, laterChild);
+        bindSpace(laterChild);
+        assertFailure(rest.postForEntity(sharedPath(laterChild, shared), null, Map.class),
+                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
     }
 
     @Test
@@ -227,6 +271,60 @@ class BindingAcceptanceTest {
     }
 
     @Test
+    void middleWorksetRejectsDeleteAndDisableBeforeRemovingAnyBindings() {
+        bindSpace(ws);
+        assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
+        String grandchild = "GRAND-" + suffix;
+        createChild(ws, grandchild);
+
+        var blocked = delete(path(ws));
+        assertFailure(blocked, HttpStatus.CONFLICT, "WorkingSetHasChildren");
+        assertEquals(List.of(grandchild), blocked.getBody().get("childWorkingSetIds"));
+        var disable = assertThrows(BindingFailure.class, () -> deletions.assertDisableAllowed(WorkingSetId.of(ws)));
+        assertEquals(BindingFailure.Reason.WorkingSetHasChildren, disable.reason());
+
+        assertEquals(ws, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
+        var bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        assertEquals(shared, bindings.trackers().getFirst().trackerId());
+        assertEquals(space, bindings.spaces().getFirst().productSpaceId());
+
+        deletions.assertDisableAllowed(WorkingSetId.of(grandchild));
+        assertEquals(HttpStatus.NO_CONTENT, delete(path(grandchild)).getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, delete(path(ws)).getStatusCode());
+        assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
+        assertEquals(0, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
+        assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
+        assertFailure(delete(path("1")), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
+    }
+
+    @Test
+    void concurrentChildCreationAndParentDeletionCannotLeaveADanglingParent() throws Exception {
+        String child = "RACE-CHILD-" + suffix;
+        var start = new CyclicBarrier(2);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var create = executor.submit(() -> {
+                start.await(5, TimeUnit.SECONDS);
+                return rest.postForEntity(path(ws) + "/children", Map.of("workingSetId", child), Map.class);
+            });
+            var remove = executor.submit(() -> {
+                start.await(5, TimeUnit.SECONDS);
+                return delete(path(ws));
+            });
+
+            var createResult = create.get(10, TimeUnit.SECONDS);
+            if (createResult.getStatusCode() == HttpStatus.CREATED) {
+                worksets.add(child);
+                assertFailure(remove.get(10, TimeUnit.SECONDS), HttpStatus.CONFLICT, "WorkingSetHasChildren");
+                assertEquals(ws, rest.getForObject(path(child), WorkingSetView.class).parentWorkingSetId());
+            } else {
+                assertFailure(createResult, HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+                assertEquals(HttpStatus.NO_CONTENT, remove.get(10, TimeUnit.SECONDS).getStatusCode());
+                assertEquals(0, count("SELECT count(*) FROM working_sets WHERE working_set_id = ?", child));
+            }
+        }
+    }
+
+    @Test
     void concurrentItemCreationAndTrackerDeletionCannotLeaveAnOrphan() throws Exception {
         var start = new CyclicBarrier(2);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -282,6 +380,12 @@ class BindingAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id)
                 VALUES (?, '1', ?, ?, ?, ?)
                 """, tracker, space, classification, mode, parent);
+    }
+
+    private void createChild(String parent, String child) {
+        assertEquals(HttpStatus.CREATED,
+                rest.postForEntity(path(parent) + "/children", Map.of("workingSetId", child), Void.class).getStatusCode());
+        worksets.add(child);
     }
 
     private void bindSpace(String id) {

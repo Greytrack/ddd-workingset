@@ -75,6 +75,7 @@ public class WorkingSetDeletionService {
     public void deleteWorkingSet(WorkingSetId id) {
         WorkingSet.requireDeletable(id);
         var workingSet = lockWorkingSet(id);
+        assertNoChildren(id);
         var bindings = workingSet.trackers().stream()
                 .sorted(Comparator.comparing(binding -> binding.trackerId().value()))
                 .toList();
@@ -92,6 +93,20 @@ public class WorkingSetDeletionService {
         bindings.forEach(binding -> unbind(workingSet, binding));
         workingSet.spaces().forEach(binding -> removeSpace(workingSet, binding.productSpaceId()));
         workingSets.deleteWorkingSet(id);
+    }
+
+    /** 停用的前置规则。后续停用命令须在同一事务内调用并执行状态变更。 */
+    @Transactional
+    public void assertDisableAllowed(WorkingSetId id) {
+        lockWorkingSet(id);
+        assertNoChildren(id);
+    }
+
+    private void assertNoChildren(WorkingSetId id) {
+        var children = workingSets.findChildren(id).stream().map(WorkingSetId::value).toList();
+        if (!children.isEmpty()) {
+            throw new BindingFailure(Reason.WorkingSetHasChildren, id.value(), Map.of("childWorkingSetIds", children));
+        }
     }
 
     private void checkUnbind(TrackerBinding binding) {

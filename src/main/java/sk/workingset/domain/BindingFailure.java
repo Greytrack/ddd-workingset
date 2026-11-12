@@ -4,7 +4,9 @@ import java.util.Map;
 
 public final class BindingFailure extends RuntimeException {
     public enum Reason {
-        WorkingSetNotFound, WorkingSetNotWritable, ProductSpaceNotFound, AlreadyBound,
+        WorkingSetNotFound, WorkingSetNotWritable, WorkingSetCycle, WorkingSetAlreadyExists,
+        WorkingSetParentImmutable, WorkingSetsNotAdjacent, WorkingSetHasChildren,
+        ProductSpaceNotFound, AlreadyBound,
         MissingSpaceBinding, TrackerAlreadyBound, SlotOccupied, SourceTrackerNotFound,
         SharingModeMismatch, TrackerOutsideSlot, SourceItemNotFound, SourceItemMismatch,
         TrackerNotFound, TrackerBindingNotFound,

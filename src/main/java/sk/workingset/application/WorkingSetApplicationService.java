@@ -1,5 +1,6 @@
 package sk.workingset.application;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -21,14 +22,15 @@ import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.TrackerItemReadPort;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
 /**
- * SK 应用服务（首切片）：非共享派生、解析与读取编排。
+ * SK 应用服务：WorkingSet 谱系、纳入、解析与读取编排。
  *
- * <p>SK 只依赖 {@link TrackerItemReadPort} 与自身仓储；不引用 ALM 的任何类型（AC-01）。
+ * <p>业务事实通过应用层 Port 获取（AC-01）。
  * 业务标识由 {@link IdentifierGenerator} 以雪花 ID 产生（P1/FACT-005）。
  */
 public class WorkingSetApplicationService {
@@ -69,6 +71,37 @@ public class WorkingSetApplicationService {
     }
 
     @Transactional
+    public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
+        if (newId.equals(parentId)) {
+            throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
+        }
+        writable(parentId);
+        if (workingSets.findAncestors(parentId).contains(newId)) {
+            throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
+        }
+        var child = WorkingSet.child(newId, parentId);
+        if (!workingSets.insertWorkingSet(child)) {
+            var existing = workingSets.findWorkingSet(newId);
+            boolean differentParent = existing.filter(set -> !parentId.equals(set.parentWorkingSetId())).isPresent();
+            var reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
+            throw new BindingFailure(reason, newId.value());
+        }
+        return child;
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<WorkingSetId> findChildren(WorkingSetId id) {
+        findWorkingSet(id);
+        return workingSets.findChildren(id);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<WorkingSetId> findAncestors(WorkingSetId id) {
+        findWorkingSet(id);
+        return workingSets.findAncestors(id);
+    }
+
+    @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
         var workingSet = writable(id);
         var space = spaces.lockProductSpace(spaceId)
@@ -81,8 +114,7 @@ public class WorkingSetApplicationService {
     @Transactional
     public WorkingSet.TrackerBinding bindTrackerShared(WorkingSetId id, TrackerId trackerId) {
         var workingSet = writable(id);
-        var source = sourceTracker(trackerId);
-        workingSet.requireDirectUpstream(source);
+        var source = directParentTracker(workingSet, trackerId);
         var binding = workingSet.bindTracker(source, classification(source), SharingMode.SHARED);
         workingSets.insertTrackerBinding(binding);
         return binding;
@@ -93,9 +125,14 @@ public class WorkingSetApplicationService {
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 
-    private Tracker sourceTracker(TrackerId id) {
-        return trackers.lockTracker(id)
+    private Tracker directParentTracker(WorkingSet target, TrackerId id) {
+        WorkingSetId parentId = target.requireParentId();
+        // 非根父级锁定绑定范围，串行化解绑与新纳入。根原生 Tracker 由 Tracker 行锁保护。
+        boolean boundInParent = !WorkingSet.DEFAULT_ID.equals(parentId) && writable(parentId).hasTrackerBinding(id);
+        var source = trackers.lockTracker(id)
                 .orElseThrow(() -> new BindingFailure(Reason.SourceTrackerNotFound, id.value()));
+        target.requireDirectParent(source, boundInParent);
+        return source;
     }
 
     private Classification classification(Tracker tracker) {
@@ -107,13 +144,13 @@ public class WorkingSetApplicationService {
     @Transactional
     public DeriveResult derive(DeriveCommand command) {
         var workingSet = writable(command.workingSetId());
-        return bindTrackerDerived(workingSet, sourceTracker(command.sourceTrackerId()), command);
+        return bindTrackerDerived(workingSet, directParentTracker(workingSet, command.sourceTrackerId()), command);
     }
 
     @Transactional
     public DeriveResult bindTrackerDerived(String spaceId, String classificationId, DeriveCommand command) {
         var workingSet = writable(command.workingSetId());
-        var source = sourceTracker(command.sourceTrackerId());
+        var source = directParentTracker(workingSet, command.sourceTrackerId());
         if (!source.productSpaceId().equals(spaceId) || !source.classificationId().equals(classificationId)) {
             throw new BindingFailure(Reason.TrackerOutsideSlot, source.trackerId().value());
         }
@@ -121,30 +158,50 @@ public class WorkingSetApplicationService {
     }
 
     private DeriveResult bindTrackerDerived(WorkingSet workingSet, Tracker source, DeriveCommand command) {
-        workingSet.requireDirectUpstream(source);
         if (source.sharingMode() != SharingMode.UNSHARED) {
             throw new BindingFailure(Reason.SharingModeMismatch, source.classificationId());
         }
         Tracker tracker = Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())),
                 source, workingSet.id());
         var binding = workingSet.bindTracker(tracker, classification(source), SharingMode.UNSHARED);
-        var sourceItem = businessItems.findIdentity(command.sourceLocalId()).orElseThrow(
-                () -> new BindingFailure(Reason.SourceItemNotFound, command.sourceLocalId().value()));
-        if (!source.trackerId().equals(sourceItem.trackerId()) || !command.commonId().equals(sourceItem.commonId())) {
-            throw new BindingFailure(Reason.SourceItemMismatch, command.sourceLocalId().value());
-        }
+        var contentSource = resolveContentSource(source, command);
         LightTrackerItem item = LightTrackerItem.derive(
                 LocalId.of(String.valueOf(identifierGenerator.nextId())),
-                sourceItem.commonId(),
+                command.commonId(),
                 tracker.trackerId(),
-                command.workingSetId(),
+                workingSet.id(),
                 command.sourceRevision(),
-                command.sourceLocalId());
+                contentSource.localId(),
+                contentSource.revision());
         trackers.insertTracker(tracker);
         workingSets.insertTrackerBinding(binding);
         items.save(item);
         return new DeriveResult(tracker, item);
     }
+
+    private ContentSource resolveContentSource(Tracker source, DeriveCommand command) {
+        LocalId sourceId = command.sourceLocalId();
+        if (source.isDerived()) {
+            var variant = items.findById(sourceId).orElseThrow(
+                    () -> new BindingFailure(Reason.SourceItemNotFound, sourceId.value()));
+            if (!source.workingSetId().equals(variant.workingSetId())
+                    || !source.trackerId().equals(variant.trackerId())
+                    || !command.commonId().equals(variant.commonId())
+                    || !command.sourceRevision().equals(variant.revision())) {
+                throw new BindingFailure(Reason.SourceItemMismatch, sourceId.value());
+            }
+            return new ContentSource(variant.effectiveContentSource(), variant.effectiveContentRevision());
+        }
+
+        var sourceItem = businessItems.findIdentity(sourceId).orElseThrow(
+                () -> new BindingFailure(Reason.SourceItemNotFound, sourceId.value()));
+        if (!source.trackerId().equals(sourceItem.trackerId()) || !command.commonId().equals(sourceItem.commonId())) {
+            throw new BindingFailure(Reason.SourceItemMismatch, sourceId.value());
+        }
+        return new ContentSource(sourceId, command.sourceRevision());
+    }
+
+    private record ContentSource(LocalId localId, Revision revision) {}
 
     /** 按工作集 + 变体身份解析；未命中 → NotFound；存在但不在该工作集 → NotIncluded。 */
     public LightTrackerItem resolve(WorkingSetId workingSetId, LocalId localId) {
@@ -169,7 +226,7 @@ public class WorkingSetApplicationService {
         Objects.requireNonNull(caller, "caller");
         LightTrackerItem item = resolve(workingSetId, localId);
         LocalId contentLocalId = item.effectiveContentSource();
-        sk.workingset.domain.Revision contentRevision = item.effectiveContentRevision();
+        Revision contentRevision = item.effectiveContentRevision();
 
         TrackerItemReadPort port = readPorts.apply(contentLocalId);
         if (!port.authorize(Operation.READ, caller)) {

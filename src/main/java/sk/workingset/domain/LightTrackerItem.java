@@ -54,18 +54,25 @@ public final class LightTrackerItem {
                                           WorkingSetId workingSetId,
                                           Revision revision,
                                           LocalId sourceLocalId) {
+        return derive(localId, commonId, trackerId, workingSetId, revision, sourceLocalId, revision);
+    }
+
+    public static LightTrackerItem derive(LocalId localId, CommonId commonId, TrackerId trackerId,
+                                          WorkingSetId workingSetId, Revision revision,
+                                          LocalId sourceLocalId, Revision sourceRevision) {
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
         Objects.requireNonNull(workingSetId, "workingSetId");
         Objects.requireNonNull(revision, "revision");
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
+        Objects.requireNonNull(sourceRevision, "sourceRevision");
         if (localId.equals(sourceLocalId)) {
             throw new IllegalArgumentException(
                     "derived variant must be source-backed: localId must differ from sourceLocalId");
         }
         LightTrackerItem item = new LightTrackerItem(
-                localId, commonId, trackerId, workingSetId, revision, sourceLocalId, revision, false);
+                localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision, false);
         item.checkInvariants();
         return item;
     }

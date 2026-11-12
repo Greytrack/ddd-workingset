@@ -68,7 +68,7 @@ class CowAcceptanceTest {
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
         }
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", source);
-        for (String ws : worksets) {
+        for (String ws : worksets.reversed()) {
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", ws);
@@ -98,6 +98,29 @@ class CowAcceptanceTest {
                         SELECT r.title, l.materialized, l.source_local_id, l.source_revision
                         FROM requirements r JOIN light_tracker_items l USING (local_id) WHERE r.local_id = ?
                         """, first.id()), completedEvents());
+    }
+
+    @Test
+    void descendantsUseActualContentOwnerAndCowFansOutAcrossLevels() {
+        createSource();
+        Target child = derive();
+        String childTracker = jdbc.queryForObject(
+                "SELECT tracker_id FROM light_tracker_items WHERE local_id = ?", String.class, child.id());
+        Target grandchild = derive(child.ws(), childTracker, child.id());
+
+        assertEquals(childTracker, jdbc.queryForObject("""
+                SELECT t.source_id FROM trackers t JOIN light_tracker_items l USING (tracker_id) WHERE l.local_id = ?
+                """, String.class, grandchild.id()));
+        assertEquals(source, read(grandchild).contentLocalId());
+
+        change("B", 0);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+        assertLocalContent(child, "A");
+        assertLocalContent(grandchild, "A");
+
+        Target laterGrandchild = derive(child.ws(), childTracker, child.id());
+        assertEquals(child.id(), read(laterGrandchild).contentLocalId());
+        assertFalse(read(laterGrandchild).materialized());
     }
 
     @Test
@@ -249,13 +272,19 @@ class CowAcceptanceTest {
     }
 
     private Target derive() {
+        return derive("1", tracker, source);
+    }
+
+    private Target derive(String parent, String sourceTracker, String sourceLocalId) {
         String ws = "WS-" + UUID.randomUUID();
-        jdbc.update("INSERT INTO working_sets VALUES (?)", ws);
+        assertEquals(HttpStatus.CREATED,
+                rest.postForEntity("/api/worksets/" + parent + "/children",
+                        Map.of("workingSetId", ws), Void.class).getStatusCode());
         worksets.add(ws);
         assertEquals(HttpStatus.CREATED,
                 rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());
         var result = rest.postForEntity("/api/worksets/" + ws + "/derive", Map.of(
-                "sourceLocalId", source, "sourceTrackerId", tracker, "sourceRevision", 3, "commonId", common),
+                "sourceLocalId", sourceLocalId, "sourceTrackerId", sourceTracker, "sourceRevision", 3, "commonId", common),
                 DeriveView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         String id = result.getBody().item().localId();

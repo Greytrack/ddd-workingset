@@ -9,6 +9,9 @@ import sk.workingset.domain.WorkingSetId;
 public interface WorkingSetRepository {
     Optional<WorkingSet> findWorkingSet(WorkingSetId id);
     Optional<WorkingSet> lockWorkingSet(WorkingSetId id);
+    boolean insertWorkingSet(WorkingSet workingSet);
+    List<WorkingSetId> findChildren(WorkingSetId id);
+    List<WorkingSetId> findAncestors(WorkingSetId id);
     void insertSpaceBinding(WorkingSet.SpaceBinding binding);
     void insertTrackerBinding(WorkingSet.TrackerBinding binding);
     void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId);

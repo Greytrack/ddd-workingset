@@ -12,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Optional;
 
 import sk.workingset.application.port.BusinessTrackerItems;
@@ -74,7 +73,7 @@ class WorkingSetSliceIntegrationTest {
         var space = new ProductSpace("space");
         var classification = new Classification("class", Classification.SharingMode.UNSHARED);
         when(sets.lockWorkingSet(WS1)).thenAnswer(invocation -> {
-            var workset = new WorkingSet(WS1, List.of(), List.of());
+            var workset = WorkingSet.child(WS1, WorkingSet.DEFAULT_ID);
             workset.bindSpace(space);
             return Optional.of(workset);
         });

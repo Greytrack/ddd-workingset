@@ -49,7 +49,24 @@ public class WorkingSetController {
     @GetMapping("/{workingSetId}")
     public WorkingSetView find(@PathVariable String workingSetId) {
         var workingSet = applicationService.findWorkingSet(WorkingSetId.of(workingSetId));
-        return new WorkingSetView(workingSet.id().value(), WorkingSet.DEFAULT_ID.equals(workingSet.id()));
+        return WorkingSetView.from(workingSet);
+    }
+
+    @PostMapping("/{workingSetId}/children")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
+        return WorkingSetView.from(applicationService.createChildWorkingSet(WorkingSetId.of(workingSetId),
+                WorkingSetId.of(requireText(request.workingSetId(), "workingSetId"))));
+    }
+
+    @GetMapping("/{workingSetId}/children")
+    public List<String> findChildren(@PathVariable String workingSetId) {
+        return applicationService.findChildren(WorkingSetId.of(workingSetId)).stream().map(WorkingSetId::value).toList();
+    }
+
+    @GetMapping("/{workingSetId}/ancestors")
+    public List<String> findAncestors(@PathVariable String workingSetId) {
+        return applicationService.findAncestors(WorkingSetId.of(workingSetId)).stream().map(WorkingSetId::value).toList();
     }
 
     @GetMapping("/{workingSetId}/bindings")
@@ -110,7 +127,15 @@ public class WorkingSetController {
         return ReadView.from(result);
     }
 
-    public record WorkingSetView(String workingSetId, boolean defaultWorkingSet) {}
+    public record CreateChildRequest(String workingSetId) {}
+
+    public record WorkingSetView(String workingSetId, boolean defaultWorkingSet, String parentWorkingSetId) {
+        static WorkingSetView from(WorkingSet workingSet) {
+            WorkingSetId parentId = workingSet.parentWorkingSetId();
+            return new WorkingSetView(workingSet.id().value(), WorkingSet.DEFAULT_ID.equals(workingSet.id()),
+                    parentId == null ? null : parentId.value());
+        }
+    }
 
     public record SpaceBindingView(String productSpaceId, String origin, String state) {
         static SpaceBindingView from(WorkingSet.SpaceBinding binding) {

@@ -80,6 +80,25 @@ CREATE TABLE IF NOT EXISTS working_sets (
 
 INSERT INTO working_sets (working_set_id) VALUES ('1') ON CONFLICT DO NOTHING;
 
+ALTER TABLE working_sets
+    ADD COLUMN IF NOT EXISTS parent_working_set_id VARCHAR(128) REFERENCES working_sets (working_set_id);
+
+-- S5 only registered first-level Working Sets. Preserve parent links already set by S6.
+UPDATE working_sets SET parent_working_set_id = '1'
+WHERE working_set_id <> '1' AND parent_working_set_id IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_working_sets_parent ON working_sets (parent_working_set_id);
+
+DO 'BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                   WHERE conname = ''ck_working_set_parent'' AND conrelid = ''working_sets''::regclass) THEN
+        ALTER TABLE working_sets ADD CONSTRAINT ck_working_set_parent
+            CHECK ((working_set_id = ''1'' AND parent_working_set_id IS NULL)
+                OR (working_set_id <> ''1'' AND parent_working_set_id IS NOT NULL
+                    AND parent_working_set_id <> working_set_id));
+    END IF;
+END';
+
 CREATE TABLE IF NOT EXISTS product_spaces (
     product_space_id VARCHAR(64) PRIMARY KEY
 );

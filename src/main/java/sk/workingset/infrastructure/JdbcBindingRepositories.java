@@ -10,6 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.port.ProductSpaceRepository;
 import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.WorkingSetRepository;
+import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.ProductSpace;
@@ -36,11 +38,12 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
-        String sql = "SELECT working_set_id FROM working_sets WHERE working_set_id = ?";
+        String sql = "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?";
         if (lock) {
             sql += " FOR UPDATE";
         }
-        if (jdbc.queryForList(sql, String.class, id.value()).isEmpty()) {
+        var parents = jdbc.queryForList(sql, String.class, id.value());
+        if (parents.isEmpty()) {
             return Optional.empty();
         }
         var spaces = jdbc.query("""
@@ -56,7 +59,42 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 rs.getString("product_space_id"), rs.getString("classification_id"),
                 SharingMode.valueOf(rs.getString("sharing_mode")),
                 WorkingSet.TrackerOrigin.valueOf(rs.getString("origin"))), id.value());
-        return Optional.of(new WorkingSet(id, spaces, trackers));
+        String parent = parents.getFirst();
+        return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), spaces, trackers));
+    }
+
+    @Override
+    public boolean insertWorkingSet(WorkingSet workingSet) {
+        return jdbc.update("""
+                INSERT INTO working_sets (working_set_id, parent_working_set_id)
+                VALUES (?, ?) ON CONFLICT (working_set_id) DO NOTHING
+                """, workingSet.id().value(), workingSet.parentWorkingSetId().value()) == 1;
+    }
+
+    @Override
+    public List<WorkingSetId> findChildren(WorkingSetId id) {
+        return jdbc.queryForList("""
+                SELECT working_set_id FROM working_sets
+                WHERE parent_working_set_id = ? ORDER BY working_set_id
+                """, String.class, id.value()).stream().map(WorkingSetId::of).toList();
+    }
+
+    @Override
+    public List<WorkingSetId> findAncestors(WorkingSetId id) {
+        var ancestors = jdbc.queryForList("""
+                WITH RECURSIVE lineage(working_set_id, parent_working_set_id, distance) AS (
+                    SELECT working_set_id, parent_working_set_id, 0
+                    FROM working_sets WHERE working_set_id = ?
+                    UNION ALL
+                    SELECT parent.working_set_id, parent.parent_working_set_id, child.distance + 1
+                    FROM working_sets parent JOIN lineage child ON parent.working_set_id = child.parent_working_set_id
+                ) CYCLE working_set_id SET cyclic USING path
+                SELECT working_set_id FROM lineage WHERE distance > 0 ORDER BY distance
+                """, String.class, id.value());
+        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.value().equals(ancestors.getLast())) {
+            throw new BindingFailure(Reason.WorkingSetCycle, id.value());
+        }
+        return ancestors.stream().map(WorkingSetId::of).toList();
     }
 
     @Override
