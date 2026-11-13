@@ -161,7 +161,9 @@ Diff 产生有向冻结差异 + ComparisonToken
 
 ## 8. 轮次终态与结果表达
 
-`MergeRound` 状态：`Preparing` → `Running` → `Completed`（终态：`Succeeded` / `PartiallySucceeded` / `Failed`）。
+**C11（2026-11-13 用户裁定）**：软删对象不进入 Compare 候选（`findIdentitiesByTracker` 过滤 `delete_flag`）。因此 `RESTORE` 不再通过 Merge 提供——软删对象只能由所属 BC 的 `undelete` 恢复（D16）；Compare 对已软删的目标侧显示 `ABSENT`。契约中的 `RESTORE` 动作保留为词汇，但当前实现路径不可达。
+
+`MergeRound` 状态：`Preparing` → `Running` → 终态（`Succeeded` / `PartiallySucceeded` / `Failed`）。实现**没有独立的 `Completed` 阶段**：本轮全部条目完成后直接进入三种终态之一；`completeRound` 只是一次执行结束的动作，不新增状态。
 
 **一次执行结束即进入终态**；终态轮次不可重开、不可再登记决定、不可再执行条目（Q4，2026-11-11 用户裁定）。
 

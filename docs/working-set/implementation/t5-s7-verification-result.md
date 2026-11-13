@@ -51,4 +51,5 @@ S7 仅覆盖 ALM Requirement 普通字段。完整历史回读、附件关系、
 - **C6**：`MergeRound.Summary.applied` 改为 Applied-only，不再与 `confirmed` 重复计数。
 - **D3-B**：COW 物化的业务保存由 ALM 独立提交，SK 的物化凭据与 LTI 切换分事务执行，未完成部分经 Modulith 重投收敛。
 - **D15-B**：Merge 的条目应用同样独立提交；目标变体切换/创建由 `RequirementMergeApplied` 事件在 SK 独立事务完成（异步、幂等、可重投），不再与业务 apply 共用条目事务。
-- 验证：`mvn -B test` 79 项通过（含 C7 LTI 唯一性验收）。
+- **C11**：`JdbcRequirementRepository.findIdentitiesByTracker` 过滤 `delete_flag = FALSE`，Compare 候选不再包含软删对象；软删对象只能由 BC 的 `undelete` 恢复，Merge `RESTORE` 当前不可达（T1 §8 已注明）。
+- 验证：`mvn -B test` 84 项通过（含 C7 LTI 唯一性、C11 软删候选验收）。
