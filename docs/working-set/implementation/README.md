@@ -26,6 +26,7 @@
 - [T6-D 回并验收](t6-d-merge-back-verification.md)；原[实施提示词](t6-d-implementation-prompt.md)保留为历史输入。
 - [t6-next-stage-outline.md](t6-next-stage-outline.md)：T6 下一阶段实施大纲（Draft；切片顺序、验收与一致性门禁）。
 - [t6-implementation-prompt.md](t6-implementation-prompt.md)：T6 实施提示词（交给实施者的完整任务说明；含必读顺序、切片任务、约束与验收命令）。
+- [t7-implementation-prompt.md](t7-implementation-prompt.md)：T7 工作集创建 LRO 实施提示词（Draft；先评审设计，再实现 T7-A～F）。
 - [t5-runtime-verification.md](t5-runtime-verification.md)：运行时骨架验证（Verified，2026-11-12；Spring Boot Web 7102 + PostgreSQL/JdbcTemplate + Redis 缓存 + Spring Modulith Event Publication Registry；`mvn test` 37 项通过，含 API/数据库/缓存与容器验收测试）。
 
 配套：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)、[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)。

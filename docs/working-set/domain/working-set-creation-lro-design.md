@@ -1,0 +1,184 @@
+# 工作集创建 LRO 设计（T7）
+
+**状态：Draft（2026-11-13；用户决策已记录，设计待评审，未发布）**
+
+- 依据：[FACT-028](../domain/facts.md)、[多级 WorkingSet 谱系](working-set-lineage-design.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[T3 物化](lighttrackeritem-materialization-contract-v1.md)、[T4 跨 BC](cross-bc-contract-v1.md)、[T1 Merge 执行](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)
+- 范围：创建工作集的异步长流程（LRO）；区别于现有的原子操作入口
+- 不包含：权限（D11 延后）、附件/关系参与 Merge（D6）、停用（D5）
+
+## 1. 背景与定位
+
+现有实现把“创建工作集”拆成多个原子操作：`createChildWorkingSet`（创建空本体）、`bindSpace`、`bindTrackerShared`、`derive`/`bindTrackerDerived`（逐项派生）。S6 设计明确“允许空范围子工作集”“创建子 WS 不自动复制父 WS 绑定”，子 WS 范围由后续逐项纳入决定。
+
+T7 新增**另一个用例**：**按用户选定的范围一次性创建完整工作集**，作为异步长流程（LRO）执行。它不替换原子操作，也不改变 S6 的“空范围子 WS 合法”；两者是不同入口：原子操作用于后续增量调整，T7 用于“新建并初始化范围”。
+
+T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作为占位适配与验收样例。
+
+## 2. 用户决策（2026-11-13）
+
+1. **异步 LRO**：创建工作集是异步长流程，提供 REST 接口供前端轮询。
+2. **非共享 Tracker copy 的 Item 范围**：父 Tracker 下**全部 Item**；**软删除的剔除**。
+3. **共享 Tracker 范围**：由用户自定义选择；选择了哪些，就在新工作集下绑定哪些。
+4. **批量 LTI 失败语义**：任务作为整体**暂不开放重试**；一次失败或成功；成功允许**部分成功**；结果记录在创建任务结果中。由于子工作集不影响父级工作集、对外部无影响，**失败后不需要补偿**；但任务明细必须显性标记**失败原因与具体位置**。
+5. **关系/引用构建**：在 LRO 内，异步事务交互；LightTrackerItem 创建完成后发送事件，触发引用/关联关系构建。
+6. **复用 MergeRound 的 LRO 模式与事件框架**（状态机、进度、结果、Modulith 事件）。
+
+## 3. 术语
+
+| 术语 | 含义 |
+| --- | --- |
+| 创建任务（`WorkingSetCreation`） | 一次“按范围创建完整工作集”的 LRO 载体，独立聚合；不拥有 WorkingSet/Tracker/LTI |
+| 步骤（Step） | LRO 内的一个阶段，如创建本体、复制非共享 Tracker、批量索引 |
+| 任务明细 | 每步/每项的成败、失败原因与位置（TrackerId / LocalId） |
+| 部分成功 | 任务完成但存在失败项；已成功项保留，失败项在明细标记 |
+| 范围选择 | 用户选定的产品空间、共享 Tracker、非共享父 Tracker 集合 |
+
+## 4. 模型
+
+### 4.1 LRO 聚合 `WorkingSetCreation`
+
+- 身份：`creationId`（雪花或请求幂等键派生）。
+- 参数：`parentWorkingSetId`、`newWorkingSetId`、选定的 `productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`、发起人（`Caller`，D11 暂不校验）。
+- 状态：`Pending → Running → Succeeded / PartiallySucceeded / Failed`。
+- 进度：当前步骤、已完成/总数（Tracker 数、Item 数）。
+- 结果：步骤明细与失败明细（JSONB）；`completedAt`。
+- 不拥有 `WorkingSet`、`Tracker`、`LightTrackerItem`、`Reference` 聚合；只记录编排事实。
+
+### 4.2 步骤与状态机
+
+| 步骤 | 内容 | 依赖 | 失败处理 |
+| --- | --- | --- | --- |
+| `CREATE_WORKING_SET` | 创建子 WS 本体（`parentWorkingSetId`） | — | 失败 → 任务 `Failed`，停止 |
+| `COPY_UNSHARED_TRACKERS` | 为每个选定的父 Tracker 复制一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`） | 本体 | 单项失败记录明细，继续其他项 |
+| `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制 | 同上 |
+| `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 本体 | 同上 |
+| `BIND_PRODUCT_SPACES` | 绑定用户选定的产品空间 | 本体 | 同上 |
+| `INDEX_UNSHARED_TRACKERS` | 对每个子 Tracker 下父 Tracker 的**全部 Item（剔除软删）**创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
+| `LINK_RELATIONS` | 索引完成后发布事件，异步构建引用/关联（依赖 QUESTION-010） | 索引 | 记录失败项；不阻断任务整体 |
+
+- 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
+- 最终状态：全部步骤成功 → `Succeeded`；存在失败项但关键步骤（创建本体）成功 → `PartiallySucceeded`；关键步骤失败 → `Failed`。
+- 不开放任务重试；重复提交返回已有任务（见 §6）。
+
+### 4.3 失败明细
+
+每个失败项至少记录：
+
+- `stage`（步骤名）、`trackerId`、`localId`（若适用）、`reason`（失败分类或异常摘要）、`occurredAt`；
+- 任务结果汇总：成功数、失败数、跳过数（如已存在）。
+- 失败项必须可在轮询接口读取；不以日志代替任务明细。
+
+### 4.4 范围选择
+
+- **非共享 Tracker**：请求携带父 WS 的 TrackerId 列表；只允许直属父 WS 当前有效范围内的 Tracker（S6 来源约束）。
+- **共享 Tracker**：请求携带父 WS 中已绑定的共享 TrackerId 列表；只绑定所选，不在新 WS 复制。
+- **产品空间**：请求携带 ProductSpaceId 列表；只允许父 WS 有效范围内的空间。
+- 父 WS 不存在的 Tracker/空间 → 该请求项失败并记录明细，不擅自扩大范围。
+
+### 4.5 身份与 LTI 索引
+
+- 每个非共享父 Tracker 复制为**一个**子 Tracker（`sourceId=父 Tracker`），不是“每个 Item 一个新 Tracker”。
+- 子 Tracker 下每个父 Item（**`delete_flag=false`**）创建一条 LightTrackerItem：
+  - `CommonId` 继承父 Item；`LocalId` 由服务端雪花生成；
+  - `SourceLocalId=父 Item LocalId`、`SourceRevision=父 Revision`；
+  - 不复制业务内容（T3）。
+- 软删 Item 剔除（C11/D16）；永久删除的 Item 不存在，天然不参与。
+- 批量索引需分页读取父 Tracker 下的 Item 身份（`CommonId/LocalId/Revision`）与来源；现有 `RequirementCatalog.identities` 只有 `localId/commonId`，T7 需扩展为分页的 `TrackerItemCatalog`（见 §7）。
+
+### 4.6 关系/引用构建
+
+- LTI 索引步骤完成后发布事件（如 `TrackerItemsIndexed` / `WorkingSetIndexCreated`），SK 侧异步监听并构建引用/关联关系。
+- 关系模型依赖 QUESTION-010（Reference/Association 的身份、钉版、悬空、修复）；T7 先定义事件契约与失败明细，关系实体与规则在 T7-E 落地。
+- 关系构建失败记录在任务明细；不阻断已完成的索引与工作集本体。
+
+## 5. 事务、事件与一致性
+
+- 每个步骤/批次独立事务提交；LRO 只推进状态与结果，不把全流程放进一个大事务（避免长锁与跨聚合大事务）。
+- 批量 LTI 按批提交（批大小可配置），逐项记录成功/失败；部分成功保留。
+- 事件沿用 Modulith 未完成事件重投（与 T6-B/D13 一致）；关系构建事件失败可重投。
+- 不补偿：失败不回滚已创建的子 WS/Tracker/LTI；子 WS 与父 WS 独立，失败不影响父级。用户可自行按 T2 K3 删除叶子子 WS。
+
+## 6. 幂等与并发
+
+- 请求带幂等键（`parentWorkingSetId + newWorkingSetId + requestId`）；重复提交返回已有任务，不重复执行。
+- 同一 `newWorkingSetId` 只允许一个创建任务；已存在子 WS → 任务失败并记录明细。
+- 步骤内已存在的 Tracker/LTI（重入/重复执行）视为已完成并记录“skipped”，不重复创建；唯一索引兜底。
+- 不开放任务重试接口；失败后由人工查看明细并决定后续（删除子 WS 或手工补齐）。
+
+## 7. 数据模型与端口
+
+### 7.1 表
+
+```sql
+CREATE TABLE IF NOT EXISTS working_set_creations (
+    id VARCHAR(64) PRIMARY KEY,
+    parent_working_set_id VARCHAR(128) NOT NULL,
+    new_working_set_id VARCHAR(128) NOT NULL,
+    idempotency_key VARCHAR(256) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    requested_by VARCHAR(128),
+    result JSONB,
+    created_at TIMESTAMP NOT NULL,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_idempotency ON working_set_creations (idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_new_ws ON working_set_creations (new_working_set_id);
+```
+
+- `result` 保存步骤明细与失败明细（JSONB，D12-A 的规模风险同 MergeRound；T7-F 验证）。
+
+### 7.2 端口
+
+- `TrackerItemCatalog`（SK 定义、BC 实现）：按 `TrackerId` **分页**列出 Item 身份（`localId`、`commonId`、`revision`），并标明软删；T7 扩展 `RequirementCatalog` 或新增端口。
+- `LightTrackerItemRepository`：批量保存（循环）与按 Tracker 查询已有 LTI（幂等）。
+- 关系/引用 Port：依赖 QUESTION-010；T7-E 定义。
+
+### 7.3 REST
+
+- `POST /api/working-set-creations`：`parentWorkingSetId`、`newWorkingSetId`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`、幂等键；返回 `creationId` 与初始状态。
+- `GET /api/working-set-creations/{id}`：状态、当前步骤、进度、步骤结果、失败明细。
+- 轮询由前端按状态终止（`Succeeded/PartiallySucceeded/Failed`）。
+
+## 8. 失败、部分成功与不补偿
+
+- 任务一次性执行；失败后不自动重试、不回滚、不清理子 WS。
+- 失败明细必须显性：阶段、Tracker、Item、原因；前端可据此提示用户。
+- 任务整体状态与明细分离：`PartiallySucceeded` 表示“有成功项也有失败项”，不是全部失败。
+
+## 9. 规模与分页
+
+- 父 Tracker 下 Item 分页读取；批量 LTI 分批提交；进度按批更新。
+- `result` JSONB 可能随失败项增长；T7-F 需验证失败明细规模与保留/清理。
+- 并发创建多个工作集时，任务表与批量写入的连接池压力需压测（QUESTION-012）。
+
+## 10. 与现有能力的关系
+
+- **不替换**原子操作：`createChildWorkingSet`、`bindSpace`、`bindTrackerShared`、`derive` 保留，用于后续增量。
+- **不重开** S6 的“空范围子 WS 合法”“创建不自动复制绑定”：T7 是显式范围创建入口。
+- 与 T6-D（回并）无关：回并是已有子 WS 的 Merge CREATE；T7 是新建工作集的初始化。
+- 复用 MergeRound 的 LRO 模式：状态机、结果、Modulith 事件、独立事务；不复用 MergeRound 的 Checkpoint/决定语义。
+
+## 11. 开放问题（T7 内需确认）
+
+1. 任务状态命名与失败明细字段的最终 API 形状（是否公开 JSONB 或用视图）。
+2. `LINK_RELATIONS` 依赖 QUESTION-010；关系模型未定前，T7-E 只落事件契约与失败明细，还是暂缓该步骤。
+3. 批量大小、分页大小、任务结果保留期限。
+4. 创建任务是否支持取消（用户决策未提；暂不提供，失败/完成即终止）。
+5. 失败后是否允许“基于已有子 WS 再跑一次补齐”（不重试任务，但可新建任务）；需确认是否与“一次失败或成功”冲突。
+
+## 12. 实施切片（T7-A～F）
+
+| 切片 | 内容 | 依赖 | 验收 |
+| --- | --- | --- | --- |
+| T7-A | 设计评审与契约：LRO 聚合、状态机、API、失败明细、幂等 | 本文档 | 评审通过、T4/场景更新 |
+| T7-B | LRO 骨架：任务表、创建/轮询 REST、状态推进、幂等 | T7-A | HTTP 创建返回任务；轮询状态；重复提交返回原任务 |
+| T7-C | 范围复制与绑定：子 WS 本体、非共享 Tracker copy、共享/空间绑定 | T7-B、S6 | 副本/绑定正确；非法范围记录失败明细 |
+| T7-D | 批量 LTI 索引：分页端口、软删剔除、分批创建、部分成功明细 | T7-C、T3 | 批量索引成功/部分成功；软删剔除；重复执行幂等 |
+| T7-E | 关系/引用构建：索引完成事件、异步构建、失败明细 | T7-D、QUESTION-010 | 事件触发；关系构建成功/失败可查 |
+| T7-F | 规模与恢复：批大小、分页、结果保留、压测 | T7-E | 规模数据、失败明细可读、连接池可承受 |
+
+## 13. 状态与下一步
+
+- 用户决策已记录；本设计待评审。
+- 建议先做 T7-A（评审契约与 API），再实现 T7-B 骨架；T7-E 在 QUESTION-010 有裁定后启动。
