@@ -307,7 +307,7 @@ class MergeAcceptanceTest {
 
         String inherited = jdbc.queryForObject("SELECT local_id FROM requirements WHERE common_id = ? AND tracker_id = ?",
                 String.class, anchor, rootTracker);
-        assertStatus(HttpStatus.CONFLICT,
+        assertStatus(HttpStatus.SERVICE_UNAVAILABLE,
                 rest.postForEntity("/api/requirements/" + inherited + "/delete2", null, Map.class));
         assertStatus(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + inherited + "/delete", null, Void.class));

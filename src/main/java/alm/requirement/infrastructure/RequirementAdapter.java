@@ -41,7 +41,11 @@ public class RequirementAdapter implements TrackerItemReadPort {
 
     @Override
     public TrackerItemContent readInheritedAt(Revision revision) {
-        return contentAt(find(), revision);
+        Requirement requirement = find();
+        if (requirement.deleted()) {
+            throw new ApplicationFailure(FailureReason.DELETED, "requirement deleted: " + localId.value());
+        }
+        return contentAt(requirement, revision);
     }
 
     @Override

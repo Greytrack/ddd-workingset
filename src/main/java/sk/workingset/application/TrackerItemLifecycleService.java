@@ -41,7 +41,8 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
         trackers.lockTracker(trackerId);
         if (items.hasSourceBackedDependents(localId)
                 || items.findById(localId).filter(item -> !item.materialized()).isPresent()) {
-            throw new ApplicationFailure(FailureReason.PREPARING, "Requirement content is still needed by COW");
+            throw new ApplicationFailure(FailureReason.DEPENDENCY_UNAVAILABLE,
+                    "Requirement content is still needed by COW");
         }
     }
 

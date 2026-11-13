@@ -21,7 +21,6 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Version;
 
 class RequirementMaterializationAdapterTest {
-    private final Runnable recordBusinessSave = mock(Runnable.class);
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
     private final RequirementMaterializationAdapter adapter = new RequirementMaterializationAdapter(
@@ -39,7 +38,7 @@ class RequirementMaterializationAdapterTest {
     void refuses_missing_or_mismatched_snapshot_without_writing_target() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.empty());
         assertThrows(MaterializationRejectedException.class,
-                () -> adapter.materialize(request, target, recordBusinessSave));
+                () -> adapter.materialize(request, target));
 
         var invalid = java.util.List.of(
                 snapshot("other", "family", 3, 1),
@@ -49,10 +48,9 @@ class RequirementMaterializationAdapterTest {
         for (var evidence : invalid) {
             when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(evidence));
             assertThrows(MaterializationRejectedException.class,
-                    () -> adapter.materialize(request, target, recordBusinessSave));
+                    () -> adapter.materialize(request, target));
         }
         verifyNoInteractions(repository);
-        verifyNoInteractions(recordBusinessSave);
     }
 
     @Test
@@ -61,9 +59,8 @@ class RequirementMaterializationAdapterTest {
         var mismatched = new TargetIdentity(LocalId.of("other"), request.targetTrackerId(),
                 request.commonId(), request.targetRevision(), false);
         assertThrows(MaterializationRejectedException.class,
-                () -> adapter.materialize(request, mismatched, recordBusinessSave));
+                () -> adapter.materialize(request, mismatched));
         verifyNoInteractions(repository);
-        verifyNoInteractions(recordBusinessSave);
     }
 
     @Test
@@ -73,12 +70,11 @@ class RequirementMaterializationAdapterTest {
                 Optional.of(existing("A", "v2")), Optional.of(existing("A", "v1")));
 
         assertThrows(MaterializationRejectedException.class,
-                () -> adapter.materialize(request, target, recordBusinessSave));
+                () -> adapter.materialize(request, target));
         assertThrows(MaterializationRejectedException.class,
-                () -> adapter.materialize(request, target, recordBusinessSave));
-        assertDoesNotThrow(() -> adapter.materialize(request, target, recordBusinessSave));
+                () -> adapter.materialize(request, target));
+        assertDoesNotThrow(() -> adapter.materialize(request, target));
         verify(repository, never()).save(any());
-        verify(recordBusinessSave).run();
     }
 
     private Requirement existing(String title, String version) {

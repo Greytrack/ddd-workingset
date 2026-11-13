@@ -10,6 +10,7 @@ import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.event.RequirementPurged;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
+import sk.workingset.domain.LifecycleCommand;
 import sk.workingset.domain.LocalId;
 
 /**
@@ -36,6 +37,10 @@ public class RequirementLifecycleService {
         var candidate = requirements.findById(id).orElseThrow(() -> missing(id));
         lifecycle.assertPurgeable(candidate.trackerId(), id);
         var current = requirements.lockById(id).orElseThrow(() -> missing(id));
+        var decision = current.delete2(LifecycleCommand.locked("permanent delete"));
+        if (!decision.succeeded()) {
+            throw new ApplicationFailure(FailureReason.DELETED, id.value());
+        }
         requirements.purge(current);
         eventPublisher.publishEvent(new RequirementPurged(id, candidate.trackerId(), Instant.now()));
     }

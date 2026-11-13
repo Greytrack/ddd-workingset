@@ -33,6 +33,7 @@ import sk.workingset.application.port.RequirementCatalog;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.infrastructure.JdbcMergeStore;
 import sk.workingset.application.event.RequirementChanged;
+import sk.workingset.application.event.RequirementPurged;
 import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.WorkingSetDeletionService;
@@ -99,7 +100,9 @@ public class ApplicationConfiguration {
             RequirementWritePort writePort, CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
             IncompleteEventPublications publications) {
         return new CowRecoveryService(store, items, writePort, failureLog, transactionRunner,
-                () -> publications.resubmitIncompletePublications(p -> p.getEvent() instanceof RequirementChanged));
+                () -> publications.resubmitIncompletePublications(p ->
+                        p.getEvent() instanceof RequirementChanged
+                                || p.getEvent() instanceof RequirementPurged));
     }
 
     @Bean

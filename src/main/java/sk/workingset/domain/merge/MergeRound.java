@@ -78,7 +78,8 @@ public record MergeRound(String id, String token, WorkingSetId source, WorkingSe
         long successful = results.stream().filter(ItemResult::succeeded).count();
         State terminal = successful == 0 ? State.Failed
                 : successful == results.size() ? State.Succeeded : State.PartiallySucceeded;
-        var summary = new Summary(successful, count(results, Outcome.Confirmed), count(results, Outcome.Rejected),
+        var summary = new Summary(count(results, Outcome.Applied), count(results, Outcome.Confirmed),
+                count(results, Outcome.Rejected),
                 count(results, Outcome.Conflict), count(results, Outcome.Deferred), count(results, Outcome.StaleEvidence),
                 count(results, Outcome.Unknown));
         return new MergeRound(id, token, source, target, caller, terminal, entries,

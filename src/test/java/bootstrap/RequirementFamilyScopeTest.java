@@ -70,6 +70,7 @@ class RequirementFamilyScopeTest {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("DELETE FROM light_tracker_items WHERE common_id = ?", family);
         jdbc.update("DELETE FROM requirements WHERE common_id = ?", family);
         // Child trackers reference parents through source_id; remove them first.
         for (String tracker : new String[] {t3, t4, t2, t1}) {
@@ -85,6 +86,23 @@ class RequirementFamilyScopeTest {
         assertDoesNotThrow(() -> repository.save(requirement("L1-", t1)));
         assertThrows(DataIntegrityViolationException.class, () -> repository.save(requirement("L2-", t2)));
         assertDoesNotThrow(() -> repository.save(requirement("L3-", t3)));
+    }
+
+    @Test
+    void light_tracker_item_family_is_unique_within_a_working_set() {
+        assertDoesNotThrow(() -> insertVariant("V1-", t1, "1"));
+        assertThrows(DataIntegrityViolationException.class, () -> insertVariant("V2-", t2, "1"));
+        assertDoesNotThrow(() -> insertVariant("V3-", t3, ws2));
+    }
+
+    private void insertVariant(String prefix, String tracker, String workingSet) {
+        String localId = prefix + suffix;
+        jdbc.update("""
+                INSERT INTO light_tracker_items
+                    (local_id, common_id, tracker_id, working_set_id, revision,
+                     source_local_id, source_revision, materialized)
+                VALUES (?, ?, ?, ?, 3, ?, 3, true)
+                """, localId, family, tracker, workingSet, localId);
     }
 
     private Requirement requirement(String prefix, String tracker) {

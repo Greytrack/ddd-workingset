@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -57,10 +56,6 @@ class CowEventHandlerTest {
         when(lifecycle.lockMaterializationTarget(eligible.trackerId(), eligible.localId()))
                 .thenReturn(TargetIdentity.of(eligible));
         var writePort = mock(RequirementWritePort.class);
-        doAnswer(call -> {
-            call.getArgument(2, Runnable.class).run();
-            return null;
-        }).when(writePort).materialize(any(), any(), any());
         var recovery = new CowRecoveryService(store, items, writePort, failures, Runnable::run, () -> {});
         var handler = new CowEventHandler(items, lifecycle, writePort, failures, Runnable::run, store, recovery);
 
@@ -69,11 +64,12 @@ class CowEventHandlerTest {
 
         var request = ArgumentCaptor.forClass(MaterializeRequest.class);
         var identity = ArgumentCaptor.forClass(TargetIdentity.class);
-        verify(writePort).materialize(request.capture(), identity.capture(), any());
+        verify(writePort).materialize(request.capture(), identity.capture());
         assertEquals(before, request.getValue().beforeRevision());
         assertEquals(own, request.getValue().targetRevision());
         assertEquals(eligible.localId(), identity.getValue().localId());
         verify(lifecycle).lockMaterializationTarget(eligible.trackerId(), eligible.localId());
+        verify(store).markMaterialized(42, eligible.localId());
         var saved = ArgumentCaptor.forClass(LightTrackerItem.class);
         verify(items).save(saved.capture());
         var materialized = saved.getValue();

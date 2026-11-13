@@ -30,6 +30,10 @@ CREATE TABLE IF NOT EXISTS light_tracker_items (
 CREATE INDEX IF NOT EXISTS idx_lti_source
     ON light_tracker_items (source_local_id, source_revision);
 
+-- C7 (POL-005): 同一工作集内 CommonId 唯一；LTI 层与 requirements 层一致。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lti_working_set_family
+    ON light_tracker_items (working_set_id, common_id);
+
 CREATE TABLE IF NOT EXISTS requirement_snapshots (
     snapshot_ref VARCHAR(64) PRIMARY KEY,
     local_id     VARCHAR(64) NOT NULL,

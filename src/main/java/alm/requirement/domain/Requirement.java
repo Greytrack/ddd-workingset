@@ -3,6 +3,8 @@ package alm.requirement.domain;
 import java.util.Objects;
 
 import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LifecycleCommand;
+import sk.workingset.domain.LifecycleResult;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
@@ -109,6 +111,41 @@ public final class Requirement implements TrackerItem {
         validateTitle(title);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
                 lockVersion.next(), false);
+    }
+
+    @Override
+    public LifecycleResult delete(LifecycleCommand command) {
+        try {
+            return LifecycleResult.applied(delete(requireExpectedLockVersion(command)));
+        } catch (IllegalStateException alreadyDeleted) {
+            return LifecycleResult.rejected(alreadyDeleted.getMessage());
+        } catch (LockVersionConflictException conflict) {
+            return LifecycleResult.conflict(conflict.getMessage());
+        }
+    }
+
+    @Override
+    public LifecycleResult undelete(LifecycleCommand command) {
+        try {
+            return LifecycleResult.applied(undelete(requireExpectedLockVersion(command)));
+        } catch (IllegalArgumentException invalid) {
+            return LifecycleResult.rejected(invalid.getMessage());
+        } catch (LockVersionConflictException conflict) {
+            return LifecycleResult.conflict(conflict.getMessage());
+        }
+    }
+
+    @Override
+    public LifecycleResult delete2(LifecycleCommand command) {
+        // 永久删除不要求先软删；对象已不存在时由应用服务/仓储返回 NOT_FOUND。
+        return LifecycleResult.applied(this);
+    }
+
+    private static LockVersion requireExpectedLockVersion(LifecycleCommand command) {
+        if (command == null || command.expectedLockVersion() == null) {
+            throw new IllegalArgumentException("expectedLockVersion is required for delete/undelete");
+        }
+        return command.expectedLockVersion();
     }
 
     private void requireActive() {

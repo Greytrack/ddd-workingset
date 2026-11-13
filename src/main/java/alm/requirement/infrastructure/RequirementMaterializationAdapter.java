@@ -44,7 +44,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     }
 
     @Override
-    public void materialize(MaterializeRequest request, TargetIdentity target, Runnable recordBusinessSave) {
+    public void materialize(MaterializeRequest request, TargetIdentity target) {
         var snapshot = snapshotStore.find(request.snapshotRef())
                 .orElseThrow(() -> new MaterializationRejectedException("Source snapshot is missing"));
         if (!snapshot.localId().equals(request.sourceLocalId())
@@ -61,7 +61,6 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
 
         if (target.materialized()) {
             verifyMaterializedTarget(target);
-            recordBusinessSave.run();
             return;
         }
         var existing = repository.findById(request.targetLocalId());
@@ -72,7 +71,6 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
                     request.targetTrackerId(), snapshot.title(), snapshot.description(),
                     request.targetRevision(), snapshot.version()));
         }
-        recordBusinessSave.run();
     }
 
     @Override
