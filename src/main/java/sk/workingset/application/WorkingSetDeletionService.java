@@ -59,7 +59,9 @@ public class WorkingSetDeletionService {
 
     @Transactional
     public void deleteTracker(TrackerId id) {
-        requireDeletable(lockTracker(id));
+        var tracker = lockTracker(id);
+        workingSets.requireReady(tracker.workingSetId());
+        requireDeletable(tracker);
         workingSets.deleteBindingsToTracker(id);
         trackers.deleteTracker(id);
     }

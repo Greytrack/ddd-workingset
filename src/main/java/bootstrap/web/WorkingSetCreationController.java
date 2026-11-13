@@ -3,6 +3,7 @@ package bootstrap.web;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,10 +40,12 @@ public class WorkingSetCreationController {
 
     public record CreationView(String creationId, WorkingSetCreation.Status status, WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
-                               Instant createdAt, Instant startedAt, Instant completedAt) {
+                               Instant createdAt, Instant startedAt, Instant completedAt,
+                               Map<WorkingSetCreation.Stage, WorkingSetCreation.Progress> stageProgress) {
         static CreationView from(WorkingSetCreation creation) {
             return new CreationView(creation.id(), creation.status(), creation.stage(), creation.progress(),
-                    creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt());
+                    creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt(),
+                    creation.stageProgress());
         }
     }
 }

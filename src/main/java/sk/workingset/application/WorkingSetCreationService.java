@@ -14,8 +14,12 @@ import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetCreation;
+import sk.workingset.domain.WorkingSetCreation.Failure;
+import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
+import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.WorkingSetCreation.Status;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.TrackerId;
 
 public class WorkingSetCreationService {
     private final WorkingSetCreationStore store;
@@ -36,9 +40,6 @@ public class WorkingSetCreationService {
 
     @Transactional
     public WorkingSetCreation submit(WorkingSetCreation.Request request, Caller caller) {
-        if (request.hasSelection()) {
-            throw new ApplicationFailure(FailureReason.CAPABILITY_NOT_SUPPORTED, "Range initialization is not available");
-        }
         var target = WorkingSetId.of(request.newWorkingSetId());
         if (WorkingSet.DEFAULT_ID.equals(target)) {
             throw new IllegalArgumentException("The default working set cannot be a creation target");
@@ -74,25 +75,61 @@ public class WorkingSetCreationService {
                 store.update(creation.start(Instant.now()));
             }
         });
-        transaction.executeWithoutResult(tx -> {
-            var creation = lock(id);
-            if (creation.status() == Status.Running) {
-                store.update(createBody(creation));
-            }
-        });
+        boolean running;
+        do {
+            running = Boolean.TRUE.equals(transaction.execute(tx -> {
+                var creation = lock(id);
+                if (creation.status() != Status.Running) {
+                    return false;
+                }
+                var updated = executeItem(creation);
+                store.update(updated);
+                return updated.status() == Status.Running;
+            }));
+        } while (running);
     }
 
-    private WorkingSetCreation createBody(WorkingSetCreation creation) {
-        var request = creation.request();
-        try {
-            workingSetService.createChildForTask(WorkingSetId.of(request.parentWorkingSetId()),
-                    WorkingSetId.of(request.newWorkingSetId()));
-            return creation.completeBody(Instant.now());
-        } catch (BindingFailure failure) {
-            return creation.failBody(failure.reason().name(), Instant.now());
-        } catch (ApplicationFailure failure) {
-            return creation.failBody(failure.reason().name(), Instant.now());
+    private WorkingSetCreation executeItem(WorkingSetCreation creation) {
+        String item = creation.currentItem();
+        var target = WorkingSetId.of(creation.request().newWorkingSetId());
+        var stage = creation.stage();
+        if (stage == Stage.BIND_UNSHARED_TRACKERS && creation.failures().stream()
+                .anyMatch(failure -> failure.stage() == Stage.COPY_UNSHARED_TRACKERS
+                        && item.equals(failure.trackerId()))) {
+            return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
+        try {
+            boolean written = switch (stage) {
+                case CREATE_WORKING_SET -> {
+                    workingSetService.createChildForTask(WorkingSetId.of(creation.request().parentWorkingSetId()), target);
+                    yield true;
+                }
+                case BIND_PRODUCT_SPACES -> workingSetService.bindSpaceForTask(target, item);
+                case COPY_UNSHARED_TRACKERS -> workingSetService.copyUnsharedTrackerForTask(target, TrackerId.of(item));
+                case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
+                case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
+            };
+            return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
+        } catch (BindingFailure failure) {
+            return recordFailure(creation, item, failure.reason().name());
+        } catch (ApplicationFailure failure) {
+            if (failure.reason() == FailureReason.PREPARING) {
+                throw failure;
+            }
+            return recordFailure(creation, item, failure.reason().name());
+        }
+    }
+
+    private WorkingSetCreation recordFailure(WorkingSetCreation creation, String item, String reason) {
+        var stage = creation.stage();
+        String trackerId = switch (stage) {
+            case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS -> item;
+            default -> null;
+        };
+        String spaceId = stage == Stage.BIND_PRODUCT_SPACES ? item
+                : trackerId == null ? null : workingSetService.trackerSpaceForTask(TrackerId.of(trackerId));
+        var now = Instant.now();
+        return creation.advance(ItemOutcome.Failed, new Failure(stage, spaceId, trackerId, null, reason, now), now);
     }
 
     private WorkingSetCreation lock(String id) {

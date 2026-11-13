@@ -16,5 +16,7 @@ public interface TrackerScopePort {
 
     Optional<TrackerScope> find(TrackerId trackerId);
 
+    default void requireWorkingSetReady(WorkingSetId workingSetId) {}
+
     record TrackerScope(WorkingSetId workingSetId, SharingMode sharingMode) {}
 }

@@ -60,6 +60,9 @@ public class RequirementApplicationService {
                               String title,
                               String description,
                               Revision revision) {
+        if (requestedWorkingSetId != null) {
+            trackerScope.requireWorkingSetReady(requestedWorkingSetId);
+        }
         var scope = trackerScope.find(trackerId);
         if (requestedWorkingSetId != null) {
             scope.ifPresent(current -> {

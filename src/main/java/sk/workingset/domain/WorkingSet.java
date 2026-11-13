@@ -102,6 +102,16 @@ public final class WorkingSet {
         return trackers.containsKey(trackerId);
     }
 
+    public boolean hasSpaceBinding(String spaceId) {
+        return spaces.containsKey(spaceId);
+    }
+
+    public void requireSpaceBinding(String spaceId) {
+        if (!hasSpaceBinding(spaceId)) {
+            throw new BindingFailure(Reason.MissingSpaceBinding, spaceId);
+        }
+    }
+
     public void requireDirectParent(Tracker source, boolean boundInParent) {
         WorkingSetId parentId = requireParentId();
         boolean ownedByParent = parentId.equals(source.workingSetId());
@@ -113,9 +123,7 @@ public final class WorkingSet {
     }
 
     public TrackerBinding bindTracker(Tracker tracker, Classification classification, SharingMode requestedMode) {
-        if (!spaces.containsKey(tracker.productSpaceId())) {
-            throw new BindingFailure(Reason.MissingSpaceBinding, tracker.productSpaceId());
-        }
+        requireSpaceBinding(tracker.productSpaceId());
         if (!tracker.classificationId().equals(classification.id())
                 || tracker.sharingMode() != requestedMode || classification.sharingMode() != requestedMode) {
             throw new BindingFailure(Reason.SharingModeMismatch, classification.id());

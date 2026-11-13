@@ -16,6 +16,7 @@ import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
+import sk.workingset.domain.ProductSpace;
 import sk.workingset.domain.WorkingSet;
 
 import sk.workingset.application.port.IdentifierGenerator;
@@ -105,9 +106,15 @@ public class WorkingSetApplicationService {
 
     @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
-        var workingSet = writable(id);
-        var space = spaces.lockProductSpace(spaceId)
+        return bindSpace(writable(id), lockSpace(spaceId));
+    }
+
+    private ProductSpace lockSpace(String spaceId) {
+        return spaces.lockProductSpace(spaceId)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
+    }
+
+    private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space) {
         var binding = workingSet.bindSpace(space);
         workingSets.insertSpaceBinding(binding);
         return binding;
@@ -116,10 +123,71 @@ public class WorkingSetApplicationService {
     @Transactional
     public WorkingSet.TrackerBinding bindTrackerShared(WorkingSetId id, TrackerId trackerId) {
         var workingSet = writable(id);
-        var source = directParentTracker(workingSet, trackerId);
-        var binding = workingSet.bindTracker(source, classification(source), SharingMode.SHARED);
+        return bindTracker(workingSet, directParentTracker(workingSet, trackerId), SharingMode.SHARED);
+    }
+
+    private WorkingSet.TrackerBinding bindTracker(WorkingSet target, Tracker tracker, SharingMode mode) {
+        var binding = target.bindTracker(tracker, classification(tracker), mode);
         workingSets.insertTrackerBinding(binding);
         return binding;
+    }
+
+    // These methods run only under the creation task row lock and the item transaction.
+    boolean bindSpaceForTask(WorkingSetId id, String spaceId) {
+        var target = lockTaskTarget(id);
+        var parent = writable(target.requireParentId());
+        var space = lockSpace(spaceId);
+        if (!WorkingSet.DEFAULT_ID.equals(parent.id()) && !parent.hasSpaceBinding(spaceId)) {
+            throw new ApplicationFailure(FailureReason.NOT_INCLUDED, spaceId);
+        }
+        if (target.hasSpaceBinding(spaceId)) {
+            return false;
+        }
+        bindSpace(target, space);
+        return true;
+    }
+
+    boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
+        var target = lockTaskTarget(id);
+        var source = directParentTracker(target, parentTrackerId);
+        requireUnshared(source);
+        target.requireSpaceBinding(source.productSpaceId());
+        if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
+            return false;
+        }
+        trackers.insertTracker(derivedTracker(target, source));
+        return true;
+    }
+
+    boolean bindUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
+        var target = lockTaskTarget(id);
+        directParentTracker(target, parentTrackerId);
+        var copy = trackers.findDerivedTracker(id, parentTrackerId)
+                .orElseThrow(() -> new BindingFailure(Reason.SourceTrackerNotFound, parentTrackerId.value()));
+        if (target.hasTrackerBinding(copy.trackerId())) {
+            return false;
+        }
+        bindTracker(target, copy, SharingMode.UNSHARED);
+        return true;
+    }
+
+    boolean bindSharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
+        var target = lockTaskTarget(id);
+        var source = directParentTracker(target, parentTrackerId);
+        if (target.hasTrackerBinding(source.trackerId())) {
+            return false;
+        }
+        bindTracker(target, source, SharingMode.SHARED);
+        return true;
+    }
+
+    String trackerSpaceForTask(TrackerId id) {
+        return trackers.findTracker(id).map(Tracker::productSpaceId).orElse(null);
+    }
+
+    private WorkingSet lockTaskTarget(WorkingSetId id) {
+        return workingSets.lockWorkingSetForCreation(id)
+                .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 
     private WorkingSet writable(WorkingSetId id) {
@@ -160,11 +228,8 @@ public class WorkingSetApplicationService {
     }
 
     private DeriveResult bindTrackerDerived(WorkingSet workingSet, Tracker source, DeriveCommand command) {
-        if (source.sharingMode() != SharingMode.UNSHARED) {
-            throw new BindingFailure(Reason.SharingModeMismatch, source.classificationId());
-        }
-        Tracker tracker = Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())),
-                source, workingSet.id());
+        requireUnshared(source);
+        Tracker tracker = derivedTracker(workingSet, source);
         var binding = workingSet.bindTracker(tracker, classification(source), SharingMode.UNSHARED);
         var contentSource = resolveContentSource(source, command);
         LightTrackerItem item = LightTrackerItem.derive(
@@ -179,6 +244,16 @@ public class WorkingSetApplicationService {
         workingSets.insertTrackerBinding(binding);
         items.save(item);
         return new DeriveResult(tracker, item);
+    }
+
+    private static void requireUnshared(Tracker source) {
+        if (source.sharingMode() != SharingMode.UNSHARED) {
+            throw new BindingFailure(Reason.SharingModeMismatch, source.classificationId());
+        }
+    }
+
+    private Tracker derivedTracker(WorkingSet target, Tracker source) {
+        return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())), source, target.id());
     }
 
     private LocalId nextDistinctLocalId(CommonId commonId) {

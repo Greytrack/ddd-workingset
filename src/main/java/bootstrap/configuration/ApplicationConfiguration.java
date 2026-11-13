@@ -45,6 +45,7 @@ import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
@@ -150,10 +151,20 @@ public class ApplicationConfiguration {
 
     @Bean
     public TrackerScopePort trackerScopePort(JdbcBindingRepositories trackers) {
-        return trackerId -> trackers.findTracker(trackerId).map(tracker -> {
-            trackers.requireReady(tracker.workingSetId());
-            return new TrackerScopePort.TrackerScope(tracker.workingSetId(), tracker.sharingMode());
-        });
+        return new TrackerScopePort() {
+            @Override
+            public Optional<TrackerScope> find(TrackerId trackerId) {
+                return trackers.findTracker(trackerId).map(tracker -> {
+                    requireWorkingSetReady(tracker.workingSetId());
+                    return new TrackerScope(tracker.workingSetId(), tracker.sharingMode());
+                });
+            }
+
+            @Override
+            public void requireWorkingSetReady(WorkingSetId workingSetId) {
+                trackers.requireReady(workingSetId);
+            }
+        };
     }
 
     @Bean

@@ -1,16 +1,24 @@
 package sk.workingset.domain;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
 
 /** Durable execution of one request to create and initialize a child working set. */
 public record WorkingSetCreation(String id, Request request, String requestedBy, Status status,
                                  Stage stage, Progress progress, List<Failure> failures,
-                                 Instant createdAt, Instant startedAt, Instant completedAt) {
+                                 Instant createdAt, Instant startedAt, Instant completedAt,
+                                 Map<Stage, Progress> stageProgress) {
     public enum Status { Pending, Running, Succeeded, PartiallySucceeded, Failed }
-    public enum Stage { CREATE_WORKING_SET }
+    public enum Stage {
+        CREATE_WORKING_SET, BIND_PRODUCT_SPACES, COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS
+    }
+
+    public enum ItemOutcome { Succeeded, Failed, Skipped }
 
     public record Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                           List<String> productSpaceIds, List<String> sharedTrackerIds,
@@ -24,8 +32,13 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             unsharedParentTrackerIds = normalize(unsharedParentTrackerIds);
         }
 
-        public boolean hasSelection() {
-            return !productSpaceIds.isEmpty() || !sharedTrackerIds.isEmpty() || !unsharedParentTrackerIds.isEmpty();
+        public List<String> items(Stage stage) {
+            return switch (stage) {
+                case CREATE_WORKING_SET -> List.of(newWorkingSetId);
+                case BIND_PRODUCT_SPACES -> productSpaceIds;
+                case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS -> unsharedParentTrackerIds;
+                case BIND_SHARED_TRACKERS -> sharedTrackerIds;
+            };
         }
 
         private static List<String> normalize(List<String> ids) {
@@ -46,17 +59,35 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
         }
     }
 
-    public record Progress(int succeeded, int failed, int skipped, Integer total) {}
+    public record Progress(int succeeded, int failed, int skipped, Integer total) {
+        int processed() {
+            return succeeded + failed + skipped;
+        }
+
+        Progress record(ItemOutcome outcome) {
+            return switch (outcome) {
+                case Succeeded -> new Progress(succeeded + 1, failed, skipped, total);
+                case Failed -> new Progress(succeeded, failed + 1, skipped, total);
+                case Skipped -> new Progress(succeeded, failed, skipped + 1, total);
+            };
+        }
+    }
     public record Failure(Stage stage, String productSpaceId, String trackerId, String localId,
                           String reason, Instant occurredAt) {}
 
     public WorkingSetCreation {
         failures = List.copyOf(failures);
+        stageProgress = stageProgress == null ? Map.of(Stage.CREATE_WORKING_SET, progress) : Map.copyOf(stageProgress);
     }
 
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
+        int total = 0;
+        for (Stage stage : Stage.values()) {
+            total += request.items(stage).size();
+        }
         return new WorkingSetCreation(id, Objects.requireNonNull(request), caller, Status.Pending,
-                Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, 1), List.of(), now, null, null);
+                Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, total), List.of(), now, null, null,
+                Map.of(Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, 1)));
     }
 
     public WorkingSetCreation start(Instant now) {
@@ -64,20 +95,47 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             throw new IllegalStateException("Only a pending creation can start");
         }
         return new WorkingSetCreation(id, request, requestedBy, Status.Running,
-                stage, progress, failures, createdAt, now, null);
+                stage, progress, failures, createdAt, now, null, stageProgress);
     }
 
-    public WorkingSetCreation completeBody(Instant now) {
+    public String currentItem() {
         requireRunning();
-        return new WorkingSetCreation(id, request, requestedBy, Status.Succeeded,
-                stage, new Progress(1, 0, 0, 1), List.of(), createdAt, startedAt, now);
+        return request.items(stage).get(stageProgress.get(stage).processed());
     }
 
-    public WorkingSetCreation failBody(String reason, Instant now) {
+    public WorkingSetCreation advance(ItemOutcome outcome, Failure failure, Instant now) {
         requireRunning();
-        return new WorkingSetCreation(id, request, requestedBy, Status.Failed, stage,
-                new Progress(0, 1, 0, 1), List.of(new Failure(stage, null, null, null, reason, now)),
-                createdAt, startedAt, now);
+        if ((outcome == ItemOutcome.Failed) != (failure != null) || failure != null && failure.stage() != stage) {
+            throw new IllegalArgumentException("Failure detail must match the current step and outcome");
+        }
+        var updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
+        updatedProgress.putAll(stageProgress);
+        var current = updatedProgress.get(stage).record(outcome);
+        updatedProgress.put(stage, current);
+        var updatedFailures = new ArrayList<>(failures);
+        if (failure != null) {
+            updatedFailures.add(failure);
+        }
+        var totals = progress.record(outcome);
+        var next = stage;
+        var nextStatus = Status.Running;
+        if (stage == Stage.CREATE_WORKING_SET && outcome == ItemOutcome.Failed) {
+            nextStatus = Status.Failed;
+        } else if (current.processed() == current.total()) {
+            Stage[] stages = Stage.values();
+            int index = stage.ordinal() + 1;
+            while (index < stages.length && request.items(stages[index]).isEmpty()) {
+                updatedProgress.put(stages[index++], new Progress(0, 0, 0, 0));
+            }
+            if (index == stages.length) {
+                nextStatus = updatedFailures.isEmpty() ? Status.Succeeded : Status.PartiallySucceeded;
+            } else {
+                next = stages[index];
+                updatedProgress.put(next, new Progress(0, 0, 0, request.items(next).size()));
+            }
+        }
+        return new WorkingSetCreation(id, request, requestedBy, nextStatus, next, totals, updatedFailures,
+                createdAt, startedAt, nextStatus == Status.Running ? null : now, updatedProgress);
     }
 
     private void requireRunning() {

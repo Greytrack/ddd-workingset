@@ -10,6 +10,7 @@ import sk.workingset.domain.WorkingSetId;
 public interface WorkingSetRepository {
     Optional<WorkingSet> findWorkingSet(WorkingSetId id);
     Optional<WorkingSet> lockWorkingSet(WorkingSetId id);
+    Optional<WorkingSet> lockWorkingSetForCreation(WorkingSetId id);
     void requireReady(WorkingSetId id);
     boolean insertWorkingSet(WorkingSet workingSet);
     List<WorkingSetId> findChildren(WorkingSetId id);

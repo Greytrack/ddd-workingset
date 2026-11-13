@@ -32,22 +32,32 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
 
     @Override
     public Optional<WorkingSet> findWorkingSet(WorkingSetId id) {
-        return loadWorkingSet(id, false);
+        return loadReadyWorkingSet(id, false);
     }
 
     @Override
     public Optional<WorkingSet> lockWorkingSet(WorkingSetId id) {
+        return loadReadyWorkingSet(id, true);
+    }
+
+    private Optional<WorkingSet> loadReadyWorkingSet(WorkingSetId id, boolean lock) {
+        requireReady(id);
+        var workingSet = loadWorkingSet(id, lock);
+        requireReady(id);
+        return workingSet;
+    }
+
+    @Override
+    public Optional<WorkingSet> lockWorkingSetForCreation(WorkingSetId id) {
         return loadWorkingSet(id, true);
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
-        requireReady(id);
         String sql = "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?";
         if (lock) {
             sql += " FOR UPDATE";
         }
         var parents = jdbc.queryForList(sql, String.class, id.value());
-        requireReady(id);
         if (parents.isEmpty()) {
             return Optional.empty();
         }
@@ -142,6 +152,14 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     @Override
     public Optional<Tracker> lockTracker(TrackerId id) {
         return loadTracker(id, true);
+    }
+
+    @Override
+    public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
+        return jdbc.query("""
+                SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?
+                """, (rs, row) -> TrackerId.of(rs.getString(1)), target.value(), source.value())
+                .stream().findFirst().flatMap(this::findTracker);
     }
 
     private Optional<Tracker> loadTracker(TrackerId id, boolean lock) {
