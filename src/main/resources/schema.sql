@@ -249,3 +249,18 @@ CREATE TABLE IF NOT EXISTS merge_checkpoints (
     revoked BOOLEAN NOT NULL,
     PRIMARY KEY (source_id, target_id, common_id)
 );
+
+-- T6-B: a stable, distinct PostgreSQL advisory lock key for each round.
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS execution_lock_id BIGSERIAL;
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS supports_commit_recovery BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE merge_rounds ALTER COLUMN supports_commit_recovery SET DEFAULT TRUE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_execution_lock ON merge_rounds (execution_lock_id);
+
+CREATE TABLE IF NOT EXISTS merge_commit_receipts (
+    round_id VARCHAR(64) NOT NULL REFERENCES merge_rounds (id) ON DELETE CASCADE,
+    entry_id VARCHAR(64) NOT NULL,
+    business_ref VARCHAR(64),
+    source_revision INTEGER,
+    target_revision INTEGER,
+    PRIMARY KEY (round_id, entry_id)
+);

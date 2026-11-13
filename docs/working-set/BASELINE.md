@@ -73,6 +73,8 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-13 | T6-B 按本轮实施任务补充 [T1 §8.1](domain/merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b) 的轮次并发及恢复边界，见 [SCN-074](scenarios/core-scenarios.md#scn-074) 和 [验收](implementation/t6-b-merge-recovery-verification.md)。接受范围与发布状态沿用现有基线。 |
+| 2026-11-13 | 实施边界（用户确认）：交付物为 `sk.workingset` 的契约、规范与约束；`alm.requirement` 为占位/参考实现，各业务 BC 由专门团队实现并遵守 SK 契约；参考实现不覆盖业务细节 Guard，不得以其缺失反推 SK 契约（T4 §3.3、business-object-lifecycle-design） |
 | 2026-11-13 | D16：软删即占用家族身份，只能恢复或永久删除（T2 §5、QUESTION-004）。D17：生命周期能力不产生 `Unknown`（设计文档）。D10：新增工作集入口与归属解析（`TrackerScopePort`、`CreateRequirementRequest.workingSetId`，T4 §4）。D12-A：JSONB 为切片实现，规模/保留/回填为后续专项（T1）。D15-B：Merge 条目应用独立提交、目标变体切换由 `RequirementMergeApplied` 事件在 SK 独立事务完成（T1 §5、T4 §3.2）；`mvn -B test` 83 项通过 |
 | 2026-11-13 | C7：LTI 层补 `(working_set_id, common_id)` 唯一索引（`uq_lti_working_set_family`），与 requirements 的 WorkingSet 作用域家族唯一性一致，新增验收。D3-B：COW 物化的业务保存由业务 BC 独立提交，SK 物化凭据与 LTI 切换分事务，未完成部分经 Modulith 未完成事件重投收敛（T3 §7、T4 §3.2、D4 验证）；`mvn -B clean test` 79 项通过 |
 | 2026-11-12 | D6：附件/关系不参与 Compare/Merge（T1、T3 §2.1）。D7：业务对象永久删除后不保留墓碑/内容/历史，查询返回 `NotFound` 是正确语义（T4 §5.1、T2 §5）；软删仍返回 `Deleted`。D10：新增工作集入口（归属解析）作为下一片实现点（T4 §4）。D13：`RequirementPurged` 改用 Modulith 监听并接入未完成事件重投。D14：`BusinessObject` 在 SK 内声明、`TrackerItem` 继承、`Requirement` 实现（T4 §3.1/§8）。同批修复：`readInheritedAt` 检查删除（C3）、`PREPARING` 改为 `DEPENDENCY_UNAVAILABLE`（C4）、`Summary.applied` 去重（C6）；`mvn -B test` 78 项通过 |

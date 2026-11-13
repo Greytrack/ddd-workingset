@@ -41,7 +41,7 @@ ComparisonToken 引用 `merge_comparisons` 中的冻结清单，含双侧 LocalI
 
 S7 仅覆盖 ALM Requirement 普通字段。完整历史回读、附件关系、Privilege、批量删除顺序、真实平台元数据回填及完整删除限制仍待后续切片。冻结比较和轮次目前按清单持久化，面向大范围的扫描、分批和保留策略尚无规模验证。
 
-`QUESTION-008` 已实现部分于 2026-11-12 关闭：登记前/后证据分界、普通字段决策优先、部分成功、新轮次与 Checkpoint 由本切片兑现。并发 Apply、重试/恢复入口与跨实例结果收敛仍未实现，转为 [`QUESTION-008.a`](../domain/open-questions.md)。
+`QUESTION-008` 已实现部分于 2026-11-12 关闭：登记前/后证据分界、普通字段决策优先、部分成功、新轮次与 Checkpoint 由本切片兑现。并发 Apply 和跨实例结果恢复在 S7 后由 [T6-B](t6-b-merge-recovery-verification.md) 验证，关联 `QUESTION-008.a`。
 
 ## 2026-11-12 后续裁定与修复
 

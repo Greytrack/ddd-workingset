@@ -6,7 +6,14 @@
 - 目标：收敛剩余开放问题与规模/并发能力，同时保持契约、实现与验收证据一致。
 - 不在本阶段：权限接入（D11 延后）、附件/关系参与 Compare/Merge（D6 本版不做）、停用生命周期（D5 不存在该概念）。
 
-## 0. 当前基线（T5 收尾状态）
+## 实施边界（重要）
+
+- **交付物是 `sk.workingset`（Shared Kernel）的契约、规范、约束与实现**；未来各业务团队模块对接时，只带出 `sk.workingset` 的内容。
+- **`alm.requirement` 目前是占位/参考实现**，用于验证 SK 契约（`TrackerItem`、`TrackerItemReadPort`、`RequirementWritePort`、事件协作等），不代表 ALM 团队最终实现，也不要求在此补齐业务细节（如具体业务 Guard、字段规则、状态机）。
+- T6 各切片的判断标准：先问“这是 SK 的规范/约束/机制，还是某个 BC 的业务细节？”前者属于本阶段；后者只做最小占位适配。
+- 业务 BC 由各自团队按专业领域实现，但必须遵守 `sk.workingset` 的契约；SK 不得依赖任何 BC 实现（ArchUnit 强制）。
+
+## 当前基线（T5 收尾状态）
 
 - 单一 ALM Requirement 纵向切片（S1～S7）已可用；COW、Compare/Merge、绑定与删除均通过真实 PostgreSQL/Redis/Tomcat 验收。
 - D3-B/D15-B 已把 COW 物化与 Merge 的业务写入拆为独立提交，LTI 切换由事件在 SK 独立事务完成（可重投）。
@@ -44,12 +51,11 @@
 
 ## 4. 建议的下一步
 
-先做 **T6-B（Merge 并发/重试/恢复）**：它是已实现能力中唯一缺少并发与恢复契约的部分，且直接影响 Merge 的可运营性。
-随后做 **T6-C（身份分配/去重）** 与 **T6-D（回并）**，把 T5 已确认但未落地的创建/回并能力补齐。
+**T6-B** 的 Merge 并发与恢复见[验收记录](t6-b-merge-recovery-verification.md)。等待用户确认后进入 **T6-C（身份分配/去重）**，再推进 **T6-D（回并）**。
 T6-E/T6-F/T6-G 可按业务优先级并行或后置。
 
 ## 5. 未决判断（需用户确认）
 
-1. T6 是否以“单一 ALM 切片 + 真实 PostgreSQL/Redis/Tomcat”继续，还是先扩展到第二个 BC（Part/DQA）验证跨 BC 契约。
+1. T6 以 SK 契约为主、`alm.requirement` 仅作占位适配；是否接入第二个 BC（Part/DQA）用于验证跨 BC 契约，还是继续以 ALM 单样例验证。
 2. QUESTION-014 的版本治理是否在 T6 内启动，还是保持团队开放项。
 3. 规模专项（T6-E）是现在做压测，还是等真实数据回填后再做。

@@ -193,6 +193,14 @@ Diff 产生有向冻结差异 + ComparisonToken
 - 新轮次的用户决定、执行状态、`ApplyResult` 与旧轮次相互独立，旧结果保留可追溯；
 - 消息重复投递的幂等处理**不属于**业务重试，仍遵循原幂等规则。
 
+### 8.1 执行中断与结果恢复（T6-B）
+
+- 同一轮次只允许一个 Apply 请求推进。执行权仍被持有时，其他 Apply 返回 HTTP 409 `RoundInProgress`（T1 轮次冲突）。终态重提返回原 `ApplyResult`。
+- Apply 受理后先持久化 `Running`。执行者退出后，调用者可用原轮次 ID 再次 Apply，接续已受理的同一次执行。恢复跳过已记录结果的条目。
+- 以轮次 ID 和条目 ID 查询业务提交凭据。业务提交、凭据和适用的 `RequirementMergeApplied` 发布记录同事务落库。若凭据已存在，只补 Checkpoint 和条目结果，即使比较后的业务内容已经改变。若事务未提交且没有凭据，则在原决定下执行尚未完成的条目。
+- 已受理的轮次在提交或结果暂时无法确认时保留 `Running`，按 T4 返回 `Unknown`。恢复以持久化凭据判定，业务拒绝等已记录结果遵循 Q4。旧版未终态轮次缺少提交凭据，须先核对已有业务事实。
+- LTI 切换仍按 D15-B 独立收敛。未完成事件经 `POST /api/cow/recover/incomplete` 重投。轮次结果以业务提交事实为准。
+
 ## 9. 与 LightTrackerItem 和业务 BC 的边界
 
 - Merge 不改变 `LocalId`/`CommonId`（INV-040）；`SourceLocalId`/`SourceRevision` 由既有 COW 机制维护（D-012/D-017）。

@@ -21,7 +21,9 @@
 - [S7 Merge 执行验证](t5-s7-verification-result.md)记录 Compare、MergeRound、Checkpoint 和 Requirement 删除生命周期的真实验收。
 - [t5-d2-family-scope-verification.md](t5-d2-family-scope-verification.md)：D2 Requirement 家族唯一性按 WorkingSet 作用域（Reviewed，2026-11-12；`mvn test` 77 项通过；真实 PostgreSQL）。
 - [t5-d4-sk-boundary-verification.md](t5-d4-sk-boundary-verification.md)：D4 把 LTI 校验与移除移回 SK，业务 BC 只经 `TrackerItemLifecyclePort` 与 `RequirementPurged` 事件协作（Reviewed，2026-11-12；`mvn test` 78 项通过）。
+- [T6-B Merge 恢复验证](t6-b-merge-recovery-verification.md)记录并发 Apply、跨实例接续和事件重投的验收。
 - [t6-next-stage-outline.md](t6-next-stage-outline.md)：T6 下一阶段实施大纲（Draft；切片顺序、验收与一致性门禁）。
+- [t6-implementation-prompt.md](t6-implementation-prompt.md)：T6 实施提示词（交给实施者的完整任务说明；含必读顺序、切片任务、约束与验收命令）。
 - [t5-runtime-verification.md](t5-runtime-verification.md)：运行时骨架验证（Verified，2026-11-12；Spring Boot Web 7102 + PostgreSQL/JdbcTemplate + Redis 缓存 + Spring Modulith Event Publication Registry；`mvn test` 37 项通过，含 API/数据库/缓存与容器验收测试）。
 
 配套：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)、[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)。
