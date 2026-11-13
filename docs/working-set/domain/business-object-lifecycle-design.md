@@ -41,7 +41,7 @@ public interface TrackerItem extends BusinessObject {
 ```
 
 - `LifecycleCommand` 承载期望并发版本（`expectedLockVersion`，可空表示调用方已锁定）与业务原因；**不携带调用者上下文**，授权由应用层在调用前完成（D11 暂不接入权限）。
-- `LifecycleResult` 表达 Applied／Rejected／Conflict 并携带变换后的对象；`delete2` 返回当前对象表示“允许由应用服务编排永久删除”，不把失败伪装成成功。
+- `LifecycleResult` 表达 Applied／Rejected／Conflict 并携带变换后的对象；`delete2` 返回当前对象表示“允许由应用服务编排永久删除”，不把失败伪装成成功。**生命周期能力不产生 `Unknown`（D17，2026-11-13 用户裁定）**：执行结果未知属于跨 BC 写入/回执语义（T4 §5），不由本能力表达。
 - `delete2` 是 guard/decision 结果，实际永久删除由 BC 应用服务编排；不要求 SK 提供通用删除实现。
 - 不允许 SK 通过 `BusinessObject` 直接写业务表或绕过 BC 聚合校验。
 

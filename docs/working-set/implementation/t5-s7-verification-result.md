@@ -49,5 +49,6 @@ S7 仅覆盖 ALM Requirement 普通字段。完整历史回读、附件关系、
 - **C3**：`RequirementAdapter.readInheritedAt` 与 `readAt` 一致检查软删标记，已删除来源不再被 Compare 显示为 `PRESENT`。
 - **C4**：内容仍被未物化变体依赖时返回 `DependencyUnavailable`（HTTP 503），不再挪用 `Preparing`。
 - **C6**：`MergeRound.Summary.applied` 改为 Applied-only，不再与 `confirmed` 重复计数。
-- **D3-B**：COW 物化的业务保存由 ALM 独立提交，SK 的物化凭据与 LTI 切换分事务执行，未完成部分经 Modulith 重投收敛；本切片 Merge 的“条目应用 + LTI 切换”仍沿用独立条目事务，不按 D3-B 拆分。
+- **D3-B**：COW 物化的业务保存由 ALM 独立提交，SK 的物化凭据与 LTI 切换分事务执行，未完成部分经 Modulith 重投收敛。
+- **D15-B**：Merge 的条目应用同样独立提交；目标变体切换/创建由 `RequirementMergeApplied` 事件在 SK 独立事务完成（异步、幂等、可重投），不再与业务 apply 共用条目事务。
 - 验证：`mvn -B test` 79 项通过（含 C7 LTI 唯一性验收）。

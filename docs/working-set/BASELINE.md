@@ -73,6 +73,7 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-13 | D16：软删即占用家族身份，只能恢复或永久删除（T2 §5、QUESTION-004）。D17：生命周期能力不产生 `Unknown`（设计文档）。D10：新增工作集入口与归属解析（`TrackerScopePort`、`CreateRequirementRequest.workingSetId`，T4 §4）。D12-A：JSONB 为切片实现，规模/保留/回填为后续专项（T1）。D15-B：Merge 条目应用独立提交、目标变体切换由 `RequirementMergeApplied` 事件在 SK 独立事务完成（T1 §5、T4 §3.2）；`mvn -B test` 83 项通过 |
 | 2026-11-13 | C7：LTI 层补 `(working_set_id, common_id)` 唯一索引（`uq_lti_working_set_family`），与 requirements 的 WorkingSet 作用域家族唯一性一致，新增验收。D3-B：COW 物化的业务保存由业务 BC 独立提交，SK 物化凭据与 LTI 切换分事务，未完成部分经 Modulith 未完成事件重投收敛（T3 §7、T4 §3.2、D4 验证）；`mvn -B clean test` 79 项通过 |
 | 2026-11-12 | D6：附件/关系不参与 Compare/Merge（T1、T3 §2.1）。D7：业务对象永久删除后不保留墓碑/内容/历史，查询返回 `NotFound` 是正确语义（T4 §5.1、T2 §5）；软删仍返回 `Deleted`。D10：新增工作集入口（归属解析）作为下一片实现点（T4 §4）。D13：`RequirementPurged` 改用 Modulith 监听并接入未完成事件重投。D14：`BusinessObject` 在 SK 内声明、`TrackerItem` 继承、`Requirement` 实现（T4 §3.1/§8）。同批修复：`readInheritedAt` 检查删除（C3）、`PREPARING` 改为 `DEPENDENCY_UNAVAILABLE`（C4）、`Summary.applied` 去重（C6）；`mvn -B test` 78 项通过 |
 | 2026-11-12 | D11：现阶段不接入权限，等权限模型开发完毕后再接入；`Caller`/`authorize` 保持占位，不落地 `Denied`，见 [T4 §7](domain/cross-bc-contract-v1.md)。D4：用户选择方案 A，把 LightTrackerItem 校验与移除移回 SK，业务 BC 不再注入 SK 仓储；跨聚合用 `RequirementPurged` 事件交互，见 [T4 §3.1](domain/cross-bc-contract-v1.md) 与 [D4 边界验证](implementation/t5-d4-sk-boundary-verification.md)（`mvn -B test` 78 项通过） |

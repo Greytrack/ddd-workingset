@@ -40,4 +40,4 @@ D4 选择方案 A：把 LightTrackerItem 的校验与移除**移回 SK**；跨�
 - 删除与 COW 事件交错时的并发收敛。
 - 其余 BC 的写入 Port 适配（当前仅有 ALM Requirement）。
 - LTI 清理失败后的重试由 Modulith 未完成事件记录 + `/api/cow/recover/incomplete` 重投（D13），不额外引入对账任务；事件处理保持幂等。
-- Merge 路径的“条目应用 + LTI 切换”仍沿用独立条目事务，不按 D3-B 拆分（见 S7 验证）；D3-B 只覆盖 COW 物化的业务保存与 SK 凭据。
+- Merge 路径的“条目应用 + LTI 切换”已按 D15-B 拆分：业务 apply 独立提交，LTI 切换由 `RequirementMergeApplied` 事件在 SK 独立事务完成（D15-B 覆盖 COW 物化与 Merge 两条链路）。
