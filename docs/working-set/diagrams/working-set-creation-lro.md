@@ -8,9 +8,9 @@ stateDiagram-v2
     Pending --> Running: 异步执行
     state Running {
         [*] --> CreateWorkingSet
-        CreateWorkingSet --> CopyUnsharedTrackers
-        CopyUnsharedTrackers --> BindProductSpaces
-        BindProductSpaces --> BindUnsharedTrackers
+        CreateWorkingSet --> BindProductSpaces
+        BindProductSpaces --> CopyUnsharedTrackers
+        CopyUnsharedTrackers --> BindUnsharedTrackers
         BindUnsharedTrackers --> BindSharedTrackers
         BindSharedTrackers --> IndexUnsharedTrackers
         IndexUnsharedTrackers --> LinkRelations: 发送索引完成事件

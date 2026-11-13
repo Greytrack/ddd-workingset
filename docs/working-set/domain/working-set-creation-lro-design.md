@@ -50,14 +50,15 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | 步骤 | 内容 | 依赖 | 失败处理 |
 | --- | --- | --- | --- |
 | `CREATE_WORKING_SET` | 创建子 WS 本体（`parentWorkingSetId`） | — | 失败 → 任务 `Failed`，停止 |
-| `COPY_UNSHARED_TRACKERS` | 为每个选定的父 Tracker 复制一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`） | 本体 | 单项失败记录明细，继续其他项 |
 | `BIND_PRODUCT_SPACES` | 绑定用户选定的产品空间 | 本体 | 同上 |
+| `COPY_UNSHARED_TRACKERS` | 为每个选定的父 Tracker 复制一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`） | 对应空间已绑定 | 单项失败记录明细，继续其他项 |
 | `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
 | `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
 | `INDEX_UNSHARED_TRACKERS` | 对每个子 Tracker 下父 Tracker 的**全部 Item（剔除软删）**创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
 | `LINK_RELATIONS` | 索引完成后发布事件，异步构建引用/关联（依赖 QUESTION-010） | 索引 | 记录失败项；不阻断任务整体 |
 
 - 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
+- 复制与绑定分别提交。复制失败时跳过该 Tracker 的绑定，复制成功而绑定失败时保留副本并记录绑定阶段的失败。轮询的 `progress` 是任务汇总，`stageProgress` 分阶段记录成功、失败、跳过和总数。
 - 最终状态：全部步骤成功 → `Succeeded`；存在失败项但关键步骤（创建本体）成功 → `PartiallySucceeded`；关键步骤失败 → `Failed`。
 - 不开放任务重试；重复提交返回已有任务（见 §6）。
 
@@ -176,4 +177,4 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 ## 13. 状态与下一步
 
-- T7-A 评审及运行中可见性已获用户确认。关系模型仍依赖 QUESTION-010。
+- T7-C 已支持非空范围创建与绑定。当前终态覆盖已启用阶段，Item 索引和关系事件分别由 T7-D、T7-E 接入。见 [T7-C 验收](../implementation/t7-c-binding-verification.md)。

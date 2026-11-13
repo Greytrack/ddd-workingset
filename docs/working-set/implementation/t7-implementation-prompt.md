@@ -33,7 +33,7 @@
 ## 4. 现状与差距
 
 - 已有原子能力：空子 WS 创建、逐项绑定共享/空间、逐项派生（一个 Item 一个新 Tracker）、单个 LTI 创建。
-- 缺失：LRO 聚合与状态机、任务表与轮询 REST、按父 Tracker 批量复制一个子 Tracker、批量 LTI 索引、关系/引用事件与构建、失败明细与部分成功。
+- T7-B/T7-C 已实现异步任务与范围绑定。批量 LTI 索引、关系事件与构建、规模验证继续按后续切片实施。
 - 现有 `RequirementCatalog.identities(trackerId)` 只有 `localId/commonId`，没有 `revision`/软删标记；T7 需要分页的身份端口（T7-D）。
 
 ## 5. 任务分解
@@ -52,9 +52,10 @@
 
 ### T7-C 范围复制与绑定
 - 创建子 WS 本体（复用 `createChildWorkingSet` 的规则）；
+- 先绑定所选空间，再复制和绑定 Tracker；依赖项失败时跳过不可执行的步骤；
 - 每个选定父 Tracker → 一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`）；
-- 绑定非共享 Tracker、共享 Tracker、产品空间；校验直属父范围；
-- 单项失败记录明细，继续其他项。
+- 绑定非共享与共享 Tracker，校验直属父范围；
+- 单项失败记录明细，继续其他项。见 [T7-C 验收](t7-c-binding-verification.md)。
 
 ### T7-D 批量 LTI 索引
 - 分页读取父 Tracker 下 Item 身份（`localId/commonId/revision`，剔除软删）；
