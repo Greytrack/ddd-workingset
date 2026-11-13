@@ -23,6 +23,7 @@
 - [t5-d4-sk-boundary-verification.md](t5-d4-sk-boundary-verification.md)：D4 把 LTI 校验与移除移回 SK，业务 BC 只经 `TrackerItemLifecyclePort` 与 `RequirementPurged` 事件协作（Reviewed，2026-11-12；`mvn test` 78 项通过）。
 - [T6-B Merge 恢复验证](t6-b-merge-recovery-verification.md)记录并发 Apply、跨实例接续和事件重投的验收。
 - [T6-C 身份分配验证](t6-c-identity-verification.md)：默认工作集同一雪花、非默认工作集两个不等 ID、派生继承 CommonId、唯一冲突统一 409（Reviewed，2026-11-13；`mvn test` 88 项通过）。
+- [t6-d-implementation-prompt.md](t6-d-implementation-prompt.md)：T6-D 子工作集新建与回并的实施提示词（Draft；先验证现有 Merge CREATE，再补身份、去重与来源记录）。
 - [t6-next-stage-outline.md](t6-next-stage-outline.md)：T6 下一阶段实施大纲（Draft；切片顺序、验收与一致性门禁）。
 - [t6-implementation-prompt.md](t6-implementation-prompt.md)：T6 实施提示词（交给实施者的完整任务说明；含必读顺序、切片任务、约束与验收命令）。
 - [t5-runtime-verification.md](t5-runtime-verification.md)：运行时骨架验证（Verified，2026-11-12；Spring Boot Web 7102 + PostgreSQL/JdbcTemplate + Redis 缓存 + Spring Modulith Event Publication Registry；`mvn test` 37 项通过，含 API/数据库/缓存与容器验收测试）。
