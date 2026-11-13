@@ -22,6 +22,7 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
 /**
@@ -48,33 +49,47 @@ public class RequirementApplicationService {
     }
 
     /**
-     * 创建并提交一个 Requirement；乐观锁从 0 开始，尚未发布大版本。
+     * 创建并提交一个 Requirement；服务端按工作集分配身份。
      *
-     * <p>D10 归属解析：显式指定工作集时，共享 Tracker 的实际归属由 Tracker 自身工作集（默认工作集）
-     * 派生、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建。
-     * 未指定工作集或 Tracker 不存在时不在此拦截，由持久化层按既有约束给出冲突。
+     * <p>默认工作集：同一个雪花 ID 同时作为 LocalId 与 CommonId；
+     * 非默认工作集：服务端生成两个不相等的雪花 ID。派生不经过本方法，CommonId 沿用来源。
+     * 显式指定非默认工作集时，非共享 Tracker 必须属于该工作集；Tracker 不存在时交由持久化层给出冲突。
      */
-    public Requirement create(LocalId localId,
-                              CommonId commonId,
-                              TrackerId trackerId,
+    public Requirement create(TrackerId trackerId,
                               WorkingSetId requestedWorkingSetId,
                               String title,
                               String description,
                               Revision revision) {
+        var scope = trackerScope.find(trackerId);
         if (requestedWorkingSetId != null) {
-            trackerScope.find(trackerId).ifPresent(scope -> {
-                if (scope.sharingMode() == SharingMode.UNSHARED
-                        && !scope.workingSetId().equals(requestedWorkingSetId)) {
+            scope.ifPresent(current -> {
+                if (current.sharingMode() == SharingMode.UNSHARED
+                        && !current.workingSetId().equals(requestedWorkingSetId)) {
                     throw new ApplicationFailure(FailureReason.NOT_INCLUDED,
                             "tracker " + trackerId.value() + " is not included in working set "
                                     + requestedWorkingSetId.value());
                 }
             });
         }
+        boolean defaultWorkingSet = scope
+                .map(current -> current.sharingMode() == SharingMode.SHARED
+                        || WorkingSet.DEFAULT_ID.equals(current.workingSetId()))
+                .orElse(false);
+        long local = identifierGenerator.nextId();
+        long common = defaultWorkingSet ? local : nextDistinct(local);
         Requirement requirement = Requirement.create(
-                localId, commonId, trackerId, title, description, revision);
+                LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
+                trackerId, title, description, revision);
         repository.save(requirement);
         return requirement;
+    }
+
+    private long nextDistinct(long local) {
+        long common = identifierGenerator.nextId();
+        while (common == local) {
+            common = identifierGenerator.nextId();
+        }
+        return common;
     }
 
     /**

@@ -48,12 +48,10 @@ class RequirementAcceptanceTest {
 
     @Test
     void create_then_modify_emits_event_persisted_in_event_publication() {
-        String commonId = "C-" + UUID.randomUUID();
         String trackerId = "T-" + UUID.randomUUID();
         fixture = new RootTrackerFixture(jdbc, trackerId);
         fixture.provision();
         Map<String, Object> createBody = Map.of(
-                "commonId", commonId,
                 "trackerId", trackerId,
                 "title", "A",
                 "description", "acceptance",
@@ -62,6 +60,8 @@ class RequirementAcceptanceTest {
         ResponseEntity<Map> created = rest.postForEntity("/api/requirements", createBody, Map.class);
         assertEquals(HttpStatus.CREATED, created.getStatusCode(), String.valueOf(created.getBody()));
         localId = String.valueOf(created.getBody().get("localId"));
+        assertEquals(localId, created.getBody().get("commonId"),
+                "默认工作集创建时 CommonId 与 LocalId 应相等");
 
         Map<String, Object> changeBody = Map.of(
                 "title", "B",

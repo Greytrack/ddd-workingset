@@ -49,7 +49,7 @@ class CowAcceptanceTest {
     private final List<String> targets = new ArrayList<>();
     private final List<String> worksets = new ArrayList<>();
     private String source;
-    private final String common = "C-" + UUID.randomUUID();
+    private String common;
     private final String tracker = "T-" + UUID.randomUUID();
     private final String space = "S-" + UUID.randomUUID();
     private final String classification = "CL-" + UUID.randomUUID();
@@ -265,10 +265,11 @@ class CowAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
                 """, tracker, space, classification);
-        var result = rest.postForEntity("/api/requirements", Map.of("commonId", common, "trackerId", tracker,
+        var result = rest.postForEntity("/api/requirements", Map.of("trackerId", tracker,
                 "title", "A", "description", "COW", "revision", 3), RequirementView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         source = result.getBody().localId();
+        common = result.getBody().commonId();
     }
 
     private Target derive() {

@@ -20,7 +20,6 @@ import alm.requirement.application.RequirementApplicationService;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.port.IdentifierGenerator;
-import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -51,25 +50,29 @@ class ApplicationContextTest {
                     (ApplicationListener<PayloadApplicationEvent<RequirementChanged>>)
                             event -> received.add(event.getPayload()));
             RequirementApplicationService service = context.getBean(RequirementApplicationService.class);
-            LocalId localId = LocalId.of("ctx-" + UUID.randomUUID());
-            CommonId commonId = CommonId.of("ctx-c-" + UUID.randomUUID());
             TrackerId trackerId = TrackerId.of("ctx-t-" + UUID.randomUUID());
 
             var fixture = new RootTrackerFixture(context.getBean(JdbcTemplate.class), trackerId.value());
             fixture.provision();
+            LocalId created = null;
             try {
-                verifyPublishedChange(service, received, localId, commonId, trackerId);
+                created = verifyPublishedChange(service, received, trackerId);
             } finally {
-                fixture.removeRequirement(localId.value());
+                if (created != null) {
+                    fixture.removeRequirement(created.value());
+                }
                 fixture.remove();
             }
         }
     }
 
-    private void verifyPublishedChange(RequirementApplicationService service, List<RequirementChanged> received,
-                                       LocalId localId, CommonId commonId, TrackerId trackerId) {
-        service.create(localId, commonId, trackerId, WorkingSetId.of("1"), "A", "source description", R3);
+    private LocalId verifyPublishedChange(RequirementApplicationService service, List<RequirementChanged> received,
+                                          TrackerId trackerId) {
+        var requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
+        var localId = requirement.localId();
         service.changeTitle(localId, "B", LockVersion.of(0));
+        assertEquals(localId.value(), requirement.commonId().value(),
+                "默认工作集创建时 CommonId 与 LocalId 必须相等");
 
         assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
         RequirementChanged event = received.getFirst();
@@ -82,6 +85,7 @@ class ApplicationContextTest {
         assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
         assertNotNull(event.snapshotRef());
         assertNotNull(event.occurredAt());
+        return localId;
     }
 
     private ConfigurableApplicationContext start() {

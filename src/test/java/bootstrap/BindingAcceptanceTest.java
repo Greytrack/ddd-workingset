@@ -219,8 +219,8 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
         assertEquals(0, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", shared));
         assertEquals(2, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
-        assertFailure(rest.postForEntity("/api/requirements", Map.of("commonId", "C-" + suffix,
-                "trackerId", shared, "title", "A", "description", "deleted tracker", "revision", 3), Map.class),
+        assertFailure(rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
+                "title", "A", "description", "deleted tracker", "revision", 3), Map.class),
                 HttpStatus.CONFLICT, "DATA_INTEGRITY_CONFLICT");
     }
 
@@ -322,8 +322,8 @@ class BindingAcceptanceTest {
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
-                return rest.postForEntity("/api/requirements", Map.of("commonId", "RACE-" + suffix,
-                        "trackerId", shared, "title", "A", "description", "concurrent", "revision", 3), Map.class)
+                return rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
+                        "title", "A", "description", "concurrent", "revision", 3), Map.class)
                         .getStatusCode();
             });
             var remove = executor.submit(() -> {

@@ -288,7 +288,11 @@ public class MergeExecutionService {
             var source = current.source();
             var accepted = acceptedFields(entry, current);
             var action = Operation.valueOf(operation);
-            LocalId localId = action == Operation.CREATE ? LocalId.of(Long.toString(ids.nextId())) : target.localId();
+            LocalId localId = action == Operation.CREATE
+                    ? (WorkingSet.DEFAULT_ID.equals(round.target())
+                            ? LocalId.of(current.family().value())
+                            : LocalId.of(Long.toString(ids.nextId())))
+                    : target.localId();
             boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
             boolean create = action == Operation.CREATE;
             comparisons.assertWriteCapability(current, create, caller);

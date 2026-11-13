@@ -18,8 +18,6 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.IdentifierGenerator;
-import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -29,6 +27,8 @@ import sk.workingset.domain.WorkingSetId;
 
 /**
  * Requirement 的最小 REST 入口：创建、普通修改标题、按 LocalId 查询。
+ *
+ * <p>创建请求不携带 CommonId：身份由应用服务按工作集分配（T6-C）。
  */
 @RestController
 @RequestMapping("/api/requirements")
@@ -37,16 +37,13 @@ public class RequirementController {
     private final RequirementApplicationService applicationService;
     private final RequirementRepository repository;
     private final RequirementLifecycleService lifecycle;
-    private final IdentifierGenerator identifierGenerator;
 
     public RequirementController(RequirementApplicationService applicationService,
                                  RequirementRepository repository,
-                                 RequirementLifecycleService lifecycle,
-                                 IdentifierGenerator identifierGenerator) {
+                                 RequirementLifecycleService lifecycle) {
         this.applicationService = applicationService;
         this.repository = repository;
         this.lifecycle = lifecycle;
-        this.identifierGenerator = identifierGenerator;
     }
 
     @PostMapping
@@ -56,8 +53,6 @@ public class RequirementController {
         WorkingSetId requestedWorkingSetId = requested == null || requested.isBlank()
                 ? null : WorkingSetId.of(requested);
         Requirement created = applicationService.create(
-                LocalId.of(String.valueOf(identifierGenerator.nextId())),
-                CommonId.of(requireText(request.commonId(), "commonId")),
                 TrackerId.of(requireText(request.trackerId(), "trackerId")),
                 requestedWorkingSetId,
                 requireText(request.title(), "title"),

@@ -15,6 +15,7 @@ import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.WorkingSet;
 
 import sk.workingset.application.port.IdentifierGenerator;
@@ -161,7 +162,7 @@ public class WorkingSetApplicationService {
         var binding = workingSet.bindTracker(tracker, classification(source), SharingMode.UNSHARED);
         var contentSource = resolveContentSource(source, command);
         LightTrackerItem item = LightTrackerItem.derive(
-                LocalId.of(String.valueOf(identifierGenerator.nextId())),
+                nextDistinctLocalId(command.commonId()),
                 command.commonId(),
                 tracker.trackerId(),
                 workingSet.id(),
@@ -172,6 +173,14 @@ public class WorkingSetApplicationService {
         workingSets.insertTrackerBinding(binding);
         items.save(item);
         return new DeriveResult(tracker, item);
+    }
+
+    private LocalId nextDistinctLocalId(CommonId commonId) {
+        LocalId candidate = LocalId.of(String.valueOf(identifierGenerator.nextId()));
+        while (candidate.value().equals(commonId.value())) {
+            candidate = LocalId.of(String.valueOf(identifierGenerator.nextId()));
+        }
+        return candidate;
     }
 
     private ContentSource resolveContentSource(Tracker source, DeriveCommand command) {
