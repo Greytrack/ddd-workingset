@@ -4,9 +4,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
+import sk.workingset.application.port.MergeTarget;
 import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerRepository;
+import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 
@@ -50,5 +52,24 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);
+    }
+
+    @Override
+    @Transactional
+    public void applyMergeTarget(MergeTarget target) {
+        if (target.inherited()) {
+            var item = items.findById(target.localId())
+                    .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
+                            "target variant disappeared: " + target.localId().value()));
+            if (!item.materialized()) {
+                item.switchToLocalBacked(target.revision());
+                items.save(item);
+            }
+            return;
+        }
+        if (target.create()) {
+            items.save(LightTrackerItem.local(target.localId(), target.commonId(), target.trackerId(),
+                    target.workingSetId(), target.revision()));
+        }
     }
 }

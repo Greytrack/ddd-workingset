@@ -12,18 +12,19 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import sk.workingset.application.event.RequirementMergeApplied;
 import sk.workingset.application.port.IdentifierGenerator;
-import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MergeStore;
+import sk.workingset.application.port.MergeTarget;
 import sk.workingset.application.port.RequirementMergeCommand;
 import sk.workingset.application.port.RequirementMergeCommand.Operation;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TrackerRepository;
-import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
@@ -49,22 +50,20 @@ public class MergeExecutionService {
     private final MergeComparisonService comparisons;
     private final RequirementWritePort writer;
     private final TrackerRepository trackers;
-    private final LightTrackerItemRepository items;
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
-    private final TransactionTemplate savepoint;
+    private final ApplicationEventPublisher events;
 
     public MergeExecutionService(MergeStore store, MergeComparisonService comparisons, RequirementWritePort writer,
-                                 TrackerRepository trackers, LightTrackerItemRepository items,
-                                 IdentifierGenerator ids, TransactionTemplate transaction, TransactionTemplate savepoint) {
+                                 TrackerRepository trackers, IdentifierGenerator ids, TransactionTemplate transaction,
+                                 ApplicationEventPublisher events) {
         this.store = store;
         this.comparisons = comparisons;
         this.writer = writer;
         this.trackers = trackers;
-        this.items = items;
         this.ids = ids;
         this.transaction = transaction;
-        this.savepoint = savepoint;
+        this.events = events;
     }
 
     public record EntryRequest(String entryKey, MergeDecision decision) {}
@@ -169,7 +168,8 @@ public class MergeExecutionService {
             return result(entry, Outcome.Deferred, "DEFER", null, null, null);
         }
         try {
-            return savepoint.execute(status -> applyDecision(round, entry));
+            // D15-B：业务 apply 在独立事务提交，LTI 切换由事件在 SK 独立事务完成。
+            return transaction.execute(status -> applyDecision(round, entry));
         } catch (MergeFailure failure) {
             Outcome outcome = switch (failure.reason()) {
                 case StaleEvidence, MergeNotAllowed -> Outcome.StaleEvidence;
@@ -216,14 +216,11 @@ public class MergeExecutionService {
                     current.trackers().target(), current.family(), localId, create ? source.revision() : target.revision(),
                     inherited || create ? null : target.lockVersion(), create ? source.version() : target.version(),
                     create ? source.fields() : target.fields(), accepted));
-            if (inherited) {
-                var item = items.findById(localId).orElseThrow(
-                        () -> new MergeFailure(Reason.Conflict, "target variant disappeared"));
-                item.switchToLocalBacked(targetRevision);
-                items.save(item);
-            } else if (create && !WorkingSet.DEFAULT_ID.equals(round.target())) {
-                items.save(LightTrackerItem.local(localId, current.family(), current.trackers().target(), round.target(),
-                        targetRevision));
+            var mergeTarget = new MergeTarget(localId, current.family(), current.trackers().target(),
+                    round.target(), targetRevision, inherited,
+                    create && !WorkingSet.DEFAULT_ID.equals(round.target()));
+            if (mergeTarget.inherited() || mergeTarget.create()) {
+                events.publishEvent(new RequirementMergeApplied(mergeTarget, Instant.now()));
             }
             businessRef = localId.value();
         }

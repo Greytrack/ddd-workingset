@@ -25,6 +25,7 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * Spring Boot 上下文与事件发布检查（S2/S3：上下文可加载、事件发布；Modulith 在提交后异步消费）。
@@ -67,7 +68,7 @@ class ApplicationContextTest {
 
     private void verifyPublishedChange(RequirementApplicationService service, List<RequirementChanged> received,
                                        LocalId localId, CommonId commonId, TrackerId trackerId) {
-        service.create(localId, commonId, trackerId, "A", "source description", R3);
+        service.create(localId, commonId, trackerId, WorkingSetId.of("1"), "A", "source description", R3);
         service.changeTitle(localId, "B", LockVersion.of(0));
 
         assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");

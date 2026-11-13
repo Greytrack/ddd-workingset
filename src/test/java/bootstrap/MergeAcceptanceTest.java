@@ -260,8 +260,9 @@ class MergeAcceptanceTest {
         register(round, field(item, "ACCEPT", false));
         assertEquals(State.Succeeded, apply(round).state());
         assertEquals("parent local", requirement(grand.item().localId()).title());
-        assertTrue(jdbc.queryForObject("SELECT materialized FROM light_tracker_items WHERE local_id = ?",
-                Boolean.class, grand.item().localId()));
+        await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT materialized FROM light_tracker_items WHERE local_id = ?",
+                Boolean.class, grand.item().localId())));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity("/api/requirements/" + grand.item().localId()
                 + "/delete", null, Void.class));
         assertStatus(HttpStatus.GONE, rest.getForEntity(ws(grandchild) + "/items/" + grand.item().localId(), Map.class));

@@ -49,7 +49,8 @@ class RequirementChangeFlowTest {
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
     private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
     private final RequirementApplicationService service = new RequirementApplicationService(
-            requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher);
+            requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher,
+            mock(sk.workingset.application.port.TrackerScopePort.class));
     private final Requirement before = Requirement.create(
             L0, CommonId.of("C1"), TrackerId.of("T0"), "A", "source description", R3, Version.of("1.2"));
 

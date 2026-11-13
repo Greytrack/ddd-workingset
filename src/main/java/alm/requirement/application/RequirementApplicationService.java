@@ -15,11 +15,14 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;
+import sk.workingset.application.port.TrackerScopePort;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * ALM Requirement 应用服务：创建、普通修改（修改前快照 + 保存成功后发布来源事件）。
@@ -30,24 +33,44 @@ public class RequirementApplicationService {
     private final SnapshotStore snapshotStore;
     private final IdentifierGenerator identifierGenerator;
     private final ApplicationEventPublisher eventPublisher;
+    private final TrackerScopePort trackerScope;
 
     public RequirementApplicationService(RequirementRepository repository,
                                           SnapshotStore snapshotStore,
                                           IdentifierGenerator identifierGenerator,
-                                          ApplicationEventPublisher eventPublisher) {
+                                          ApplicationEventPublisher eventPublisher,
+                                          TrackerScopePort trackerScope) {
         this.repository = Objects.requireNonNull(repository, "repository");
         this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
         this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
         this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
+        this.trackerScope = Objects.requireNonNull(trackerScope, "trackerScope");
     }
 
-    /** 创建并提交一个 Requirement；乐观锁从 0 开始，尚未发布大版本。 */
+    /**
+     * 创建并提交一个 Requirement；乐观锁从 0 开始，尚未发布大版本。
+     *
+     * <p>D10 归属解析：显式指定工作集时，共享 Tracker 的实际归属由 Tracker 自身工作集（默认工作集）
+     * 派生、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建。
+     * 未指定工作集或 Tracker 不存在时不在此拦截，由持久化层按既有约束给出冲突。
+     */
     public Requirement create(LocalId localId,
                               CommonId commonId,
                               TrackerId trackerId,
+                              WorkingSetId requestedWorkingSetId,
                               String title,
                               String description,
                               Revision revision) {
+        if (requestedWorkingSetId != null) {
+            trackerScope.find(trackerId).ifPresent(scope -> {
+                if (scope.sharingMode() == SharingMode.UNSHARED
+                        && !scope.workingSetId().equals(requestedWorkingSetId)) {
+                    throw new ApplicationFailure(FailureReason.NOT_INCLUDED,
+                            "tracker " + trackerId.value() + " is not included in working set "
+                                    + requestedWorkingSetId.value());
+                }
+            });
+        }
         Requirement requirement = Requirement.create(
                 localId, commonId, trackerId, title, description, revision);
         repository.save(requirement);

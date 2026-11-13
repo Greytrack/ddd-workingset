@@ -26,4 +26,9 @@ public interface TrackerItemLifecyclePort {
 
     /** 幂等移除业务对象对应的 LTI；由业务对象永久删除事件驱动。 */
     void removePurged(LocalId localId);
+
+    /**
+     * 业务 Merge 写入提交后切换/创建目标变体（D15-B，独立事务、幂等）。
+     */
+    void applyMergeTarget(MergeTarget target);
 }

@@ -33,6 +33,7 @@ import sk.workingset.application.port.RequirementCatalog;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.infrastructure.JdbcMergeStore;
 import sk.workingset.application.event.RequirementChanged;
+import sk.workingset.application.event.RequirementMergeApplied;
 import sk.workingset.application.event.RequirementPurged;
 import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
@@ -45,6 +46,7 @@ import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
+import sk.workingset.application.port.TrackerScopePort;
 import sk.workingset.infrastructure.CachingLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcBindingRepositories;
 import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
@@ -102,7 +104,8 @@ public class ApplicationConfiguration {
         return new CowRecoveryService(store, items, writePort, failureLog, transactionRunner,
                 () -> publications.resubmitIncompletePublications(p ->
                         p.getEvent() instanceof RequirementChanged
-                                || p.getEvent() instanceof RequirementPurged));
+                                || p.getEvent() instanceof RequirementPurged
+                                || p.getEvent() instanceof RequirementMergeApplied));
     }
 
     @Bean
@@ -136,9 +139,17 @@ public class ApplicationConfiguration {
             JdbcRequirementRepository requirements,
             JdbcSnapshotStore snapshotStore,
             IdentifierGenerator identifierGenerator,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            TrackerScopePort trackerScopePort) {
         return new RequirementApplicationService(
-                requirements, snapshotStore, identifierGenerator, eventPublisher);
+                requirements, snapshotStore, identifierGenerator, eventPublisher, trackerScopePort);
+    }
+
+    @Bean
+    public TrackerScopePort trackerScopePort(JdbcBindingRepositories trackers) {
+        return trackerId -> trackers.findTracker(trackerId)
+                .map(tracker -> new TrackerScopePort.TrackerScope(
+                        tracker.workingSetId(), tracker.sharingMode()));
     }
 
     @Bean
@@ -199,13 +210,9 @@ public class ApplicationConfiguration {
 
     @Bean
     public MergeExecutionService mergeExecutionService(MergeStore store, MergeComparisonService comparisons,
-            RequirementWritePort writer, JdbcBindingRepositories trackers, LightTrackerItemRepository items,
-            IdentifierGenerator ids, TransactionTemplate newTransactionTemplate,
-            PlatformTransactionManager transactionManager) {
-        var savepoint = new TransactionTemplate(transactionManager);
-        savepoint.setPropagationBehavior(TransactionDefinition.PROPAGATION_NESTED);
-        return new MergeExecutionService(store, comparisons, writer, trackers, items, ids,
-                newTransactionTemplate, savepoint);
+            RequirementWritePort writer, JdbcBindingRepositories trackers, IdentifierGenerator ids,
+            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events) {
+        return new MergeExecutionService(store, comparisons, writer, trackers, ids, newTransactionTemplate, events);
     }
 
     @Bean

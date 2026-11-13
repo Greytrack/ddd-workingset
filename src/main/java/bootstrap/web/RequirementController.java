@@ -24,6 +24,8 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * Requirement 的最小 REST 入口：创建、普通修改标题、按 LocalId 查询。
@@ -50,10 +52,14 @@ public class RequirementController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RequirementView create(@RequestBody CreateRequirementRequest request) {
+        String requested = request.workingSetId();
+        WorkingSetId requestedWorkingSetId = requested == null || requested.isBlank()
+                ? null : WorkingSetId.of(requested);
         Requirement created = applicationService.create(
                 LocalId.of(String.valueOf(identifierGenerator.nextId())),
                 CommonId.of(requireText(request.commonId(), "commonId")),
                 TrackerId.of(requireText(request.trackerId(), "trackerId")),
+                requestedWorkingSetId,
                 requireText(request.title(), "title"),
                 Objects.requireNonNull(request.description(), "description"),
                 Revision.of(request.revision()));
