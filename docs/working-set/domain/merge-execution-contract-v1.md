@@ -161,7 +161,9 @@ Diff 产生有向冻结差异 + ComparisonToken
 
 ## 8. 轮次终态与结果表达
 
-**C11（2026-11-13 用户裁定）**：软删对象不进入 Compare 候选（`findIdentitiesByTracker` 过滤 `delete_flag`）。因此 `RESTORE` 不再通过 Merge 提供——软删对象只能由所属 BC 的 `undelete` 恢复（D16）；Compare 对已软删的目标侧显示 `ABSENT`。契约中的 `RESTORE` 动作保留为词汇，但当前实现路径不可达。
+**C11（2026-11-13 用户裁定）**：Compare 过滤软删对象，已软删的目标侧显示 `ABSENT`；用户可选动作不包含 `RESTORE`。
+
+**T6-D 回并（用户确认）**：子工作集原生新增 Item 只经直属父子 Compare → 显式 `CREATE` → Apply 回并。目标 BC 在条目写入事务内按目标工作集和 CommonId 检查家族席位。席位空闲时按 [T4 身份规则](cross-bc-contract-v1.md#4-六个用例的契约边界)创建；同 Tracker 的原变体软删时，恢复并合入源侧业务内容，保留原 LocalId、CommonId 和目标业务版次，一次提交后可见。其他 Tracker 占用席位时为冲突。已存在的有效候选不能登记 `CREATE`；登记后目标变为可见时仍按 §3.3 处理过期证据。恢复更新失败时原变体保持软删。回并来源沿用轮次及其冻结比较证据。
 
 `MergeRound` 状态：`Preparing` → `Running` → 终态（`Succeeded` / `PartiallySucceeded` / `Failed`）。实现**没有独立的 `Completed` 阶段**：本轮全部条目完成后直接进入三种终态之一；`completeRound` 只是一次执行结束的动作，不新增状态。
 

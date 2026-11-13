@@ -37,7 +37,7 @@
 2. **SK 优先**：T6 的交付重心是 `sk.workingset` 的契约与约束；`alm.requirement` 只做最小占位适配与契约验证，不为其补业务细节 Guard/规则。
 3. **聚合边界**：聚合是事务一致性边界；跨聚合按 ID 引用，不做对象图装载；跨聚合写入沿用 D3-B/D15-B 模式（业务保存独立提交、SK 切换由事件完成、Modulith 未完成事件可重投）。
 4. **失败语义**：只用 T4 §5 九分类；软删返回 `Deleted`、永久删除返回 `NotFound`（D7）、COW 依赖返回 `DependencyUnavailable`；不得把 `Deleted` 降级为 `NotFound`。
-5. **C11 约束**：Compare 候选过滤软删对象；`RESTORE` 当前不可达，恢复走 BC 的 `undelete`；不要擅自恢复 Merge RESTORE。
+5. **C11 约束**：Compare 候选过滤软删对象，独立 `RESTORE` 动作不可选。回并 `CREATE` 触发的恢复见 [T1 §8](../domain/merge-execution-contract-v1.md#8-轮次终态与结果表达)。
 6. **D16 约束**：软删即占用家族身份；创建冲突返回明确冲突（409 `DATA_INTEGRITY_CONFLICT`），不得静默复用软删行。
 7. **测试**：只测公共 seam；期望来自已确认规则而非实现重算；覆盖不变量、边界、反例、并发与失败恢复；事件驱动处使用 `await`；不修改测试期望来掩盖领域冲突。
 8. **文档**：每片同步更新 T1～T4、`scenarios/core-scenarios.md`、验证记录与 `BASELINE.md`；文档相对链接必须可解析。

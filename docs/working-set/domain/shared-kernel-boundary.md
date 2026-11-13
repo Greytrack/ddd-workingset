@@ -50,7 +50,7 @@ DQA 是质量体系建设的一环，自行管理业务逻辑。其 Tracker 全�
 
 子工作集可在其已有非共享 Tracker 下原生新建 Item。对共享 Tracker，从子工作集入口新建的 Item 实际在默认工作集创建，通过共享 Tracker 纳入的工作集可查看。子工作集禁止创建 Tracker。Working Set 应解析实际创建归属，再交所属业务 BC 校验并创建合法对象。公共能力的操作入口与生命周期归属分别表达。
 
-场景见 [子工作集新建 Item](../scenarios/core-scenarios.md#子工作集新建-item-与-tracker-边界)。子工作集新增 Item 回并父工作集已获用户确认，允许通过用户合并决定在父工作集创建对应 Item，由目标业务 BC 校验并提交。家族身份分配、创建事实同步与去重协议待设计。各 BC 暴露的具体创建入口依其实际接入合同确定。
+场景见 [子工作集新建 Item](../scenarios/core-scenarios.md#子工作集新建-item-与-tracker-边界)，创建和回并的职责见 [T4 §4](cross-bc-contract-v1.md#4-六个用例的契约边界)。各 BC 暴露的具体创建入口依其接入合同确定。
 
 ## 比对与合并的关系准入（用户已确认）
 

@@ -146,7 +146,7 @@
 - 从子工作集入口在共享 Tracker 下新建 Item，视觉上在子工作集操作，实际在默认工作集创建，并通过共享 Tracker 可见。
 - 子工作集不允许新建 Tracker。
 
-这些规则区分操作入口、对象创建归属与集合创建权限。具体对象的创建合法性与权限由所属 BC 裁决。PLM/DQA 已确认的共享查看接入范围继续按各 BC 合同处理，通用创建归属规则不自动增加其界面的创建入口。用户已确认新增 Item 可以回并父工作集，派生及回并的 CommonId/LocalId 关系见 [身份规则](../domain/glossary.md#item-身份规则用户已确认)，标识分配与具体创建协议继续设计。
+具体对象的创建合法性与权限由所属 BC 裁决。PLM/DQA 的共享查看范围沿用各 BC 合同。标识分配见 [T4 §4](../domain/cross-bc-contract-v1.md#4-六个用例的契约边界)。
 
 来源为本对话用户的明确答复。关联 [POL-002/007](../domain/facts.md)、[创建边界](../domain/shared-kernel-boundary.md#item-创建入口与归属用户已确认)。
 
@@ -158,9 +158,9 @@
 - **When** 用户通过合并选择将这条新增需求带回父工作集。
 - **Then** 允许在父工作集创建对应 Item，目标业务 BC 负责校验并提交。父侧对象由用户的合并决定创建，属于存在性差异的显式处理。
 
-用户已确认父子对应 Item 使用相同 CommonId、各自不同的 LocalId。默认工作集 Item 的 CommonId=LocalId，非默认工作集 Item 的 CommonId!=LocalId。标识分配及创建去重凭据待细化，见 [身份规则](../domain/glossary.md#item-身份规则用户已确认)。对象创建不会改变工作集父子链；Item 的来源或谱系如何记录继续设计。
+父侧已有有效同族时，双方均为 PRESENT，用户可合并适用字段。父侧原变体软删时，Compare 显示 ABSENT，用户选择 CREATE 后恢复原 LocalId 并写入源侧内容，恢复和更新一并提交。重复 Apply 返回原结果。两个已登记轮次竞争同一父侧席位时，先提交的一轮创建变体，后续轮次复核得到过期证据。
 
-关联 [创建边界](../domain/shared-kernel-boundary.md#item-创建入口与归属用户已确认) 与 [QUESTION-005](../domain/open-questions.md)。
+身份、来源审计与事务约束见 [T1 §8](../domain/merge-execution-contract-v1.md#8-轮次终态与结果表达)，验收见 [T6-D](../implementation/t6-d-merge-back-verification.md)。
 
 ## 直接父子双向合并新增、删除、修改
 

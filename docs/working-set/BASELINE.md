@@ -73,6 +73,7 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-13 | T6-D：用户确认回并入口、来源审计与软删恢复更新规则，见 [T1 §8](domain/merge-execution-contract-v1.md#8-轮次终态与结果表达) 和 [T6-D 验收](implementation/t6-d-merge-back-verification.md)。`mvn -B clean test` 91 项通过。 |
 | 2026-11-13 | T6-C：创建请求不再携带 CommonId；默认工作集服务端生成同一雪花作为 LocalId/CommonId，非默认工作集生成两个不等 ID，派生继承来源 CommonId；唯一冲突统一 409。见 [T6-C 验证](implementation/t6-c-identity-verification.md)；`mvn -B clean test` 88 项通过 |
 | 2026-11-13 | T6-B 按本轮实施任务补充 [T1 §8.1](domain/merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b) 的轮次并发及恢复边界，见 [SCN-074](scenarios/core-scenarios.md#scn-074) 和 [验收](implementation/t6-b-merge-recovery-verification.md)。接受范围与发布状态沿用现有基线。 |
 | 2026-11-13 | 实施边界（用户确认）：交付物为 `sk.workingset` 的契约、规范与约束；`alm.requirement` 为占位/参考实现，各业务 BC 由专门团队实现并遵守 SK 契约；参考实现不覆盖业务细节 Guard，不得以其缺失反推 SK 契约（T4 §3.3、business-object-lifecycle-design） |
