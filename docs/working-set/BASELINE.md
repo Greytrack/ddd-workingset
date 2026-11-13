@@ -73,6 +73,8 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
+| 2026-11-13 | C7：LTI 层补 `(working_set_id, common_id)` 唯一索引（`uq_lti_working_set_family`），与 requirements 的 WorkingSet 作用域家族唯一性一致，新增验收。D3-B：COW 物化的业务保存由业务 BC 独立提交，SK 物化凭据与 LTI 切换分事务，未完成部分经 Modulith 未完成事件重投收敛（T3 §7、T4 §3.2、D4 验证）；`mvn -B clean test` 79 项通过 |
+| 2026-11-12 | D6：附件/关系不参与 Compare/Merge（T1、T3 §2.1）。D7：业务对象永久删除后不保留墓碑/内容/历史，查询返回 `NotFound` 是正确语义（T4 §5.1、T2 §5）；软删仍返回 `Deleted`。D10：新增工作集入口（归属解析）作为下一片实现点（T4 §4）。D13：`RequirementPurged` 改用 Modulith 监听并接入未完成事件重投。D14：`BusinessObject` 在 SK 内声明、`TrackerItem` 继承、`Requirement` 实现（T4 §3.1/§8）。同批修复：`readInheritedAt` 检查删除（C3）、`PREPARING` 改为 `DEPENDENCY_UNAVAILABLE`（C4）、`Summary.applied` 去重（C6）；`mvn -B test` 78 项通过 |
 | 2026-11-12 | D11：现阶段不接入权限，等权限模型开发完毕后再接入；`Caller`/`authorize` 保持占位，不落地 `Denied`，见 [T4 §7](domain/cross-bc-contract-v1.md)。D4：用户选择方案 A，把 LightTrackerItem 校验与移除移回 SK，业务 BC 不再注入 SK 仓储；跨聚合用 `RequirementPurged` 事件交互，见 [T4 §3.1](domain/cross-bc-contract-v1.md) 与 [D4 边界验证](implementation/t5-d4-sk-boundary-verification.md)（`mvn -B test` 78 项通过） |
 | 2026-11-12 | D5：用户裁定 WorkingSet/Tracker **不存在“停用”概念**，相关表述与代码已清除（`assertDisableAllowed` 移除，`mvn -B test` 77 项通过），[QUESTION-009.a](domain/open-questions.md) 关闭。D8：用户按 A（工作视图/范围清单）收尾关闭 [QUESTION-001](domain/open-questions.md)，与 S1～S7 实现及本 BASELINE 一致。D9：用户裁定关闭 [QUESTION-008](domain/open-questions.md) 已实现部分（登记前/后证据分界、普通字段决策优先、部分成功、新轮次、Checkpoint），剩余并发/重试/结果恢复协议转 `QUESTION-008.a` |
 | 2026-11-12 | D1：`TrackerItem` 继承 `BusinessObject`，`BusinessObject` 声明 delete/undelete/delete2 公共能力，具体规则/guard/编排由各业务 BC 实现；设计见 [business-object-lifecycle-design.md](domain/business-object-lifecycle-design.md)，Draft，接口签名待评审。D2：Requirement 家族唯一性按 WorkingSet 作用域（用户选择 A），schema/索引已修正，见 [D2 验证](implementation/t5-d2-family-scope-verification.md) |

@@ -42,3 +42,12 @@ ComparisonToken 引用 `merge_comparisons` 中的冻结清单，含双侧 LocalI
 S7 仅覆盖 ALM Requirement 普通字段。完整历史回读、附件关系、Privilege、批量删除顺序、真实平台元数据回填及完整删除限制仍待后续切片。冻结比较和轮次目前按清单持久化，面向大范围的扫描、分批和保留策略尚无规模验证。
 
 `QUESTION-008` 已实现部分于 2026-11-12 关闭：登记前/后证据分界、普通字段决策优先、部分成功、新轮次与 Checkpoint 由本切片兑现。并发 Apply、重试/恢复入口与跨实例结果收敛仍未实现，转为 [`QUESTION-008.a`](../domain/open-questions.md)。
+
+## 2026-11-12 后续裁定与修复
+
+- **D7**：`delete2` 保持彻底清除——业务行、业务快照与 LightTrackerItem 一并移除，不保留墓碑或历史；删除后查询返回 `NotFound` 是正确语义（软删仍返回 `Deleted`）。
+- **C3**：`RequirementAdapter.readInheritedAt` 与 `readAt` 一致检查软删标记，已删除来源不再被 Compare 显示为 `PRESENT`。
+- **C4**：内容仍被未物化变体依赖时返回 `DependencyUnavailable`（HTTP 503），不再挪用 `Preparing`。
+- **C6**：`MergeRound.Summary.applied` 改为 Applied-only，不再与 `confirmed` 重复计数。
+- **D3-B**：COW 物化的业务保存由 ALM 独立提交，SK 的物化凭据与 LTI 切换分事务执行，未完成部分经 Modulith 重投收敛；本切片 Merge 的“条目应用 + LTI 切换”仍沿用独立条目事务，不按 D3-B 拆分。
+- 验证：`mvn -B test` 79 项通过（含 C7 LTI 唯一性验收）。

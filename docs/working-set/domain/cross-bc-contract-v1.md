@@ -60,7 +60,7 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 **明确不属于 `TrackerItemReadPort`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见 §3.3），不是只读契约的方法。
 
-**2026-11-12 补充设计（D1 用户裁定；Draft）**：`TrackerItem` 继承顶级公共能力接口 `BusinessObject`；`BusinessObject` 声明所有业务对象共有的 `delete`（软删）、`undelete`（恢复）、`delete2`（永久删除）能力。具体删除规则、guard、编排由各业务 BC 实现；SK 不提供通用删除实现，`TrackerItemReadPort` 仍只读。该扩展改变本节对 `TrackerItem` “只读”的表述，接口签名与 T4 修订方式待评审，详见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
+**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；`BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemReadPort` 仍保持只读；写入协作仍走各 BC 的 WritePort。`Requirement` 作为 ALM 实现已具备该能力，`RequirementLifecycleService.delete2` 先调用聚合 guard 再删除。设计见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
 
 **2026-11-12 D4 用户裁定（方案 A：移回 SK）**：`Tracker` 与 `LightTrackerItem` 两个聚合及其仓储归 SK 独占；业务 BC **不得**注入 `TrackerRepository` / `LightTrackerItemRepository`，也不接收 SK 聚合对象。物化所需的 Tracker 锁定与目标变体读取由 SK 应用层完成，业务 BC 只接收值对象 `TargetIdentity`（localId / trackerId / commonId / revision / materialized）。业务对象永久删除后的 LTI 清理由 SK 定义、业务 BC 发布的 `RequirementPurged` 事件驱动，SK 侧处理幂等。协作接口为 SK 定义的 `TrackerItemLifecyclePort`（`lockMaterializationTarget` / `assertPurgeable` / `removePurged`，由 SK 实现），不走通用 Save 或聚合透传。实现证据见 [S7 验证](../implementation/t5-s7-verification-result.md)与 [D4 边界验证](../implementation/t5-d4-sk-boundary-verification.md)。
 
@@ -77,6 +77,9 @@ SK 应用层 ──依赖──▶ <BC>WritePort（写入协作，Outbound Port�
 业务 BC ──实现──▶ 上述两个 Port 的 Adapter
 业务 BC 内部：聚合构建、整体校验、持久化、领域事件
 ```
+
+- **D3-B（2026-11-12 用户裁定）**：COW 物化的业务保存由业务 BC **独立提交**；SK 的物化凭据与 LightTrackerItem 切换在独立事务中进行，**不要求跨 BC 同事务**。未完成的凭据/切换通过 Modulith 未完成事件重投收敛（D13）；业务保存按目标身份与快照证据幂等。
+- 返回值与失败语义仍按 §5；事务实现不在本契约内，但 D3-B 是已确认的协作前提。
 
 ### 3.3 业务 BC 必须拥有的职责
 
@@ -115,20 +118,22 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 **不要求每个接口统一返回九类**：§5.2 是适用分类的唯一矩阵。原本节三个创建/扩展用例遗漏 `Preparing` 的摘要按该矩阵及 T4 评审 §3 校正。
 
+**下一片实现点（D10，2026-11-12 用户裁定）**：`create` 业务对象并纳入需要新增**工作集入口**——当前 `CreateRequirementRequest` 只有 `trackerId`，没有工作集归属解析（共享 Tracker 归默认工作集、非共享归当前工作集）。该入口作为下一片实现，不在本版冒充已完成。
+
 ## 5. 九分类公共失败语义（K2″，用户确认）
 
 ### 5.1 术语与禁止的偷换
 
 | 分类 | 含义 | 禁止的偷换 |
 | --- | --- | --- |
-| `NotFound` | 对象从未存在，或不在当前身份空间内 | 不得把「无权」「已删除」「未纳入」报成不存在 |
+| `NotFound` | 对象从未存在，或不在当前身份空间内 | 不得把「无权」「已删除」「未纳入」报成不存在。**例外（D7，2026-11-12 用户裁定）：业务对象被永久删除后不保留墓碑与内容，`NotFound` 是其正确语义**；软删仍须返回 `Deleted` |
 | `NotIncluded` | 对象存在但未纳入当前工作集范围 | **不得降级为 `NotFound`** |
 | `Denied` | 对象存在但调用方无权 | **不得降级为 `NotFound`**，不得泄露内容 |
 | `Deleted` | 已删除（不可恢复） | 不得当作「历史不可用」或「当前值缺失」 |
 | `HistoryUnavailable` | 所需历史/切点不可读 | **不得用当前值冒充历史值** |
 | `Preparing` | 范围/成员处于准备中的显式中间态 | 不得当作已完成 |
 | `CapabilityNotSupported` | 对象/BC 不支持该能力 | **不得解释为空差异或无记录** |
-| `DependencyUnavailable` | Privilege / Workflow / Class Hierarchy 等依赖不可用 | 不得默许操作通过 |
+| `DependencyUnavailable` | Privilege / Workflow / Class Hierarchy 等依赖不可用；**也用于业务对象内容仍被未物化变体依赖（COW 未完成，D7/C4）** | 不得默许操作通过；不得当作 `Preparing` 的可等待中间态 |
 | `Unknown` | 执行结果未知（回执丢失等） | **不得解释为确定未执行**；调用方须按既有幂等协议恢复或确认 |
 
 **九分类是跨 BC 的统一语义词汇表**，不是九状态聚合生命周期，也不是要求统一异常类层次。每用例只暴露适用子集（§5.2）。
@@ -178,6 +183,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | 六个用例的边界划分与适用分类矩阵 | **契约 v1（本文件冻结）** |
 | 版本治理（K3″） | **团队开放项**（`QUESTION-014`，未裁定） |
 | SK 独占 Tracker/LightTrackerItem 聚合与仓储；业务 BC 只经 `TrackerItemLifecyclePort` 与 `RequirementPurged` 事件协作（D4） | **用户确认**（2026-11-12，方案 A：移回 SK，跨聚合用事件） |
+| `BusinessObject` 在 SK 内声明 delete/undelete/delete2 能力，`TrackerItem` 继承并由各 BC 实现（D14） | **用户确认**（2026-11-12，已落地） |
 | 权限接入时机：现阶段不接入，待权限模型完成后接入（D11） | **用户确认**（2026-11-12） |
 | 具体 API 签名、包名、模块、传输协议、事务、权限缓存时效 | **不在本契约** |
 
