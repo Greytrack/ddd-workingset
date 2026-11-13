@@ -9,7 +9,7 @@
 ## 当前文档
 
 - [t5-s0-minimal-slice-design.md](t5-s0-minimal-slice-design.md)：T5-S0 首切片最小纵向切片设计（Draft；P1～P5 工程选型、A1～A3 约束、最小目录/依赖、四项能力、LightTrackerItem 不变量、接口清单与 T1～T4 冲突检查）。
-- [t5-s0-scenario-test-mapping.md](t5-s0-scenario-test-mapping.md)：AT-01～AT-05 与 AC-01/AC-02 场景-期望-测试映射（Draft）。
+- [t5-s0-scenario-test-mapping.md](t5-s0-scenario-test-mapping.md)：AT-01～AT-05 与 AC-01/AC-02 场景-期望-测试映射（Historical，S1 验收规划，已完成）。
 - [S1～S4 原任务清单](t5-s0-codex-task-plan.md)保留历史版本入口。
 - [t5-s1-verification-result.md](t5-s1-verification-result.md)：S1 验证结果（Verified，2026-11-11；`mvn test` 12 项通过，含 AT-01/AT-02/AC-01/AC-02）。
 - [t5-s2-verification-result.md](t5-s2-verification-result.md)：S2 验证结果（Verified，2026-11-11；`mvn test` 35 项通过，含 AT-03 前半、事件信封/顺序、并发冲突、Spring 上下文与雪花 ID）。
@@ -21,6 +21,7 @@
 - [S7 Merge 执行验证](t5-s7-verification-result.md)记录 Compare、MergeRound、Checkpoint 和 Requirement 删除生命周期的真实验收。
 - [t5-d2-family-scope-verification.md](t5-d2-family-scope-verification.md)：D2 Requirement 家族唯一性按 WorkingSet 作用域（Reviewed，2026-11-12；`mvn test` 77 项通过；真实 PostgreSQL）。
 - [t5-d4-sk-boundary-verification.md](t5-d4-sk-boundary-verification.md)：D4 把 LTI 校验与移除移回 SK，业务 BC 只经 `TrackerItemLifecyclePort` 与 `RequirementPurged` 事件协作（Reviewed，2026-11-12；`mvn test` 78 项通过）。
+- [t6-next-stage-outline.md](t6-next-stage-outline.md)：T6 下一阶段实施大纲（Draft；切片顺序、验收与一致性门禁）。
 - [t5-runtime-verification.md](t5-runtime-verification.md)：运行时骨架验证（Verified，2026-11-12；Spring Boot Web 7102 + PostgreSQL/JdbcTemplate + Redis 缓存 + Spring Modulith Event Publication Registry；`mvn test` 37 项通过，含 API/数据库/缓存与容器验收测试）。
 
 配套：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)、[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)。

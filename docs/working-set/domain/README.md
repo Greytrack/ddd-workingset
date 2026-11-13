@@ -9,7 +9,7 @@
 ## 已接受领域文档
 
 - [facts-policy-baseline-v1.md](facts-policy-baseline-v1.md)：事实与政策主题基线 v1（Accepted，2026-11-10；覆盖阶段 3.1 的 R01—R19 与限定术语）；
-- [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：首版领域模型基线候选 v1（Accepted 候选，含 D-001～D-019 与阶段 4 补充；未正式发布）。
+- [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：首版领域模型基线候选 v1（Historical，作为 2026-11-10 接受依据保留；当前权威入口见 [BASELINE](../BASELINE.md)）。
 
 ## 阶段 5 契约
 

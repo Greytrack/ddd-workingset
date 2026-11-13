@@ -1,6 +1,6 @@
 # T5 首切片架构与 COW 时序
 
-**状态：Draft，实施视图。** 范围为 ALM Requirement 普通字段。依据见 [首切片设计](../implementation/t5-s0-minimal-slice-design.md)、[T3 物化契约](../domain/lighttrackeritem-materialization-contract-v1.md)和 [S4 验证结果](../implementation/t5-s4-verification-result.md)。部署与跨实例顺序另议。
+**状态：Historical（S0 实施视图）。** D4/D15 已改变物化与 Merge 的事务边界，当前实现见 [D4 边界验证](../implementation/t5-d4-sk-boundary-verification.md) 与 [S7 验证](../implementation/t5-s7-verification-result.md)；本图保留为 S0 阶段证据。
 
 ## 组件依赖
 

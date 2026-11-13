@@ -1,6 +1,6 @@
 # Working Set 首版领域模型基线候选 v1
 
-**状态：Accepted（候选基线；未正式发布，未 Commit/Tag）**
+**状态：Historical（首版候选基线；作为 2026-11-10 接受依据保留，当前权威入口见 [BASELINE.md](../BASELINE.md)）**
 
 - 版本：v1（基于 D-001～D-019）
 - 日期：2026-11-10

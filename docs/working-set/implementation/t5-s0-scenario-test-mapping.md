@@ -1,6 +1,6 @@
 # T5-S0 场景-期望-测试映射表
 
-**状态：Draft（S1 验收规划；不含测试代码）**
+**状态：Historical（S1 验收规划，已完成）。** 当前验收证据见 [S1](t5-s1-verification-result.md)～[S7](t5-s7-verification-result.md) 验证结果；本表保留为规划记录。
 
 - 日期：2026-11-11
 - 依据：[T5-S0 最小纵向切片设计](t5-s0-minimal-slice-design.md)、T3（物化协议）、T4（Port/Adapter、九分类）、T2（非共享派生）
