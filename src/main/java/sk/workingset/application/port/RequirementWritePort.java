@@ -3,7 +3,6 @@ package sk.workingset.application.port;
 import java.util.List;
 
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 
 public interface RequirementWritePort {
     /**
@@ -18,5 +17,5 @@ public interface RequirementWritePort {
 
     void lockMergeEvidence(List<LocalId> ids);
 
-    Revision applyMerge(RequirementMergeCommand command);
+    RequirementMergeCommand.Result applyMerge(RequirementMergeCommand command);
 }

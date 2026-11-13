@@ -118,6 +118,10 @@ public class MergeComparisonService {
                         : new TrackerPair(tracker.sourceId(), tracker.trackerId()))).toList();
     }
 
+    boolean isMergeBack(WorkingSetId source, WorkingSetId target) {
+        return target.equals(workingSet(source).parentWorkingSetId());
+    }
+
     private boolean parentIncludes(WorkingSet source, WorkingSet target, TrackerId trackerId) {
         WorkingSet parent = source.id().equals(target.parentWorkingSetId()) ? source : target;
         return trackers.findTracker(trackerId)
@@ -167,8 +171,7 @@ public class MergeComparisonService {
             var revision = variant == null || !inherited ? stamp.revision() : variant.revision();
             var contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
             if (!inherited && stamp.deleted()) {
-                return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),
-                        Presence.DELETED, null, Map.of());
+                return Side.absent();
             }
             var content = inherited ? port.readInheritedAt(contentRevision) : port.readAt(contentRevision);
             return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),

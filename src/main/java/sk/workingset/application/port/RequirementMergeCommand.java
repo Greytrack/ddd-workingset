@@ -11,6 +11,10 @@ import sk.workingset.domain.TrackerId;
 public record RequirementMergeCommand(String roundId, String entryId, String token, Operation operation,
                                       TrackerId trackerId, CommonId commonId, LocalId localId,
                                       Revision revision, Long expectedLockVersion, String version,
-                                      Map<String, Object> baseFields, Map<String, Object> acceptedFields) {
+                                      Map<String, Object> baseFields, Map<String, Object> acceptedFields,
+                                      boolean mergeBackCreate) {
     public enum Operation { CREATE, UPDATE, DELETE, RESTORE }
+
+    /** 目标 BC 实际提交的变体身份及其版次。 */
+    public record Result(LocalId localId, Revision revision, boolean created) {}
 }

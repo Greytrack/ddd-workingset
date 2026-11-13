@@ -79,6 +79,7 @@ class MergeAcceptanceTest {
     private final List<String> rounds = new ArrayList<>();
     private final List<String> worksets = new ArrayList<>();
     private String childTracker;
+    private String childAnchor;
 
     @BeforeEach
     void setup() {
@@ -91,7 +92,9 @@ class MergeAcceptanceTest {
         createChild("1", child);
         assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(child) + "/spaces/" + space, null, Void.class));
         var source = seed(rootTracker, anchor, "same");
-        childTracker = derive(child, rootTracker, source, anchor).trackerId();
+        var derived = derive(child, rootTracker, source, anchor);
+        childTracker = derived.trackerId();
+        childAnchor = derived.item().localId();
     }
 
     @AfterEach
@@ -169,6 +172,105 @@ class MergeAcceptanceTest {
         var afterDelete = compare(source, target);
         assertEquals(Presence.ABSENT, diff(afterDelete, remove).target().presence());
         assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + removedId, Map.class));
+    }
+
+    @Test
+    void mergesNativeChildItemBackToDefaultParentWithFamilyIdentity() {
+        assertNativeMergeBack("1", child, rootTracker, childTracker);
+    }
+
+    @Test
+    void mergesNativeChildItemBackToNonDefaultParentAndRestoresItsOriginalVariant() {
+        String grandchild = id("grandchild");
+        createChild(child, grandchild);
+        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(grandchild) + "/spaces/" + space, null, Void.class));
+        String grandTracker = derive(grandchild, childTracker, childAnchor, anchor).trackerId();
+        assertNativeMergeBack(child, grandchild, childTracker, grandTracker);
+    }
+
+    private void assertNativeMergeBack(String parent, String sourceWs, String parentTracker, String sourceTracker) {
+        var source = createRequirement(sourceWs, sourceTracker, "native child item");
+        var comparison = compare(sourceWs, parent);
+        var difference = diff(comparison, source.commonId());
+        assertEquals(Presence.ABSENT, difference.target().presence());
+        String round = start(parent, comparison);
+        assertNotNull(register(round, existence(difference, "CREATE"))[0].entryId());
+        var created = apply(round);
+        assertEquals(State.Succeeded, created.state());
+        String parentLocal = created.itemResults().getFirst().businessRef();
+        var target = requirement(parentLocal);
+        assertEquals(parentTracker, target.trackerId());
+        assertEquals(source.commonId(), target.commonId());
+        assertFalse(source.localId().equals(target.localId()));
+        assertEquals("1".equals(parent), target.localId().equals(target.commonId()));
+        assertEquals(source.title(), target.title());
+        assertEquals(created, apply(round));
+        if (!"1".equals(parent)) {
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertStatus(HttpStatus.OK,
+                    rest.getForEntity(ws(parent) + "/items/" + parentLocal, Map.class)));
+        }
+
+        change(source.localId(), "updated child", 0);
+        var active = compare(sourceWs, parent);
+        assertEquals(Presence.PRESENT, diff(active, source.commonId()).target().presence());
+        assertNotNull(register(start(parent, active), existence(diff(active, source.commonId()), "CREATE"))[0].failure());
+
+        assertStatus(HttpStatus.NO_CONTENT,
+                rest.postForEntity("/api/requirements/" + parentLocal + "/delete", null, Void.class));
+        assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + parentLocal, Map.class));
+        var afterDelete = compare(sourceWs, parent);
+        var absent = diff(afterDelete, source.commonId());
+        assertEquals(Presence.ABSENT, absent.target().presence());
+        assertNotNull(register(start(parent, afterDelete), existence(absent, "RESTORE"))[0].failure());
+        var fresh = compare(sourceWs, parent);
+        String restoreRound = start(parent, fresh);
+        assertNotNull(register(restoreRound, existence(diff(fresh, source.commonId()), "CREATE"))[0].entryId());
+        var restored = apply(restoreRound);
+        assertEquals(State.Succeeded, restored.state(), restored::toString);
+        assertEquals(parentLocal, restored.itemResults().getFirst().businessRef());
+        assertEquals("updated child", requirement(parentLocal).title());
+        assertEquals(target.revision(), requirement(parentLocal).revision());
+        assertEquals(source.commonId(), requirement(source.localId()).commonId());
+        assertEquals(sourceWs, rest.getForObject(ws(sourceWs), WorkingSetController.WorkingSetView.class).workingSetId());
+        assertEquals(parent, rest.getForObject(ws(sourceWs), WorkingSetController.WorkingSetView.class).parentWorkingSetId());
+        assertEquals(restored, apply(restoreRound));
+    }
+
+    @Test
+    void concurrentMergeBackRoundsCommitOnlyOneVariant() throws Exception {
+        var source = createRequirement(child, childTracker, "concurrent child item");
+        var first = compare(child, "1");
+        var second = compare(child, "1");
+        String firstRound = start("1", first);
+        String secondRound = start("1", second);
+        assertNotNull(register(firstRound, existence(diff(first, source.commonId()), "CREATE"))[0].entryId());
+        assertNotNull(register(secondRound, existence(diff(second, source.commonId()), "CREATE"))[0].entryId());
+
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var one = executor.submit(() -> {
+                start.await();
+                return apply(firstRound);
+            });
+            var two = executor.submit(() -> {
+                start.await();
+                return apply(secondRound);
+            });
+            start.countDown();
+            var outcomes = List.of(one.get(10, TimeUnit.SECONDS).itemResults().getFirst().outcome(),
+                    two.get(10, TimeUnit.SECONDS).itemResults().getFirst().outcome());
+            assertTrue(outcomes.contains(Outcome.Applied), outcomes::toString);
+            assertTrue(outcomes.contains(Outcome.StaleEvidence), outcomes::toString);
+        }
+        assertEquals(source.title(), requirement(source.commonId()).title());
+    }
+
+    private RequirementView createRequirement(String workset, String tracker, String title) {
+        var response = rest.postForEntity("/api/requirements", Map.of("workingSetId", workset,
+                "trackerId", tracker, "title", title, "description", "description", "revision", 3),
+                RequirementView.class);
+        assertStatus(HttpStatus.CREATED, response);
+        return response.getBody();
     }
 
     @Test
@@ -400,6 +502,10 @@ class MergeAcceptanceTest {
                 VALUES (?, '1', ?, ?, 'SHARED')
                 """, shared, space, sharedClassification);
         assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(child) + "/trackers/shared/" + shared, null, Void.class));
+        var sharedItem = createRequirement(child, shared, "shared child entry");
+        assertEquals(sharedItem.localId(), sharedItem.commonId());
+        assertTrue(compare(child, "1").differences().stream()
+                .noneMatch(item -> sharedItem.commonId().equals(item.family().value())));
         assertStatus(HttpStatus.CONFLICT,
                 rest.postForEntity(ws(child) + "/compare/1?trackerId=" + shared, null, Map.class));
 

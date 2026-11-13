@@ -104,6 +104,10 @@ public final class Requirement implements TrackerItem {
     }
 
     public Requirement undelete(LockVersion expectedLockVersion) {
+        return restoreContent(title, description, expectedLockVersion);
+    }
+
+    public Requirement restoreContent(String title, String description, LockVersion expectedLockVersion) {
         verifyLockVersion(expectedLockVersion);
         if (!deleteFlag) {
             throw new IllegalArgumentException("Requirement is already active");

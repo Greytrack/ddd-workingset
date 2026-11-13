@@ -92,6 +92,15 @@ public class JdbcRequirementRepository implements RequirementRepository {
                 MAPPER, id.value()).stream().findFirst();
     }
 
+    public Optional<Requirement> lockFamilyInWorkingSet(TrackerId trackerId, CommonId commonId) {
+        return jdbc.query("""
+                SELECT r.* FROM requirements r
+                WHERE r.working_set_id = (SELECT working_set_id FROM trackers WHERE tracker_id = ?)
+                  AND r.common_id = ?
+                FOR UPDATE
+                """, MAPPER, trackerId.value(), commonId.value()).stream().findFirst();
+    }
+
     public void purge(Requirement requirement) {
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", requirement.localId().value());
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", requirement.localId().value());

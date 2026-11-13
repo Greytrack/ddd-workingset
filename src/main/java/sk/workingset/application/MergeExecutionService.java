@@ -296,17 +296,19 @@ public class MergeExecutionService {
             boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
             boolean create = action == Operation.CREATE;
             comparisons.assertWriteCapability(current, create, caller);
-            targetRevision = writer.applyMerge(new RequirementMergeCommand(round.id(), entry.id(), round.token(), action,
+            var committed = writer.applyMerge(new RequirementMergeCommand(round.id(), entry.id(), round.token(), action,
                     current.trackers().target(), current.family(), localId, create ? source.revision() : target.revision(),
                     inherited || create ? null : target.lockVersion(), create ? source.version() : target.version(),
-                    create ? source.fields() : target.fields(), accepted));
-            var mergeTarget = new MergeTarget(localId, current.family(), current.trackers().target(),
+                    create ? source.fields() : target.fields(), accepted,
+                    create && comparisons.isMergeBack(round.source(), round.target())));
+            targetRevision = committed.revision();
+            businessRef = committed.localId();
+            var mergeTarget = new MergeTarget(businessRef, current.family(), current.trackers().target(),
                     round.target(), targetRevision, inherited,
-                    create && !WorkingSet.DEFAULT_ID.equals(round.target()));
+                    create && committed.created() && !WorkingSet.DEFAULT_ID.equals(round.target()));
             if (mergeTarget.inherited() || mergeTarget.create()) {
                 events.publishEvent(new RequirementMergeApplied(mergeTarget, Instant.now()));
             }
-            businessRef = localId;
         }
         return new MergeCommitReceipt(businessRef, current.source().revision(), targetRevision);
     }

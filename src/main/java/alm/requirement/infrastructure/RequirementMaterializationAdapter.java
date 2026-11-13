@@ -12,7 +12,6 @@ import sk.workingset.application.port.RequirementMergeCommand;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 
 /**
  * ALM 写入协作 Adapter（D4 方案 A）。
@@ -39,7 +38,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     }
 
     @Override
-    public Revision applyMerge(RequirementMergeCommand command) {
+    public RequirementMergeCommand.Result applyMerge(RequirementMergeCommand command) {
         return mergeWriter.apply(command);
     }
 

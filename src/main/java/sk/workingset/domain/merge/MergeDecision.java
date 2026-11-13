@@ -41,7 +41,7 @@ public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction exi
     private static boolean allowed(ExistenceAction action, Presence source, Presence target) {
         return switch (action) {
             case CREATE -> source == Presence.PRESENT && target == Presence.ABSENT;
-            case RESTORE -> source == Presence.PRESENT && target == Presence.DELETED;
+            case RESTORE -> false;
             case DELETE -> source != Presence.PRESENT && target == Presence.PRESENT;
             case KEEP_TARGET, DEFER -> true;
         };
