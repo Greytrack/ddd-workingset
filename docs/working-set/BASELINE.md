@@ -73,7 +73,7 @@
 
 | 日期 | 记录与确认依据 |
 | --- | --- |
-| 2026-11-13 | T7 立项：创建工作集作为异步 LRO（不替换现有原子操作）；用户确认异步轮询、非共享 Tracker 全量 Item（剔除软删）、共享 Tracker 用户选择、批量 LTI 允许部分成功且不补偿/不重试、索引后事件构建关系/引用、复用 MergeRound 模式。设计见 [LRO 设计](domain/working-set-creation-lro-design.md)（Draft，未发布） |
+| 2026-11-13 | T7-A：用户确认 [创建 LRO 契约](domain/working-set-creation-lro-design.md)及终态前的 `Preparing` 行为。T7-B 的空范围异步任务、轮询与幂等受理见 [验收记录](implementation/t7-b-creation-task-verification.md)。正式发布状态沿用现有基线。 |
 | 2026-11-13 | T6-D：用户确认回并入口、来源审计与软删恢复更新规则，见 [T1 §8](domain/merge-execution-contract-v1.md#8-轮次终态与结果表达) 和 [T6-D 验收](implementation/t6-d-merge-back-verification.md)。`mvn -B clean test` 91 项通过。 |
 | 2026-11-13 | T6-C：创建请求不再携带 CommonId；默认工作集服务端生成同一雪花作为 LocalId/CommonId，非默认工作集生成两个不等 ID，派生继承来源 CommonId；唯一冲突统一 409。见 [T6-C 验证](implementation/t6-c-identity-verification.md)；`mvn -B clean test` 88 项通过 |
 | 2026-11-13 | T6-B 按本轮实施任务补充 [T1 §8.1](domain/merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b) 的轮次并发及恢复边界，见 [SCN-074](scenarios/core-scenarios.md#scn-074) 和 [验收](implementation/t6-b-merge-recovery-verification.md)。接受范围与发布状态沿用现有基线。 |

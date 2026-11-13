@@ -1,6 +1,6 @@
 # T7 实施提示词（工作集创建 LRO）
 
-> 交给实施者的完整任务说明。T7 是新增的“按范围异步创建工作集”用例，不替换现有原子操作。先读设计与契约，再实现；每片完成后停下等待确认。
+> T7 是新增的“按范围异步创建工作集”用例。每片完成后停下等待确认。[T7-A 评审](../reviews/2026-11-13-t7-a-creation-lro-review.md)已记录绑定前置、内容来源和接口细节。
 
 ## 0. 角色与目标
 
@@ -58,7 +58,7 @@
 
 ### T7-D 批量 LTI 索引
 - 分页读取父 Tracker 下 Item 身份（`localId/commonId/revision`，剔除软删）；
-- 为每个 Item 创建 LTI（`CommonId` 继承、`LocalId` 雪花、`SourceLocalId=父 LocalId`、`SourceRevision=父 Revision`）；
+- 为每个 Item 创建 LTI，身份及有效内容来源遵循 [LRO 设计 §4.5](../domain/working-set-creation-lro-design.md#45-身份与-lti-索引)；
 - 分批提交；逐项记录成功/失败/跳过；部分成功；
 - 重复执行/重入幂等（已存在 LTI 跳过并记录）。
 
@@ -81,7 +81,7 @@
 - 关键步骤（创建本体）失败：任务 `Failed`，明细可读。
 - 重复提交返回已有任务；任务不提供重试接口。
 - 关系构建事件：索引完成后触发；构建失败可在明细读取（或按 QUESTION-010 暂缓该步骤）。
-- `mvn -B clean test` 全绿（当前 88 项 + 新增），含 ArchUnit、真实 PostgreSQL/Redis/Tomcat。
+- `mvn -B clean test` 全绿（T6-D 91 项 + 新增），含 ArchUnit、真实 PostgreSQL/Redis/Tomcat。
 
 ## 7. 全局约束
 

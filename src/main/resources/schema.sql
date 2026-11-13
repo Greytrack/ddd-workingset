@@ -264,3 +264,14 @@ CREATE TABLE IF NOT EXISTS merge_commit_receipts (
     target_revision INTEGER,
     PRIMARY KEY (round_id, entry_id)
 );
+CREATE TABLE IF NOT EXISTS working_set_creations (
+    id VARCHAR(64) PRIMARY KEY,
+    parent_working_set_id VARCHAR(128) NOT NULL,
+    new_working_set_id VARCHAR(128) NOT NULL UNIQUE,
+    request_id VARCHAR(128) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    result JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ
+);

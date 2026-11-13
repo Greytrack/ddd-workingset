@@ -268,3 +268,7 @@ SourceRevision 当前值读取与首次 COW 快照适用于普通字段；附件
 - **MergeCheckpoint／合并检查点**：**独立聚合**，表达「差异已处理」的确认/撤销事实，不等同内容相等；键候选为有向 source-target-family，确认/撤销需因果单调。
 - **差异冻结／比较令牌**：待定执行协议（`QUESTION-015`），尚未确认机制，不得据此宣称 D-019 已确定执行细节。
 - 准入与物化：未物化变体可参与 Diff；未物化目标被 Merge 修改时在 merge 中构建业务聚合正常 save（物化与修改一体）；共享 Tracker 不参与 Merge，非共享只允许直接父子准入。
+
+## 工作集创建任务（T7）
+
+**工作集创建任务（WorkingSetCreation）**：一次按用户选择的范围创建子工作集的异步执行记录。任务保存选择范围、进度和结果，通过身份关联工作集及其成员。见 [T7 设计](working-set-creation-lro-design.md)。

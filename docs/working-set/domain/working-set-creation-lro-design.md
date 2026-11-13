@@ -1,9 +1,10 @@
 # 工作集创建 LRO 设计（T7）
 
-**状态：Draft（2026-11-13；用户决策已记录，设计待评审，未发布）**
+**状态：Reviewed（T7-A；§2 保留已确认决策，接口与运行细节见 [T7-A 评审](../reviews/2026-11-13-t7-a-creation-lro-review.md)，未发布）**
 
 - 依据：[FACT-028](../domain/facts.md)、[多级 WorkingSet 谱系](working-set-lineage-design.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[T3 物化](lighttrackeritem-materialization-contract-v1.md)、[T4 跨 BC](cross-bc-contract-v1.md)、[T1 Merge 执行](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)
 - 范围：创建工作集的异步长流程（LRO）；区别于现有的原子操作入口
+- 追溯：[状态图](../diagrams/working-set-creation-lro.md)、[SCN-075](../scenarios/core-scenarios.md#scn-075-按范围异步创建工作集)
 - 不包含：权限（D11 延后）、附件/关系参与 Merge（D6）、停用（D5）
 
 ## 1. 背景与定位
@@ -50,9 +51,9 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | --- | --- | --- | --- |
 | `CREATE_WORKING_SET` | 创建子 WS 本体（`parentWorkingSetId`） | — | 失败 → 任务 `Failed`，停止 |
 | `COPY_UNSHARED_TRACKERS` | 为每个选定的父 Tracker 复制一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`） | 本体 | 单项失败记录明细，继续其他项 |
-| `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制 | 同上 |
-| `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 本体 | 同上 |
 | `BIND_PRODUCT_SPACES` | 绑定用户选定的产品空间 | 本体 | 同上 |
+| `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
+| `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
 | `INDEX_UNSHARED_TRACKERS` | 对每个子 Tracker 下父 Tracker 的**全部 Item（剔除软删）**创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
 | `LINK_RELATIONS` | 索引完成后发布事件，异步构建引用/关联（依赖 QUESTION-010） | 索引 | 记录失败项；不阻断任务整体 |
 
@@ -77,31 +78,32 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ### 4.5 身份与 LTI 索引
 
-- 每个非共享父 Tracker 复制为**一个**子 Tracker（`sourceId=父 Tracker`），不是“每个 Item 一个新 Tracker”。
-- 子 Tracker 下每个父 Item（**`delete_flag=false`**）创建一条 LightTrackerItem：
+- 每个非共享父 Tracker 复制为**一个**子 Tracker（`sourceId=父 Tracker`）。所选 Tracker 的空间必须在请求的空间范围内，复制前检查该前置；实际建立 TrackerBinding 时仍按 T2 复核。
+- 对每个有效父 Item 创建一条 LightTrackerItem，父范围包括业务原生 Item 与已纳入的 LTI，重合身份只计一次：
   - `CommonId` 继承父 Item；`LocalId` 由服务端雪花生成；
-  - `SourceLocalId=父 Item LocalId`、`SourceRevision=父 Revision`；
-  - 不复制业务内容（T3）。
+  - 自身 Revision 固定为父变体 Revision。父变体已有本地业务内容时以父 LocalId 和 Revision 为有效来源。父变体仍为 Source-backed 时沿用其实际 `SourceLocalId` 和 `SourceRevision`，见 [T3 §4](lighttrackeritem-materialization-contract-v1.md#4-双态契约与状态判定)。
+  - 普通业务字段按 T3 读取，附件与关系的派生基准仍按 T3 §2.1。
 - 软删 Item 剔除（C11/D16）；永久删除的 Item 不存在，天然不参与。
 - 批量索引需分页读取父 Tracker 下的 Item 身份（`CommonId/LocalId/Revision`）与来源；现有 `RequirementCatalog.identities` 只有 `localId/commonId`，T7 需扩展为分页的 `TrackerItemCatalog`（见 §7）。
 
 ### 4.6 关系/引用构建
 
 - LTI 索引步骤完成后发布事件（如 `TrackerItemsIndexed` / `WorkingSetIndexCreated`），SK 侧异步监听并构建引用/关联关系。
-- 关系模型依赖 QUESTION-010（Reference/Association 的身份、钉版、悬空、修复）；T7 先定义事件契约与失败明细，关系实体与规则在 T7-E 落地。
+- 关系模型依赖 QUESTION-010（Reference/Association 的身份、钉版、悬空、修复）。T7-E 先交付索引完成事实、关系协作端口和失败记录，关系规则待 QUESTION-010 裁定。评审建议轮询显式标记关系步骤暂缓。
 - 关系构建失败记录在任务明细；不阻断已完成的索引与工作集本体。
 
 ## 5. 事务、事件与一致性
 
 - 每个步骤/批次独立事务提交；LRO 只推进状态与结果，不把全流程放进一个大事务（避免长锁与跨聚合大事务）。
 - 批量 LTI 按批提交（批大小可配置），逐项记录成功/失败；部分成功保留。
-- 事件沿用 Modulith 未完成事件重投（与 T6-B/D13 一致）；关系构建事件失败可重投。
+- 事件沿用 Modulith 未完成事件重投（与 T6-B/D13 一致）。重投仅接续中断前尚无持久化结论的执行；已记录的业务失败保持终态。成功的副作用和对应进度在同一事务提交。
 - 不补偿：失败不回滚已创建的子 WS/Tracker/LTI；子 WS 与父 WS 独立，失败不影响父级。用户可自行按 T2 K3 删除叶子子 WS。
+- 可见性（T7-A 用户确认）：从任务受理到终态前，现有入口查询或使用目标工作集时返回 `Preparing`。轮询入口继续开放，终态后按实际提交结果访问工作集。内部执行者通过任务自身的执行入口推进。
 
 ## 6. 幂等与并发
 
-- 请求带幂等键（`parentWorkingSetId + newWorkingSetId + requestId`）；重复提交返回已有任务，不重复执行。
-- 同一 `newWorkingSetId` 只允许一个创建任务；已存在子 WS → 任务失败并记录明细。
+- 请求以 `(parentWorkingSetId, newWorkingSetId, requestId)` 为幂等键。相同键、相同规范化范围返回已有任务；相同键但范围不同返回 HTTP 409。
+- 同一 `newWorkingSetId` 只允许一个创建任务，其他任务请求返回 HTTP 409。若没有既有任务、但子 WS 已经由其他入口创建，受理后的本体步骤记录失败。
 - 步骤内已存在的 Tracker/LTI（重入/重复执行）视为已完成并记录“skipped”，不重复创建；唯一索引兜底。
 - 不开放任务重试接口；失败后由人工查看明细并决定后续（删除子 WS 或手工补齐）。
 
@@ -113,20 +115,17 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 CREATE TABLE IF NOT EXISTS working_set_creations (
     id VARCHAR(64) PRIMARY KEY,
     parent_working_set_id VARCHAR(128) NOT NULL,
-    new_working_set_id VARCHAR(128) NOT NULL,
-    idempotency_key VARCHAR(256) NOT NULL,
+    new_working_set_id VARCHAR(128) NOT NULL UNIQUE,
+    request_id VARCHAR(128) NOT NULL,
     status VARCHAR(32) NOT NULL,
-    requested_by VARCHAR(128),
-    result JSONB,
-    created_at TIMESTAMP NOT NULL,
-    started_at TIMESTAMP,
-    completed_at TIMESTAMP
+    result JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_idempotency ON working_set_creations (idempotency_key);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_new_ws ON working_set_creations (new_working_set_id);
 ```
 
-- `result` 保存步骤明细与失败明细（JSONB，D12-A 的规模风险同 MergeRound；T7-F 验证）。
+- `result` 保存规范化请求、发起人、进度和失败明细。目标 ID 唯一约束负责并发受理，服务复核完整幂等键和请求范围。JSONB 的规模风险在 T7-F 验证。
 
 ### 7.2 端口
 
@@ -136,8 +135,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_new_ws ON working_set_creations (new_wo
 
 ### 7.3 REST
 
-- `POST /api/working-set-creations`：`parentWorkingSetId`、`newWorkingSetId`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`、幂等键；返回 `creationId` 与初始状态。
-- `GET /api/working-set-creations/{id}`：状态、当前步骤、进度、步骤结果、失败明细。
+- `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`newWorkingSetId`、`requestId`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`。范围按集合比较，空集合合法。首次返回 HTTP 202、`creationId`、`status` 和轮询 `Location`。相同请求复用任务并返回当前状态。
+- `GET /api/working-set-creations/{id}` 返回专用任务视图，字段包括 `creationId`、`status`、`stage`、`progress`、`failures` 和任务时间。进度按步骤记录成功、失败和跳过数，扫描结束前允许总数未知。不存在的任务返回 HTTP 404。
+- `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason` 使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。
 - 轮询由前端按状态终止（`Succeeded/PartiallySucceeded/Failed`）。
 
 ## 8. 失败、部分成功与不补偿
@@ -161,11 +161,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_new_ws ON working_set_creations (new_wo
 
 ## 11. 开放问题（T7 内需确认）
 
-1. 任务状态命名与失败明细字段的最终 API 形状（是否公开 JSONB 或用视图）。
-2. `LINK_RELATIONS` 依赖 QUESTION-010；关系模型未定前，T7-E 只落事件契约与失败明细，还是暂缓该步骤。
-3. 批量大小、分页大小、任务结果保留期限。
-4. 创建任务是否支持取消（用户决策未提；暂不提供，失败/完成即终止）。
-5. 失败后是否允许“基于已有子 WS 再跑一次补齐”（不重试任务，但可新建任务）；需确认是否与“一次失败或成功”冲突。
+- 批大小、分页大小与结果保留在 T7-F 验证。取消和基于已有子工作集发起补齐任务仍待单独决策。
 
 ## 12. 实施切片（T7-A～F）
 
@@ -180,5 +176,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_wsc_new_ws ON working_set_creations (new_wo
 
 ## 13. 状态与下一步
 
-- 用户决策已记录；本设计待评审。
-- 建议先做 T7-A（评审契约与 API），再实现 T7-B 骨架；T7-E 在 QUESTION-010 有裁定后启动。
+- T7-A 评审及运行中可见性已获用户确认。关系模型仍依赖 QUESTION-010。

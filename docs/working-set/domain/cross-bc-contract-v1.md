@@ -119,6 +119,8 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | `diff` 有向比较 | 固定方向与冻结证据、组织差异（T1 已定 `ComparisonToken`） | 定义字段语义、相等规则、不可比较与脱敏字段 | §5.2；执行期见 T1 |
 | `merge` 应用并确认 | 保存决定、编排执行、记录结果与 Checkpoint（T1 已定） | 重新授权、整体校验、提交目标变化 | §5.2；执行结果见 T1 |
 
+**按范围异步创建工作集（T7-A 用户确认）**：SK 管理创建任务和范围绑定，业务 BC 提供按 Tracker 分页的有效 Item 身份与业务 Revision。SK 将业务目录与已纳入的 LTI 合并，依据 T3 确定有效内容来源。任务受理、轮询及 `Preparing` 的边界见 [T7 LRO 设计](working-set-creation-lro-design.md)。
+
 **不要求每个接口统一返回九类**：§5.2 是适用分类的唯一矩阵。原本节三个创建/扩展用例遗漏 `Preparing` 的摘要按该矩阵及 T4 评审 §3 校正。
 
 **工作集入口（D10，2026-11-13 已实现）**：`CreateRequirementRequest` 增加 `workingSetId`（为空时默认默认工作集）；共享 Tracker 实际归属默认工作集、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建，否则返回 `NotIncluded`。业务 BC 通过 SK 的 `TrackerScopePort` 解析归属，不直接访问 SK 仓储；实际 `working_set_id` 仍由 Tracker 派生。
