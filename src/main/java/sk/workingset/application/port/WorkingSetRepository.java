@@ -6,6 +6,7 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
+/** WorkingSet 聚合存取、绑定关系与谱系查询（子级/祖先）。 */
 public interface WorkingSetRepository {
     Optional<WorkingSet> findWorkingSet(WorkingSetId id);
     Optional<WorkingSet> lockWorkingSet(WorkingSetId id);

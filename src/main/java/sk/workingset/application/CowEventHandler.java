@@ -12,6 +12,12 @@ import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.LightTrackerItem;
 
+/**
+ * COW 物化处理器：来源业务对象更新后，把未物化变体物化为本地内容。
+ *
+ * <p>D3-B：读目标身份、业务保存、SK 凭据/切换各用独立事务；失败记录到
+ * {@link CowFailureLog} 并抛出聚合异常，未完成事件由 Modulith 重投。
+ */
 public final class CowEventHandler {
     private final LightTrackerItemRepository items;
     private final TrackerItemLifecyclePort lifecycle;

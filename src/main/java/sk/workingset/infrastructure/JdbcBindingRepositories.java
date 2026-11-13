@@ -20,6 +20,7 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
+/** WorkingSet/Tracker/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。 */
 public final class JdbcBindingRepositories implements WorkingSetRepository, TrackerRepository, ProductSpaceRepository {
     private final JdbcTemplate jdbc;
 

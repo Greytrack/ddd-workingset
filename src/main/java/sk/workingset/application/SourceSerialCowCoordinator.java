@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sk.workingset.domain.LocalId;
 
+/** 按来源串行执行 COW：同一来源的事件按顺序处理，避免旧事件覆盖新快照。 */
 public final class SourceSerialCowCoordinator {
     private static final Logger log = LoggerFactory.getLogger(SourceSerialCowCoordinator.class);
     private static final int RECENT_SOURCE_LIMIT = 1024;

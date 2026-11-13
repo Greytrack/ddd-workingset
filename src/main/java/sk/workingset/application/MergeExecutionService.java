@@ -43,6 +43,13 @@ import sk.workingset.domain.merge.MergeRound.ItemResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
 import sk.workingset.domain.merge.MergeRound.State;
 
+/**
+ * Merge 轮次执行：逐条应用决定、记录结果与终态。
+ *
+ * <p>D15-B：条目业务 apply 在独立事务提交；目标变体切换/创建由
+ * {@code RequirementMergeApplied} 事件在 SK 独立事务完成，二者不共用条目事务。
+ * 条目失败按 Rejected/Conflict/StaleEvidence 记录，不影响已成功条目。
+ */
 public class MergeExecutionService {
     private static final Logger log = LoggerFactory.getLogger(MergeExecutionService.class);
 

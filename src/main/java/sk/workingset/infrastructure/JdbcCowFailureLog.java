@@ -10,6 +10,7 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 
+/** COW 失败日志的 JDBC 实现；每条失败独立事务写入，避免随业务回滚丢失。 */
 public final class JdbcCowFailureLog implements CowFailureLog {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate newTransactionTemplate;

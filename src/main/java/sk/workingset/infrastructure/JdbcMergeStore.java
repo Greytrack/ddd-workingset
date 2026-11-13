@@ -12,6 +12,7 @@ import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
 
+/** Merge 存储的 JDBC 实现：比较证据与轮次状态按 JSONB 整份保存（D12-A 切片实现）。 */
 public final class JdbcMergeStore implements MergeStore {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;

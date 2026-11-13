@@ -82,7 +82,8 @@ public class JdbcRequirementRepository implements RequirementRepository {
     }
 
     public List<Identity> findIdentitiesByTracker(TrackerId trackerId) {
-        return jdbc.query("SELECT local_id, common_id FROM requirements WHERE tracker_id = ? ORDER BY local_id",
+        return jdbc.query("SELECT local_id, common_id FROM requirements "
+                        + "WHERE tracker_id = ? AND delete_flag = FALSE ORDER BY local_id",
                 (rs, row) -> new Identity(LocalId.of(rs.getString(1)), CommonId.of(rs.getString(2))), trackerId.value());
     }
 

@@ -2,6 +2,7 @@ package bootstrap;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
 
@@ -94,6 +95,14 @@ class RequirementFamilyScopeTest {
         repository.save(first);
         repository.save(first.delete(first.lockVersion()));
         assertThrows(DataIntegrityViolationException.class, () -> repository.save(requirement("L2-", t1)));
+    }
+
+    @Test
+    void deleted_requirements_are_excluded_from_tracker_catalog() {
+        var saved = requirement("L1-", t1);
+        repository.save(saved);
+        repository.save(saved.delete(saved.lockVersion()));
+        assertTrue(repository.findIdentitiesByTracker(TrackerId.of(t1)).isEmpty());
     }
 
     @Test

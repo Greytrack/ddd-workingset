@@ -2,6 +2,7 @@ package sk.workingset.domain;
 
 import java.util.Map;
 
+/** 绑定/删除失败：携带原因与可观察详情（子级、成员、空间等），由 Web 层映射为 HTTP 状态。 */
 public final class BindingFailure extends RuntimeException {
     public enum Reason {
         WorkingSetNotFound, WorkingSetNotWritable, WorkingSetCycle, WorkingSetAlreadyExists,

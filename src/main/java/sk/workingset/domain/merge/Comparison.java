@@ -10,6 +10,7 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
+/** 冻结比较：token、双侧工作集、候选 Tracker 对与差异清单；只读、可追溯。 */
 public record Comparison(String token, WorkingSetId source, WorkingSetId target, Instant comparedAt,
                          List<TrackerPair> candidates, List<Difference> differences) {
     public Comparison {

@@ -21,6 +21,12 @@ import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
 import sk.workingset.domain.WorkingSetId;
 
+/**
+ * 工作集绑定解除与聚合删除：默认根保护、子工作集保护、成员可解除性预检与解除顺序。
+ *
+ * <p>删除顺序为 TrackerBinding → SpaceBinding → WorkingSet；能力范围只到 Working Set，
+ * 业务对象生命周期由各 BC 负责（D7/D16）。
+ */
 public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;

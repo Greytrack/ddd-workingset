@@ -152,13 +152,11 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.CONFLICT, reused);
         assertEquals("ComparisonAlreadyUsed", reused.getBody().get("reason"));
 
+        // C11：软删对象不进入 Compare 候选，恢复走 BC 的 undelete，不再通过 Merge RESTORE。
         seed(sourceTracker, remove, "present again");
-        var restoreComparison = compare(source, target);
-        assertEquals(Presence.DELETED, diff(restoreComparison, remove).target().presence());
-        String restoreRound = start(target, restoreComparison);
-        register(restoreRound, existence(diff(restoreComparison, remove), "RESTORE"));
-        assertEquals(State.Succeeded, apply(restoreRound).state());
-        assertEquals("to delete", requirement(removedId).title());
+        var afterDelete = compare(source, target);
+        assertEquals(Presence.ABSENT, diff(afterDelete, remove).target().presence());
+        assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + removedId, Map.class));
     }
 
     @Test

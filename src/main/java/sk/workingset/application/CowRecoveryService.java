@@ -8,6 +8,11 @@ import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.domain.LocalId;
 
+/**
+ * COW 恢复服务：重投未完成事件，或对“业务已保存但未切换”的物化收据做切换补偿。
+ *
+ * <p>切换动作幂等；业务保存凭据缺失时拒绝继续，避免伪造完成。
+ */
 public final class CowRecoveryService {
     private final CowMaterializationStore store;
     private final LightTrackerItemRepository items;

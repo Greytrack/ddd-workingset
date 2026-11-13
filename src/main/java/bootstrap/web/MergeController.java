@@ -25,6 +25,12 @@ import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeCheckpoint;
 
+/**
+ * Compare / Merge 的 HTTP 入口。
+ *
+ * <p>负责请求/响应映射；比较证据、轮次状态与条目执行由 {@code MergeComparisonService}
+ * 与 {@code MergeExecutionService} 承担。
+ */
 @RestController
 @RequestMapping("/api")
 public class MergeController {

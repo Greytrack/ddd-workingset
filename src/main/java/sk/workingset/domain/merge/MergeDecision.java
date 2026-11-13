@@ -7,6 +7,7 @@ import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 
+/** 条目决定：字段级动作、存在性动作与 markAsMerged；DEFER 表示本轮不处理。 */
 public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction existence, boolean markAsMerged) {
     public enum FieldAction { ACCEPT, KEEP_TARGET, DEFER }
     public enum ExistenceAction { CREATE, RESTORE, DELETE, KEEP_TARGET, DEFER }

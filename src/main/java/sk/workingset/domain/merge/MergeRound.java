@@ -8,6 +8,11 @@ import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 
+/**
+ * Merge 轮次聚合：登记条目、执行、唯一终态结果；终态不可重开。
+ *
+ * <p>状态为 Preparing → Running → Succeeded/PartiallySucceeded/Failed，没有独立 Completed 阶段（C5）。
+ */
 public record MergeRound(String id, String token, WorkingSetId source, WorkingSetId target, String caller,
                          State state, List<Entry> entries, ApplyResult result) {
     public enum State { Preparing, Running, Succeeded, PartiallySucceeded, Failed }

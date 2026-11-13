@@ -11,6 +11,12 @@ import sk.workingset.application.WorkingSetDeletionService;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
+/**
+ * 绑定解除与聚合删除的 HTTP 入口。
+ *
+ * <p>把 URL 映射到 {@link WorkingSetDeletionService}；删除顺序与拒绝语义由应用服务承担，
+ * 控制器不判断业务规则。
+ */
 @RestController
 @RequestMapping("/api")
 public class BindingDeletionController {

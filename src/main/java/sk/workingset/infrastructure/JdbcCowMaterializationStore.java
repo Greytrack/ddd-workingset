@@ -8,6 +8,7 @@ import sk.workingset.application.CowMaterializationStore;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
+/** COW 物化收据的 JDBC 实现：按事件与目标变体做幂等 upsert 与状态推进。 */
 public final class JdbcCowMaterializationStore implements CowMaterializationStore {
     private static final String FIND = "SELECT * FROM cow_materializations WHERE event_id = ? AND target_local_id = ?";
     private static final RowMapper<Entry> ENTRY = (row, number) -> new Entry(row.getLong("event_id"),
