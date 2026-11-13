@@ -12,6 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
 
 import alm.requirement.application.RequirementApplicationService;
 import alm.requirement.infrastructure.JdbcRequirementRepository;
@@ -25,7 +31,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
+import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
@@ -35,6 +45,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.MergeExecutionService.Registration;
 import sk.workingset.application.port.MergeStore;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -52,7 +63,8 @@ class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private StringRedisTemplate redis;
-    @Autowired private MergeStore store;
+    @SpyBean private MergeStore store;
+    @SpyBean private TrackerItemLifecyclePort lifecycle;
     @Autowired private RequirementApplicationService requirements;
     @Autowired private JdbcRequirementRepository repository;
 
@@ -229,6 +241,113 @@ class MergeAcceptanceTest {
         assertFalse(store.recordCheckpoint(checkpoint));
         assertTrue(store.findCheckpoint(key).orElseThrow().revoked());
         assertNotNull(diff(compare("1", child), keep));
+    }
+
+    @Test
+    void competingApplyIsRejectedAndResumeOnlyRecordsTheCommittedWrite() throws Exception {
+        String family = id("resume");
+        String source = seed(rootTracker, family, "accepted");
+        String target = seed(childTracker, family, "before");
+        String laterFamily = id("resume-later");
+        seed(rootTracker, laterFamily, "later accepted");
+        String laterTarget = seed(childTracker, laterFamily, "later before");
+        var allDifferences = compare("1", child);
+        String round = start(child, allDifferences);
+        register(round, field(diff(allDifferences, family), "ACCEPT", true),
+                field(diff(allDifferences, laterFamily), "ACCEPT", false));
+
+        var recording = new CountDownLatch(1);
+        var interrupt = new CountDownLatch(1);
+        doAnswer(call -> {
+            recording.countDown();
+            if (!interrupt.await(12, TimeUnit.SECONDS)) {
+                throw new AssertionError("Timed out waiting to interrupt result recording");
+            }
+            throw new TransientDataAccessResourceException("simulated result transaction failure");
+        }).doCallRealMethod().when(store).updateRound(argThat(value -> round.equals(value.id())
+                && value.state() == State.Running && value.entries().getFirst().result() != null));
+
+        try (var otherNode = new SpringApplicationBuilder(WorkingsetApplication.class)
+                    .run("--server.port=0", "--spring.modulith.republish-outstanding-events-on-restart=false");
+                var executor = Executors.newSingleThreadExecutor()) {
+            int otherPort = ((ServletWebServerApplicationContext) otherNode).getWebServer().getPort();
+            String otherApplyUrl = "http://127.0.0.1:" + otherPort + roundPath(round) + "/apply";
+            var first = executor.submit(() -> rest.postForEntity(roundPath(round) + "/apply", null, Map.class));
+            try {
+                assertTrue(recording.await(10, TimeUnit.SECONDS));
+                assertEquals("accepted", requirement(target).title());
+                var competing = rest.postForEntity(otherApplyUrl, null, Map.class);
+                assertStatus(HttpStatus.CONFLICT, competing);
+                assertEquals("RoundInProgress", competing.getBody().get("reason"));
+            } finally {
+                interrupt.countDown();
+            }
+            var interrupted = first.get(12, TimeUnit.SECONDS);
+            assertStatus(HttpStatus.SERVICE_UNAVAILABLE, interrupted);
+            assertEquals("UNKNOWN", interrupted.getBody().get("reason"));
+
+            var progress = rest.getForObject(roundPath(round), MergeRound.class);
+            assertEquals(State.Running, progress.state());
+            assertTrue(progress.entries().stream().allMatch(entry -> entry.result() == null));
+            assertEquals("later before", requirement(laterTarget).title());
+            requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
+            change(target, "local edit after commit", 1);
+
+            var recovered = rest.postForEntity(otherApplyUrl, null, ApplyResult.class);
+            assertStatus(HttpStatus.OK, recovered);
+            assertEquals(recovered.getBody(), apply(round));
+        }
+
+        var recovered = apply(round);
+        assertEquals("later accepted", requirement(laterTarget).title());
+        assertEquals(State.Succeeded, recovered.state());
+        assertEquals(Outcome.Confirmed, recovered.itemResults().getFirst().outcome());
+        assertEquals(target, recovered.itemResults().getFirst().businessRef());
+        assertEquals(recovered, apply(round));
+        assertEquals("local edit after commit", requirement(target).title());
+        assertEquals(2, requirement(target).lockVersion());
+        var checkpoint = store.findCheckpoint(new MergeCheckpoint.Key(
+                WorkingSetId.of("1"), WorkingSetId.of(child), CommonId.of(family))).orElseThrow();
+        assertEquals(3, checkpoint.sourceRevision().value());
+    }
+
+    @Test
+    void replayCompletesMergeTargetAfterListenerFailureWithoutApplyingBusinessWriteAgain() {
+        String family = id("replay");
+        seed(rootTracker, family, "copied once");
+        var comparison = compare("1", child);
+        String round = start(child, comparison);
+        register(round, existence(diff(comparison, family), "CREATE"));
+
+        var attempted = new CountDownLatch(1);
+        doAnswer(call -> {
+            attempted.countDown();
+            throw new IllegalStateException("simulated LTI listener failure");
+        }).doCallRealMethod().when(lifecycle).applyMergeTarget(argThat(target -> family.equals(target.commonId().value())));
+
+        var result = apply(round);
+        assertEquals(State.Succeeded, result.state());
+        String localId = result.itemResults().getFirst().businessRef();
+        await().atMost(Duration.ofSeconds(8)).until(() -> attempted.getCount() == 0);
+        assertEquals("copied once", requirement(localId).title());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM light_tracker_items WHERE local_id = ?",
+                Integer.class, localId));
+        await().atMost(Duration.ofSeconds(8)).until(() -> pendingMergePublications(localId) == 1);
+
+        assertStatus(HttpStatus.ACCEPTED, rest.postForEntity("/api/cow/recover/incomplete", null, Void.class));
+        await().atMost(Duration.ofSeconds(8)).until(() -> pendingMergePublications(localId) == 0
+                && Boolean.TRUE.equals(jdbc.queryForObject(
+                        "SELECT materialized FROM light_tracker_items WHERE local_id = ?", Boolean.class, localId)));
+        assertEquals(result, apply(round));
+        assertEquals(0, requirement(localId).lockVersion());
+    }
+
+    private int pendingMergePublications(String localId) {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) FROM event_publication
+                WHERE event_type LIKE '%RequirementMergeApplied' AND serialized_event LIKE ?
+                AND completion_date IS NULL
+                """, Integer.class, "%" + localId + "%");
     }
 
     @Test

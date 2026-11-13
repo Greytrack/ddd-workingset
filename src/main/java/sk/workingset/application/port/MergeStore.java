@@ -19,6 +19,13 @@ public interface MergeStore {
     Optional<MergeRound> findRound(String id, boolean lock);
     void updateRound(MergeRound round);
 
+    /** 在当前事务内独占一个轮次的执行权，事务结束时释放。 */
+    boolean tryLockExecution(String roundId);
+    boolean supportsCommitRecovery(String roundId);
+
+    Optional<MergeCommitReceipt> findCommitReceipt(String roundId, String entryId);
+    void insertCommitReceipt(String roundId, String entryId, MergeCommitReceipt receipt);
+
     long nextDecisionVersion();
     boolean recordCheckpoint(MergeCheckpoint checkpoint);
     Optional<MergeCheckpoint> findCheckpoint(MergeCheckpoint.Key key);

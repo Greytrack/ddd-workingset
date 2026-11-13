@@ -13,12 +13,15 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import sk.workingset.application.event.RequirementMergeApplied;
 import sk.workingset.application.port.IdentifierGenerator;
+import sk.workingset.application.port.MergeCommitReceipt;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.application.port.MergeTarget;
 import sk.workingset.application.port.RequirementMergeCommand;
@@ -143,58 +146,128 @@ public class MergeExecutionService {
     }
 
     public MergeRound.ApplyResult apply(String id) {
-        MergeRound round;
-        do {
-            round = transaction.execute(status -> advance(id));
-        } while (Objects.requireNonNull(round).result() == null);
-        return round.result();
+        try {
+            var round = round(id, false);
+            if (round.result() != null) {
+                return round.result();
+            }
+            // Keep the execution lock across entry commits. A disconnected executor releases it.
+            return transaction.execute(status -> runWithExecutionLock(id));
+        } catch (DataAccessException | TransactionException failure) {
+            log.error("Merge round {} could not confirm execution progress", id, failure);
+            throw new ApplicationFailure(FailureReason.UNKNOWN, "execution progress unavailable: " + id);
+        }
     }
 
-    private MergeRound advance(String id) {
-        var round = round(id, true);
-        if (round.result() != null) {
-            return round;
+    private MergeRound.ApplyResult runWithExecutionLock(String id) {
+        if (!store.tryLockExecution(id)) {
+            var result = round(id, false).result();
+            if (result != null) {
+                return result;
+            }
+            throw new MergeFailure(Reason.RoundInProgress, id);
         }
+        if (!store.supportsCommitRecovery(id)) {
+            throw new ApplicationFailure(FailureReason.UNKNOWN, "legacy round requires reconciliation: " + id);
+        }
+
+        var round = transaction.execute(status -> startExecution(id));
+        for (var entry : Objects.requireNonNull(round).entries()) {
+            if (entry.result() == null) {
+                var receipt = executeEntry(round, entry);
+                transaction.executeWithoutResult(status -> recordResult(id, entry, receipt));
+            }
+        }
+        return transaction.execute(status -> {
+            var current = round(id, true);
+            if (current.result() != null) {
+                return current.result();
+            }
+            var completed = current.complete(Instant.now());
+            store.updateRound(completed);
+            return completed.result();
+        });
+    }
+
+    private MergeRound startExecution(String id) {
+        var round = round(id, true);
         if (round.state() == State.Preparing) {
             round = round.start();
+            store.updateRound(round);
         }
-        var next = round.entries().stream().filter(entry -> entry.result() == null).findFirst();
-        if (next.isPresent()) {
-            Entry entry = next.get();
-            round = round.finishEntry(entry, executeEntry(round, entry));
-        }
-        if (round.entries().stream().allMatch(entry -> entry.result() != null)) {
-            round = round.complete(Instant.now());
-        }
-        store.updateRound(round);
         return round;
     }
 
-    private ItemResult executeEntry(MergeRound round, Entry entry) {
+    private void recordResult(String id, Entry entry, Execution execution) {
+        var round = round(id, true);
+        if (recordedResult(round, entry) != null) {
+            return;
+        }
+        var result = execution.result();
+        if (execution.receipt() != null) {
+            result = confirm(round, entry, execution.receipt());
+        }
+        store.updateRound(round.finishEntry(entry, result));
+    }
+
+    private static ItemResult recordedResult(MergeRound round, Entry entry) {
+        return round.entries().stream().filter(current -> current.id().equals(entry.id()))
+                .findFirst().orElseThrow().result();
+    }
+
+    private record Execution(ItemResult result, MergeCommitReceipt receipt) {
+        static Execution finished(ItemResult result) {
+            return new Execution(result, null);
+        }
+
+        static Execution committed(MergeCommitReceipt receipt) {
+            return new Execution(null, receipt);
+        }
+    }
+
+    private Execution executeEntry(MergeRound round, Entry entry) {
         if (entry.decision().deferred()) {
-            return result(entry, Outcome.Deferred, "DEFER", null, null, null);
+            return Execution.finished(result(entry, Outcome.Deferred, "DEFER", null, null, null));
         }
         try {
-            // D15-B：业务 apply 在独立事务提交，LTI 切换由事件在 SK 独立事务完成。
-            return transaction.execute(status -> applyDecision(round, entry));
+            // The receipt and any event publication commit with the ALM write.
+            return transaction.execute(status -> {
+                // Also serialize receipt lookup and writing if a disconnected executor is still unwinding.
+                var current = round(round.id(), true);
+                var recorded = recordedResult(current, entry);
+                if (recorded != null) {
+                    return Execution.finished(recorded);
+                }
+                var receipt = store.findCommitReceipt(round.id(), entry.id()).orElseGet(() -> {
+                    var committed = applyDecision(round, entry);
+                    store.insertCommitReceipt(round.id(), entry.id(), committed);
+                    return committed;
+                });
+                return Execution.committed(receipt);
+            });
         } catch (MergeFailure failure) {
             Outcome outcome = switch (failure.reason()) {
                 case StaleEvidence, MergeNotAllowed -> Outcome.StaleEvidence;
                 case Conflict -> Outcome.Conflict;
                 default -> Outcome.Rejected;
             };
-            return result(entry, outcome, operation(entry), null, null, failure.getMessage());
+            return Execution.finished(result(entry, outcome, operation(entry), null, null, failure.getMessage()));
         } catch (DataIntegrityViolationException failure) {
-            return result(entry, Outcome.Conflict, operation(entry), null, null, "target persistence conflict");
+            return Execution.finished(result(entry, Outcome.Conflict, operation(entry), null, null,
+                    "target persistence conflict"));
         } catch (ApplicationFailure failure) {
-            return result(entry, Outcome.Rejected, operation(entry), null, null, failure.reason().name());
+            if (failure.reason() == FailureReason.UNKNOWN) {
+                throw failure;
+            }
+            return Execution.finished(result(entry, Outcome.Rejected, operation(entry), null, null,
+                    failure.reason().name()));
         } catch (RuntimeException failure) {
             log.error("Merge entry {} could not complete", entry.id(), failure);
-            return result(entry, Outcome.Unknown, operation(entry), null, null, "execution result unavailable");
+            throw new ApplicationFailure(FailureReason.UNKNOWN, "execution result unavailable: " + entry.id());
         }
     }
 
-    private ItemResult applyDecision(MergeRound round, Entry entry) {
+    private MergeCommitReceipt applyDecision(MergeRound round, Entry entry) {
         var frozen = entry.evidence();
         lockEvidence(frozen);
         if (!comparisons.candidates(round.source(), round.target()).contains(frozen.trackers())) {
@@ -209,7 +282,7 @@ public class MergeExecutionService {
 
         String operation = operation(entry);
         Revision targetRevision = current.target().revision();
-        String businessRef = null;
+        LocalId businessRef = null;
         if (!"KEEP_TARGET".equals(operation)) {
             var target = current.target();
             var source = current.source();
@@ -229,12 +302,18 @@ public class MergeExecutionService {
             if (mergeTarget.inherited() || mergeTarget.create()) {
                 events.publishEvent(new RequirementMergeApplied(mergeTarget, Instant.now()));
             }
-            businessRef = localId.value();
+            businessRef = localId;
         }
+        return new MergeCommitReceipt(businessRef, current.source().revision(), targetRevision);
+    }
+
+    private ItemResult confirm(MergeRound round, Entry entry, MergeCommitReceipt receipt) {
+        String operation = operation(entry);
+        String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
         if (entry.decision().markAsMerged()) {
-            var key = new MergeCheckpoint.Key(round.source(), round.target(), current.family());
+            var key = new MergeCheckpoint.Key(round.source(), round.target(), entry.evidence().family());
             boolean confirmed = store.recordCheckpoint(new MergeCheckpoint(key, entry.decisionVersion(),
-                    current.source().revision(), targetRevision, round.token(), false));
+                    receipt.sourceRevision(), receipt.targetRevision(), round.token(), false));
             return result(entry, confirmed ? Outcome.Confirmed : Outcome.Applied, operation, businessRef,
                     confirmed ? "Confirmed" : "Superseded", null);
         }

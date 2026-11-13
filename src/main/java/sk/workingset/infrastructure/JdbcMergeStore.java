@@ -6,7 +6,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import sk.workingset.application.port.MergeCommitReceipt;
 import sk.workingset.application.port.MergeStore;
+import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeCheckpoint;
@@ -52,6 +54,40 @@ public final class JdbcMergeStore implements MergeStore {
     @Override
     public void updateRound(MergeRound round) {
         jdbc.update("UPDATE merge_rounds SET state = CAST(? AS jsonb) WHERE id = ?", encode(round), round.id());
+    }
+
+    @Override
+    public boolean tryLockExecution(String roundId) {
+        return jdbc.query("""
+                SELECT pg_try_advisory_xact_lock(execution_lock_id) FROM merge_rounds WHERE id = ?
+                """, (rs, row) -> rs.getBoolean(1), roundId).stream().findFirst().orElse(false);
+    }
+
+    @Override
+    public boolean supportsCommitRecovery(String roundId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT supports_commit_recovery FROM merge_rounds WHERE id = ?", Boolean.class, roundId));
+    }
+
+    @Override
+    public Optional<MergeCommitReceipt> findCommitReceipt(String roundId, String entryId) {
+        return jdbc.query("""
+                SELECT business_ref, source_revision, target_revision FROM merge_commit_receipts
+                WHERE round_id = ? AND entry_id = ?
+                """, (rs, row) -> {
+                    String businessRef = rs.getString(1);
+                    return new MergeCommitReceipt(businessRef == null ? null : LocalId.of(businessRef),
+                            revision(rs.getObject(2, Integer.class)), revision(rs.getObject(3, Integer.class)));
+                }, roundId, entryId).stream().findFirst();
+    }
+
+    @Override
+    public void insertCommitReceipt(String roundId, String entryId, MergeCommitReceipt receipt) {
+        jdbc.update("""
+                INSERT INTO merge_commit_receipts (round_id, entry_id, business_ref, source_revision, target_revision)
+                VALUES (?, ?, ?, ?, ?)
+                """, roundId, entryId, receipt.businessRef() == null ? null : receipt.businessRef().value(),
+                revision(receipt.sourceRevision()), revision(receipt.targetRevision()));
     }
 
     @Override
