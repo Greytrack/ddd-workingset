@@ -123,6 +123,8 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 **工作集入口（D10，2026-11-13 已实现）**：`CreateRequirementRequest` 增加 `workingSetId`（为空时默认默认工作集）；共享 Tracker 实际归属默认工作集、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建，否则返回 `NotIncluded`。业务 BC 通过 SK 的 `TrackerScopePort` 解析归属，不直接访问 SK 仓储；实际 `working_set_id` 仍由 Tracker 派生。
 
+**身份分配（T6-C，2026-11-13 用户确认）**：创建请求不携带 CommonId，由服务端按工作集分配——默认工作集生成一个雪花 ID 同时作为 LocalId 与 CommonId；非默认工作集生成两个不相等的雪花 ID。派生沿用来源 CommonId，LocalId 由服务端生成且与 CommonId 不等。同族唯一冲突（含软删占键）统一返回 409 `DATA_INTEGRITY_CONFLICT`，不新增失败分类。
+
 ## 5. 九分类公共失败语义（K2″，用户确认）
 
 ### 5.1 术语与禁止的偷换
