@@ -68,6 +68,12 @@ public class WorkingSetApplicationService {
 
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
+        workingSets.requireReady(newId);
+        return createChildForTask(parentId, newId);
+    }
+
+    // Called by the creation runner inside its locked task transaction.
+    WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId) {
         if (newId.equals(parentId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
@@ -77,8 +83,8 @@ public class WorkingSetApplicationService {
         }
         var child = WorkingSet.child(newId, parentId);
         if (!workingSets.insertWorkingSet(child)) {
-            var existing = workingSets.findWorkingSet(newId);
-            boolean differentParent = existing.filter(set -> !parentId.equals(set.parentWorkingSetId())).isPresent();
+            var existing = workingSets.findAncestors(newId);
+            boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             var reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
             throw new BindingFailure(reason, newId.value());
         }
@@ -217,6 +223,7 @@ public class WorkingSetApplicationService {
     /** 按工作集 + 变体身份解析；未命中 → NotFound；存在但不在该工作集 → NotIncluded。 */
     public LightTrackerItem resolve(WorkingSetId workingSetId, LocalId localId) {
         Objects.requireNonNull(workingSetId, "workingSetId");
+        workingSets.requireReady(workingSetId);
         Objects.requireNonNull(localId, "localId");
         LightTrackerItem item = items.findById(localId)
                 .orElseThrow(() -> new ApplicationFailure(

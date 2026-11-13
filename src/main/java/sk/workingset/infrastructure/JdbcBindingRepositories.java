@@ -7,6 +7,8 @@ import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import sk.workingset.application.ApplicationFailure;
+import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.ProductSpaceRepository;
 import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.WorkingSetRepository;
@@ -39,11 +41,13 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
+        requireReady(id);
         String sql = "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?";
         if (lock) {
             sql += " FOR UPDATE";
         }
         var parents = jdbc.queryForList(sql, String.class, id.value());
+        requireReady(id);
         if (parents.isEmpty()) {
             return Optional.empty();
         }
@@ -65,6 +69,17 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     @Override
+    public void requireReady(WorkingSetId id) {
+        boolean preparing = Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM working_set_creations
+                    WHERE new_working_set_id = ? AND status IN ('Pending', 'Running'))
+                """, Boolean.class, id.value()));
+        if (preparing) {
+            throw new ApplicationFailure(FailureReason.PREPARING, id.value());
+        }
+    }
+
+    @Override
     public boolean insertWorkingSet(WorkingSet workingSet) {
         return jdbc.update("""
                 INSERT INTO working_sets (working_set_id, parent_working_set_id)
@@ -75,8 +90,11 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     @Override
     public List<WorkingSetId> findChildren(WorkingSetId id) {
         return jdbc.queryForList("""
-                SELECT working_set_id FROM working_sets
-                WHERE parent_working_set_id = ? ORDER BY working_set_id
+                SELECT w.working_set_id FROM working_sets w
+                WHERE parent_working_set_id = ? AND NOT EXISTS (
+                    SELECT 1 FROM working_set_creations c WHERE c.new_working_set_id = w.working_set_id
+                    AND c.status IN ('Pending', 'Running'))
+                ORDER BY w.working_set_id
                 """, String.class, id.value()).stream().map(WorkingSetId::of).toList();
     }
 

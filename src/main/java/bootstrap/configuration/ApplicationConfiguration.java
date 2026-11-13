@@ -38,6 +38,9 @@ import sk.workingset.application.event.RequirementPurged;
 import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.WorkingSetDeletionService;
+import sk.workingset.application.WorkingSetCreationService;
+import sk.workingset.application.port.WorkingSetCreationStore;
+import sk.workingset.infrastructure.JdbcWorkingSetCreationStore;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.LocalId;
@@ -147,14 +150,27 @@ public class ApplicationConfiguration {
 
     @Bean
     public TrackerScopePort trackerScopePort(JdbcBindingRepositories trackers) {
-        return trackerId -> trackers.findTracker(trackerId)
-                .map(tracker -> new TrackerScopePort.TrackerScope(
-                        tracker.workingSetId(), tracker.sharingMode()));
+        return trackerId -> trackers.findTracker(trackerId).map(tracker -> {
+            trackers.requireReady(tracker.workingSetId());
+            return new TrackerScopePort.TrackerScope(tracker.workingSetId(), tracker.sharingMode());
+        });
     }
 
     @Bean
     public JdbcBindingRepositories bindingRepositories(JdbcTemplate jdbc) {
         return new JdbcBindingRepositories(jdbc);
+    }
+
+    @Bean
+    public WorkingSetCreationStore workingSetCreationStore(JdbcTemplate jdbc, ObjectMapper mapper) {
+        return new JdbcWorkingSetCreationStore(jdbc, mapper);
+    }
+
+    @Bean
+    public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
+            JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
+            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events) {
+        return new WorkingSetCreationService(store, bindings, workingSets, newTransactionTemplate, events);
     }
 
     @Bean
