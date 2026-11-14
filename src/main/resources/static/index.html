@@ -188,6 +188,7 @@
     white-space: nowrap;
   }
   tbody td { padding: 8px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+  td.item-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; font-weight: 550; }
   tbody tr { cursor: pointer; transition: background .1s ease; }
   tbody tr:hover { background: #f8fafc; }
   tbody tr.selected { background: var(--accent-soft); }
@@ -379,7 +380,7 @@ function renderWorksetTree() {
     row.dataset.wsId = node.id;
     row.title = node.id;
     row.style.paddingLeft = (9 + Math.min(depth, 10) * 14) + 'px';
-    const label = node.ws?.defaultWorkingSet ? '默认工作集 (1)' : shortId(node.id);
+    const label = node.ws?.name || (node.ws?.defaultWorkingSet ? '默认工作集 (1)' : shortId(node.id));
     row.innerHTML = `<span class="tree-dot"></span><span class="tree-label">${escapeHtml(label)}</span>` +
       (node.children.length ? `<span class="badge count">${node.children.length}</span>` : '') +
       (node.error ? '<span class="badge unbound">不可用</span>' : '');
@@ -438,7 +439,7 @@ function renderSpaces() {
   const node = findNode(state.worksets, state.selectedWs);
   const ws = node?.ws;
   info.innerHTML = `
-    <div class="ws-title">${escapeHtml(ws?.defaultWorkingSet ? '默认工作集' : '工作集')} <span class="mono">${escapeHtml(state.selectedWs)}</span></div>
+    <div class="ws-title">${escapeHtml(ws?.name || (ws?.defaultWorkingSet ? '默认工作集' : shortId(state.selectedWs)))} <span class="mono">${escapeHtml(state.selectedWs)}</span></div>
     <div class="ws-meta">父级：${ws?.parentWorkingSetId ? `<span class="mono">${escapeHtml(ws.parentWorkingSetId)}</span>` : '无（根）'}</div>`;
 
   const spaces = new Map();
@@ -469,12 +470,13 @@ function renderSpaces() {
     const boundCount = trackers.filter((tracker) => boundIds.has(tracker.trackerId)).length;
     const expanded = state.expandedSpaces.has(spaceId);
     const origin = space.origin || (space.bound ? '' : '未绑定空间');
+    const spaceName = space.name || (space.bound ? shortId(spaceId) : '未绑定空间');
     html += `
       <div class="space-card ${expanded ? 'expanded' : ''}">
-        <button type="button" class="space-head" data-space-toggle="${escapeHtml(spaceId)}">
+        <button type="button" class="space-head" data-space-toggle="${escapeHtml(spaceId)}" title="${escapeHtml(spaceId)}">
           <span class="space-main">
-            <span class="space-id mono">${escapeHtml(spaceId)}</span>
-            <span class="space-meta">${escapeHtml(origin)}${space.state ? ' · ' + escapeHtml(space.state) : ''} · ${trackers.length} 个 Tracker${boundCount !== trackers.length ? '（已绑定 ' + boundCount + '）' : ''}</span>
+            <span class="space-id">${escapeHtml(spaceName)}</span>
+            <span class="space-meta"><span class="mono">${escapeHtml(spaceId)}</span> · ${escapeHtml(origin)}${space.state ? ' · ' + escapeHtml(space.state) : ''} · ${trackers.length} 个 Tracker${boundCount !== trackers.length ? '（已绑定 ' + boundCount + '）' : ''}</span>
           </span>
           <span class="chevron">${expanded ? '⌄' : '›'}</span>
         </button>
@@ -510,10 +512,11 @@ function renderTrackerTree(trackers, boundIds) {
     const kids = sort(childrenOf.get(tracker.trackerId) || []);
     const selected = state.selectedTracker?.trackerId === tracker.trackerId ? ' selected' : '';
     const bound = boundIds.has(tracker.trackerId);
+    const trackerName = tracker.name || shortId(tracker.trackerId);
     return `
       <div class="tracker-node${selected}" data-tracker-id="${escapeHtml(tracker.trackerId)}"
            style="padding-left:${8 + Math.min(depth, 8) * 14}px" title="${escapeHtml(tracker.trackerId)}">
-        <span class="tracker-label mono">${escapeHtml(shortId(tracker.trackerId))}</span>
+        <span class="tracker-label">${escapeHtml(trackerName)}</span>
         <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${escapeHtml(tracker.sharingMode)}</span>
         ${tracker.sourceId ? `<span class="badge source">源 ${escapeHtml(shortId(tracker.sourceId))}</span>` : ''}
         ${bound ? '' : '<span class="badge unbound">未绑定</span>'}
@@ -575,9 +578,12 @@ function renderTracker() {
     return;
   }
   const tracker = state.selectedTracker;
+  const space = (state.bindings?.spaces || []).find((item) => item.productSpaceId === tracker.productSpaceId);
+  const trackerName = tracker.name || shortId(tracker.trackerId);
+  const spaceName = space?.name || tracker.productSpaceId;
   area.innerHTML = `
-    <div class="ws-title"><span class="mono">${escapeHtml(tracker.trackerId)}</span></div>
-    <div class="ws-meta">空间 <span class="mono">${escapeHtml(tracker.productSpaceId)}</span> · ${escapeHtml(tracker.sharingMode)} · 分类 <span class="mono">${escapeHtml(tracker.classificationId)}</span>${tracker.sourceId ? ` · 源 <span class="mono">${escapeHtml(tracker.sourceId)}</span>` : ''}</div>`;
+    <div class="ws-title">${escapeHtml(trackerName)} <span class="mono">${escapeHtml(tracker.trackerId)}</span></div>
+    <div class="ws-meta">空间 ${escapeHtml(spaceName)} · ${escapeHtml(tracker.sharingMode)} · 分类 <span class="mono">${escapeHtml(tracker.classificationId)}</span>${tracker.sourceId ? ` · 源 <span class="mono">${escapeHtml(tracker.sourceId)}</span>` : ''}</div>`;
 }
 
 function renderItems() {
@@ -607,6 +613,7 @@ function renderItems() {
     const selected = state.selectedItem?.localId === item.localId ? ' selected' : '';
     return `
       <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
+        <td class="item-name" title="${escapeHtml(item.name || item.commonId)}">${escapeHtml(item.name || shortId(item.commonId))}</td>
         <td class="mono" title="${escapeHtml(item.localId)}">${escapeHtml(shortId(item.localId))}</td>
         <td class="mono" title="${escapeHtml(item.commonId)}">${escapeHtml(shortId(item.commonId))}</td>
         <td>${escapeHtml(item.revision)}</td>
@@ -619,7 +626,7 @@ function renderItems() {
   area.innerHTML = `
     <table>
       <thead>
-        <tr><th>Local ID</th><th>Common ID</th><th>Rev</th><th>来源 Local</th><th>来源 Rev</th><th>本地物化</th></tr>
+        <tr><th>名称</th><th>Local ID</th><th>Common ID</th><th>Rev</th><th>来源 Local</th><th>来源 Rev</th><th>本地物化</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
@@ -640,7 +647,7 @@ function renderItemDetail() {
     `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(formatValue(value))}</dd>`).join('');
   return `
     <div class="detail">
-      <div class="detail-title">Item 内容 <span class="mono">${escapeHtml(shortId(state.selectedItem?.localId))}</span></div>
+      <div class="detail-title">${escapeHtml(state.selectedItem?.name || 'Item 内容')} <span class="mono">${escapeHtml(shortId(state.selectedItem?.localId))}</span></div>
       <div class="detail-meta">内容来源 <span class="mono">${escapeHtml(content?.contentLocalId || '—')}</span> · 版本 ${escapeHtml(content?.contentRevision ?? '—')} · ${content?.materialized ? '本地物化' : '来源继承'}</div>
       <dl class="fields">${rows || '<dt>内容</dt><dd>—</dd>'}</dl>
     </div>`;
