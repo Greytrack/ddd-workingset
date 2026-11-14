@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Working Set Explorer</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f6fb;
+    --panel: #ffffff;
+    --line: #e5e7eb;
+    --line-soft: #eef1f6;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-soft: #eef2ff;
+    --green: #166534;
+    --green-soft: #dcfce7;
+    --amber: #92400e;
+    --amber-soft: #fef3c7;
+    --red: #991b1b;
+    --red-soft: #fee2e2;
+    --shadow: 0 8px 24px rgba(15, 23, 42, .06);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 500px at 10% -10%, #e0e7ff 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.5 "Segoe UI", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+  }
+  .topbar {
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 20px;
+    background: rgba(255, 255, 255, .86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 12px;
+    display: grid; place-items: center;
+    color: #fff; font-weight: 700; letter-spacing: .5px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, .28);
+  }
+  .brand h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .2px; }
+  .brand p { margin: 1px 0 0; font-size: 11px; color: var(--muted); }
+  .actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .status {
+    font-size: 12px; color: var(--muted);
+    padding: 5px 10px; border-radius: 999px;
+    background: #f3f4f6; max-width: 48vw;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .status.error { color: var(--red); background: var(--red-soft); }
+  .status.ok { color: var(--green); background: var(--green-soft); }
+  .btn {
+    border: 1px solid var(--line);
+    background: #fff; color: var(--text);
+    border-radius: 9px; padding: 8px 14px;
+    font: inherit; font-size: 13px; cursor: pointer;
+    transition: .15s ease;
+  }
+  .btn:hover { border-color: #c7d2fe; color: var(--accent); box-shadow: var(--shadow); }
+  .layout {
+    height: calc(100vh - 68px);
+    display: grid;
+    grid-template-columns: 275px 410px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+  .panel {
+    min-width: 0; min-height: 0;
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 13px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    background: #fff;
+    flex: 0 0 auto;
+  }
+  .panel-head h2 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .3px; }
+  .muted { color: var(--muted); font-size: 11px; }
+  .mono { font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace; font-size: 11px; }
+  .tree { overflow: auto; padding: 8px; flex: 1 1 auto; }
+  .tree-node {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 9px; margin: 2px 0;
+    border-radius: 9px; cursor: pointer; user-select: none;
+    border-left: 3px solid transparent;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .tree-node:hover { background: #f8fafc; }
+  .tree-node.selected { background: var(--accent-soft); border-left-color: var(--accent); }
+  .tree-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #cbd5e1; flex: 0 0 auto;
+  }
+  .tree-node.selected .tree-dot { background: var(--accent); }
+  .tree-label {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 12.5px;
+  }
+  .badge {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center;
+    padding: 2px 7px; border-radius: 999px;
+    font-size: 10px; font-weight: 600; line-height: 1.4;
+    background: #e5e7eb; color: #374151;
+    white-space: nowrap;
+  }
+  .badge.count { margin-left: auto; background: #f1f5f9; color: var(--muted); }
+  .badge.shared { background: var(--green-soft); color: var(--green); }
+  .badge.unshared { background: var(--amber-soft); color: var(--amber); }
+  .badge.source { background: #e0e7ff; color: #3730a3; }
+  .badge.unbound { background: var(--red-soft); color: var(--red); }
+  .selected-workset, .selected-tracker {
+    padding: 12px 16px;
+    background: #fbfcfe;
+    border-bottom: 1px solid var(--line-soft);
+    flex: 0 0 auto;
+  }
+  .ws-title { font-size: 13px; font-weight: 650; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+  .ws-meta { margin-top: 3px; font-size: 11px; color: var(--muted); word-break: break-all; }
+  .space-list { overflow: auto; padding: 10px; flex: 1 1 auto; }
+  .space-card {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    margin-bottom: 9px;
+    overflow: hidden;
+    background: #fff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .space-card:hover { border-color: #c7d2fe; }
+  .space-card.expanded { border-color: #c7d2fe; box-shadow: 0 4px 14px rgba(79, 70, 229, .07); }
+  .space-head {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 11px 12px;
+    border: 0; background: transparent; color: inherit;
+    text-align: left; cursor: pointer; font: inherit;
+  }
+  .space-head:hover { background: #f8fafc; }
+  .space-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .space-id { font-size: 12px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; }
+  .space-meta { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chevron { color: #94a3b8; font-size: 16px; flex: 0 0 auto; }
+  .tracker-tree { border-top: 1px solid var(--line-soft); padding: 6px 8px 9px; background: #fcfdff; }
+  .tracker-node {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; margin: 1px 0;
+    border-radius: 7px; cursor: pointer;
+    transition: background .12s ease;
+  }
+  .tracker-node:hover { background: #f1f5f9; }
+  .tracker-node.selected { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+  .tracker-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-area { overflow: auto; padding: 12px 14px; flex: 1 1 auto; }
+  .empty {
+    padding: 26px 12px;
+    text-align: center; color: var(--muted);
+    font-size: 12.5px;
+  }
+  .empty.small { padding: 12px; }
+  .error-text { color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: #fff;
+    text-align: left; font-size: 10.5px; font-weight: 700;
+    color: var(--muted); letter-spacing: .2px;
+    padding: 8px 8px; border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody td { padding: 8px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+  tbody tr { cursor: pointer; transition: background .1s ease; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody tr.selected { background: var(--accent-soft); }
+  .hint { margin-top: 10px; font-size: 11px; color: var(--muted); }
+  .detail {
+    margin-top: 14px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: #fbfcfe;
+    padding: 12px 14px;
+  }
+  .detail-title { font-size: 12.5px; font-weight: 700; display: flex; align-items: baseline; gap: 7px; }
+  .detail-meta { margin-top: 4px; font-size: 10.5px; color: var(--muted); word-break: break-all; }
+  .fields {
+    display: grid; grid-template-columns: 120px minmax(0, 1fr);
+    gap: 7px 10px; margin: 12px 0 0;
+    font-size: 12px;
+  }
+  .fields dt { color: var(--muted); font-weight: 500; }
+  .fields dd { margin: 0; word-break: break-word; white-space: pre-wrap; }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 240px 340px minmax(0, 1fr); }
+  }
+  @media (max-width: 860px) {
+    .topbar { height: auto; padding: 12px 14px; align-items: flex-start; flex-direction: column; }
+    .layout { height: auto; grid-template-columns: 1fr; padding: 10px; }
+    .panel { max-height: 52vh; }
+    .status { max-width: 80vw; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">WS</div>
+    <div>
+      <h1>Working Set Explorer</h1>
+      <p>工作集 · 产品空间 · Tracker · Item</p>
+    </div>
+  </div>
+  <div class="actions">
+    <span id="status" class="status">准备就绪</span>
+    <button id="refresh" type="button" class="btn">刷新</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="panel">
+    <div class="panel-head"><h2>工作集</h2><span id="worksetCount" class="muted"></span></div>
+    <div id="worksetTree" class="tree"></div>
+  </aside>
+
+  <section class="panel">
+    <div class="panel-head"><h2>产品空间</h2><span id="spaceCount" class="muted"></span></div>
+    <div id="selectedWorkset" class="selected-workset"><div class="empty">从左侧选择工作集</div></div>
+    <div id="spaceList" class="space-list"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Item</h2><span id="itemCount" class="muted"></span></div>
+    <div id="selectedTracker" class="selected-tracker"><div class="empty">从中间选择一个 Tracker</div></div>
+    <div id="itemArea" class="item-area"><div class="empty">选择 Tracker 后显示 Item 列表</div></div>
+  </section>
+</main>
+
+<script>
+const $ = (selector) => document.querySelector(selector);
+
+const state = {
+  worksets: [],
+  selectedWs: null,
+  bindings: { spaces: [], trackers: [] },
+  trackers: [],
+  expandedSpaces: new Set(),
+  selectedSpace: null,
+  selectedTracker: null,
+  items: [],
+  itemsLoading: false,
+  itemsError: null,
+  selectedItem: null,
+  content: null,
+  contentLoading: false,
+  contentError: null
+};
+
+const REASON_TEXT = {
+  PREPARING: '工作集正在准备中，暂时不可用',
+  NOT_INCLUDED: '该 Tracker 未绑定到当前工作集',
+  NOT_FOUND: '对象不存在',
+  DELETED: '对象已删除',
+  HISTORY_UNAVAILABLE: '所需历史版本不可读',
+  DEPENDENCY_UNAVAILABLE: '依赖服务暂不可用',
+  UNKNOWN: '发生未知错误'
+};
+
+async function api(path) {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    headers: { Accept: 'application/json' }
+  });
+  const text = await response.text();
+  let body = null;
+  if (text) {
+    try { body = JSON.parse(text); } catch { body = text; }
+  }
+  if (!response.ok) {
+    const error = new Error(reasonText(body) || response.statusText || ('HTTP ' + response.status));
+    error.status = response.status;
+    error.body = body;
+    throw error;
+  }
+  return body;
+}
+
+function reasonText(body) {
+  if (!body || typeof body !== 'object') return typeof body === 'string' ? body : '';
+  const friendly = body.reason ? (REASON_TEXT[body.reason] || body.reason) : '';
+  return [friendly, body.message].filter(Boolean).join(' · ');
+}
+
+function setStatus(text, kind = '') {
+  const status = $('#status');
+  status.textContent = text;
+  status.className = 'status ' + kind;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function shortId(value) {
+  if (!value) return '—';
+  const text = String(value);
+  return text.length > 22 ? text.slice(0, 9) + '…' + text.slice(-7) : text;
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function findNode(nodes, id) {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const found = findNode(node.children || [], id);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function loadWorksetTree() {
+  setStatus('加载工作集…');
+  const seen = new Set();
+  async function build(id) {
+    if (seen.has(id) || seen.size >= 500) return null;
+    seen.add(id);
+    let ws;
+    try {
+      ws = await api('/api/worksets/' + encodeURIComponent(id));
+    } catch (error) {
+      return { id, error, children: [] };
+    }
+    let childIds = [];
+    try {
+      childIds = await api('/api/worksets/' + encodeURIComponent(id) + '/children') || [];
+    } catch {
+      childIds = [];
+    }
+    const children = (await Promise.all(childIds.map(build))).filter(Boolean);
+    return { id, ws, children };
+  }
+  const root = await build('1');
+  state.worksets = root ? [root] : [];
+  renderWorksetTree();
+  setStatus(root ? '工作集已加载' : '无法加载默认工作集', root ? 'ok' : 'error');
+}
+
+function renderWorksetTree() {
+  const container = $('#worksetTree');
+  container.innerHTML = '';
+  let count = 0;
+  const walk = (node, depth) => {
+    count += 1;
+    const row = document.createElement('div');
+    row.className = 'tree-node' + (state.selectedWs === node.id ? ' selected' : '');
+    row.dataset.wsId = node.id;
+    row.title = node.id;
+    row.style.paddingLeft = (9 + Math.min(depth, 10) * 14) + 'px';
+    const label = node.ws?.defaultWorkingSet ? '默认工作集 (1)' : shortId(node.id);
+    row.innerHTML = `<span class="tree-dot"></span><span class="tree-label">${escapeHtml(label)}</span>` +
+      (node.children.length ? `<span class="badge count">${node.children.length}</span>` : '') +
+      (node.error ? '<span class="badge unbound">不可用</span>' : '');
+    container.appendChild(row);
+    node.children.forEach((child) => walk(child, depth + 1));
+  };
+  state.worksets.forEach((node) => walk(node, 0));
+  $('#worksetCount').textContent = count ? count + ' 个' : '';
+  if (!count) container.innerHTML = '<div class="empty">暂无工作集</div>';
+}
+
+async function selectWorkset(id) {
+  state.selectedWs = id;
+  state.selectedSpace = null;
+  state.selectedTracker = null;
+  state.selectedItem = null;
+  state.items = [];
+  state.itemsLoading = false;
+  state.itemsError = null;
+  state.content = null;
+  state.contentError = null;
+  state.bindings = { spaces: [], trackers: [] };
+  state.trackers = [];
+  state.expandedSpaces.clear();
+  renderWorksetTree();
+  renderSpaces();
+  renderTracker();
+  renderItems();
+  setStatus('加载 ' + shortId(id) + ' 的绑定范围…');
+
+  try {
+    const base = '/api/worksets/' + encodeURIComponent(id);
+    const [bindings, trackers] = await Promise.all([api(base + '/bindings'), api(base + '/trackers')]);
+    state.bindings = bindings || { spaces: [], trackers: [] };
+    state.trackers = trackers || [];
+    renderSpaces();
+    const bound = (state.bindings.trackers || []).length;
+    setStatus('已加载 ' + (state.bindings.spaces || []).length + ' 个空间 · ' + state.trackers.length + ' 个 Tracker（绑定 ' + bound + '）', 'ok');
+  } catch (error) {
+    renderSpaces();
+    setStatus(reasonText(error.body) || error.message, 'error');
+  }
+}
+
+function renderSpaces() {
+  const info = $('#selectedWorkset');
+  const list = $('#spaceList');
+
+  if (!state.selectedWs) {
+    info.innerHTML = '<div class="empty">从左侧选择工作集</div>';
+    list.innerHTML = '';
+    $('#spaceCount').textContent = '';
+    return;
+  }
+
+  const node = findNode(state.worksets, state.selectedWs);
+  const ws = node?.ws;
+  info.innerHTML = `
+    <div class="ws-title">${escapeHtml(ws?.defaultWorkingSet ? '默认工作集' : '工作集')} <span class="mono">${escapeHtml(state.selectedWs)}</span></div>
+    <div class="ws-meta">父级：${ws?.parentWorkingSetId ? `<span class="mono">${escapeHtml(ws.parentWorkingSetId)}</span>` : '无（根）'}</div>`;
+
+  const spaces = new Map();
+  (state.bindings?.spaces || []).forEach((space) => {
+    spaces.set(space.productSpaceId, { ...space, bound: true });
+  });
+  state.trackers.forEach((tracker) => {
+    if (!spaces.has(tracker.productSpaceId)) {
+      spaces.set(tracker.productSpaceId, {
+        productSpaceId: tracker.productSpaceId,
+        origin: null,
+        state: null,
+        bound: false
+      });
+    }
+  });
+
+  if (!spaces.size) {
+    list.innerHTML = '<div class="empty">该工作集还没有绑定产品空间或 Tracker</div>';
+    $('#spaceCount').textContent = '';
+    return;
+  }
+
+  const boundIds = new Set((state.bindings?.trackers || []).map((item) => item.trackerId));
+  let html = '';
+  spaces.forEach((space, spaceId) => {
+    const trackers = state.trackers.filter((tracker) => tracker.productSpaceId === spaceId);
+    const boundCount = trackers.filter((tracker) => boundIds.has(tracker.trackerId)).length;
+    const expanded = state.expandedSpaces.has(spaceId);
+    const origin = space.origin || (space.bound ? '' : '未绑定空间');
+    html += `
+      <div class="space-card ${expanded ? 'expanded' : ''}">
+        <button type="button" class="space-head" data-space-toggle="${escapeHtml(spaceId)}">
+          <span class="space-main">
+            <span class="space-id mono">${escapeHtml(spaceId)}</span>
+            <span class="space-meta">${escapeHtml(origin)}${space.state ? ' · ' + escapeHtml(space.state) : ''} · ${trackers.length} 个 Tracker${boundCount !== trackers.length ? '（已绑定 ' + boundCount + '）' : ''}</span>
+          </span>
+          <span class="chevron">${expanded ? '⌄' : '›'}</span>
+        </button>
+        ${expanded ? `<div class="tracker-tree">${renderTrackerTree(trackers, boundIds)}</div>` : ''}
+      </div>`;
+  });
+  list.innerHTML = html;
+  $('#spaceCount').textContent = spaces.size + ' 个空间';
+}
+
+function renderTrackerTree(trackers, boundIds) {
+  if (!trackers.length) return '<div class="empty small">该空间下没有 Tracker</div>';
+
+  const byId = new Map(trackers.map((tracker) => [tracker.trackerId, tracker]));
+  const childrenOf = new Map();
+  const roots = [];
+  trackers.forEach((tracker) => {
+    const parent = tracker.parentId && byId.has(tracker.parentId) && tracker.parentId !== tracker.trackerId
+      ? tracker.parentId : null;
+    if (parent) {
+      if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+      childrenOf.get(parent).push(tracker);
+    } else {
+      roots.push(tracker);
+    }
+  });
+
+  const visited = new Set();
+  const sort = (list) => list.sort((a, b) => String(a.trackerId).localeCompare(String(b.trackerId)));
+  const walk = (tracker, depth) => {
+    if (visited.has(tracker.trackerId)) return '';
+    visited.add(tracker.trackerId);
+    const kids = sort(childrenOf.get(tracker.trackerId) || []);
+    const selected = state.selectedTracker?.trackerId === tracker.trackerId ? ' selected' : '';
+    const bound = boundIds.has(tracker.trackerId);
+    return `
+      <div class="tracker-node${selected}" data-tracker-id="${escapeHtml(tracker.trackerId)}"
+           style="padding-left:${8 + Math.min(depth, 8) * 14}px" title="${escapeHtml(tracker.trackerId)}">
+        <span class="tracker-label mono">${escapeHtml(shortId(tracker.trackerId))}</span>
+        <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${escapeHtml(tracker.sharingMode)}</span>
+        ${tracker.sourceId ? `<span class="badge source">源 ${escapeHtml(shortId(tracker.sourceId))}</span>` : ''}
+        ${bound ? '' : '<span class="badge unbound">未绑定</span>'}
+      </div>` + kids.map((child) => walk(child, depth + 1)).join('');
+  };
+
+  let html = sort(roots).map((tracker) => walk(tracker, 0)).join('');
+  if (!html) {
+    html = sort(trackers).map((tracker) => walk(tracker, 0)).join('');
+  }
+  return html || '<div class="empty small">该空间下没有可显示的 Tracker</div>';
+}
+
+async function selectTracker(trackerId) {
+  const tracker = state.trackers.find((item) => item.trackerId === trackerId);
+  if (!tracker) return;
+
+  state.selectedTracker = tracker;
+  state.selectedSpace = tracker.productSpaceId;
+  state.expandedSpaces.add(tracker.productSpaceId);
+  state.selectedItem = null;
+  state.content = null;
+  state.contentError = null;
+  state.items = [];
+  state.itemsError = null;
+
+  const bound = (state.bindings?.trackers || []).some((item) => item.trackerId === trackerId);
+  renderSpaces();
+  renderTracker();
+
+  if (!bound) {
+    state.itemsLoading = false;
+    state.itemsError = '该 Tracker 未绑定到当前工作集，无法读取 Item';
+    renderItems();
+    setStatus(state.itemsError, 'error');
+    return;
+  }
+
+  state.itemsLoading = true;
+  renderItems();
+  setStatus('加载 Tracker Item…');
+  try {
+    state.items = await api('/api/worksets/' + encodeURIComponent(state.selectedWs) +
+      '/trackers/' + encodeURIComponent(trackerId) + '/items') || [];
+    setStatus('已加载 ' + state.items.length + ' 个 Item', 'ok');
+  } catch (error) {
+    state.itemsError = reasonText(error.body) || error.message;
+    setStatus(state.itemsError, 'error');
+  } finally {
+    state.itemsLoading = false;
+    renderItems();
+  }
+}
+
+function renderTracker() {
+  const area = $('#selectedTracker');
+  if (!state.selectedTracker) {
+    area.innerHTML = '<div class="empty">从中间选择一个 Tracker</div>';
+    return;
+  }
+  const tracker = state.selectedTracker;
+  area.innerHTML = `
+    <div class="ws-title"><span class="mono">${escapeHtml(tracker.trackerId)}</span></div>
+    <div class="ws-meta">空间 <span class="mono">${escapeHtml(tracker.productSpaceId)}</span> · ${escapeHtml(tracker.sharingMode)} · 分类 <span class="mono">${escapeHtml(tracker.classificationId)}</span>${tracker.sourceId ? ` · 源 <span class="mono">${escapeHtml(tracker.sourceId)}</span>` : ''}</div>`;
+}
+
+function renderItems() {
+  const area = $('#itemArea');
+  if (!state.selectedTracker) {
+    area.innerHTML = '<div class="empty">选择 Tracker 后显示 Item 列表</div>';
+    $('#itemCount').textContent = '';
+    return;
+  }
+  if (state.itemsLoading) {
+    area.innerHTML = '<div class="empty">加载 Item…</div>';
+    $('#itemCount').textContent = '';
+    return;
+  }
+  if (state.itemsError) {
+    area.innerHTML = `<div class="empty error-text">${escapeHtml(state.itemsError)}</div>`;
+    $('#itemCount').textContent = '';
+    return;
+  }
+  if (!state.items.length) {
+    area.innerHTML = '<div class="empty">该 Tracker 下没有 Item</div>';
+    $('#itemCount').textContent = '0 个';
+    return;
+  }
+
+  const rows = state.items.map((item) => {
+    const selected = state.selectedItem?.localId === item.localId ? ' selected' : '';
+    return `
+      <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
+        <td class="mono" title="${escapeHtml(item.localId)}">${escapeHtml(shortId(item.localId))}</td>
+        <td class="mono" title="${escapeHtml(item.commonId)}">${escapeHtml(shortId(item.commonId))}</td>
+        <td>${escapeHtml(item.revision)}</td>
+        <td class="mono" title="${escapeHtml(item.sourceLocalId)}">${escapeHtml(shortId(item.sourceLocalId))}</td>
+        <td>${escapeHtml(item.sourceRevision)}</td>
+        <td>${item.materialized ? '<span class="badge shared">是</span>' : '<span class="badge unshared">否</span>'}</td>
+      </tr>`;
+  }).join('');
+
+  area.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Local ID</th><th>Common ID</th><th>Rev</th><th>来源 Local</th><th>来源 Rev</th><th>本地物化</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${state.selectedItem ? renderItemDetail() : '<div class="hint">点击一行查看 Item 内容</div>'}`;
+  $('#itemCount').textContent = state.items.length + ' 个';
+}
+
+function renderItemDetail() {
+  if (state.contentLoading) {
+    return '<div class="detail"><div class="empty small">加载内容…</div></div>';
+  }
+  if (state.contentError) {
+    return `<div class="detail"><div class="empty small error-text">${escapeHtml(state.contentError)}</div></div>`;
+  }
+  const content = state.content;
+  const fields = content?.fields || {};
+  const rows = Object.entries(fields).map(([key, value]) =>
+    `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(formatValue(value))}</dd>`).join('');
+  return `
+    <div class="detail">
+      <div class="detail-title">Item 内容 <span class="mono">${escapeHtml(shortId(state.selectedItem?.localId))}</span></div>
+      <div class="detail-meta">内容来源 <span class="mono">${escapeHtml(content?.contentLocalId || '—')}</span> · 版本 ${escapeHtml(content?.contentRevision ?? '—')} · ${content?.materialized ? '本地物化' : '来源继承'}</div>
+      <dl class="fields">${rows || '<dt>内容</dt><dd>—</dd>'}</dl>
+    </div>`;
+}
+
+async function loadContent(localId, workingSetId) {
+  state.selectedItem = state.items.find((item) => item.localId === localId) || { localId, workingSetId };
+  state.content = null;
+  state.contentError = null;
+  state.contentLoading = true;
+  renderItems();
+  try {
+    state.content = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
+      '/items/' + encodeURIComponent(localId) + '/content');
+  } catch (error) {
+    state.contentError = reasonText(error.body) || error.message;
+  } finally {
+    state.contentLoading = false;
+    renderItems();
+  }
+}
+
+async function refresh() {
+  const current = state.selectedWs;
+  state.selectedWs = null;
+  state.selectedTracker = null;
+  state.selectedItem = null;
+  state.items = [];
+  state.content = null;
+  await loadWorksetTree();
+  const root = state.worksets[0];
+  const target = current && findNode(state.worksets, current) ? current : root?.id;
+  if (target) await selectWorkset(target);
+}
+
+function bindEvents() {
+  $('#worksetTree').addEventListener('click', (event) => {
+    const row = event.target.closest('[data-ws-id]');
+    if (row) selectWorkset(row.dataset.wsId);
+  });
+
+  $('#spaceList').addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-space-toggle]');
+    if (toggle) {
+      const spaceId = toggle.dataset.spaceToggle;
+      state.selectedSpace = spaceId;
+      if (state.expandedSpaces.has(spaceId)) state.expandedSpaces.delete(spaceId);
+      else state.expandedSpaces.add(spaceId);
+      renderSpaces();
+      return;
+    }
+    const tracker = event.target.closest('[data-tracker-id]');
+    if (tracker) selectTracker(tracker.dataset.trackerId);
+  });
+
+  $('#itemArea').addEventListener('click', (event) => {
+    const row = event.target.closest('[data-local-id]');
+    if (row) loadContent(row.dataset.localId, row.dataset.itemWs);
+  });
+
+  $('#refresh').addEventListener('click', refresh);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  bindEvents();
+  refresh();
+});
+</script>
+</body>
+</html>
