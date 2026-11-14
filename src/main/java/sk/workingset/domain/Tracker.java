@@ -4,9 +4,14 @@ import java.util.Objects;
 
 import sk.workingset.domain.Classification.SharingMode;
 
-/** sourceId 表示直接派生来源，parentId 表示同工作集内的组织父级。 */
-public record Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId,
+/** sourceId 表示直接派生来源，parentId 表示同工作集内的组织父级。name 仅用于界面可读展示。 */
+public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
                       String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
+
+    public Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId,
+                   String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
+        this(trackerId, null, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId);
+    }
 
     public Tracker {
         Objects.requireNonNull(trackerId, "trackerId");
@@ -28,7 +33,7 @@ public record Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId work
     }
 
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target) {
-        return new Tracker(id, source.trackerId(), target, source.productSpaceId(),
+        return new Tracker(id, source.name(), source.trackerId(), target, source.productSpaceId(),
                 source.classificationId(), source.sharingMode(), null);
     }
 

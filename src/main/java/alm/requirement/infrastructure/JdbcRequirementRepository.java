@@ -30,13 +30,13 @@ public class JdbcRequirementRepository implements RequirementRepository {
 
     private static final String INSERT = """
             INSERT INTO requirements
-                (local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (local_id, common_id, tracker_id, name, title, description, revision, version, lock_version, delete_flag)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
     private static final String UPDATE = """
             UPDATE requirements
-            SET title = ?, description = ?, revision = ?, version = ?, delete_flag = ?, lock_version = ?
+            SET name = ?, title = ?, description = ?, revision = ?, version = ?, delete_flag = ?, lock_version = ?
             WHERE local_id = ? AND lock_version = ?
             """;
 
@@ -61,13 +61,14 @@ public class JdbcRequirementRepository implements RequirementRepository {
         long lockVersion = requirement.lockVersion().value();
         if (lockVersion == 0) {
             jdbc.update(INSERT, requirement.localId().value(), requirement.commonId().value(),
-                    requirement.trackerId().value(), requirement.title(), requirement.description(),
+                    requirement.trackerId().value(), requirement.title(), requirement.title(), requirement.description(),
                     requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted());
             return;
         }
         long expected = lockVersion - 1;
-        int affected = jdbc.update(UPDATE, requirement.title(), requirement.description(), requirement.revision().value(),
-                requirement.version().value(), requirement.deleted(), lockVersion, requirement.localId().value(), expected);
+        int affected = jdbc.update(UPDATE, requirement.title(), requirement.title(), requirement.description(),
+                requirement.revision().value(), requirement.version().value(), requirement.deleted(), lockVersion,
+                requirement.localId().value(), expected);
         if (affected == 0) {
             throw new LockVersionConflictException(LockVersion.of(expected), currentLockVersion(requirement.localId()));
         }
@@ -80,6 +81,13 @@ public class JdbcRequirementRepository implements RequirementRepository {
                         + "FROM requirements WHERE local_id = ?",
                 MAPPER,
                 localId.value()).stream().findFirst();
+    }
+
+    /** UI read model: display name of the content source, falling back to title for legacy rows. */
+    public Optional<String> findName(LocalId localId) {
+        return jdbc.query("SELECT COALESCE(name, title) FROM requirements WHERE local_id = ?",
+                rs -> rs.next() ? Optional.ofNullable(rs.getString(1)) : Optional.<String>empty(),
+                localId.value());
     }
 
     public List<Identity> findIdentitiesByTracker(TrackerId trackerId) {

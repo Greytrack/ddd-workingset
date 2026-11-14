@@ -80,7 +80,7 @@ public class WorkingSetController {
     @GetMapping("/{workingSetId}/trackers/{trackerId}/items")
     public List<LightTrackerItemView> findItems(@PathVariable String workingSetId, @PathVariable String trackerId) {
         return applicationService.findItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
-                .map(LightTrackerItemView::from).toList();
+                .map(indexed -> LightTrackerItemView.from(indexed.item(), indexed.name())).toList();
     }
 
     @GetMapping("/{workingSetId}/bindings")
@@ -143,17 +143,20 @@ public class WorkingSetController {
 
     public record CreateChildRequest(String workingSetId) {}
 
-    public record WorkingSetView(String workingSetId, boolean defaultWorkingSet, String parentWorkingSetId) {
+    public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
+                                 String parentWorkingSetId) {
         static WorkingSetView from(WorkingSet workingSet) {
             WorkingSetId parentId = workingSet.parentWorkingSetId();
-            return new WorkingSetView(workingSet.id().value(), WorkingSet.DEFAULT_ID.equals(workingSet.id()),
+            return new WorkingSetView(workingSet.id().value(), workingSet.name(),
+                    WorkingSet.DEFAULT_ID.equals(workingSet.id()),
                     parentId == null ? null : parentId.value());
         }
     }
 
-    public record SpaceBindingView(String productSpaceId, String origin, String state) {
+    public record SpaceBindingView(String productSpaceId, String name, String origin, String state) {
         static SpaceBindingView from(WorkingSet.SpaceBinding binding) {
-            return new SpaceBindingView(binding.productSpaceId(), binding.origin().name(), binding.state().name());
+            return new SpaceBindingView(binding.productSpaceId(), binding.name(),
+                    binding.origin().name(), binding.state().name());
         }
     }
 
@@ -167,10 +170,10 @@ public class WorkingSetController {
 
     public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {}
 
-    public record TrackerView(String trackerId, String parentId, String sourceId, String productSpaceId,
+    public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
                               String classificationId, String sharingMode) {
         static TrackerView from(Tracker tracker) {
-            return new TrackerView(tracker.trackerId().value(),
+            return new TrackerView(tracker.trackerId().value(), tracker.name(),
                     tracker.parentId() == null ? null : tracker.parentId().value(),
                     tracker.sourceId() == null ? null : tracker.sourceId().value(),
                     tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name());

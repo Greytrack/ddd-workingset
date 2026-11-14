@@ -21,18 +21,29 @@ public final class WorkingSet {
     public enum SpaceState { ACTIVE }
     public enum TrackerOrigin { SHARED_REUSE, UNSHARED_DERIVATION }
 
-    public record SpaceBinding(WorkingSetId workingSetId, String productSpaceId,
-                               SpaceOrigin origin, SpaceState state) {}
+    public record SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
+                               SpaceOrigin origin, SpaceState state) {
+        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId,
+                            SpaceOrigin origin, SpaceState state) {
+            this(workingSetId, productSpaceId, null, origin, state);
+        }
+    }
 
     public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
                                  String classificationId, SharingMode sharingMode, TrackerOrigin origin) {}
 
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;
+    private final String name;
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
 
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId,
+                      Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
+        this(id, parentWorkingSetId, null, spaces, trackers);
+    }
+
+    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this.id = Objects.requireNonNull(id, "id");
         if (id.equals(parentWorkingSetId)) {
@@ -42,6 +53,7 @@ public final class WorkingSet {
             throw new IllegalArgumentException("only the default Working Set has no parent");
         }
         this.parentWorkingSetId = parentWorkingSetId;
+        this.name = name;
         spaces.forEach(binding -> this.spaces.put(binding.productSpaceId(), binding));
         trackers.forEach(binding -> this.trackers.put(binding.trackerId(), binding));
     }
@@ -52,11 +64,12 @@ public final class WorkingSet {
 
     public WorkingSetId id() { return id; }
     public WorkingSetId parentWorkingSetId() { return parentWorkingSetId; }
+    public String name() { return name; }
     public List<SpaceBinding> spaces() { return List.copyOf(spaces.values()); }
     public List<TrackerBinding> trackers() { return List.copyOf(trackers.values()); }
 
     public SpaceBinding bindSpace(ProductSpace space) {
-        var binding = new SpaceBinding(id, space.id(), SpaceOrigin.EXPLICIT, SpaceState.ACTIVE);
+        var binding = new SpaceBinding(id, space.id(), space.name(), SpaceOrigin.EXPLICIT, SpaceState.ACTIVE);
         if (spaces.putIfAbsent(space.id(), binding) != null) {
             throw new BindingFailure(Reason.AlreadyBound, space.id());
         }

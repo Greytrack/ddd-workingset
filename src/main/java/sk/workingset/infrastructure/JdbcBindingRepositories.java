@@ -58,18 +58,23 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
-        String sql = "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?";
+        String sql = "SELECT parent_working_set_id, name FROM working_sets WHERE working_set_id = ?";
         if (lock) {
             sql += " FOR UPDATE";
         }
-        var parents = jdbc.queryForList(sql, String.class, id.value());
-        if (parents.isEmpty()) {
+        var rows = jdbc.query(sql,
+                (rs, row) -> new String[]{rs.getString("parent_working_set_id"), rs.getString("name")},
+                id.value());
+        if (rows.isEmpty()) {
             return Optional.empty();
         }
         var spaces = jdbc.query("""
-                SELECT product_space_id, origin, state FROM space_bindings
-                WHERE working_set_id = ? ORDER BY product_space_id
+                SELECT sb.product_space_id, ps.name AS product_space_name, sb.origin, sb.state
+                FROM space_bindings sb
+                LEFT JOIN product_spaces ps ON ps.product_space_id = sb.product_space_id
+                WHERE sb.working_set_id = ? ORDER BY sb.product_space_id
                 """, (rs, row) -> new WorkingSet.SpaceBinding(id, rs.getString("product_space_id"),
+                rs.getString("product_space_name"),
                 WorkingSet.SpaceOrigin.valueOf(rs.getString("origin")),
                 WorkingSet.SpaceState.valueOf(rs.getString("state"))), id.value());
         var trackers = jdbc.query("""
@@ -79,8 +84,9 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 rs.getString("product_space_id"), rs.getString("classification_id"),
                 SharingMode.valueOf(rs.getString("sharing_mode")),
                 WorkingSet.TrackerOrigin.valueOf(rs.getString("origin"))), id.value());
-        String parent = parents.getFirst();
-        return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), spaces, trackers));
+        String parent = rows.getFirst()[0];
+        String name = rows.getFirst()[1];
+        return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), name, spaces, trackers));
     }
 
     @Override
@@ -97,9 +103,9 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     @Override
     public boolean insertWorkingSet(WorkingSet workingSet) {
         return jdbc.update("""
-                INSERT INTO working_sets (working_set_id, parent_working_set_id)
-                VALUES (?, ?) ON CONFLICT (working_set_id) DO NOTHING
-                """, workingSet.id().value(), workingSet.parentWorkingSetId().value()) == 1;
+                INSERT INTO working_sets (working_set_id, parent_working_set_id, name)
+                VALUES (?, ?, ?) ON CONFLICT (working_set_id) DO NOTHING
+                """, workingSet.id().value(), workingSet.parentWorkingSetId().value(), workingSet.name()) == 1;
     }
 
     @Override
@@ -174,10 +180,12 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
 
     private Optional<Tracker> loadTracker(TrackerId id, boolean lock) {
         String sql = """
-                SELECT tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
+                SELECT tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
                        parent_id FROM trackers WHERE tracker_id = ?
                 """;
-        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, (rs, row) -> new Tracker(TrackerId.of(rs.getString("tracker_id")), optionalId(rs, "source_id"),
+        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, (rs, row) -> new Tracker(
+                TrackerId.of(rs.getString("tracker_id")), rs.getString("name"),
+                optionalId(rs, "source_id"),
                 WorkingSetId.of(rs.getString("working_set_id")), rs.getString("product_space_id"),
                 rs.getString("classification_id"), SharingMode.valueOf(rs.getString("sharing_mode")),
                 optionalId(rs, "parent_id")), id.value()).stream().findFirst();
@@ -186,10 +194,11 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     @Override
     public List<Tracker> findTrackers(WorkingSetId workingSetId) {
         return jdbc.query("""
-                SELECT tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
+                SELECT tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
                        parent_id FROM trackers WHERE working_set_id = ? ORDER BY tracker_id
                 """, (rs, row) -> new Tracker(TrackerId.of(rs.getString("tracker_id")),
-                optionalId(rs, "source_id"), WorkingSetId.of(rs.getString("working_set_id")),
+                rs.getString("name"), optionalId(rs, "source_id"),
+                WorkingSetId.of(rs.getString("working_set_id")),
                 rs.getString("product_space_id"), rs.getString("classification_id"),
                 SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id")),
                 workingSetId.value());
@@ -199,17 +208,18 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     public void insertTracker(Tracker tracker) {
         jdbc.update("""
                 INSERT INTO trackers
-                    (tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, tracker.trackerId().value(), tracker.sourceId() == null ? null : tracker.sourceId().value(),
+                    (tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, tracker.trackerId().value(), tracker.name(),
+                tracker.sourceId() == null ? null : tracker.sourceId().value(),
                 tracker.workingSetId().value(), tracker.productSpaceId(), tracker.classificationId(),
                 tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().value());
     }
 
     @Override
     public Optional<ProductSpace> lockProductSpace(String id) {
-        return jdbc.query("SELECT product_space_id FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
-                (rs, row) -> new ProductSpace(rs.getString(1)), id).stream().findFirst();
+        return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
+                (rs, row) -> new ProductSpace(rs.getString(1), rs.getString(2)), id).stream().findFirst();
     }
 
     @Override

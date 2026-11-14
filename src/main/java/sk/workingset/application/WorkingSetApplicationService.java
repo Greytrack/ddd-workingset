@@ -113,13 +113,19 @@ public class WorkingSetApplicationService {
 
     /** 只读列表：当前工作集绑定该 Tracker 时，返回该 Tracker 下的 LightTrackerItem。 */
     @Transactional(readOnly = true)
-    public List<LightTrackerItem> findItems(WorkingSetId workingSetId, TrackerId trackerId) {
+    public List<IndexedItem> findItems(WorkingSetId workingSetId, TrackerId trackerId) {
         var workingSet = findWorkingSet(workingSetId);
         if (!workingSet.hasTrackerBinding(trackerId)) {
             throw new ApplicationFailure(FailureReason.NOT_INCLUDED, trackerId.value());
         }
-        return items.findInTracker(trackerId);
+        return items.findInTracker(trackerId).stream()
+                .map(item -> new IndexedItem(item,
+                        businessItems.name(item.effectiveContentSource()).orElse(null)))
+                .toList();
     }
+
+    /** UI read model: LTI plus the readable name of its effective content source. */
+    public record IndexedItem(LightTrackerItem item, String name) {}
 
     @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {

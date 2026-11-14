@@ -242,6 +242,11 @@ public class ApplicationConfiguration {
             }
 
             @Override
+            public Optional<String> name(LocalId localId) {
+                return requirements.findName(localId);
+            }
+
+            @Override
             public boolean existsInTracker(TrackerId trackerId) {
                 return requirements.existsInTracker(trackerId);
             }
