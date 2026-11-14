@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS requirements (
 ALTER TABLE requirements ADD COLUMN IF NOT EXISTS delete_flag BOOLEAN NOT NULL DEFAULT FALSE;
 -- D2: WorkingSet-scoped Requirement family uniqueness. The column is derived from trackers.
 ALTER TABLE requirements ADD COLUMN IF NOT EXISTS working_set_id VARCHAR(128);
+-- UI read model: human-readable name; existing rows fall back to title.
+ALTER TABLE requirements ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+UPDATE requirements SET name = title WHERE name IS NULL;
 
 CREATE TABLE IF NOT EXISTS light_tracker_items (
     local_id         VARCHAR(64) PRIMARY KEY,
@@ -95,6 +98,10 @@ ALTER TABLE working_sets
 UPDATE working_sets SET parent_working_set_id = '1'
 WHERE working_set_id <> '1' AND parent_working_set_id IS NULL;
 
+-- UI read model: human-readable Working Set name.
+ALTER TABLE working_sets ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+UPDATE working_sets SET name = '默认工作集' WHERE working_set_id = '1' AND name IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_working_sets_parent ON working_sets (parent_working_set_id);
 
 DO 'BEGIN
@@ -110,6 +117,8 @@ END';
 CREATE TABLE IF NOT EXISTS product_spaces (
     product_space_id VARCHAR(64) PRIMARY KEY
 );
+-- UI read model: human-readable Product Space name.
+ALTER TABLE product_spaces ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 
 CREATE TABLE IF NOT EXISTS classifications (
     classification_id VARCHAR(64) PRIMARY KEY,
@@ -132,6 +141,8 @@ CREATE TABLE IF NOT EXISTS trackers (
     CHECK ((source_id IS NULL AND working_set_id = '1')
         OR (source_id IS NOT NULL AND working_set_id <> '1' AND sharing_mode = 'UNSHARED'))
 );
+-- UI read model: human-readable Tracker name.
+ALTER TABLE trackers ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 
 -- D2: Requirement family uniqueness is scoped by WorkingSet, not by Tracker (POL-005).
 UPDATE requirements r
