@@ -48,6 +48,9 @@ public class WorkingSetCreationService {
         if (previous.isPresent()) {
             return replay(previous.orElseThrow(), request);
         }
+        if (workingSets.findWorkingSetForCreation(target).isPresent()) {
+            throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
+        }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
         var creation = WorkingSetCreation.submit(UUID.randomUUID().toString(), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
@@ -66,6 +69,14 @@ public class WorkingSetCreationService {
 
     public WorkingSetCreation find(String id) {
         return store.find(id, false).orElseThrow(() -> notFound(id));
+    }
+
+    /** 任务上下文读取创建中的目标工作集；普通查询仍按 Preparing 过滤。 */
+    public WorkingSet findTarget(String id) {
+        var creation = find(id);
+        return workingSets.findWorkingSetForCreation(WorkingSetId.of(creation.request().newWorkingSetId()))
+                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
+                        "Working set is not created yet: " + creation.request().newWorkingSetId()));
     }
 
     public void execute(String id) {

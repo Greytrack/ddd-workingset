@@ -11,6 +11,8 @@ public interface WorkingSetRepository {
     Optional<WorkingSet> findWorkingSet(WorkingSetId id);
     Optional<WorkingSet> lockWorkingSet(WorkingSetId id);
     Optional<WorkingSet> lockWorkingSetForCreation(WorkingSetId id);
+    /** 任务上下文只读：不检查 Preparing，仅供 WorkingSetCreationService 使用。 */
+    Optional<WorkingSet> findWorkingSetForCreation(WorkingSetId id);
     void requireReady(WorkingSetId id);
     boolean insertWorkingSet(WorkingSet workingSet);
     List<WorkingSetId> findChildren(WorkingSetId id);

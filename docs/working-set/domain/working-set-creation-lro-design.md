@@ -99,12 +99,13 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 - 批量 LTI 按批提交（批大小可配置），逐项记录成功/失败；部分成功保留。
 - 事件沿用 Modulith 未完成事件重投（与 T6-B/D13 一致）。重投仅接续中断前尚无持久化结论的执行；已记录的业务失败保持终态。成功的副作用和对应进度在同一事务提交。
 - 不补偿：失败不回滚已创建的子 WS/Tracker/LTI；子 WS 与父 WS 独立，失败不影响父级。用户可自行按 T2 K3 删除叶子子 WS。
-- 可见性（T7-A 用户确认）：从任务受理到终态前，现有入口查询或使用目标工作集时返回 `Preparing`。轮询入口继续开放，终态后按实际提交结果访问工作集。内部执行者通过任务自身的执行入口推进。
+- 可见性（T7-A 用户确认）：从任务受理到终态前，普通入口（工作集详情、子级、祖先、绑定、Item 读取/写入）对目标 WS 返回 `Preparing`；`findChildren`/`findAncestors` 过滤 Pending/Running 的目标；任务上下文通过任务专用只读接口读取目标 WS。轮询入口继续开放，终态后按实际提交结果访问工作集。
 
 ## 6. 幂等与并发
 
 - 请求以 `(parentWorkingSetId, newWorkingSetId, requestId)` 为幂等键。相同键、相同规范化范围返回已有任务；相同键但范围不同返回 HTTP 409。
-- 同一 `newWorkingSetId` 只允许一个创建任务，其他任务请求返回 HTTP 409。若没有既有任务、但子 WS 已经由其他入口创建，受理后的本体步骤记录失败。
+- 同一 `newWorkingSetId` 只允许一个创建任务，其他任务请求返回 HTTP 409。
+- 受理前强校验目标 `newWorkingSetId` 是否已存在于 `working_sets`：已存在 → 直接 409 `WorkingSetAlreadyExists`，不插入任务、不把已有 WS 标记为 `Preparing`。
 - 步骤内已存在的 Tracker/LTI（重入/重复执行）视为已完成并记录“skipped”，不重复创建；唯一索引兜底。
 - 不开放任务重试接口；失败后由人工查看明细并决定后续（删除子 WS 或手工补齐）。
 
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 - `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`newWorkingSetId`、`requestId`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`。范围按集合比较，空集合合法。首次返回 HTTP 202、`creationId`、`status` 和轮询 `Location`。相同请求复用任务并返回当前状态。
 - `GET /api/working-set-creations/{id}` 返回专用任务视图，字段包括 `creationId`、`status`、`stage`、`progress`、`failures` 和任务时间。进度按步骤记录成功、失败和跳过数，扫描结束前允许总数未知。不存在的任务返回 HTTP 404。
+- `GET /api/working-set-creations/{id}/working-set` 任务专用只读：按任务 id 读取创建中的目标工作集；普通 `/api/worksets/{id}` 仍返回 `Preparing`。任务不存在或目标尚未创建 → 404。
 - `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason` 使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。
 - 轮询由前端按状态终止（`Succeeded/PartiallySucceeded/Failed`）。
 

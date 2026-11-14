@@ -2,7 +2,9 @@ package bootstrap;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.List;
@@ -200,6 +202,96 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(1, bindings().trackers().size());
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
+    }
+
+    @Test
+    void rejectsExistingTargetWithoutMarkingItPreparing() {
+        jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", child);
+        var response = rest.postForEntity(CREATIONS, new Request("1", child, "existing-target",
+                List.of(), List.of(), List.of()), Map.class);
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("WorkingSetAlreadyExists", response.getBody().get("reason"));
+        assertEquals(HttpStatus.OK, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
+    }
+
+    @Test
+    void rejectsParentThatIsBeingCreated() throws Exception {
+        String pendingParent = "pending-" + child;
+        String id;
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.prepareStatement(
+                    "SELECT working_set_id FROM working_sets WHERE working_set_id = '1' FOR UPDATE")) {
+                statement.executeQuery().close();
+                id = submit(new Request("1", pendingParent, "pending-parent",
+                        List.of(), List.of(), List.of()));
+                await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                        assertEquals(Status.Running, task(id).status()));
+                var rejected = rest.postForEntity(CREATIONS, new Request(pendingParent, child, "child-of-pending",
+                        List.of(), List.of(), List.of()), Map.class);
+                assertEquals(HttpStatus.CONFLICT, rejected.getStatusCode());
+                assertEquals("PREPARING", rejected.getBody().get("reason"));
+            } finally {
+                connection.rollback();
+            }
+        }
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertEquals(Status.Succeeded, task(id).status()));
+        jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + id + "%");
+        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", pendingParent);
+        jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", pendingParent);
+    }
+
+    @Test
+    void filtersCreatingWorkingSetFromQueriesButTaskViewIsAvailable() throws Exception {
+        seedRange();
+        String id;
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.prepareStatement(
+                    "SELECT product_space_id FROM product_spaces WHERE product_space_id = ? FOR UPDATE")) {
+                statement.setString(1, space);
+                statement.executeQuery().close();
+                id = submit(new Request("1", child, "filter", List.of(space), List.of(), List.of()));
+                await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+                    assertEquals(Status.Running, task(id).status());
+                    assertEquals(1, jdbc.queryForObject(
+                            "SELECT count(*) FROM working_sets WHERE working_set_id = ?", Integer.class, child));
+                });
+                var ordinary = rest.getForEntity("/api/worksets/" + child, Map.class);
+                assertEquals(HttpStatus.CONFLICT, ordinary.getStatusCode());
+                assertEquals("PREPARING", ordinary.getBody().get("reason"));
+                assertFalse(rest.getForObject("/api/worksets/1/children", List.class).contains(child));
+                var view = rest.getForEntity(CREATIONS + "/" + id + "/working-set", WorkingSetView.class);
+                assertEquals(HttpStatus.OK, view.getStatusCode());
+                assertEquals(child, view.getBody().workingSetId());
+            } finally {
+                connection.rollback();
+            }
+        }
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertEquals(Status.Succeeded, task(id).status()));
+    }
+
+    @Test
+    void ancestorsExcludeCreatingWorkingSet() {
+        String mid = "mid-" + child;
+        String leaf = "leaf-" + child;
+        jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", mid);
+        jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, ?)", leaf, mid);
+        jdbc.update("""
+                INSERT INTO working_set_creations
+                    (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
+                VALUES (?, '1', ?, 'running', 'Running', CAST(? AS jsonb), now())
+                """, "task-" + child, mid, "{}");
+        try {
+            var ancestors = rest.getForObject("/api/worksets/" + leaf + "/ancestors", List.class);
+            assertFalse(ancestors.contains(mid));
+            assertTrue(ancestors.contains("1"));
+        } finally {
+            jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", mid);
+            jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", mid, leaf);
+        }
     }
 
     private void seedRange() {

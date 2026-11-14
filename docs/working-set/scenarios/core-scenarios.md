@@ -893,6 +893,9 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then 返回同一任务。子工作集只复用所选共享 Tracker，非共享 Tracker 只复制一次。索引包含所有有效父 Item，已软删 Item 不纳入。父变体未物化时，子索引保留实际内容来源。
 - 所选空间先绑定。若漏选一个 Tracker 所属的空间，该 Tracker 的复制失败、绑定跳过。若直属父工作集未绑定共享 Tracker，该项拒绝纳入。轮询可读失败位置和分阶段计数，其余合法项仍可完成。若子工作集本体无法创建，任务失败并停止。
 - 任务在终态前允许轮询，现有入口访问目标工作集时返回 `Preparing`。
+- 目标 ID 已存在 → 受理直接 409 `WorkingSetAlreadyExists`，不改变该 WS 的普通可见性。
+- 父 WS 正在被其他任务创建（Pending/Running）→ 以它为父的受理返回 409 `Preparing`；普通子级/祖先查询不包含创建中的 WS。
+- 任务上下文可通过 `GET /api/working-set-creations/{id}/working-set` 读取目标 WS；普通 `GET /api/worksets/{id}` 仍返回 `Preparing`。
 - 若处理进程在索引批次提交后中断，事件重投依据已提交进度继续。成功批次不重复生成 LTI。
 - 验证边界：通过受理与轮询 REST 观察任务状态、阶段和失败详情，再通过现有查询验证已提交范围。
 - 实施证据见 [T7-C 范围绑定验收](../implementation/t7-c-binding-verification.md)。Item 索引和索引批次接续留给 T7-D。

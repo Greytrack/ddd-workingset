@@ -38,6 +38,12 @@ public class WorkingSetCreationController {
         return CreationView.from(creations.find(id));
     }
 
+    /** 任务上下文读取创建中的目标工作集；普通 /api/worksets/{id} 仍返回 Preparing。 */
+    @GetMapping("/{id}/working-set")
+    public WorkingSetController.WorkingSetView findTarget(@PathVariable String id) {
+        return WorkingSetController.WorkingSetView.from(creations.findTarget(id));
+    }
+
     public record CreationView(String creationId, WorkingSetCreation.Status status, WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
                                Instant createdAt, Instant startedAt, Instant completedAt,

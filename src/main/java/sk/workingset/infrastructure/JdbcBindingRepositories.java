@@ -52,6 +52,11 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         return loadWorkingSet(id, true);
     }
 
+    @Override
+    public Optional<WorkingSet> findWorkingSetForCreation(WorkingSetId id) {
+        return loadWorkingSet(id, false);
+    }
+
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
         String sql = "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?";
         if (lock) {
@@ -118,7 +123,12 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                     SELECT parent.working_set_id, parent.parent_working_set_id, child.distance + 1
                     FROM working_sets parent JOIN lineage child ON parent.working_set_id = child.parent_working_set_id
                 ) CYCLE working_set_id SET cyclic USING path
-                SELECT working_set_id FROM lineage WHERE distance > 0 ORDER BY distance
+                SELECT working_set_id FROM lineage
+                WHERE distance > 0 AND NOT EXISTS (
+                    SELECT 1 FROM working_set_creations c
+                    WHERE c.new_working_set_id = lineage.working_set_id
+                    AND c.status IN ('Pending', 'Running'))
+                ORDER BY distance
                 """, String.class, id.value());
         if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.value().equals(ancestors.getLast())) {
             throw new BindingFailure(Reason.WorkingSetCycle, id.value());
