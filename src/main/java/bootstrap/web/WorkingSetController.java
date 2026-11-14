@@ -19,6 +19,7 @@ import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.Tracker;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.WorkingSet;
 
@@ -67,6 +68,19 @@ public class WorkingSetController {
     @GetMapping("/{workingSetId}/ancestors")
     public List<String> findAncestors(@PathVariable String workingSetId) {
         return applicationService.findAncestors(WorkingSetId.of(workingSetId)).stream().map(WorkingSetId::value).toList();
+    }
+
+    /** 界面只读列表：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。 */
+    @GetMapping("/{workingSetId}/trackers")
+    public List<TrackerView> findTrackers(@PathVariable String workingSetId) {
+        return applicationService.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
+    }
+
+    /** 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。 */
+    @GetMapping("/{workingSetId}/trackers/{trackerId}/items")
+    public List<LightTrackerItemView> findItems(@PathVariable String workingSetId, @PathVariable String trackerId) {
+        return applicationService.findItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
+                .map(LightTrackerItemView::from).toList();
     }
 
     @GetMapping("/{workingSetId}/bindings")
@@ -152,6 +166,16 @@ public class WorkingSetController {
     }
 
     public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {}
+
+    public record TrackerView(String trackerId, String parentId, String sourceId, String productSpaceId,
+                              String classificationId, String sharingMode) {
+        static TrackerView from(Tracker tracker) {
+            return new TrackerView(tracker.trackerId().value(),
+                    tracker.parentId() == null ? null : tracker.parentId().value(),
+                    tracker.sourceId() == null ? null : tracker.sourceId().value(),
+                    tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name());
+        }
+    }
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {

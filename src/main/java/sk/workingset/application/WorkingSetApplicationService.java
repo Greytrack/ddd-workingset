@@ -104,6 +104,23 @@ public class WorkingSetApplicationService {
         return workingSets.findAncestors(id);
     }
 
+    /** 只读列表：供界面按工作集展示 Tracker 树。包含未绑定的副本。 */
+    @Transactional(readOnly = true)
+    public List<Tracker> findTrackers(WorkingSetId workingSetId) {
+        findWorkingSet(workingSetId);
+        return trackers.findTrackers(workingSetId);
+    }
+
+    /** 只读列表：当前工作集绑定该 Tracker 时，返回该 Tracker 下的 LightTrackerItem。 */
+    @Transactional(readOnly = true)
+    public List<LightTrackerItem> findItems(WorkingSetId workingSetId, TrackerId trackerId) {
+        var workingSet = findWorkingSet(workingSetId);
+        if (!workingSet.hasTrackerBinding(trackerId)) {
+            throw new ApplicationFailure(FailureReason.NOT_INCLUDED, trackerId.value());
+        }
+        return items.findInTracker(trackerId);
+    }
+
     @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
         return bindSpace(writable(id), lockSpace(spaceId));

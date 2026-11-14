@@ -54,7 +54,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | `COPY_UNSHARED_TRACKERS` | 为每个选定的父 Tracker 复制一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`） | 对应空间已绑定 | 单项失败记录明细，继续其他项 |
 | `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
 | `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
-| `INDEX_UNSHARED_TRACKERS` | 对每个子 Tracker 下父 Tracker 的**全部 Item（剔除软删）**创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
+| `INDEX_UNSHARED_TRACKERS`（T7-D 已实现） | 对每个绑定成功的非共享子 Tracker，按父 Tracker 的有效 Item 创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
 | `LINK_RELATIONS` | 索引完成后发布事件，异步构建引用/关联（依赖 QUESTION-010） | 索引 | 记录失败项；不阻断任务整体 |
 
 - 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
@@ -84,8 +84,8 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
   - `CommonId` 继承父 Item；`LocalId` 由服务端雪花生成；
   - 自身 Revision 固定为父变体 Revision。父变体已有本地业务内容时以父 LocalId 和 Revision 为有效来源。父变体仍为 Source-backed 时沿用其实际 `SourceLocalId` 和 `SourceRevision`，见 [T3 §4](lighttrackeritem-materialization-contract-v1.md#4-双态契约与状态判定)。
   - 普通业务字段按 T3 读取，附件与关系的派生基准仍按 T3 §2.1。
-- 软删 Item 剔除（C11/D16）；永久删除的 Item 不存在，天然不参与。
-- 批量索引需分页读取父 Tracker 下的 Item 身份（`CommonId/LocalId/Revision`）与来源；现有 `RequirementCatalog.identities` 只有 `localId/commonId`，T7 需扩展为分页的 `TrackerItemCatalog`（见 §7）。
+- 原生 Item、Local-backed 父 LTI 对应对象及 Source-backed 父 LTI 的实际内容来源，软删时均剔除且不计失败。扫描中发现对象或实际来源缺失时记 `NOT_FOUND`。
+- SK 按 LocalId 合并业务身份页与 LTI 页。重合同族优先有效业务身份，子工作集已有同族 LTI 计为跳过。
 
 ### 4.6 关系/引用构建
 
@@ -131,8 +131,8 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 ### 7.2 端口
 
-- `TrackerItemCatalog`（SK 定义、BC 实现）：按 `TrackerId` **分页**列出 Item 身份（`localId`、`commonId`、`revision`），并标明软删；T7 扩展 `RequirementCatalog` 或新增端口。
-- `LightTrackerItemRepository`：批量保存（循环）与按 Tracker 查询已有 LTI（幂等）。
+- `TrackerItemCatalog`（SK 定义、BC 实现）：按 Tracker 和 LocalId 游标提供未软删的业务身份页及有效同族查询。`RequirementCatalog` 继续服务 Merge。
+- `LightTrackerItemRepository` 提供父 LTI 分页查询与按工作集/家族条件插入。内容可读性沿用 T3 读取边界。
 - 关系/引用 Port：依赖 QUESTION-010；T7-E 定义。
 
 ### 7.3 REST
@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 ## 9. 规模与分页
 
-- 父 Tracker 下 Item 分页读取；批量 LTI 分批提交；进度按批更新。
+- 索引阶段主进度按父 Tracker 计数。轮询 `indexProgress` 按父 Tracker 提供 Item 成功、失败和跳过数。批大小配置为 `workingset.creation.index-batch-size`，默认 100。LocalId 游标、计数和批次 LTI 同事务提交，重投从已提交游标继续。
 - `result` JSONB 可能随失败项增长；T7-F 需验证失败明细规模与保留/清理。
 - 并发创建多个工作集时，任务表与批量写入的连接池压力需压测（QUESTION-012）。
 
@@ -179,4 +179,4 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 ## 13. 状态与下一步
 
-- T7-C 已支持非空范围创建与绑定。当前终态覆盖已启用阶段，Item 索引和关系事件分别由 T7-D、T7-E 接入。见 [T7-C 验收](../implementation/t7-c-binding-verification.md)。
+- T7-D 已接入批量索引，并在最终索引批次提交后发布 `TrackerItemsIndexed`。事件包含所有扫描完成的子 Tracker，包括有单项失败的 Tracker。T7-E 消费该事件。见 [T7-D 验收](../implementation/t7-d-index-verification.md)。

@@ -898,4 +898,4 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 任务上下文可通过 `GET /api/working-set-creations/{id}/working-set` 读取目标 WS；普通 `GET /api/worksets/{id}` 仍返回 `Preparing`。
 - 若处理进程在索引批次提交后中断，事件重投依据已提交进度继续。成功批次不重复生成 LTI。
 - 验证边界：通过受理与轮询 REST 观察任务状态、阶段和失败详情，再通过现有查询验证已提交范围。
-- 实施证据见 [T7-C 范围绑定验收](../implementation/t7-c-binding-verification.md)。Item 索引和索引批次接续留给 T7-D。
+- 实施证据见 [T7-C 范围绑定验收](../implementation/t7-c-binding-verification.md) 和 [T7-D 批量索引验收](../implementation/t7-d-index-verification.md)。

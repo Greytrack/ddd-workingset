@@ -3,6 +3,7 @@ package sk.workingset.domain;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -12,10 +13,11 @@ import java.util.TreeSet;
 public record WorkingSetCreation(String id, Request request, String requestedBy, Status status,
                                  Stage stage, Progress progress, List<Failure> failures,
                                  Instant createdAt, Instant startedAt, Instant completedAt,
-                                 Map<Stage, Progress> stageProgress) {
+                                 Map<Stage, Progress> stageProgress, Map<String, IndexProgress> indexProgress) {
     public enum Status { Pending, Running, Succeeded, PartiallySucceeded, Failed }
     public enum Stage {
-        CREATE_WORKING_SET, BIND_PRODUCT_SPACES, COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS
+        CREATE_WORKING_SET, BIND_PRODUCT_SPACES, COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
+        INDEX_UNSHARED_TRACKERS
     }
 
     public enum ItemOutcome { Succeeded, Failed, Skipped }
@@ -36,7 +38,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             return switch (stage) {
                 case CREATE_WORKING_SET -> List.of(newWorkingSetId);
                 case BIND_PRODUCT_SPACES -> productSpaceIds;
-                case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS -> unsharedParentTrackerIds;
+                case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS -> unsharedParentTrackerIds;
                 case BIND_SHARED_TRACKERS -> sharedTrackerIds;
             };
         }
@@ -75,19 +77,31 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
     public record Failure(Stage stage, String productSpaceId, String trackerId, String localId,
                           String reason, Instant occurredAt) {}
 
+    public record IndexProgress(String afterLocalId, int succeeded, int failed, int skipped,
+                                String scannedChildTrackerId) {
+        public static IndexProgress initial() {
+            return new IndexProgress("", 0, 0, 0, null);
+        }
+    }
+
     public WorkingSetCreation {
         failures = List.copyOf(failures);
         stageProgress = stageProgress == null ? Map.of(Stage.CREATE_WORKING_SET, progress) : Map.copyOf(stageProgress);
+        indexProgress = indexProgress == null ? Map.of() : Map.copyOf(indexProgress);
     }
 
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
+        return new WorkingSetCreation(id, request, caller, Status.Pending,
+                Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, total(request)), List.of(), now, null, null,
+                Map.of(Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, 1)), Map.of());
+    }
+
+    private static int total(Request request) {
         int total = 0;
         for (Stage stage : Stage.values()) {
             total += request.items(stage).size();
         }
-        return new WorkingSetCreation(id, Objects.requireNonNull(request), caller, Status.Pending,
-                Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, total), List.of(), now, null, null,
-                Map.of(Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, 1)));
+        return total;
     }
 
     public WorkingSetCreation start(Instant now) {
@@ -95,7 +109,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             throw new IllegalStateException("Only a pending creation can start");
         }
         return new WorkingSetCreation(id, request, requestedBy, Status.Running,
-                stage, progress, failures, createdAt, now, null, stageProgress);
+                stage, progress, failures, createdAt, now, null, stageProgress, indexProgress);
     }
 
     public String currentItem() {
@@ -108,15 +122,40 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
         if ((outcome == ItemOutcome.Failed) != (failure != null) || failure != null && failure.stage() != stage) {
             throw new IllegalArgumentException("Failure detail must match the current step and outcome");
         }
+        return advance(outcome, failure == null ? List.of() : List.of(failure), now);
+    }
+
+    public WorkingSetCreation recordIndexBatch(IndexProgress batch, List<Failure> batchFailures,
+                                                boolean finished, Instant now) {
+        if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
+            throw new IllegalStateException("Not indexing");
+        }
+        var updatedIndex = new HashMap<>(indexProgress);
+        updatedIndex.put(currentItem(), batch);
+        if (finished) {
+            return advance(batch.failed() == 0 ? ItemOutcome.Succeeded : ItemOutcome.Failed,
+                    batchFailures, now, updatedIndex);
+        }
+        var updatedFailures = new ArrayList<>(failures);
+        updatedFailures.addAll(batchFailures);
+        return new WorkingSetCreation(id, request, requestedBy, status, stage, progress, updatedFailures,
+                createdAt, startedAt, completedAt, stageProgress, updatedIndex);
+    }
+
+    private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, Instant now) {
+        return advance(outcome, newFailures, now, indexProgress);
+    }
+
+    private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, Instant now,
+                                       Map<String, IndexProgress> updatedIndex) {
         var updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
         updatedProgress.putAll(stageProgress);
         var current = updatedProgress.get(stage).record(outcome);
         updatedProgress.put(stage, current);
         var updatedFailures = new ArrayList<>(failures);
-        if (failure != null) {
-            updatedFailures.add(failure);
-        }
-        var totals = progress.record(outcome);
+        updatedFailures.addAll(newFailures);
+        var totals = new Progress(progress.succeeded(), progress.failed(), progress.skipped(), total(request))
+                .record(outcome);
         var next = stage;
         var nextStatus = Status.Running;
         if (stage == Stage.CREATE_WORKING_SET && outcome == ItemOutcome.Failed) {
@@ -135,7 +174,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             }
         }
         return new WorkingSetCreation(id, request, requestedBy, nextStatus, next, totals, updatedFailures,
-                createdAt, startedAt, nextStatus == Status.Running ? null : now, updatedProgress);
+                createdAt, startedAt, nextStatus == Status.Running ? null : now, updatedProgress, updatedIndex);
     }
 
     private void requireRunning() {

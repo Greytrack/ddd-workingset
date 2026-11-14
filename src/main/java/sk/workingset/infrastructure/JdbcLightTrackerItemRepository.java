@@ -84,6 +84,32 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
     }
 
     @Override
+    public List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
+        return jdbc.query("SELECT " + COLUMNS + " FROM light_tracker_items WHERE tracker_id = ? "
+                        + "AND local_id COLLATE \"C\" > ? ORDER BY local_id COLLATE \"C\" LIMIT ?",
+                MAPPER, trackerId.value(), afterLocalId, limit);
+    }
+
+    @Override
+    public boolean insertIfFamilyAbsent(LightTrackerItem item) {
+        return jdbc.update("""
+                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
+                    source_local_id, source_revision, materialized)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (working_set_id, common_id) DO NOTHING
+                """, item.localId().value(), item.commonId().value(), item.trackerId().value(),
+                item.workingSetId().value(), item.revision().value(), item.sourceLocalId().value(),
+                item.sourceRevision().value(), item.materialized()) == 1;
+    }
+
+    @Override
+    public boolean hasFamily(WorkingSetId workingSetId, CommonId commonId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?)
+                """, Boolean.class, workingSetId.value(), commonId.value()));
+    }
+
+    @Override
     public boolean hasSourceBackedDependents(LocalId id) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE source_local_id = ? AND NOT materialized)

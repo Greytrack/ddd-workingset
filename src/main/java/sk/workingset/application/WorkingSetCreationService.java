@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
+import sk.workingset.application.event.TrackerItemsIndexed;
 import sk.workingset.application.port.WorkingSetCreationStore;
 import sk.workingset.application.port.WorkingSetRepository;
 import sk.workingset.domain.BindingFailure;
@@ -16,6 +17,7 @@ import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetCreation;
 import sk.workingset.domain.WorkingSetCreation.Failure;
 import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
+import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.WorkingSetCreation.Status;
 import sk.workingset.domain.WorkingSetId;
@@ -27,15 +29,18 @@ public class WorkingSetCreationService {
     private final WorkingSetApplicationService workingSetService;
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
+    private final WorkingSetItemIndexer indexer;
 
     public WorkingSetCreationService(WorkingSetCreationStore store, WorkingSetRepository workingSets,
                                      WorkingSetApplicationService workingSetService,
-                                     TransactionTemplate transaction, ApplicationEventPublisher events) {
+                                     TransactionTemplate transaction, ApplicationEventPublisher events,
+                                     WorkingSetItemIndexer indexer) {
         this.store = store;
         this.workingSets = workingSets;
         this.workingSetService = workingSetService;
         this.transaction = transaction;
         this.events = events;
+        this.indexer = indexer;
     }
 
     @Transactional
@@ -93,8 +98,15 @@ public class WorkingSetCreationService {
                 if (creation.status() != Status.Running) {
                     return false;
                 }
-                var updated = executeItem(creation);
+                var updated = creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
+                        ? indexer.indexBatch(creation, tx) : executeItem(creation);
                 store.update(updated);
+                if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS && updated.status() != Status.Running) {
+                    var scannedTrackers = updated.indexProgress().values().stream()
+                            .map(IndexProgress::scannedChildTrackerId).filter(java.util.Objects::nonNull).sorted().toList();
+                    events.publishEvent(new TrackerItemsIndexed(id, updated.request().newWorkingSetId(),
+                            scannedTrackers, updated.completedAt()));
+                }
                 return updated.status() == Status.Running;
             }));
         } while (running);
@@ -119,6 +131,7 @@ public class WorkingSetCreationService {
                 case COPY_UNSHARED_TRACKERS -> workingSetService.copyUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
+                case INDEX_UNSHARED_TRACKERS -> throw new IllegalStateException("Indexing requires batch execution");
             };
             return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
         } catch (BindingFailure failure) {

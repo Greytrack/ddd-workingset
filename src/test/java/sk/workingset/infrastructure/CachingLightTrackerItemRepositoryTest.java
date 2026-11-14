@@ -62,6 +62,17 @@ class CachingLightTrackerItemRepositoryTest {
             public List<LightTrackerItem> findInTracker(TrackerId trackerId) { return List.of(); }
 
             @Override
+            public List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
+                return List.of();
+            }
+
+            @Override
+            public boolean insertIfFamilyAbsent(LightTrackerItem item) { return true; }
+
+            @Override
+            public boolean hasFamily(WorkingSetId workingSetId, CommonId commonId) { return false; }
+
+            @Override
             public boolean hasSourceBackedDependents(LocalId id) { return false; }
 
             @Override

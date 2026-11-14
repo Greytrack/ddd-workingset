@@ -15,9 +15,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * LightTrackerItem 查询缓存装饰器（Redis，TTL + 提交后更新）。
@@ -87,6 +89,21 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
     @Override
     public List<LightTrackerItem> findInTracker(TrackerId trackerId) {
         return delegate.findInTracker(trackerId);
+    }
+
+    @Override
+    public List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
+        return delegate.pageInTracker(trackerId, afterLocalId, limit);
+    }
+
+    @Override
+    public boolean insertIfFamilyAbsent(LightTrackerItem item) {
+        return delegate.insertIfFamilyAbsent(item);
+    }
+
+    @Override
+    public boolean hasFamily(WorkingSetId workingSetId, CommonId commonId) {
+        return delegate.hasFamily(workingSetId, commonId);
     }
 
     @Override

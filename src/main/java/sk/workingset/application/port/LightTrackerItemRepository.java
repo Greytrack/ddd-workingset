@@ -4,9 +4,11 @@ import java.util.List;
 import java.util.Optional;
 
 import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * LightTrackerItem 聚合的命令侧存取（T3）。
@@ -20,6 +22,12 @@ public interface LightTrackerItemRepository {
     boolean existsInTracker(TrackerId trackerId);
 
     List<LightTrackerItem> findInTracker(TrackerId trackerId);
+
+    List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit);
+
+    boolean insertIfFamilyAbsent(LightTrackerItem item);
+
+    boolean hasFamily(WorkingSetId workingSetId, CommonId commonId);
 
     boolean hasSourceBackedDependents(LocalId id);
 

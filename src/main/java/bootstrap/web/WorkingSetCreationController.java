@@ -47,11 +47,20 @@ public class WorkingSetCreationController {
     public record CreationView(String creationId, WorkingSetCreation.Status status, WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
                                Instant createdAt, Instant startedAt, Instant completedAt,
-                               Map<WorkingSetCreation.Stage, WorkingSetCreation.Progress> stageProgress) {
+                               Map<WorkingSetCreation.Stage, WorkingSetCreation.Progress> stageProgress,
+                               Map<String, IndexCounts> indexProgress) {
         static CreationView from(WorkingSetCreation creation) {
             return new CreationView(creation.id(), creation.status(), creation.stage(), creation.progress(),
                     creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt(),
-                    creation.stageProgress());
+                    creation.stageProgress(), creation.indexProgress().entrySet().stream().collect(
+                            java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey,
+                                    entry -> IndexCounts.from(entry.getValue()))));
+        }
+    }
+
+    public record IndexCounts(int succeeded, int failed, int skipped) {
+        static IndexCounts from(WorkingSetCreation.IndexProgress progress) {
+            return new IndexCounts(progress.succeeded(), progress.failed(), progress.skipped());
         }
     }
 }

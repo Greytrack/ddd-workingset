@@ -39,6 +39,8 @@ import sk.workingset.application.SourceSerialCowCoordinator;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.WorkingSetDeletionService;
 import sk.workingset.application.WorkingSetCreationService;
+import sk.workingset.application.WorkingSetItemIndexer;
+import sk.workingset.application.port.TrackerItemCatalog;
 import sk.workingset.application.port.WorkingSetCreationStore;
 import sk.workingset.infrastructure.JdbcWorkingSetCreationStore;
 import sk.workingset.application.port.BusinessTrackerItems;
@@ -180,8 +182,32 @@ public class ApplicationConfiguration {
     @Bean
     public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
             JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
-            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events) {
-        return new WorkingSetCreationService(store, bindings, workingSets, newTransactionTemplate, events);
+            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer) {
+        return new WorkingSetCreationService(store, bindings, workingSets, newTransactionTemplate, events, indexer);
+    }
+
+    @Bean
+    public TrackerItemCatalog trackerItemCatalog(JdbcRequirementRepository requirements) {
+        return new TrackerItemCatalog() {
+            @Override
+            public java.util.List<Identity> page(TrackerId trackerId, String afterLocalId, int limit) {
+                return requirements.pageActiveIdentities(trackerId, afterLocalId, limit);
+            }
+
+            @Override
+            public boolean hasActiveFamily(TrackerId trackerId, sk.workingset.domain.CommonId commonId) {
+                return requirements.hasActiveFamily(trackerId, commonId);
+            }
+        };
+    }
+
+    @Bean
+    public WorkingSetItemIndexer workingSetItemIndexer(JdbcBindingRepositories bindings,
+            LightTrackerItemRepository items, TrackerItemCatalog catalog, BusinessTrackerItems businessItems,
+            JdbcRequirementRepository requirements, IdentifierGenerator ids,
+            @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
+        return new WorkingSetItemIndexer(bindings, bindings, items, catalog, businessItems,
+                id -> new RequirementAdapter(requirements, id), ids, batchSize);
     }
 
     @Bean

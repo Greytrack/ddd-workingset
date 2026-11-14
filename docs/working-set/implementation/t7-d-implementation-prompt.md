@@ -1,6 +1,6 @@
 # T7-D 实施提示词（批量 LTI 索引）
 
-**状态：Draft（实施提示词）**。本文件是 T7-D 切片的任务说明，不替代 [T7 设计](../domain/working-set-creation-lro-design.md)。完成后新增 `t7-d-index-verification.md` 记录实际结果。
+**状态：Historical**。本文件保留 T7-D 实施前的任务与备选项。当前裁定和实施结果见 [T7-D 验收](t7-d-index-verification.md)。
 
 ## 0. 角色与目标
 

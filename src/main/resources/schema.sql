@@ -217,6 +217,9 @@ END';
 
 CREATE INDEX IF NOT EXISTS idx_requirements_tracker ON requirements (tracker_id);
 CREATE INDEX IF NOT EXISTS idx_lti_tracker ON light_tracker_items (tracker_id, working_set_id);
+CREATE INDEX IF NOT EXISTS idx_lti_tracker_local ON light_tracker_items (tracker_id, local_id COLLATE "C");
+CREATE INDEX IF NOT EXISTS idx_requirement_active_tracker_local
+    ON requirements (tracker_id, local_id COLLATE "C") WHERE NOT delete_flag;
 CREATE INDEX IF NOT EXISTS idx_trackers_org_parent ON trackers (parent_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_source ON trackers (source_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_product_space ON trackers (product_space_id);

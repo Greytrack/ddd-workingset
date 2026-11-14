@@ -15,21 +15,29 @@ import javax.sql.DataSource;
 import bootstrap.web.WorkingSetController.WorkingSetView;
 import bootstrap.web.WorkingSetController.BindingsView;
 import bootstrap.web.WorkingSetCreationController.CreationView;
+import bootstrap.web.LightTrackerItemView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.modulith.events.ApplicationModuleListener;
+import sk.workingset.application.event.TrackerItemsIndexed;
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
 import sk.workingset.domain.WorkingSetCreation.Request;
 import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.WorkingSetCreation.Status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "workingset.creation.index-batch-size=2")
+@Import(WorkingSetCreationAcceptanceTest.IndexEventConfiguration.class)
 class WorkingSetCreationAcceptanceTest {
     private static final String CREATIONS = "/api/working-set-creations";
     private final String child = UUID.randomUUID().toString();
@@ -44,15 +52,22 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private DataSource dataSource;
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transaction;
+    @Autowired private IndexEvents indexEvents;
 
     @AfterEach
     void cleanUp() {
+        indexEvents.clear(child);
+        jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", child);
+        jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", parent);
+        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id IN (?, ?))",
+                space, otherSpace);
         jdbc.update("""
                 DELETE FROM event_publication WHERE serialized_event LIKE ANY (
                     SELECT '%' || id || '%' FROM working_set_creations WHERE new_working_set_id = ?)
                 """, child);
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
+        jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", parent);
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", parent);
@@ -129,7 +144,7 @@ class WorkingSetCreationAcceptanceTest {
         var request = new Request("1", child, "range", List.of(space), List.of(shared), List.of(unshared));
         String id = submit(request);
         var completed = awaitStatus(id, Status.Succeeded);
-        assertEquals(5, completed.progress().succeeded());
+        assertEquals(6, completed.progress().succeeded());
         var bindings = bindings();
         assertEquals(List.of(space), bindings.spaces().stream().map(binding -> binding.productSpaceId()).toList());
         assertEquals(2, bindings.trackers().size());
@@ -143,6 +158,7 @@ class WorkingSetCreationAcceptanceTest {
         transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmitted(id)));
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertEquals(2, jdbc.queryForObject("""
                 SELECT count(*) FROM event_publication WHERE serialized_event LIKE ? AND completion_date IS NOT NULL
+                    AND event_type LIKE '%WorkingSetCreationSubmitted'
                 """, Integer.class, "%" + id + "%")));
         assertEquals(completed, task(id));
         assertEquals(bindings, bindings());
@@ -165,6 +181,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(otherSpace, failure.productSpaceId());
         assertEquals("MissingSpaceBinding", failure.reason());
         assertEquals(1, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).skipped());
+        assertEquals(1, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).skipped());
         assertEquals(2, bindings().trackers().size());
         assertEquals(1, bindings().spaces().size());
     }
@@ -294,6 +311,157 @@ class WorkingSetCreationAcceptanceTest {
         }
     }
 
+    @Test
+    void indexesAllThreeNativeItemsWithInheritedIdentityAndSource() {
+        seedRange();
+        var families = List.of("a-" + child, "b-" + child, "c-" + child);
+        for (String family : families) {
+            seedItem(unshared, family, family, false);
+        }
+        seedItem(unshared, "deleted-" + child, "deleted-" + child, true);
+        String second = "other-tracker-" + child;
+        seedTracker(second, otherSpace, unshared, "UNSHARED");
+        seedItem(second, "other-item-" + child, "other-item-" + child, false);
+        String id = submit(new Request("1", child, "index", List.of(space, otherSpace), List.of(), List.of(unshared, second)));
+        var completed = awaitStatus(id, Status.Succeeded);
+        assertEquals(2, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).succeeded());
+        assertEquals(3, completed.indexProgress().get(unshared).succeeded());
+        assertEquals(1, completed.indexProgress().get(second).succeeded());
+        String copiedTracker = bindings().trackers().stream()
+                .filter(binding -> space.equals(binding.productSpaceId())).findFirst().orElseThrow().trackerId();
+        var indexed = jdbc.queryForList("SELECT local_id FROM light_tracker_items WHERE tracker_id = ? ORDER BY common_id",
+                String.class, copiedTracker);
+        assertEquals(families.size(), indexed.size());
+        for (int index = 0; index < families.size(); index++) {
+            String family = families.get(index);
+            String localId = indexed.get(index);
+            var item = rest.getForObject("/api/worksets/" + child + "/items/" + localId, LightTrackerItemView.class);
+            assertEquals(family, item.commonId());
+            assertFalse(family.equals(item.localId()));
+            assertEquals(3, item.revision());
+            assertEquals(family, item.sourceLocalId());
+            assertEquals(3, item.sourceRevision());
+            assertFalse(item.materialized());
+        }
+    }
+
+    @Test
+    void indexesDerivedParentAndExcludesDeletedSourcesWhileRecordingMissingSources() {
+        seedRange();
+        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
+                Map.of("workingSetId", parent), Map.class).getStatusCode());
+        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
+                null, Map.class).getStatusCode());
+        String nativeId = "root-" + child;
+        seedItem(unshared, nativeId, nativeId, false);
+        var derive = rest.postForEntity("/api/worksets/" + parent + "/derive",
+                Map.of("sourceTrackerId", unshared, "sourceLocalId", nativeId, "commonId", nativeId,
+                        "sourceRevision", 3), bootstrap.web.DeriveView.class);
+        assertEquals(HttpStatus.CREATED, derive.getStatusCode());
+        String parentTracker = derive.getBody().trackerId();
+        String overlap = "overlap-" + child;
+        seedItem(parentTracker, overlap, overlap, false);
+        seedParentLti(parentTracker, overlap, overlap, overlap, true);
+        String deleted = "deleted-" + child;
+        seedItem(unshared, deleted, deleted, true);
+        seedParentLti(parentTracker, "virtual-deleted-" + child, deleted, deleted, false);
+        String localDeleted = "local-deleted-" + child;
+        seedItem(parentTracker, localDeleted, localDeleted, true);
+        seedParentLti(parentTracker, localDeleted, localDeleted, localDeleted, true);
+        String broken = "broken-" + child;
+        seedParentLti(parentTracker, broken, broken, "missing-" + child, false);
+        String stale = "stale-" + child;
+        seedItem(unshared, stale, stale, false);
+        seedParentLti(parentTracker, "virtual-stale-" + child, stale, stale, false);
+        jdbc.update("UPDATE requirements SET revision = 4 WHERE local_id = ?", stale);
+
+        String id = submit(new Request(parent, child, "index-derived", List.of(space), List.of(), List.of(parentTracker)));
+        var completed = awaitStatus(id, Status.PartiallySucceeded);
+        assertEquals(2, completed.indexProgress().get(parentTracker).succeeded());
+        assertEquals(List.of("NOT_FOUND", "HISTORY_UNAVAILABLE"),
+                completed.failures().stream().map(details -> details.reason()).toList());
+        var failure = completed.failures().getFirst();
+        assertEquals(Stage.INDEX_UNSHARED_TRACKERS, failure.stage());
+        assertEquals(broken, failure.localId());
+        assertEquals(parentTracker, failure.trackerId());
+        assertEquals("NOT_FOUND", failure.reason());
+        String copied = bindings().trackers().getFirst().trackerId();
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var event = indexEvents.find(child);
+            assertNotNull(event);
+            assertEquals(id, event.creationId());
+            assertEquals(List.of(copied), event.trackerIds());
+        });
+        String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
+                String.class, child, nativeId);
+        var item = rest.getForObject("/api/worksets/" + child + "/items/" + local, LightTrackerItemView.class);
+        assertEquals(nativeId, item.sourceLocalId());
+        assertEquals(3, item.sourceRevision());
+    }
+
+    @Test
+    void keepsPreparingBetweenCommittedBatchesAndSerializesEventRedelivery() throws Exception {
+        seedRange();
+        String first = "a-" + child;
+        String second = "b-" + child;
+        String last = "c-" + child;
+        for (String family : List.of(first, second, last)) {
+            seedItem(unshared, family, family, false);
+        }
+        String id;
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.prepareStatement("SELECT local_id FROM requirements WHERE local_id = ? FOR UPDATE")) {
+                statement.setString(1, last);
+                statement.executeQuery().close();
+                id = submit(new Request("1", child, "index-running", List.of(space), List.of(), List.of(unshared)));
+                await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+                    var running = task(id);
+                    assertEquals(Status.Running, running.status());
+                    assertEquals(Stage.INDEX_UNSHARED_TRACKERS, running.stage());
+                    assertNotNull(running.indexProgress().get(unshared));
+                    assertEquals(2, running.indexProgress().get(unshared).succeeded());
+                });
+                String firstLocal = jdbc.queryForObject(
+                        "SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
+                        String.class, child, first);
+                var response = rest.getForEntity("/api/worksets/" + child + "/items/" + firstLocal, Map.class);
+                assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+                assertEquals("PREPARING", response.getBody().get("reason"));
+                assertEquals(HttpStatus.OK, rest.getForEntity(CREATIONS + "/" + id + "/working-set", Map.class).getStatusCode());
+                String tracker = jdbc.queryForObject(
+                        "SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?",
+                        String.class, child, unshared);
+                jdbc.update("""
+                        INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
+                            source_local_id, source_revision, materialized) VALUES (?, ?, ?, ?, 3, ?, 3, false)
+                        """, "existing-" + child, last, tracker, child, last);
+                transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmitted(id)));
+            } finally {
+                connection.rollback();
+            }
+        }
+        var completed = awaitStatus(id, Status.Succeeded);
+        assertEquals(2, completed.indexProgress().get(unshared).succeeded());
+        assertEquals(1, completed.indexProgress().get(unshared).skipped());
+        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
+                Integer.class, child));
+    }
+
+    private void seedItem(String tracker, String localId, String commonId, boolean deleted) {
+        jdbc.update("""
+                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version, delete_flag)
+                VALUES (?, ?, ?, 'source', 'description', 3, 0, ?)
+                """, localId, commonId, tracker, deleted);
+    }
+
+    private void seedParentLti(String tracker, String localId, String commonId, String sourceId, boolean materialized) {
+        jdbc.update("""
+                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
+                    source_local_id, source_revision, materialized) VALUES (?, ?, ?, ?, 3, ?, 3, ?)
+                """, localId, commonId, tracker, parent, sourceId, materialized);
+    }
+
     private void seedRange() {
         jdbc.update("INSERT INTO product_spaces VALUES (?), (?)", space, otherSpace);
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED'), (?, 'UNSHARED')", shared, unshared);
@@ -330,5 +498,30 @@ class WorkingSetCreationAcceptanceTest {
 
     private Request request(String parent, String requestId) {
         return new Request(parent, child, requestId, List.of(), List.of(), List.of());
+    }
+
+    @TestConfiguration
+    static class IndexEventConfiguration {
+        @Bean
+        IndexEvents indexEvents() {
+            return new IndexEvents();
+        }
+    }
+
+    static class IndexEvents {
+        private final Map<String, TrackerItemsIndexed> byWorkingSet = new java.util.concurrent.ConcurrentHashMap<>();
+
+        public TrackerItemsIndexed find(String workingSetId) {
+            return byWorkingSet.get(workingSetId);
+        }
+
+        public void clear(String workingSetId) {
+            byWorkingSet.remove(workingSetId);
+        }
+
+        @ApplicationModuleListener
+        public void on(TrackerItemsIndexed event) {
+            byWorkingSet.put(event.workingSetId(), event);
+        }
     }
 }

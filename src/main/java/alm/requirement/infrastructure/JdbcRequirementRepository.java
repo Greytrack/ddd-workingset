@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import sk.workingset.application.port.TrackerItemCatalog;
 
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
@@ -85,6 +86,21 @@ public class JdbcRequirementRepository implements RequirementRepository {
         return jdbc.query("SELECT local_id, common_id FROM requirements "
                         + "WHERE tracker_id = ? AND delete_flag = FALSE ORDER BY local_id",
                 (rs, row) -> new Identity(LocalId.of(rs.getString(1)), CommonId.of(rs.getString(2))), trackerId.value());
+    }
+
+    public List<TrackerItemCatalog.Identity> pageActiveIdentities(TrackerId trackerId, String afterLocalId, int limit) {
+        return jdbc.query("""
+                SELECT local_id, common_id, revision FROM requirements
+                WHERE tracker_id = ? AND NOT delete_flag AND local_id COLLATE "C" > ?
+                ORDER BY local_id COLLATE "C" LIMIT ?
+                """, (rs, row) -> new TrackerItemCatalog.Identity(LocalId.of(rs.getString(1)),
+                CommonId.of(rs.getString(2)), Revision.of(rs.getInt(3))), trackerId.value(), afterLocalId, limit);
+    }
+
+    public boolean hasActiveFamily(TrackerId trackerId, CommonId commonId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag)
+                """, Boolean.class, trackerId.value(), commonId.value()));
     }
 
     public Optional<Requirement> lockById(LocalId id) {

@@ -184,6 +184,18 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     @Override
+    public List<Tracker> findTrackers(WorkingSetId workingSetId) {
+        return jdbc.query("""
+                SELECT tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
+                       parent_id FROM trackers WHERE working_set_id = ? ORDER BY tracker_id
+                """, (rs, row) -> new Tracker(TrackerId.of(rs.getString("tracker_id")),
+                optionalId(rs, "source_id"), WorkingSetId.of(rs.getString("working_set_id")),
+                rs.getString("product_space_id"), rs.getString("classification_id"),
+                SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id")),
+                workingSetId.value());
+    }
+
+    @Override
     public void insertTracker(Tracker tracker) {
         jdbc.update("""
                 INSERT INTO trackers

@@ -13,6 +13,6 @@
 
 [任务服务](../../../src/main/java/sk/workingset/application/WorkingSetCreationService.java) 用任务行锁串行化每项推进。每项写入与进度同事务提交。已存在的副本或绑定计入跳过，已提交进度的事件重投从剩余项继续。PostgreSQL 任务表结构沿用 T7-B，既有任务 JSON 缺少 `stageProgress` 时按本体阶段恢复。
 
-验收入口见 [WorkingSetCreationAcceptanceTest](../../../src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)。当前终态仅涵盖已启用阶段，LTI 索引由 T7-D 接入，关系事件由 T7-E 接入。
+验收入口见 [WorkingSetCreationAcceptanceTest](../../../src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)。本记录覆盖绑定阶段，后续索引行为见 [T7-D 验收](t7-d-index-verification.md)。
 
 `mvn -B clean test` 在 PostgreSQL、Redis 和内嵌 Tomcat 环境通过 101 项，含 ArchUnit。失败、错误、跳过均为 0。
