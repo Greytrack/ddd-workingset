@@ -132,7 +132,7 @@
   .check-item span { min-width: 0; }
   .check-id { display: block; color: var(--muted); font-size: 10px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; }
   .scope-hint { margin: 4px 0 8px; font-size: 11px; line-height: 1.5; color: var(--muted); }
-  .scope-tree { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow: auto; padding-right: 2px; }
+  .scope-tree { display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
   .scope-space { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
   .scope-space.no-space { opacity: .62; }
   .scope-space-head {
@@ -142,7 +142,13 @@
   .scope-space-main { display: flex; align-items: center; gap: 7px; min-width: 0; cursor: pointer; }
   .scope-space-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 650; }
   .scope-space-meta { margin-left: auto; color: var(--muted); font-size: 10.5px; white-space: nowrap; }
-  .scope-trackers { margin-left: 15px; padding: 9px 12px 11px 16px; border-left: 2px solid #e0e7ff; }
+  .scope-toggle {
+    flex: 0 0 auto; border: 0; background: transparent; color: #94a3b8;
+    font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 5px; border-radius: 6px;
+  }
+  .scope-toggle:hover { background: var(--accent-soft); color: var(--accent); }
+  .scope-trackers { display: none; margin-left: 15px; padding: 9px 12px 11px 16px; border-left: 2px solid #e0e7ff; }
+  .scope-space.expanded .scope-trackers { display: block; }
   .scope-tracker-group { margin-top: 9px; }
   .scope-tracker-group:first-child { margin-top: 0; }
   .scope-group-title { margin: 0 0 5px; color: var(--muted); font-size: 10.5px; font-weight: 700; }

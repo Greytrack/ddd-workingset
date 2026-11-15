@@ -39,7 +39,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 ### 4.1 LRO 聚合 `WorkingSetCreation`
 
 - 身份：`creationId`（雪花或请求幂等键派生）。
-- 参数：`parentWorkingSetId`、`newWorkingSetId`、选定的 `productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`、发起人（`Caller`，D11 暂不校验）。
+- 参数：`parentWorkingSetId`、`newWorkingSetId`、`requestId`、`name`（用户可读的工作集名称，持久化到 `working_sets.name`）、选定的 `productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`、发起人（`Caller`，D11 暂不校验）。
 - 状态：`Pending → Running → Succeeded / PartiallySucceeded / Failed`。
 - 进度：当前步骤、已完成/总数（Tracker 数、Item 数）。
 - 结果：步骤明细与失败明细（JSONB）；`completedAt`。
@@ -157,7 +157,7 @@ CREATE INDEX IF NOT EXISTS idx_creation_items_page
 
 ### 7.3 REST
 
-- `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`newWorkingSetId`、`requestId`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`。范围按集合比较，空集合合法。首次返回 HTTP 202、`creationId`、`status` 和轮询 `Location`。相同请求复用任务并返回当前状态。
+- `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`newWorkingSetId`、`requestId`、`name`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`。`name` 为用户可读名称，创建任务在 `CREATE_WORKING_SET` 阶段写入 `working_sets.name`；范围按集合比较，空集合合法。首次返回 HTTP 202、`creationId`、`status` 和轮询 `Location`。相同请求复用任务并返回当前状态。
 - `GET /api/working-set-creations/{id}` 返回专用任务视图，字段包括 `creationId`、`status`、`stage`、`progress`、`failures` 和任务时间。进度按步骤记录成功、失败和跳过数，扫描结束前允许总数未知。不存在的任务返回 HTTP 404。
 - `GET /api/working-set-creations/{id}/working-set` 任务专用只读：按任务 id 读取创建中的目标工作集；普通 `/api/worksets/{id}` 仍返回 `Preparing`。任务不存在或目标尚未创建 → 404。
 - `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason` 使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。

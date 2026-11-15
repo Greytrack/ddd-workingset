@@ -222,6 +222,14 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
+    void persistsCustomWorkingSetName() {
+        String id = submit(new Request("1", child, "named", List.of(), List.of(), List.of(), "自定义工作集"));
+        awaitStatus(id, Status.Succeeded);
+        assertEquals("自定义工作集",
+                rest.getForObject("/api/worksets/" + child, WorkingSetView.class).name());
+    }
+
+    @Test
     void rejectsExistingTargetWithoutMarkingItPreparing() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", child);
         var response = rest.postForEntity(CREATIONS, new Request("1", child, "existing-target",

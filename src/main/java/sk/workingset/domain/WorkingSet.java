@@ -59,7 +59,11 @@ public final class WorkingSet {
     }
 
     public static WorkingSet child(WorkingSetId id, WorkingSetId parentId) {
-        return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), List.of(), List.of());
+        return child(id, parentId, null);
+    }
+
+    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name) {
+        return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name, List.of(), List.of());
     }
 
     public WorkingSetId id() { return id; }

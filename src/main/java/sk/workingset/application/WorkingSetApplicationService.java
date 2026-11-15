@@ -75,6 +75,11 @@ public class WorkingSetApplicationService {
 
     // Called by the creation runner inside its locked task transaction.
     WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId) {
+        return createChildForTask(parentId, newId, null);
+    }
+
+    // Called by the creation runner with the user-supplied display name.
+    WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId, String name) {
         if (newId.equals(parentId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
@@ -82,7 +87,7 @@ public class WorkingSetApplicationService {
         if (workingSets.findAncestors(parentId).contains(newId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
-        var child = WorkingSet.child(newId, parentId);
+        var child = WorkingSet.child(newId, parentId, name);
         if (!workingSets.insertWorkingSet(child)) {
             var existing = workingSets.findAncestors(newId);
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());

@@ -126,7 +126,9 @@ public class WorkingSetCreationService {
         try {
             boolean written = switch (stage) {
                 case CREATE_WORKING_SET -> {
-                    workingSetService.createChildForTask(WorkingSetId.of(creation.request().parentWorkingSetId()), target);
+                    workingSetService.createChildForTask(
+                            WorkingSetId.of(creation.request().parentWorkingSetId()), target,
+                            creation.request().name());
                     yield true;
                 }
                 case BIND_PRODUCT_SPACES -> workingSetService.bindSpaceForTask(target, item);

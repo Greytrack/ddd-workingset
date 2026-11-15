@@ -24,7 +24,14 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
 
     public record Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                           List<String> productSpaceIds, List<String> sharedTrackerIds,
-                          List<String> unsharedParentTrackerIds) {
+                          List<String> unsharedParentTrackerIds, String name) {
+        public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
+                       List<String> productSpaceIds, List<String> sharedTrackerIds,
+                       List<String> unsharedParentTrackerIds) {
+            this(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds, sharedTrackerIds,
+                    unsharedParentTrackerIds, null);
+        }
+
         public Request {
             validateId(parentWorkingSetId, "parentWorkingSetId");
             validateId(newWorkingSetId, "newWorkingSetId");
@@ -32,6 +39,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             productSpaceIds = normalize(productSpaceIds);
             sharedTrackerIds = normalize(sharedTrackerIds);
             unsharedParentTrackerIds = normalize(unsharedParentTrackerIds);
+            name = normalizeName(name);
         }
 
         public List<String> items(Stage stage) {
@@ -52,6 +60,20 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
                 }
             }
             return List.copyOf(normalized);
+        }
+
+        private static String normalizeName(String name) {
+            if (name == null) {
+                return null;
+            }
+            String trimmed = name.trim();
+            if (trimmed.isEmpty()) {
+                throw new IllegalArgumentException("name must not be blank");
+            }
+            if (trimmed.length() > 255) {
+                throw new IllegalArgumentException("name must contain at most 255 characters");
+            }
+            return trimmed;
         }
 
         private static void validateId(String id, String field) {

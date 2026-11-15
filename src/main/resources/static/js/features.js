@@ -201,6 +201,10 @@ async function openCreateWorkset() {
           <label for="createParent">父工作集</label>
           <select id="createParent" name="parentWorkingSetId">${options}</select>
         </div>
+        <div class="field">
+          <label for="createName">工作集名称</label>
+          <input id="createName" name="name" placeholder="例如：动力系统 V2 需求工作集" maxlength="255" required>
+        </div>
         <div class="grid-2">
           <div class="field"><label for="createTarget">新工作集 ID</label><input id="createTarget" name="newWorkingSetId" value="${escapeHtml(defaultTarget)}" required></div>
           <div class="field"><label for="createRequest">请求 ID</label><input id="createRequest" name="requestId" value="${escapeHtml('ui-' + Date.now())}" required></div>
@@ -275,6 +279,7 @@ function renderScopeSpace(space) {
         <span class="scope-space-name">${escapeHtml(space.name || space.productSpaceId)}<span class="check-id">${escapeHtml(space.productSpaceId)}</span></span>
       </label>
       <span class="scope-space-meta" data-scope-meta></span>
+      <button type="button" class="scope-toggle" data-scope-toggle="${escapeHtml(space.productSpaceId)}" aria-label="展开 Tracker" aria-expanded="false">›</button>
     </div>
     <div class="scope-trackers">
       <div class="scope-tracker-group">
@@ -304,6 +309,8 @@ async function submitCreateWorkset(form) {
   const parentId = form.parentWorkingSetId.value.trim();
   const targetId = form.newWorkingSetId.value.trim();
   const requestId = form.requestId.value.trim();
+  const nameInput = form.querySelector('input[name="name"]');
+  const workspaceName = nameInput ? nameInput.value.trim() : '';
   const values = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
   const productSpaceIds = values('productSpaceIds');
   const selectedSpaces = new Set(productSpaceIds);
@@ -318,13 +325,14 @@ async function submitCreateWorkset(form) {
         parentWorkingSetId: parentId,
         newWorkingSetId: targetId,
         requestId,
+        name: workspaceName,
         productSpaceIds,
         sharedTrackerIds: trackerValues('sharedTrackerIds'),
         unsharedParentTrackerIds: trackerValues('unsharedParentTrackerIds')
       })
     });
     const parentName = findNode(state.worksets, parentId)?.ws?.name || shortId(parentId);
-    addTask(creation, { targetId, targetName: targetId, parentId, parentName });
+    addTask(creation, { targetId, targetName: workspaceName || targetId, parentId, parentName });
     closeModal();
     openTaskCenter();
     setStatus('创建任务已提交：' + shortId(creation.creationId), 'ok');
@@ -483,7 +491,19 @@ function bindEvents() {
   });
 
   $('#modalContent').addEventListener('click', (event) => {
-    if (event.target.closest('[data-close-modal]')) closeModal();
+    if (event.target.closest('[data-close-modal]')) {
+      closeModal();
+      return;
+    }
+    const toggle = event.target.closest('[data-scope-toggle]');
+    if (toggle) {
+      const space = toggle.closest('.scope-space');
+      if (!space) return;
+      const expanded = space.classList.toggle('expanded');
+      toggle.textContent = expanded ? '⌄' : '›';
+      toggle.setAttribute('aria-expanded', String(expanded));
+      toggle.setAttribute('aria-label', expanded ? '收起 Tracker' : '展开 Tracker');
+    }
   });
 
   $('#modalContent').addEventListener('change', (event) => {
