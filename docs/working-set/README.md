@@ -24,10 +24,6 @@ ADR 使用：`Proposed`、`Accepted`、`Rejected`、`Superseded`。
 - [implementation/](implementation/README.md)：验收测试、实验、实现与设计的映射；
 - [`pre-design/`](../../pre-design/)：前期 V3／V4、引用、比对与合并等历史输入。
 
-## 阶段 2 候选知识入口
-
-候选知识按主题见 [domain/](domain/README.md)，历史评审见 [reviews/](reviews/README.md)。这些目录包含混合状态材料，接受范围以 [BASELINE](BASELINE.md) 为准。
-
 ## 建议阅读顺序
 
 1. 阅读根目录 `AGENTS.md`；
@@ -38,4 +34,4 @@ ADR 使用：`Proposed`、`Accepted`、`Rejected`、`Superseded`。
 
 只读取当前任务需要的材料。若文档状态、确认依据或替代关系不清楚，先记录为开放问题，不自行提升状态。
 
-当前阶段与下一步见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)；历史决策过程见[阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md)。
+当前实现和后续计划见[实施与验收索引](implementation/README.md)。首切片的历史规划见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。

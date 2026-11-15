@@ -34,7 +34,6 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.Difference;
-import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeDecision;
 import sk.workingset.domain.merge.MergeDecision.FieldAction;

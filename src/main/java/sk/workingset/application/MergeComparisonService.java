@@ -19,7 +19,6 @@ import sk.workingset.application.port.TrackerItemReadPort;
 import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.WorkingSetRepository;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;

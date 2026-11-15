@@ -59,7 +59,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 - 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
 - 复制与绑定分别提交。复制失败时跳过该 Tracker 的绑定，复制成功而绑定失败时保留副本并记录绑定阶段的失败。轮询的 `progress` 是任务汇总，`stageProgress` 分阶段记录成功、失败、跳过和总数。
-- 最终状态：全部步骤成功 → `Succeeded`；存在失败项但关键步骤（创建本体）成功 → `PartiallySucceeded`；关键步骤失败 → `Failed`。
+- 最终状态：本体创建失败时为 `Failed`；本体成功后有失败明细（包括带原因的跳过）为 `PartiallySucceeded`，无失败明细为 `Succeeded`。
 - 不开放任务重试；重复提交返回已有任务（见 §6）。
 
 ### 4.3 失败明细
@@ -91,9 +91,8 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ### 4.6 关系/引用构建
 
-- LTI 索引步骤完成后发布事件（如 `TrackerItemsIndexed` / `WorkingSetIndexCreated`），SK 侧异步监听并构建引用/关联关系。
-- 关系模型依赖 QUESTION-010（Reference/Association 的身份、钉版、悬空、修复）。T7-E 先交付索引完成事实、关系协作端口和失败记录，关系规则待 QUESTION-010 裁定。评审建议轮询显式标记关系步骤暂缓。
-- 关系构建失败记录在任务明细；不阻断已完成的索引与工作集本体。
+- 索引结束时随终态事务登记 `TrackerItemsIndexed`，提交后交付。事件包含扫描完成的子 Tracker，包括存在单项失败或带明细跳过的 Tracker。当前占位监听器保留 Modulith 事件发布记录。
+- 关系规则、消费者和任务视图边界待 [QUESTION-010](open-questions.md) 与 [T7-E](../implementation/t7-implementation-prompt.md#t7-e-关系与引用构建) 推进。构建失败应可追溯，已提交的索引和工作集本体保留。
 
 ## 5. 事务、事件与一致性
 
@@ -113,41 +112,9 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ## 7. 数据模型与端口
 
-### 7.1 表
+### 7.1 持久化
 
-```sql
-CREATE TABLE IF NOT EXISTS working_set_creations (
-    id VARCHAR(64) PRIMARY KEY,
-    parent_working_set_id VARCHAR(128) NOT NULL,
-    new_working_set_id VARCHAR(128) NOT NULL UNIQUE,
-    request_id VARCHAR(128) NOT NULL,
-    status VARCHAR(32) NOT NULL,
-    result JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ
-);
-
--- 受理时冻结父 Item 身份与来源；索引阶段只读快照。
-CREATE TABLE IF NOT EXISTS working_set_creation_snapshots (
-    creation_id VARCHAR(64) PRIMARY KEY REFERENCES working_set_creations (id) ON DELETE CASCADE,
-    completed_at TIMESTAMPTZ NOT NULL
-);
-CREATE TABLE IF NOT EXISTS working_set_creation_items (
-    creation_id VARCHAR(64) NOT NULL REFERENCES working_set_creation_snapshots (creation_id) ON DELETE CASCADE,
-    parent_tracker_id VARCHAR(64) NOT NULL,
-    local_id VARCHAR(64) NOT NULL,
-    common_id VARCHAR(64) NOT NULL,
-    revision INTEGER NOT NULL,
-    source_local_id VARCHAR(64) NOT NULL,
-    source_revision INTEGER NOT NULL,
-    PRIMARY KEY (creation_id, parent_tracker_id, local_id)
-);
-CREATE INDEX IF NOT EXISTS idx_creation_items_page
-    ON working_set_creation_items (creation_id, parent_tracker_id, local_id COLLATE "C");
-```
-
-- `result` 保存规范化请求、发起人、进度和失败明细。目标 ID 唯一约束负责并发受理，服务复核完整幂等键和请求范围。JSONB 的规模风险在 T7-F 验证。
+`working_set_creations.result` 保存规范化请求、发起人、进度与明细。快照标记和冻结身份分别存入 `working_set_creation_snapshots` 和 `working_set_creation_items`，由任务身份关联。DDL 见 [schema.sql](../../../src/main/resources/schema.sql)。
 
 ### 7.2 端口
 
@@ -163,15 +130,9 @@ CREATE INDEX IF NOT EXISTS idx_creation_items_page
 - `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason` 使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。
 - 轮询由前端按状态终止（`Succeeded/PartiallySucceeded/Failed`）。
 
-## 8. 失败、部分成功与不补偿
-
-- 任务一次性执行；失败后不自动重试、不回滚、不清理子 WS。
-- 失败明细必须显性：阶段、Tracker、Item、原因；前端可据此提示用户。
-- 任务整体状态与明细分离：`PartiallySucceeded` 表示“有成功项也有失败项”，不是全部失败。
-
 ## 9. 规模与分页
 
-- 索引阶段主进度按父 Tracker 计数。轮询 `indexProgress` 按父 Tracker 提供 Item 成功、失败和跳过数。批大小配置为 `workingset.creation.index-batch-size`，默认 100。父 Item 身份与来源在受理事务内写入 `working_set_creation_items`，索引阶段按 LocalId 游标分页读取该快照；冻结后来源缺失、软删或版次不可读计为跳过并保留明细。LocalId 游标、计数和批次 LTI 同事务提交，重投从已提交游标继续。
+- 主进度按父 Tracker 计数，`indexProgress` 提供各 Tracker 的 Item 成功、失败和跳过数。批大小配置为 `workingset.creation.index-batch-size`，默认 100。LocalId 游标、计数和批次 LTI 同事务提交，重投从已提交游标继续。
 - `result` JSONB 可能随失败项增长；T7-F 需验证失败明细规模与保留/清理。
 - 并发创建多个工作集时，任务表与批量写入的连接池压力需压测（QUESTION-012）。
 
@@ -199,4 +160,4 @@ CREATE INDEX IF NOT EXISTS idx_creation_items_page
 
 ## 13. 状态与下一步
 
-- T7-D 已接入批量索引，并在最终索引批次提交后发布 `TrackerItemsIndexed`。事件包含所有扫描完成的子 Tracker，包括有单项失败的 Tracker。生产占位监听器先持久化事件，T7-E 替换为关系构建消费者。见 [T7-D 验收](../implementation/t7-d-index-verification.md)。
+- 实施证据见 [T7-D 验收](../implementation/t7-d-index-verification.md)，剩余工作见 [T7 后续计划](../implementation/t7-implementation-prompt.md)。

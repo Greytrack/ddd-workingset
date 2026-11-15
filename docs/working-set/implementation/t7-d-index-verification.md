@@ -11,9 +11,9 @@
 
 | 索引情形 | 结果 |
 | --- | --- |
-| 父对象或实际来源缺失 | `NOT_FOUND` |
-| 所需版次不可读 | `HISTORY_UNAVAILABLE` |
-| 对象自身或 Source-backed 的实际来源已软删 | 过滤，读取端口的 `DELETED` 用于识别该情形 |
+| 索引时父对象或实际来源缺失 | 跳过，保留 `NOT_FOUND` 明细 |
+| 索引时所需版次不可读 | 跳过，保留 `HISTORY_UNAVAILABLE` 明细 |
+| 对象自身或实际来源软删 | 受理时过滤；冻结后变化则跳过，保留 `DELETED` 明细 |
 | 已知依赖不可用 | `DEPENDENCY_UNAVAILABLE` |
 | 无法归类的内部故障 | `UNKNOWN`，任务明细只记录分类 |
 
