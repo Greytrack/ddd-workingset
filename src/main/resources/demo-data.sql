@@ -20,7 +20,6 @@ TRUNCATE TABLE
     merge_checkpoints,
     merge_commit_receipts,
     merge_rounds,
-    merge_comparisons,
     working_set_creations
 CASCADE;
 

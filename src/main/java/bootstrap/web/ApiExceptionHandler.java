@@ -38,7 +38,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MergeFailure.class)
     public ResponseEntity<Map<String, Object>> handleMergeFailure(MergeFailure failure) {
         int status = switch (failure.reason()) {
-            case ComparisonNotFound, RoundNotFound -> 404;
+            case RoundNotFound -> 404;
             case InvalidDecision, Rejected -> 422;
             default -> 409;
         };

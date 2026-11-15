@@ -34,7 +34,7 @@ import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 
 /**
- * 有向比较：按直属父子与 Tracker 来源选择候选，读取双侧证据并生成冻结差异。
+ * 有向比较：按直属父子与 Tracker 来源选择候选，读取双侧证据并生成瞬时差异。
  *
  * <p>比较只读业务内容与 LTI，不写决定；软删对象不进入候选目录（C11），
  * 读取失败按 T4 失败语义区分不可读、已删除与缺失。
@@ -58,7 +58,7 @@ public class MergeComparisonService {
         this.store = store;
     }
 
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId selected, Caller caller) {
         var candidates = candidates(source, target);
         if (selected != null) {
@@ -96,8 +96,7 @@ public class MergeComparisonService {
                         left, right, fields));
             }
         }
-        var comparison = new Comparison(source, target, Instant.now(), candidates, differences);
-        return comparison;
+        return new Comparison(source, target, Instant.now(), candidates, differences);
     }
 
     private boolean handled(WorkingSetId source, WorkingSetId target, CommonId family, Side left, Side right) {
