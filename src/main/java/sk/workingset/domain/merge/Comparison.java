@@ -41,8 +41,31 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
                              String version, Presence presence, String failure) {}
     }
 
-    public record Difference(String key, CommonId family, TrackerPair trackers, Side source, Side target,
-                             List<String> fields) {
-        public Difference { fields = List.copyOf(fields); }
+    public record Difference(String key, ChangeKind kind, CommonId family, TrackerPair trackers,
+                             Side source, Side target, List<String> fields) {
+        public Difference {
+            fields = List.copyOf(fields);
+            if (kind == null) {
+                kind = classify(source, target);
+            }
+        }
+
+        public Difference(String key, CommonId family, TrackerPair trackers, Side source, Side target,
+                          List<String> fields) {
+            this(key, classify(source, target), family, trackers, source, target, fields);
+        }
+
+        public static ChangeKind classify(Side source, Side target) {
+            if (source.presence() == Presence.PRESENT && target.presence() == Presence.ABSENT) {
+                return ChangeKind.ADDED;
+            }
+            if (source.presence() == Presence.ABSENT && target.presence() == Presence.PRESENT) {
+                return ChangeKind.DELETED;
+            }
+            return ChangeKind.MODIFIED;
+        }
     }
+
+    /** 有向差异的三类可决策结果。 */
+    public enum ChangeKind { ADDED, MODIFIED, DELETED }
 }

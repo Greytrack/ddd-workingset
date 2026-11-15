@@ -251,17 +251,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_token ON merge_rounds (token);
 
 CREATE SEQUENCE IF NOT EXISTS merge_decision_version;
 
-CREATE TABLE IF NOT EXISTS merge_checkpoints (
-    source_id VARCHAR(128) NOT NULL,
-    target_id VARCHAR(128) NOT NULL,
-    common_id VARCHAR(64) NOT NULL,
-    decision_version BIGINT NOT NULL,
-    source_revision INTEGER,
-    target_revision INTEGER,
-    token VARCHAR(64) NOT NULL,
-    revoked BOOLEAN NOT NULL,
-    PRIMARY KEY (source_id, target_id, common_id)
-);
+    CREATE TABLE IF NOT EXISTS merge_checkpoints (
+        source_id VARCHAR(128) NOT NULL,
+        target_id VARCHAR(128) NOT NULL,
+        common_id VARCHAR(64) NOT NULL,
+        decision_version BIGINT NOT NULL,
+        source_revision INTEGER,
+        target_revision INTEGER,
+        source_local_id VARCHAR(64),
+        target_local_id VARCHAR(64),
+        token VARCHAR(64) NOT NULL,
+        revoked BOOLEAN NOT NULL,
+        PRIMARY KEY (source_id, target_id, common_id)
+    );
+    ALTER TABLE merge_checkpoints ADD COLUMN IF NOT EXISTS source_local_id VARCHAR(64);
+    ALTER TABLE merge_checkpoints ADD COLUMN IF NOT EXISTS target_local_id VARCHAR(64);
 
 -- T6-B: a stable, distinct PostgreSQL advisory lock key for each round.
 ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS execution_lock_id BIGSERIAL;

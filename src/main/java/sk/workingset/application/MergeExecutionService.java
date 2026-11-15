@@ -329,8 +329,10 @@ public class MergeExecutionService {
         String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
         if (entry.decision().markAsMerged()) {
             var key = new MergeCheckpoint.Key(round.source(), round.target(), entry.evidence().family());
+            var sourceId = entry.evidence().source().localId();
+            var targetId = receipt.businessRef() != null ? receipt.businessRef() : entry.evidence().target().localId();
             boolean confirmed = store.recordCheckpoint(new MergeCheckpoint(key, entry.decisionVersion(),
-                    receipt.sourceRevision(), receipt.targetRevision(), round.token(), false));
+                    receipt.sourceRevision(), receipt.targetRevision(), sourceId, targetId, round.token(), false));
             return result(entry, confirmed ? Outcome.Confirmed : Outcome.Applied, operation, businessRef,
                     confirmed ? "Confirmed" : "Superseded", null);
         }

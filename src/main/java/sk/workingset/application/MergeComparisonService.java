@@ -24,6 +24,7 @@ import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.WorkingSetLineagePolicy;
 import sk.workingset.domain.merge.Comparison;
+import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.Side;
@@ -77,13 +78,22 @@ public class MergeComparisonService {
             for (var family : families) {
                 Side left = read(sources.get(family), caller);
                 Side right = read(targets.get(family), caller);
-                List<String> fields = differingFields(left, right);
-                boolean unreadable = left.presence() == Presence.UNREADABLE || right.presence() == Presence.UNREADABLE;
-                boolean differs = unreadable || left.presence() != right.presence() || !fields.isEmpty();
-                if (differs && (unreadable || !handled(source, target, family, left, right))) {
-                    differences.add(new Difference(Integer.toString(differences.size() + 1), family, pair, left, right,
-                            fields));
+                if (handled(source, target, family, left, right)) {
+                    continue;
                 }
+                if (left.presence() == Presence.ABSENT && right.presence() == Presence.ABSENT) {
+                    continue;
+                }
+                var kind = Difference.classify(left, right);
+                boolean unreadable = left.presence() == Presence.UNREADABLE
+                        || right.presence() == Presence.UNREADABLE;
+                // 新增/删除只下发存在性差异，不进入字段比较。
+                List<String> fields = kind == ChangeKind.MODIFIED ? differingFields(left, right) : List.of();
+                if (kind == ChangeKind.MODIFIED && !unreadable && fields.isEmpty()) {
+                    continue;
+                }
+                differences.add(new Difference(Integer.toString(differences.size() + 1), kind, family, pair,
+                        left, right, fields));
             }
         }
         var comparison = new Comparison(source, target, Instant.now(), candidates, differences);
@@ -94,7 +104,9 @@ public class MergeComparisonService {
         return store.findCheckpoint(new MergeCheckpoint.Key(source, target, family))
                 .filter(checkpoint -> !checkpoint.revoked())
                 .filter(checkpoint -> java.util.Objects.equals(checkpoint.sourceRevision(), left.revision())
-                        && java.util.Objects.equals(checkpoint.targetRevision(), right.revision()))
+                        && java.util.Objects.equals(checkpoint.targetRevision(), right.revision())
+                        && java.util.Objects.equals(checkpoint.sourceLocalId(), left.localId())
+                        && java.util.Objects.equals(checkpoint.targetLocalId(), right.localId()))
                 .isPresent();
     }
 

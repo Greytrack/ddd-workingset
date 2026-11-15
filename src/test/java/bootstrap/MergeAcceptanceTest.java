@@ -50,6 +50,7 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.MergeCheckpoint;
@@ -149,6 +150,13 @@ class MergeAcceptanceTest {
         var compared = compare(source, target);
         assertEquals(Presence.ABSENT, diff(compared, add).target().presence());
         assertEquals(Presence.ABSENT, diff(compared, remove).source().presence());
+        assertEquals(ChangeKind.ADDED, diff(compared, add).kind());
+        assertEquals(ChangeKind.DELETED, diff(compared, remove).kind());
+        assertEquals(ChangeKind.MODIFIED, diff(compared, edit).kind());
+        assertTrue(diff(compared, add).fields().isEmpty());
+        assertTrue(diff(compared, remove).fields().isEmpty());
+        assertTrue(diff(compared, edit).fields().contains("title"));
+        assertFalse(compared.differences().stream().anyMatch(item -> anchor.equals(item.family().value())));
         var round = start(target, compared);
         register(round, existence(diff(compared, add), "CREATE"), existence(diff(compared, remove), "DELETE"),
                 field(diff(compared, edit), "ACCEPT", false));
@@ -344,6 +352,12 @@ class MergeAcceptanceTest {
 
         var key = new MergeCheckpoint.Key(WorkingSetId.of("1"), WorkingSetId.of(child), CommonId.of(keep));
         var checkpoint = store.findCheckpoint(key).orElseThrow();
+        assertNotNull(checkpoint.sourceLocalId());
+        assertNotNull(checkpoint.targetLocalId());
+        assertEquals(kept, checkpoint.targetLocalId().value());
+        change(kept, "changed after checkpoint", 0);
+        var afterCheckpointEdit = compare("1", child);
+        assertFalse(afterCheckpointEdit.differences().stream().anyMatch(item -> keep.equals(item.family().value())));
         change(rejectedSource, "valid on retry", 1);
         var retryComparison = compare("1", child);
         assertFalse(retryComparison.differences().stream().anyMatch(item -> keep.equals(item.family().value())));
