@@ -378,6 +378,8 @@ class WorkingSetCreationAcceptanceTest {
         String id = submit(new Request(parent, child, "index-derived", List.of(space), List.of(), List.of(parentTracker)));
         var completed = awaitStatus(id, Status.PartiallySucceeded);
         assertEquals(2, completed.indexProgress().get(parentTracker).succeeded());
+        assertEquals(2, completed.indexProgress().get(parentTracker).skipped());
+        assertEquals(0, completed.indexProgress().get(parentTracker).failed());
         assertEquals(List.of("NOT_FOUND", "HISTORY_UNAVAILABLE"),
                 completed.failures().stream().map(details -> details.reason()).toList());
         var failure = completed.failures().getFirst();

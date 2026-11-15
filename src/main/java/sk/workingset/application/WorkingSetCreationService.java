@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -43,7 +44,7 @@ public class WorkingSetCreationService {
         this.indexer = indexer;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submit(WorkingSetCreation.Request request, Caller caller) {
         var target = WorkingSetId.of(request.newWorkingSetId());
         if (WorkingSet.DEFAULT_ID.equals(target)) {
@@ -59,6 +60,7 @@ public class WorkingSetCreationService {
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
         var creation = WorkingSetCreation.submit(UUID.randomUUID().toString(), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
+            indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
             return creation;
         }

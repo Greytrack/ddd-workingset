@@ -84,8 +84,10 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
   - `CommonId` 继承父 Item；`LocalId` 由服务端雪花生成；
   - 自身 Revision 固定为父变体 Revision。父变体已有本地业务内容时以父 LocalId 和 Revision 为有效来源。父变体仍为 Source-backed 时沿用其实际 `SourceLocalId` 和 `SourceRevision`，见 [T3 §4](lighttrackeritem-materialization-contract-v1.md#4-双态契约与状态判定)。
   - 普通业务字段按 T3 读取，附件与关系的派生基准仍按 T3 §2.1。
-- 原生 Item、Local-backed 父 LTI 对应对象及 Source-backed 父 LTI 的实际内容来源，软删时均剔除且不计失败。扫描中发现对象或实际来源缺失时记 `NOT_FOUND`。
+- 索引范围在任务受理事务内冻结为父 Item 身份与有效来源快照；索引阶段只读该快照，终态后不补扫。冻结后来源缺失、软删或版次不可读时，该 Item 计为跳过并保留失败明细，不阻断其他项。
+- 原生 Item、Local-backed 父 LTI 对应对象及 Source-backed 父 LTI 的实际内容来源，受理时已软删的均不写入快照。
 - SK 按 LocalId 合并业务身份页与 LTI 页。重合同族优先有效业务身份，子工作集已有同族 LTI 计为跳过。
+- 索引由系统任务执行，当前不校验用户级授权；权限接入后另行裁定。
 
 ### 4.6 关系/引用构建
 
@@ -125,6 +127,24 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
 );
+
+-- 受理时冻结父 Item 身份与来源；索引阶段只读快照。
+CREATE TABLE IF NOT EXISTS working_set_creation_snapshots (
+    creation_id VARCHAR(64) PRIMARY KEY REFERENCES working_set_creations (id) ON DELETE CASCADE,
+    completed_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS working_set_creation_items (
+    creation_id VARCHAR(64) NOT NULL REFERENCES working_set_creation_snapshots (creation_id) ON DELETE CASCADE,
+    parent_tracker_id VARCHAR(64) NOT NULL,
+    local_id VARCHAR(64) NOT NULL,
+    common_id VARCHAR(64) NOT NULL,
+    revision INTEGER NOT NULL,
+    source_local_id VARCHAR(64) NOT NULL,
+    source_revision INTEGER NOT NULL,
+    PRIMARY KEY (creation_id, parent_tracker_id, local_id)
+);
+CREATE INDEX IF NOT EXISTS idx_creation_items_page
+    ON working_set_creation_items (creation_id, parent_tracker_id, local_id COLLATE "C");
 ```
 
 - `result` 保存规范化请求、发起人、进度和失败明细。目标 ID 唯一约束负责并发受理，服务复核完整幂等键和请求范围。JSONB 的规模风险在 T7-F 验证。
@@ -151,7 +171,7 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 ## 9. 规模与分页
 
-- 索引阶段主进度按父 Tracker 计数。轮询 `indexProgress` 按父 Tracker 提供 Item 成功、失败和跳过数。批大小配置为 `workingset.creation.index-batch-size`，默认 100。LocalId 游标、计数和批次 LTI 同事务提交，重投从已提交游标继续。
+- 索引阶段主进度按父 Tracker 计数。轮询 `indexProgress` 按父 Tracker 提供 Item 成功、失败和跳过数。批大小配置为 `workingset.creation.index-batch-size`，默认 100。父 Item 身份与来源在受理事务内写入 `working_set_creation_items`，索引阶段按 LocalId 游标分页读取该快照；冻结后来源缺失、软删或版次不可读计为跳过并保留明细。LocalId 游标、计数和批次 LTI 同事务提交，重投从已提交游标继续。
 - `result` JSONB 可能随失败项增长；T7-F 需验证失败明细规模与保留/清理。
 - 并发创建多个工作集时，任务表与批量写入的连接池压力需压测（QUESTION-012）。
 
@@ -179,4 +199,4 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 ## 13. 状态与下一步
 
-- T7-D 已接入批量索引，并在最终索引批次提交后发布 `TrackerItemsIndexed`。事件包含所有扫描完成的子 Tracker，包括有单项失败的 Tracker。T7-E 消费该事件。见 [T7-D 验收](../implementation/t7-d-index-verification.md)。
+- T7-D 已接入批量索引，并在最终索引批次提交后发布 `TrackerItemsIndexed`。事件包含所有扫描完成的子 Tracker，包括有单项失败的 Tracker。生产占位监听器先持久化事件，T7-E 替换为关系构建消费者。见 [T7-D 验收](../implementation/t7-d-index-verification.md)。

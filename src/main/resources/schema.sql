@@ -289,3 +289,21 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
 );
+
+-- T7-D: 受理时冻结父 Item 身份与来源；索引阶段只读取该快照。
+CREATE TABLE IF NOT EXISTS working_set_creation_snapshots (
+    creation_id VARCHAR(64) PRIMARY KEY REFERENCES working_set_creations (id) ON DELETE CASCADE,
+    completed_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS working_set_creation_items (
+    creation_id VARCHAR(64) NOT NULL REFERENCES working_set_creation_snapshots (creation_id) ON DELETE CASCADE,
+    parent_tracker_id VARCHAR(64) NOT NULL,
+    local_id VARCHAR(64) NOT NULL,
+    common_id VARCHAR(64) NOT NULL,
+    revision INTEGER NOT NULL,
+    source_local_id VARCHAR(64) NOT NULL,
+    source_revision INTEGER NOT NULL,
+    PRIMARY KEY (creation_id, parent_tracker_id, local_id)
+);
+CREATE INDEX IF NOT EXISTS idx_creation_items_page
+    ON working_set_creation_items (creation_id, parent_tracker_id, local_id COLLATE "C");

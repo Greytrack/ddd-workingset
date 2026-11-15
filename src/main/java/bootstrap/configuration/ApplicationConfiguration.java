@@ -41,7 +41,9 @@ import sk.workingset.application.WorkingSetDeletionService;
 import sk.workingset.application.WorkingSetCreationService;
 import sk.workingset.application.WorkingSetItemIndexer;
 import sk.workingset.application.port.TrackerItemCatalog;
+import sk.workingset.application.port.WorkingSetCreationSnapshotStore;
 import sk.workingset.application.port.WorkingSetCreationStore;
+import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotStore;
 import sk.workingset.infrastructure.JdbcWorkingSetCreationStore;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.IdentifierGenerator;
@@ -180,6 +182,11 @@ public class ApplicationConfiguration {
     }
 
     @Bean
+    public WorkingSetCreationSnapshotStore workingSetCreationSnapshotStore(JdbcTemplate jdbc) {
+        return new JdbcWorkingSetCreationSnapshotStore(jdbc);
+    }
+
+    @Bean
     public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
             JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
             TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer) {
@@ -203,10 +210,11 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetItemIndexer workingSetItemIndexer(JdbcBindingRepositories bindings,
-            LightTrackerItemRepository items, TrackerItemCatalog catalog, BusinessTrackerItems businessItems,
+            LightTrackerItemRepository items, TrackerItemCatalog catalog,
+            WorkingSetCreationSnapshotStore snapshots, BusinessTrackerItems businessItems,
             JdbcRequirementRepository requirements, IdentifierGenerator ids,
             @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
-        return new WorkingSetItemIndexer(bindings, bindings, items, catalog, businessItems,
+        return new WorkingSetItemIndexer(bindings, bindings, items, catalog, snapshots, businessItems,
                 id -> new RequirementAdapter(requirements, id), ids, batchSize);
     }
 
