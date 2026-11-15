@@ -119,6 +119,7 @@ public class WorkingSetApplicationService {
             throw new ApplicationFailure(FailureReason.NOT_INCLUDED, trackerId.value());
         }
         return items.findInTracker(trackerId).stream()
+                .filter(item -> !businessItems.isDeleted(item.effectiveContentSource()))
                 .map(item -> new IndexedItem(item,
                         businessItems.name(item.effectiveContentSource()).orElse(null)))
                 .toList();

@@ -148,9 +148,10 @@ public class ApplicationConfiguration {
             JdbcSnapshotStore snapshotStore,
             IdentifierGenerator identifierGenerator,
             ApplicationEventPublisher eventPublisher,
-            TrackerScopePort trackerScopePort) {
+            TrackerScopePort trackerScopePort,
+            TrackerItemLifecyclePort lifecycle) {
         return new RequirementApplicationService(
-                requirements, snapshotStore, identifierGenerator, eventPublisher, trackerScopePort);
+                requirements, snapshotStore, identifierGenerator, eventPublisher, trackerScopePort, lifecycle);
     }
 
     @Bean

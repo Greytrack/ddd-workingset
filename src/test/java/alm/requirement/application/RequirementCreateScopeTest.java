@@ -38,7 +38,8 @@ class RequirementCreateScopeTest {
     private final TrackerScopePort trackerScope = mock(TrackerScopePort.class);
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementApplicationService service = new RequirementApplicationService(
-            repository, mock(SnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackerScope);
+            repository, mock(SnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackerScope,
+            mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
 
     @BeforeEach
     void stubIdentifiers() {

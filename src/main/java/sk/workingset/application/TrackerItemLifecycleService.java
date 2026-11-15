@@ -8,9 +8,12 @@ import sk.workingset.application.port.MergeTarget;
 import sk.workingset.application.port.TargetIdentity;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerRepository;
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * SK 拥有的 LTI 生命周期协作实现（D4 方案 A）。
@@ -52,6 +55,16 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);
+    }
+
+    @Override
+    @Transactional
+    public void indexLocal(TrackerId trackerId, LocalId localId, CommonId commonId,
+                           WorkingSetId workingSetId, Revision revision) {
+        if (items.findById(localId).isPresent()) {
+            return;
+        }
+        items.save(LightTrackerItem.local(localId, commonId, trackerId, workingSetId, revision));
     }
 
     @Override

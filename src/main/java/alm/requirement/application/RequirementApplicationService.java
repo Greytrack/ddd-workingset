@@ -15,6 +15,7 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerScopePort;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
@@ -35,17 +36,20 @@ public class RequirementApplicationService {
     private final IdentifierGenerator identifierGenerator;
     private final ApplicationEventPublisher eventPublisher;
     private final TrackerScopePort trackerScope;
+    private final TrackerItemLifecyclePort lifecycle;
 
     public RequirementApplicationService(RequirementRepository repository,
                                           SnapshotStore snapshotStore,
                                           IdentifierGenerator identifierGenerator,
                                           ApplicationEventPublisher eventPublisher,
-                                          TrackerScopePort trackerScope) {
+                                          TrackerScopePort trackerScope,
+                                          TrackerItemLifecyclePort lifecycle) {
         this.repository = Objects.requireNonNull(repository, "repository");
         this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
         this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
         this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
         this.trackerScope = Objects.requireNonNull(trackerScope, "trackerScope");
+        this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
     }
 
     /**
@@ -55,6 +59,7 @@ public class RequirementApplicationService {
      * 非默认工作集：服务端生成两个不相等的雪花 ID。派生不经过本方法，CommonId 沿用来源。
      * 显式指定非默认工作集时，非共享 Tracker 必须属于该工作集；Tracker 不存在时交由持久化层给出冲突。
      */
+    @Transactional
     public Requirement create(TrackerId trackerId,
                               WorkingSetId requestedWorkingSetId,
                               String title,
@@ -84,6 +89,9 @@ public class RequirementApplicationService {
                 LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
                 trackerId, title, description, revision);
         repository.save(requirement);
+        scope.ifPresent(current -> lifecycle.indexLocal(
+                trackerId, requirement.localId(), requirement.commonId(),
+                current.workingSetId(), requirement.revision()));
         return requirement;
     }
 
@@ -106,6 +114,15 @@ public class RequirementApplicationService {
         Requirement current = load(localId);
         requireActive(current);
         return saveChange(current, current.changeTitle(newTitle, expectedLockVersion));
+    }
+
+    /** 普通修改标题和描述；业务 revision 不升级，仍按乐观锁写入并发布来源事件。 */
+    @Transactional
+    public Requirement changeContent(LocalId localId, String newTitle, String newDescription,
+                                     LockVersion expectedLockVersion) {
+        Requirement current = load(localId);
+        requireActive(current);
+        return saveChange(current, current.changeContent(newTitle, newDescription, expectedLockVersion));
     }
 
     @Transactional

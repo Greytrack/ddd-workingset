@@ -69,11 +69,13 @@ class CowAcceptanceTest {
         }
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", source);
         for (String ws : worksets.reversed()) {
+            jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws);
         }
+        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id = ?", tracker);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM classifications WHERE classification_id = ?", classification);

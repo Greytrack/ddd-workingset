@@ -1,7 +1,10 @@
 package sk.workingset.application.port;
 
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /**
  * SK 拥有的 LTI 生命周期协作接口（D4 方案 A：LTI 校验/移除移回 SK，业务 BC 不再操作 SK 仓储）。
@@ -26,6 +29,15 @@ public interface TrackerItemLifecyclePort {
 
     /** 幂等移除业务对象对应的 LTI；由业务对象永久删除事件驱动。 */
     void removePurged(LocalId localId);
+
+    /**
+     * 业务原生对象创建后，确保对应 Local-backed LTI 存在。
+     *
+     * <p>已存在同一 LocalId 的索引时直接返回；用于让新建单个业务对象立即可
+     * 被工作集界面读取。调用方保证 {@code workingSetId} 是该 Tracker 的归属工作集。
+     */
+    void indexLocal(TrackerId trackerId, LocalId localId, CommonId commonId,
+                    WorkingSetId workingSetId, Revision revision);
 
     /**
      * 业务 Merge 写入提交后切换/创建目标变体（D15-B，独立事务、幂等）。

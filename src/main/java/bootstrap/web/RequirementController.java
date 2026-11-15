@@ -3,6 +3,7 @@ package bootstrap.web;
 import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,6 +70,25 @@ public class RequirementController {
                 requireText(request.title(), "title"),
                 LockVersion.of(request.expectedLockVersion()));
         return RequirementView.from(changed);
+    }
+
+    /** 编辑单个需求的标题和描述。 */
+    @PutMapping("/{localId}")
+    public RequirementView changeContent(@PathVariable("localId") String localId,
+                                         @RequestBody ChangeRequirementRequest request) {
+        Requirement changed = applicationService.changeContent(
+                LocalId.of(localId),
+                requireText(request.title(), "title"),
+                Objects.requireNonNull(request.description(), "description"),
+                LockVersion.of(request.expectedLockVersion()));
+        return RequirementView.from(changed);
+    }
+
+    /** REST 风格的单个需求软删除；旧入口 POST /{localId}/delete 保持兼容。 */
+    @DeleteMapping("/{localId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteOne(@PathVariable String localId) {
+        applicationService.delete(LocalId.of(localId));
     }
 
     @PostMapping("/{localId}/delete")
