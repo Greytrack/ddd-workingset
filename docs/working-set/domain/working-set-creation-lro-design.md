@@ -92,7 +92,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 ### 4.6 关系/引用构建
 
 - 索引结束时随终态事务登记 `TrackerItemsIndexed`，提交后交付。事件包含扫描完成的子 Tracker，包括存在单项失败或带明细跳过的 Tracker。当前占位监听器保留 Modulith 事件发布记录。
-- 关系规则、消费者和任务视图边界待 [QUESTION-010](open-questions.md) 与 [T7-E](../implementation/t7-implementation-prompt.md#t7-e-关系与引用构建) 推进。构建失败应可追溯，已提交的索引和工作集本体保留。
+- QUESTION-010 已于 2026-11-15 裁定 C（按关系类型拆分，见[裁定记录](../reviews/2026-11-15-question-010-relation-identity-decision.md)）：Reference 使用逻辑 Family + 可选钉版/物理定位，Association 使用具体 Variant 端点。T7-E 只消费事件构建/修复，不参与 Compare/Merge；构建失败应可追溯，已提交的索引和工作集本体保留。FACT-009 可见性、删除守卫与 QUESTION-006 保留期限仍需随 T7-E 验收确认。
 
 ## 5. 事务、事件与一致性
 
@@ -120,7 +120,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 - `TrackerItemCatalog`（SK 定义、BC 实现）：按 Tracker 和 LocalId 游标提供未软删的业务身份页及有效同族查询。`RequirementCatalog` 继续服务 Merge。
 - `LightTrackerItemRepository` 提供父 LTI 分页查询与按工作集/家族条件插入。内容可读性沿用 T3 读取边界。
-- 关系/引用 Port：依赖 QUESTION-010；T7-E 定义。
+- 关系/引用 Port：按 QUESTION-010 C 裁定，由 T7-E 定义 Reference/Association 端口；字段、失败明细和关系进度待 T7-E 验收。
 
 ### 7.3 REST
 
@@ -155,7 +155,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | T7-B | LRO 骨架：任务表、创建/轮询 REST、状态推进、幂等 | T7-A | HTTP 创建返回任务；轮询状态；重复提交返回原任务 |
 | T7-C | 范围复制与绑定：子 WS 本体、非共享 Tracker copy、共享/空间绑定 | T7-B、S6 | 副本/绑定正确；非法范围记录失败明细 |
 | T7-D | 批量 LTI 索引：分页端口、软删剔除、分批创建、部分成功明细 | T7-C、T3 | 批量索引成功/部分成功；软删剔除；重复执行幂等 |
-| T7-E | 关系/引用构建：索引完成事件、异步构建、失败明细 | T7-D、QUESTION-010 | 事件触发；关系构建成功/失败可查 |
+| T7-E | 关系/引用构建：索引完成事件、异步构建、失败明细 | T7-D、QUESTION-010（已裁定 C） | 事件触发；关系构建/修复成功或失败可查；不参与 Compare/Merge |
 | T7-F | 规模与恢复：批大小、分页、结果保留、压测 | T7-E | 规模数据、失败明细可读、连接池可承受 |
 
 ## 13. 状态与下一步

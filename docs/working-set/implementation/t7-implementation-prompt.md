@@ -1,10 +1,15 @@
 # T7 后续实施计划
 
-**状态：Draft（T7-E／F）**。已实现的创建任务、范围绑定、受理快照和索引见 [T7 设计](../domain/working-set-creation-lro-design.md)及[验收索引](README.md)。
+**状态：Draft（T7-E 契约已裁定 C；T7-F 待推进）**。已实现的创建任务、范围绑定、受理快照和索引见 [T7 设计](../domain/working-set-creation-lro-design.md)及[验收索引](README.md)。
 
 ## T7-E 关系与引用构建
 
-以索引完成事件 TrackerItemsIndexed 作为协作边界。关系身份、钉版、悬空及修复依赖 [QUESTION-010](../domain/open-questions.md)。确认这些规则后再实现关系协作端口与消费者、记录可观察的构建失败，并裁定关系进度如何进入任务视图。
+QUESTION-010 已于 2026-11-15 裁定 C，见[裁定记录](../reviews/2026-11-15-question-010-relation-identity-decision.md)。
+
+- **Reference**：逻辑 Family（`targetCommonId` + `targetTrackerId`），可选 `targetRevision` 钉版和 `targetLocalId` 物理定位；右侧为空保持有效悬空，修复同一行。
+- **Association**：具体 `sourceLocalId`/`targetLocalId`；缺端点不落库，保留恢复意图；下游关系丢弃。
+- 本轮只消费 `TrackerItemsIndexed` 做构建与修复，不参与 Compare/Merge（D6）；权限保持 D11 占位。
+- 记录可观察的构建/修复失败，并裁定关系进度是否进入任务视图。FACT-009 的可见性、删除守卫和 QUESTION-006 保留期限仍需随 T7-E 验收确认。
 
 ## T7-F 规模、保留与恢复
 
