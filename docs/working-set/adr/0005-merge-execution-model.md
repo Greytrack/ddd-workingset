@@ -82,3 +82,7 @@ D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint �
 终态判定：`Succeeded` ＝本轮全部条目成功处理；`PartiallySucceeded` ＝至少一项成功且存在未完成或失败项；`Failed` ＝无成功项且存在失败或未完成项。`KEEP_TARGET + markAsMerged=true` 属成功处理项；纯 `DEFER` 轮次归入 `Failed`，本轮不新增专用状态枚举。
 
 影响：早期「同一 MergeRound 内重试」候选设计作废；契约 §1/§4/§5/§7/§8 与 [MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md) 已同步。
+
+## 2026-11-15 补充裁定：compare 不持久化
+
+业务团队确认 compare 是高频只读展示，不持久化比较结果或 `merge_comparisons` JSONB。原「ComparisonToken 必须持久化并用于回读冻结清单」的执行方式被取代：compare 返回瞬时比较证据；用户决策连同所选差异证据随 MergeRound 持久化；apply 只执行轮次内决策范围，并在登记/执行时校验证据未过期。ADR 原有「比较证据必须绑定双侧内容证据」的决定继续适用，但不再要求持久化 token；ADR 状态保持 `Accepted`。详见 [Compare 不持久化裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)。

@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import sk.workingset.application.event.RequirementMergeApplied;
+import sk.workingset.application.event.MergeRoundSubmitted;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.MergeCommitReceipt;
 import sk.workingset.application.port.MergeStore;
@@ -75,24 +76,28 @@ public class MergeExecutionService {
         this.events = events;
     }
 
-    public record EntryRequest(String entryKey, MergeDecision decision) {}
+    public record EntryRequest(String entryKey, Difference evidence, MergeDecision decision) {}
     public record Registration(String entryKey, String entryId, Reason failure, String detail) {}
 
     @Transactional
-    public MergeRound start(WorkingSetId target, String token, Caller caller) {
-        var comparison = comparisons.find(token);
-        if (!target.equals(comparison.target())) {
-            throw new MergeFailure(Reason.MergeNotAllowed, "comparison target differs");
-        }
-        var candidates = comparisons.candidates(comparison.source(), target);
-        if (!candidates.containsAll(comparison.candidates())) {
-            throw new MergeFailure(Reason.MergeNotAllowed, "comparison scope has changed");
-        }
-        var round = MergeRound.prepare(UUID.randomUUID().toString(), comparison, caller.id());
+    public MergeRound start(WorkingSetId target, WorkingSetId source, Caller caller) {
+        var round = MergeRound.prepare(UUID.randomUUID().toString(), source, target, caller.id());
         if (!store.insertRound(round)) {
-            throw new MergeFailure(Reason.ComparisonAlreadyUsed, token);
+            throw new MergeFailure(Reason.ComparisonAlreadyUsed, round.token());
         }
         return round;
+    }
+
+    @Transactional
+    public MergeRound submit(WorkingSetId target, WorkingSetId source, List<EntryRequest> decisions, Caller caller) {
+        var round = start(target, source, caller);
+        var failures = register(round.id(), decisions).stream()
+                .filter(result -> result.failure() != null).toList();
+        if (!failures.isEmpty()) {
+            throw new MergeFailure(Reason.InvalidDecision, failures.toString());
+        }
+        events.publishEvent(new MergeRoundSubmitted(round.id()));
+        return round(round.id(), false);
     }
 
     @Transactional
@@ -101,9 +106,9 @@ public class MergeExecutionService {
         if (round.state() != State.Preparing) {
             throw new MergeFailure(Reason.RoundClosed, roundId);
         }
-        var comparison = comparisons.find(round.token());
         var results = new ArrayList<Registration>();
         var caller = Caller.of(round.caller());
+        var candidates = comparisons.candidates(round.source(), round.target());
         for (var request : requests) {
             try {
                 var duplicate = round.entries().stream()
@@ -112,12 +117,19 @@ public class MergeExecutionService {
                     results.add(new Registration(request.entryKey(), duplicate.get().id(), null, null));
                     continue;
                 }
-                var frozen = comparison.differences().stream().filter(diff -> diff.key().equals(request.entryKey()))
-                        .findFirst().orElseThrow(() -> new MergeFailure(Reason.InvalidDecision, request.entryKey()));
+                var frozen = request.evidence();
+                if (frozen == null) {
+                    throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
+                }
+                if (!frozen.key().equals(request.entryKey())) {
+                    throw new MergeFailure(Reason.InvalidDecision, request.entryKey());
+                }
+                if (!candidates.contains(frozen.trackers())) {
+                    throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
+                }
                 lockEvidence(frozen);
                 var current = comparisons.current(frozen, caller);
-                if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())
-                        || !comparisons.candidates(round.source(), round.target()).contains(frozen.trackers())) {
+                if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
                     throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
                 }
                 if (request.decision() == null) {

@@ -47,27 +47,25 @@ public class MergeController {
     @PostMapping("/worksets/{target}/compare/{source}")
     public ComparisonPage compare(@PathVariable String target, @PathVariable String source,
                                   @RequestParam(required = false) String trackerId,
+                                  @RequestParam(defaultValue = "0") int offset,
                                   @RequestParam(defaultValue = "100") int limit) {
-        checkPage(0, limit);
+        checkPage(offset, limit);
         var result = comparisons.compare(WorkingSetId.of(source), WorkingSetId.of(target),
                 trackerId == null ? null : TrackerId.of(trackerId), CALLER);
-        return page(result, 0, limit);
-    }
-
-    @GetMapping("/comparisons/{token}")
-    public ComparisonPage readPage(@PathVariable String token, @RequestParam(defaultValue = "0") int offset,
-                                   @RequestParam(defaultValue = "100") int limit) {
-        checkPage(offset, limit);
-        return page(comparisons.find(token), offset, limit);
+        return page(result, offset, limit);
     }
 
     @PostMapping("/worksets/{target}/merge-rounds")
     @ResponseStatus(HttpStatus.CREATED)
     public MergeRound start(@PathVariable String target, @RequestBody StartRequest request) {
-        if (request.comparisonToken() == null || request.comparisonToken().isBlank()) {
-            throw new IllegalArgumentException("comparisonToken is required");
+        if (request.sourceWorkingSetId() == null || request.sourceWorkingSetId().isBlank()) {
+            throw new IllegalArgumentException("sourceWorkingSetId is required");
         }
-        return rounds.start(WorkingSetId.of(target), request.comparisonToken(), CALLER);
+        var source = WorkingSetId.of(request.sourceWorkingSetId());
+        if (request.decisions() != null && !request.decisions().isEmpty()) {
+            return rounds.submit(WorkingSetId.of(target), source, request.decisions(), CALLER);
+        }
+        return rounds.start(WorkingSetId.of(target), source, CALLER);
     }
 
     @PostMapping("/merge-rounds/{id}/entries")
@@ -105,15 +103,15 @@ public class MergeController {
     private static ComparisonPage page(Comparison comparison, int offset, int limit) {
         int start = Math.min(offset, comparison.differences().size());
         int end = start + Math.min(limit, comparison.differences().size() - start);
-        return new ComparisonPage(comparison.token(), comparison.source(), comparison.target(), comparison.comparedAt(),
+        return new ComparisonPage(comparison.source(), comparison.target(), comparison.comparedAt(),
                 comparison.candidates(), comparison.differences().subList(start, end),
                 end < comparison.differences().size() ? end : null);
     }
 
-    public record StartRequest(String comparisonToken) {}
+    public record StartRequest(String sourceWorkingSetId, List<EntryRequest> decisions) {}
     public record RevokeRequest(long expectedDecisionVersion) {}
     public record EntriesRequest(List<EntryRequest> entries) {}
-    public record ComparisonPage(String comparisonToken, WorkingSetId source, WorkingSetId target, Instant comparedAt,
+    public record ComparisonPage(WorkingSetId source, WorkingSetId target, Instant comparedAt,
                                  List<Comparison.TrackerPair> candidates, List<Comparison.Difference> differences,
                                  Integer nextOffset) {}
 }

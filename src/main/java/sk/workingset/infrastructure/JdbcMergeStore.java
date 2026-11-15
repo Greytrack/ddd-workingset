@@ -10,11 +10,10 @@ import sk.workingset.application.port.MergeCommitReceipt;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
 
-/** Merge 存储的 JDBC 实现：比较证据与轮次状态按 JSONB 整份保存（D12-A 切片实现）。 */
+/** Merge 存储的 JDBC 实现：轮次状态按 JSONB 保存，比较结果不持久化。 */
 public final class JdbcMergeStore implements MergeStore {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
@@ -22,18 +21,6 @@ public final class JdbcMergeStore implements MergeStore {
     public JdbcMergeStore(JdbcTemplate jdbc, ObjectMapper json) {
         this.jdbc = jdbc;
         this.json = json;
-    }
-
-    @Override
-    public void insertComparison(Comparison comparison) {
-        jdbc.update("INSERT INTO merge_comparisons (token, evidence) VALUES (?, CAST(? AS jsonb))",
-                comparison.token(), encode(comparison));
-    }
-
-    @Override
-    public Optional<Comparison> findComparison(String token) {
-        return jdbc.query("SELECT evidence FROM merge_comparisons WHERE token = ?",
-                (rs, row) -> decode(rs.getString(1), Comparison.class), token).stream().findFirst();
     }
 
     @Override

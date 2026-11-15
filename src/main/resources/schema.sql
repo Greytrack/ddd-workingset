@@ -237,16 +237,15 @@ CREATE INDEX IF NOT EXISTS idx_trackers_product_space ON trackers (product_space
 CREATE INDEX IF NOT EXISTS idx_tracker_bindings_tracker ON tracker_bindings (tracker_id);
 CREATE INDEX IF NOT EXISTS idx_space_bindings_space ON space_bindings (product_space_id);
 
-CREATE TABLE IF NOT EXISTS merge_comparisons (
-    token VARCHAR(64) PRIMARY KEY,
-    evidence JSONB NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS merge_rounds (
     id VARCHAR(64) PRIMARY KEY,
-    token VARCHAR(64) NOT NULL REFERENCES merge_comparisons (token),
+    token VARCHAR(64) NOT NULL,
     state JSONB NOT NULL
 );
+
+-- 2026-11-15：compare 结果不持久化；轮次 token 仅用于本轮次审计。
+ALTER TABLE merge_rounds DROP CONSTRAINT IF EXISTS merge_rounds_token_fkey;
+DROP TABLE IF EXISTS merge_comparisons;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_token ON merge_rounds (token);
 

@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.UUID;
 import java.util.function.Function;
 
 import org.springframework.transaction.annotation.Isolation;
@@ -72,7 +71,7 @@ public class MergeComparisonService {
         for (var pair : candidates) {
             var sources = familyIds(pair.source());
             var targets = familyIds(pair.target());
-            var families = new TreeSet<CommonId>(java.util.Comparator.comparing(CommonId::value));
+            var families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
             families.addAll(sources.keySet());
             families.addAll(targets.keySet());
             for (var family : families) {
@@ -87,9 +86,7 @@ public class MergeComparisonService {
                 }
             }
         }
-        var comparison = new Comparison(UUID.randomUUID().toString(), source, target, Instant.now(),
-                candidates, differences);
-        store.insertComparison(comparison);
+        var comparison = new Comparison(source, target, Instant.now(), candidates, differences);
         return comparison;
     }
 
@@ -99,11 +96,6 @@ public class MergeComparisonService {
                 .filter(checkpoint -> java.util.Objects.equals(checkpoint.sourceRevision(), left.revision())
                         && java.util.Objects.equals(checkpoint.targetRevision(), right.revision()))
                 .isPresent();
-    }
-
-    public Comparison find(String token) {
-        return store.findComparison(token)
-                .orElseThrow(() -> new MergeFailure(Reason.ComparisonNotFound, token));
     }
 
     List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {

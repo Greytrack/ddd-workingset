@@ -3,6 +3,7 @@ package sk.workingset.domain.merge;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.Difference;
@@ -45,8 +46,8 @@ public record MergeRound(String id, String token, WorkingSetId source, WorkingSe
         entries = List.copyOf(entries);
     }
 
-    public static MergeRound prepare(String id, Comparison comparison, String caller) {
-        return new MergeRound(id, comparison.token(), comparison.source(), comparison.target(), caller,
+    public static MergeRound prepare(String id, WorkingSetId source, WorkingSetId target, String caller) {
+        return new MergeRound(id, UUID.randomUUID().toString(), source, target, caller,
                 State.Preparing, List.of(), null);
     }
 

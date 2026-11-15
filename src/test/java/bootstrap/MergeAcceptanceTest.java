@@ -104,7 +104,6 @@ class MergeAcceptanceTest {
         }
         for (String token : tokens) {
             jdbc.update("DELETE FROM merge_checkpoints WHERE token = ?", token);
-            jdbc.update("DELETE FROM merge_comparisons WHERE token = ?", token);
         }
         var itemIds = jdbc.queryForList("""
                 SELECT local_id FROM requirements WHERE tracker_id IN
@@ -162,16 +161,34 @@ class MergeAcceptanceTest {
         assertEquals("new", jdbc.queryForObject(
                 "SELECT title FROM requirements WHERE tracker_id = ? AND common_id = ?", String.class, targetTracker, add));
         assertEquals(result, apply(round));
-        var reused = rest.postForEntity(ws(target) + "/merge-rounds",
-                Map.of("comparisonToken", compared.comparisonToken()), Map.class);
-        assertStatus(HttpStatus.CONFLICT, reused);
-        assertEquals("ComparisonAlreadyUsed", reused.getBody().get("reason"));
 
         // C11：软删对象不进入 Compare 候选，恢复走 BC 的 undelete，不再通过 Merge RESTORE。
         seed(sourceTracker, remove, "present again");
         var afterDelete = compare(source, target);
         assertEquals(Presence.ABSENT, diff(afterDelete, remove).target().presence());
         assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + removedId, Map.class));
+    }
+
+    @Test
+    void submittedDecisionsRunAsAsyncRoundAndPollToTerminal() {
+        String family = id("async");
+        seed(rootTracker, family, "source");
+        String target = seed(childTracker, family, "target");
+        var compared = compare("1", child);
+        var difference = diff(compared, family);
+        var response = rest.postForEntity(ws(child) + "/merge-rounds",
+                Map.of("sourceWorkingSetId", "1",
+                        "decisions", List.of(field(difference, "ACCEPT", false))), MergeRound.class);
+        assertStatus(HttpStatus.CREATED, response);
+        String round = response.getBody().id();
+        rounds.add(round);
+        tokens.add(response.getBody().token());
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var current = rest.getForObject(roundPath(round), MergeRound.class);
+            assertNotNull(current.result());
+            assertEquals(State.Succeeded, current.result().state());
+        });
+        assertEquals("source", requirement(target).title());
     }
 
     @Test
@@ -281,8 +298,6 @@ class MergeAcceptanceTest {
         var frozen = compare("1", child);
         String staleRound = start(child, frozen);
         change(source, "changed before registration", 0);
-        var frozenPage = rest.getForObject("/api/comparisons/" + frozen.comparisonToken(), ComparisonPage.class);
-        assertEquals("source", diff(frozenPage, edit).source().fields().get("title"));
         assertEquals("StaleEvidence", register(staleRound, field(diff(frozen, edit), "ACCEPT", false))[0].failure().name());
 
         var fresh = compare("1", child);
@@ -588,16 +603,16 @@ class MergeAcceptanceTest {
     private ComparisonPage compare(String source, String target) {
         var response = rest.postForEntity(ws(target) + "/compare/" + source, null, ComparisonPage.class);
         assertStatus(HttpStatus.OK, response);
-        tokens.add(response.getBody().comparisonToken());
         return response.getBody();
     }
 
     private String start(String target, ComparisonPage compared) {
         var response = rest.postForEntity(ws(target) + "/merge-rounds",
-                Map.of("comparisonToken", compared.comparisonToken()), MergeRound.class);
+                Map.of("sourceWorkingSetId", compared.source().value()), MergeRound.class);
         assertStatus(HttpStatus.CREATED, response);
         String id = response.getBody().id();
         rounds.add(id);
+        tokens.add(response.getBody().token());
         return id;
     }
 
@@ -616,11 +631,13 @@ class MergeAcceptanceTest {
     }
 
     private static Map<String, Object> existence(Difference diff, String action) {
-        return Map.of("entryKey", diff.key(), "decision", Map.of("existence", action, "markAsMerged", false));
+        return Map.of("entryKey", diff.key(), "evidence", diff,
+                "decision", Map.of("existence", action, "markAsMerged", false));
     }
 
     private static Map<String, Object> field(Difference diff, String action, boolean mark) {
-        return Map.of("entryKey", diff.key(), "decision", Map.of("fields", Map.of("title", action), "markAsMerged", mark));
+        return Map.of("entryKey", diff.key(), "evidence", diff,
+                "decision", Map.of("fields", Map.of("title", action), "markAsMerged", mark));
     }
 
     private static Difference diff(ComparisonPage page, String family) {
