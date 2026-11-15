@@ -1,6 +1,6 @@
 # 阶段 5：契约层计划（Contracts）
 
-**状态：Draft（计划文件；不构成任何业务裁定、ADR 或基线发布授权）**
+**状态：Historical（T1～T5 已完成；当前进度与下一步见[实施与验收索引](../implementation/README.md)）**
 
 - 日期：2026-11-10
 - 前提：[阶段 4 收尾](2026-11-10-stage-4-productspace-classification-review.md#8-阶段-4-收尾2026-11-10)已完成，[首版基线审核](2026-11-10-baseline-v1-audit.md)结论「通过（附观察项）」。

@@ -18,7 +18,7 @@
 - [2026-11-10 候选不变量逐条审查](2026-11-10-invariant-evidence-review.md)：区分已接受测试依据与仍待批准的 INV 全文。
 - [2026-11-10 阶段 4 集中评审](2026-11-10-stage-4-productspace-classification-review.md)：ProductSpace/Classification/绑定、删除语义与 D-019 Diff/Merge 衔接裁定。
 - [2026-11-10 首版基线审核](2026-11-10-baseline-v1-audit.md)：首版领域模型基线 v1 静态一致性审核；结论「通过（附观察项）」，不构成发布/Commit/Tag 授权。
-- [2026-11-10 阶段 5 契约层计划](2026-11-10-stage-5-contract-plan.md)：契约层议题顺序（T1 Merge 执行协议 → T2 绑定与删除 → T3 物化协议 → T4 跨 BC 契约 → T5 最小纵向切片）、产出物与门禁。
+- [2026-11-10 阶段 5 契约层计划](2026-11-10-stage-5-contract-plan.md)：Historical；T1～T5 已完成，当前进度与下一步见[实施与验收索引](../implementation/README.md)。
 - [2026-11-11 T1 契约审核](2026-11-11-t1-contract-review.md)：T1 通过并关闭（Reviewed）；重试与终态话题不再新增领域问题，进入 T2。
 - [2026-11-11 T2 评审（冻结）](2026-11-11-t2-binding-deletion-review.md)：K1～K3 用户确认落地、4 项一致性修正、旧表述清理；绑定与删除契约 v1 冻结为 Reviewed，进入 T3。
 - [2026-11-11 T3 评审（冻结）](2026-11-11-t3-materialization-review.md)：K1′～K3′ 用户确认落地（独立 materialized 字段、LocalId 稳定复用、事件驱动最终一致）、旧推导候选标 Superseded；物化协议契约 v1 冻结为 Reviewed，进入 T4。

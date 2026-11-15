@@ -13,7 +13,7 @@
 
 ## 阶段 5 契约
 
-契约正文按主题维护，确认范围见 [BASELINE](../BASELINE.md)，进度见[阶段 5 计划](../reviews/2026-11-10-stage-5-contract-plan.md)。
+契约正文按主题维护，确认范围见 [BASELINE](../BASELINE.md)，进度与下一步见[实施与验收索引](../implementation/README.md)；阶段 5 计划保留为历史记录。
 
 - [Merge 执行](merge-execution-contract-v1.md)：轮次、条目、比较证据与 Checkpoint。
 - [绑定与删除](binding-deletion-contract-v1.md)：绑定结构、操作与拒绝条件。

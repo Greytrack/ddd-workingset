@@ -1,6 +1,6 @@
 # WorkingSet 谱系与相邻父子 Merge
 
-**状态：Draft（2026-11-12；由 FACT-028 用户裁定支撑，设计待评审）**
+**状态：Reviewed（FACT-028 已确认，S6 已实施；图本身未纳入正式基线）**
 
 目的：展示 WorkingSet 单父谱系、子 WS Tracker 来源约束，以及 Merge 只允许直属父子的准入。不表达 GateFlow 版次链特例。
 

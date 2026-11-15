@@ -1,6 +1,17 @@
 # 实施与验收索引
 
-当前设计见 [BASELINE](../BASELINE.md)。本页索引各阶段的验收证据和后续计划。
+当前设计见 [BASELINE](../BASELINE.md)。本页索引验收证据、当前阶段和下一步。
+
+## 当前阶段
+
+| 主题 | 已完成 | 进行中/后续 |
+| --- | --- | --- |
+| T6 Merge 与身份 | T6-B 并发与恢复、T6-C 身份分配、T6-D 子工作集回并 | T6-E 规模/分页/保留、T6-F 谱系约束、T6-G 关系/Baseline/治理；见 [T6 后续大纲](t6-next-stage-outline.md) |
+| T7 创建工作集 | T7-A 契约、T7-B 任务骨架、T7-C 范围绑定、T7-D 批量索引（受理时冻结快照） | T7-E 关系构建（依赖 QUESTION-010）、T7-F 规模/保留/恢复（依赖 QUESTION-012）；见 [T7 后续计划](t7-implementation-prompt.md) |
+
+下一步建议：先关闭 `QUESTION-010` 以解锁 T7-E 与 T6-G；T7-F 与 T6-E 合并做规模、保留和恢复验证；T6-F 按 `QUESTION-002` 逐项裁定。T7-E 接入前继续保留 `TrackerItemsIndexed` 生产占位监听器。
+
+## 验收记录
 
 | 范围 | 验收记录 |
 | --- | --- |
@@ -9,6 +20,4 @@
 | T5 首个纵向切片 | [S1 查询](t5-s1-verification-result.md)、[S2 保存与事件](t5-s2-verification-result.md)、[S3 首次物化](t5-s3-verification-result.md)、[S4 恢复](t5-s4-verification-result.md)、[S5 绑定与删除](t5-s5-verification-result.md)、[S6 谱系](t5-s6-verification-result.md)、[S7 Merge](t5-s7-verification-result.md) |
 | T5 支撑证据 | [运行时](t5-runtime-verification.md)、[D2 家族作用域](t5-d2-family-scope-verification.md)、[D4 SK 边界](t5-d4-sk-boundary-verification.md) |
 
-后续见 [T6 后续大纲](t6-next-stage-outline.md)和 [T7 后续计划](t7-implementation-prompt.md)。领域待裁定事项见[开放问题](../domain/open-questions.md)。
-
-T5 前期证据见 [S0 评审](../reviews/2026-11-11-t5-s0-design-review.md)与 [S3 实施记录](t5-s3-codex-task-brief.md)。已完成的 T6、T6-D、T7-D 实施提示词及阶段 2 概念旧图可从 Git 历史版本 a10992f 查阅。
+领域待裁定事项见[开放问题](../domain/open-questions.md)。已完成的 T6/T7 实施提示词及阶段 2 概念旧图已从当前索引移除，必要时从 Git 历史查阅。

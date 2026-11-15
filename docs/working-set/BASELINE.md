@@ -6,7 +6,7 @@
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
 - **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）
 - **Released Git Tag**: None
-- **Last Updated**: 2026-11-11
+- **Last Updated**: 2026-11-15
 
 ## 当前基线状态
 
@@ -67,32 +67,25 @@
 
 2026-11-11 的内容固定和接口责任裁定见[一致性修正记录](reviews/2026-11-11-consistency-reconciliation.md)，契约入口为 T3 §2.1 与 T4 §3.1。接受范围仅限用户确认的规则，关联 SCN-072/073。
 
-剩余问题统一见[开放问题](domain/open-questions.md)；首切片门禁与实施待办见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。已确认规则与待验证的技术前提应分别读取。
+剩余问题统一见[开放问题](domain/open-questions.md)；当前实施、阶段与后续计划见[实施与验收索引](implementation/README.md)，阶段 5 计划保留为历史记录。已确认规则与待验证的技术前提应分别读取。
 
 ## 最近基线变更
 
-| 日期 | 记录与确认依据 |
+| 日期 | 变更主题与依据 |
 | --- | --- |
-| 2026-11-13 | T7-A：用户确认 [创建 LRO 契约](domain/working-set-creation-lro-design.md)及终态前的 `Preparing` 行为。T7-B 的空范围异步任务、轮询与幂等受理见 [验收记录](implementation/t7-b-creation-task-verification.md)。正式发布状态沿用现有基线。 |
-| 2026-11-13 | T7-C：非空范围受理、空间前置、非共享 Tracker 复制与绑定、共享 Tracker 复用及逐项结果已实现，见 [T7-C 验收](implementation/t7-c-binding-verification.md)。 |
-| 2026-11-14 | T7-D 用户裁定与批量索引实施，见 [创建 LRO 设计](domain/working-set-creation-lro-design.md) 和 [T7-D 验收](implementation/t7-d-index-verification.md)。 |
-| 2026-11-13 | T6-D：用户确认回并入口、来源审计与软删恢复更新规则，见 [T1 §8](domain/merge-execution-contract-v1.md#8-轮次终态与结果表达) 和 [T6-D 验收](implementation/t6-d-merge-back-verification.md)。`mvn -B clean test` 91 项通过。 |
-| 2026-11-13 | T6-C：创建请求不再携带 CommonId；默认工作集服务端生成同一雪花作为 LocalId/CommonId，非默认工作集生成两个不等 ID，派生继承来源 CommonId；唯一冲突统一 409。见 [T6-C 验证](implementation/t6-c-identity-verification.md)；`mvn -B clean test` 88 项通过 |
-| 2026-11-13 | T6-B 按本轮实施任务补充 [T1 §8.1](domain/merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b) 的轮次并发及恢复边界，见 [SCN-074](scenarios/core-scenarios.md#scn-074) 和 [验收](implementation/t6-b-merge-recovery-verification.md)。接受范围与发布状态沿用现有基线。 |
-| 2026-11-13 | 实施边界（用户确认）：交付物为 `sk.workingset` 的契约、规范与约束；`alm.requirement` 为占位/参考实现，各业务 BC 由专门团队实现并遵守 SK 契约；参考实现不覆盖业务细节 Guard，不得以其缺失反推 SK 契约（T4 §3.3、business-object-lifecycle-design） |
-| 2026-11-13 | D16：软删即占用家族身份，只能恢复或永久删除（T2 §5、QUESTION-004）。D17：生命周期能力不产生 `Unknown`（设计文档）。D10：新增工作集入口与归属解析（`TrackerScopePort`、`CreateRequirementRequest.workingSetId`，T4 §4）。D12-A：JSONB 为切片实现，规模/保留/回填为后续专项（T1）。D15-B：Merge 条目应用独立提交、目标变体切换由 `RequirementMergeApplied` 事件在 SK 独立事务完成（T1 §5、T4 §3.2）；`mvn -B test` 83 项通过 |
-| 2026-11-13 | C7：LTI 层补 `(working_set_id, common_id)` 唯一索引（`uq_lti_working_set_family`），与 requirements 的 WorkingSet 作用域家族唯一性一致，新增验收。D3-B：COW 物化的业务保存由业务 BC 独立提交，SK 物化凭据与 LTI 切换分事务，未完成部分经 Modulith 未完成事件重投收敛（T3 §7、T4 §3.2、D4 验证）；`mvn -B clean test` 79 项通过 |
-| 2026-11-12 | D6：附件/关系不参与 Compare/Merge（T1、T3 §2.1）。D7：业务对象永久删除后不保留墓碑/内容/历史，查询返回 `NotFound` 是正确语义（T4 §5.1、T2 §5）；软删仍返回 `Deleted`。D10：新增工作集入口（归属解析）作为下一片实现点（T4 §4）。D13：`RequirementPurged` 改用 Modulith 监听并接入未完成事件重投。D14：`BusinessObject` 在 SK 内声明、`TrackerItem` 继承、`Requirement` 实现（T4 §3.1/§8）。同批修复：`readInheritedAt` 检查删除（C3）、`PREPARING` 改为 `DEPENDENCY_UNAVAILABLE`（C4）、`Summary.applied` 去重（C6）；`mvn -B test` 78 项通过 |
-| 2026-11-12 | D11：现阶段不接入权限，等权限模型开发完毕后再接入；`Caller`/`authorize` 保持占位，不落地 `Denied`，见 [T4 §7](domain/cross-bc-contract-v1.md)。D4：用户选择方案 A，把 LightTrackerItem 校验与移除移回 SK，业务 BC 不再注入 SK 仓储；跨聚合用 `RequirementPurged` 事件交互，见 [T4 §3.1](domain/cross-bc-contract-v1.md) 与 [D4 边界验证](implementation/t5-d4-sk-boundary-verification.md)（`mvn -B test` 78 项通过） |
-| 2026-11-12 | D5：用户裁定 WorkingSet/Tracker **不存在“停用”概念**，相关表述与代码已清除（`assertDisableAllowed` 移除，`mvn -B test` 77 项通过），[QUESTION-009.a](domain/open-questions.md) 关闭。D8：用户按 A（工作视图/范围清单）收尾关闭 [QUESTION-001](domain/open-questions.md)，与 S1～S7 实现及本 BASELINE 一致。D9：用户裁定关闭 [QUESTION-008](domain/open-questions.md) 已实现部分（登记前/后证据分界、普通字段决策优先、部分成功、新轮次、Checkpoint），剩余并发/重试/结果恢复协议转 `QUESTION-008.a` |
-| 2026-11-12 | D1：`TrackerItem` 继承 `BusinessObject`，`BusinessObject` 声明 delete/undelete/delete2 公共能力，具体规则/guard/编排由各业务 BC 实现；设计见 [business-object-lifecycle-design.md](domain/business-object-lifecycle-design.md)，Draft，接口签名待评审。D2：Requirement 家族唯一性按 WorkingSet 作用域（用户选择 A），schema/索引已修正，见 [D2 验证](implementation/t5-d2-family-scope-verification.md) |
-| 2026-11-12 | [S7 实施裁定](reviews/2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界，登记后普通字段按决策优先；Requirement `delete`/`undelete`/`delete2` 最小生命周期；S7 验证见 [S7 验证结果](implementation/t5-s7-verification-result.md)，未发布 |
-| 2026-11-12 | [FACT-028](domain/facts.md) 多级 WorkingSet 谱系核心规则：单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 不允许删除；WorkingSet/Tracker 不存在“停用”生命周期（同日裁定）；设计见 [working-set-lineage-design.md](domain/working-set-lineage-design.md)，Draft，未发布 |
-| 2026-11-11 | T1 关闭、T2～T4 冻结：见下方契约登记及各议题评审；T1 Q4 见 ADR-0005 补充裁定 |
-| 2026-11-10 | [阶段 4 收尾与 D-019](reviews/2026-11-10-stage-4-productspace-classification-review.md)、[首版基线审核](reviews/2026-11-10-baseline-v1-audit.md)；ADR-0001～0005 接受依据见各 ADR |
-| 2026-11-09～10 | [阶段 3.1 规则确认](reviews/2026-11-09-stage-3-1-rule-convergence.md)、[分主题接受与 INV 审查](reviews/2026-11-10-invariant-evidence-review.md) |
-| 2026-11-09 | [阶段 2 候选整理](reviews/2026-11-09-stage-2-domain-discovery-review.md)、[AC-001 边界确认](reviews/2026-11-09-stage-3-0-shared-kernel-boundary-review.md)；候选图表未纳入基线 |
-| 2026-11-08 | 建立基线入口，当时尚无 Accepted 设计基线 |
+| 2026-11-14 | T7-D：受理时冻结父 Item 快照、批量 LTI 索引与 `TrackerItemsIndexed`；见 [T7 设计](domain/working-set-creation-lro-design.md) 与 [T7-D 验收](implementation/t7-d-index-verification.md)。 |
+| 2026-11-13 | T7-A/B/C：创建 LRO 契约、任务骨架、范围复制与绑定；见 [T7-A 评审](reviews/2026-11-13-t7-a-creation-lro-review.md)、[T7-B](implementation/t7-b-creation-task-verification.md)、[T7-C](implementation/t7-c-binding-verification.md)。 |
+| 2026-11-13 | T6-B/C/D：Merge 并发恢复、身份分配、子工作集回并；见 [T6-B](implementation/t6-b-merge-recovery-verification.md)、[T6-C](implementation/t6-c-identity-verification.md)、[T6-D](implementation/t6-d-merge-back-verification.md)。 |
+| 2026-11-13 | 实施边界与裁定：SK 契约优先、ALM 为参考实现；D16 软删占键、D17 生命周期不产生 Unknown、D10 工作集入口、D12-A JSONB 切片、D15-B Merge 事件切换、C7 LTI 家族唯一索引、D3-B COW 事件收敛；详见 [T4](domain/cross-bc-contract-v1.md)、[T3](domain/lighttrackeritem-materialization-contract-v1.md)、[T1](domain/merge-execution-contract-v1.md)。 |
+| 2026-11-12 | D6/D7：附件与关系不参与 Compare/Merge，永久删除不保留墓碑；D13/D14：Modulith 事件与 `BusinessObject` 继承；D4/D5/D8/D9/D11：SK 边界、无“停用”、工作视图、并发协议与权限占位；见 [一致性修正](reviews/2026-11-11-consistency-reconciliation.md)、[T4](domain/cross-bc-contract-v1.md)。 |
+| 2026-11-12 | D1/D2：BusinessObject 生命周期能力；Requirement 家族唯一性按 WorkingSet 作用域；见 [生命周期设计](domain/business-object-lifecycle-design.md)、[D2 验证](implementation/t5-d2-family-scope-verification.md)。 |
+| 2026-11-12 | FACT-028：单父谱系、直属父 Tracker 来源、相邻父子 Merge、空范围子 WS；见 [谱系设计](domain/working-set-lineage-design.md)。 |
+| 2026-11-12 | S7：直属父子 Compare/Merge 与 Requirement 最小生命周期；见 [S7 验证](implementation/t5-s7-verification-result.md)。 |
+| 2026-11-11 | T1～T4 契约冻结/关闭与 Q1～Q4 裁定；见 [T1](reviews/2026-11-11-t1-contract-review.md)、[T2](reviews/2026-11-11-t2-binding-deletion-review.md)、[T3](reviews/2026-11-11-t3-materialization-review.md)、[T4](reviews/2026-11-11-t4-cross-bc-review.md)。 |
+| 2026-11-10 | 阶段 4 收尾、首版基线审核与 ADR-0001～0005 Accepted；见 [阶段 4 评审](reviews/2026-11-10-stage-4-productspace-classification-review.md)、[基线审核](reviews/2026-11-10-baseline-v1-audit.md)。 |
+| 2026-11-09～08 | 阶段 2/3 候选整理、AC-001 边界确认与基线入口建立；见 [阶段 2 评审](reviews/2026-11-09-stage-2-domain-discovery-review.md)、[阶段 3 评审](reviews/2026-11-09-stage-3-architecture-review.md)。 |
+
+更早的逐日讨论与验证细节保留在相应评审、契约和验收记录中；本表只保留基线变更主题。
 
 ## 按主题接受的治理规则
 
@@ -116,8 +109,8 @@
 | T2 | [绑定与删除](domain/binding-deletion-contract-v1.md)，Reviewed | K1～K3；POL-016、INV-064～068 | [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md) |
 | T3 | [物化协议](domain/lighttrackeritem-materialization-contract-v1.md)，Reviewed | K1′～K3′；INV-069～071 | [T3 评审](reviews/2026-11-11-t3-materialization-review.md) |
 | T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
-| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Draft；S1～S7 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级谱系与相邻父子准入；S7 直属父子 Compare/Merge 与 Requirement 最小生命周期 | [实施证据索引](implementation/README.md) |
+| T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Reviewed；S1～S7 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级谱系与相邻父子准入；S7 直属父子 Compare/Merge 与 Requirement 最小生命周期 | [实施证据索引](implementation/README.md) |
 
 术语沿用 2026-11-11 裁定。`version` 为可空的发布大版本，`revision` 为手动推进的业务版次，`lock_version` 为提交时递增的乐观锁版本。
 
-SCN-057～073 与配套图表由各契约链接。进度、下一步及门禁统一见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。
+SCN-057～073 与配套图表由各契约链接。当前进度、下一步及门禁见[实施与验收索引](implementation/README.md)；阶段 5 计划保留为历史记录。

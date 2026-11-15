@@ -34,4 +34,4 @@ ADR 使用：`Proposed`、`Accepted`、`Rejected`、`Superseded`。
 
 只读取当前任务需要的材料。若文档状态、确认依据或替代关系不清楚，先记录为开放问题，不自行提升状态。
 
-当前实现和后续计划见[实施与验收索引](implementation/README.md)。首切片的历史规划见[阶段 5 计划](reviews/2026-11-10-stage-5-contract-plan.md)。
+当前实现、阶段与后续计划见[实施与验收索引](implementation/README.md)。
