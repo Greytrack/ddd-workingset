@@ -21,19 +21,22 @@
 
 - 请求校验前置：`decisions` 1–50 条、`requestId` 非空且 ≤128；不满足直接 400，不存在空轮次或分批登记入口。
 - 同 `requestId` 返回原轮次；同键换方向 409 `Conflict`；登记阶段证据过期 409 `StaleEvidence`，整轮回滚，不留半成品轮次。
+- 并发同键：`insertOrFindRound` 以 `ON CONFLICT (request_id) DO UPDATE … RETURNING state` 单条语句返回已提交轮次，不依赖"插入失败后再查询"的可见性。
 - 提交后由 `MergeRoundSubmitted` 异步逐条执行；`apply` 仅作幂等触发器与恢复入口。
 - Checkpoint 的业务身份是方向 + 家族（`source_id, target_id, common_id`）；左右 `local_id` 只作为确认时的变体证据。
 
 ## 验证
 
-`mvn -B -Dspring.profiles.active=default test`：110 项通过，其中 `MergeAcceptanceTest` 17 项覆盖：
+`mvn -B -Dspring.profiles.active=default test`：113 项通过（22 个测试类），其中 `MergeAcceptanceTest` 20 项覆盖：
 
-- `submittedDecisionsRunAsAsyncRoundAndPollToTerminal`、`duplicateSubmittedDecisionsReturnTheSameRound`：异步轮询与同键幂等。
-- `rejectsMissingDecisionsMissingRequestIdAndOversizedPage`、`requestIdCannotBeReusedForAnotherDirection`：前置拦截与跨方向冲突。
+- `submittedDecisionsRunAsAsyncRoundAndPollToTerminal`、`duplicateSubmittedDecisionsReturnTheSameRound`：异步轮询与串行同键重放。
+- `concurrentSubmissionsWithSameRequestIdReturnOneRound`：两线程同键并发提交返回同一轮次，库中只有一行。
+- `failedSubmissionLeavesNoRoundBehind`：证据过期 409 后事务回滚，不残留轮次。
+- `rejectsMissingDecisionsMissingRequestIdAndOversizedPage`、`rejectsRequestIdLongerThanStorageColumn`、`requestIdCannotBeReusedForAnotherDirection`：空决策、缺键、超限、超长与跨方向冲突。
 - `secondRoundWithRacedEvidenceCannotCommitTheSameFamilyTwice`：同家族旧证据第二次提交被拒。
 - `partialRoundRetainsKeepTargetCheckpointAndNewRoundOnlyProcessesSelectedItems`：KEEP_TARGET 确认、部分成功与重做边界。
 - `competingApplyIsRejectedAndResumeOnlyRecordsTheCommittedWrite`、`replayCompletesMergeTargetAfterListenerFailureWithoutApplyingBusinessWriteAgain`：并发执行、恢复与事件重投。
 
 ## 前端
 
-`src/main/resources/static/js/merge.js`：默认「当前工作集 → 其父工作集」方向（默认工作集取第一个子工作集），compare 分页、逐条选择采纳源/保留目标/暂缓并勾选标记已处理，整页决策以 `crypto.randomUUID()` 作为 `requestId` 提交，随后轮询轮次终态并展示摘要与条目结果。
+`src/main/resources/static/js/merge.js`：面板顶部「源 / 目标」下拉（默认当前工作集 → 其父；默认工作集取第一个子），前端预判直接父子并禁用非法组合；compare 分页、按差异类型给默认决策（`ADDED`/`MODIFIED` 采纳源，`DELETED` 保留目标），整页决策以 `crypto.randomUUID()` 作为 `requestId` 提交，随后轮询轮次终态并展示摘要与条目结果。全局函数带 `merge` 前缀（避免覆盖 `features.js` 的 `flattenWorksets`），静态资源按 `?v=N` 版本化；约定见 [前端脚本约定](../../../src/main/resources/static/js/README.md)。

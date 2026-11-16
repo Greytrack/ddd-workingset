@@ -9,7 +9,7 @@
 | T6 Merge 与身份 | T6-B 并发与恢复、T6-C 身份分配、T6-D 子工作集回并、T6-E 瞬时 compare + 一页决策 MergeRound 幂等与异步 LRO | T6-F 谱系约束、T6-G 关系/Baseline/治理；见 [T6 后续大纲](t6-next-stage-outline.md) |
 | T7 创建工作集 | T7-A 契约、T7-B 任务骨架、T7-C 范围绑定、T7-D 批量索引（受理时冻结快照） | T7-E 关系构建（QUESTION-010 已裁定 C，待实现）、T7-F 规模/保留/恢复（依赖 QUESTION-012）；见 [T7 后续计划](t7-implementation-prompt.md) |
 
-下一步建议：QUESTION-010 已裁定 C，下一步实现 T7-E 的 Reference/Association 构建与修复；规模、保留与恢复验证统一见[规模压测与保留专题](performance-testing.md)；T6-F 按 `QUESTION-002` 逐项裁定。T7-E 接入前继续保留 `TrackerItemsIndexed` 生产占位监听器。
+下一步建议：T6-E 已收尾（113 项通过，见[T6-E 验收](t6-e-merge-round-verification.md)）。建议顺序：① 实现 T7-E 的 Reference/Association 构建与修复（QUESTION-010 已裁定 C）；② 按 `QUESTION-002` 逐项裁定 T6-F 谱系约束，**先裁定再改 schema 与 lineage 查询**；③ T6-G 的 Baseline 含义与 Shared Kernel 版本治理（QUESTION-011／014，需四 BC 访谈）。规模、保留与恢复验证统一见[规模压测与保留专题](performance-testing.md)，可与 ①② 并行采样，不阻塞实现。T7-E 接入前继续保留 `TrackerItemsIndexed` 生产占位监听器。
 
 ## 验收记录
 
