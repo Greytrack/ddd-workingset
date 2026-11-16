@@ -5,7 +5,7 @@
 - 日期：2026-11-10（2026-11-11 补充 Q4 裁定）
 - 阶段：阶段 5 契约层 T1（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
 - 已确认依据：D-019（FACT-027、INV-061～063）、D-007/D-008/D-012/D-018、FACT-007/008、INV-006～010、POL-004、R08～R11、B06/B08/B09/B10
-- 本文件**不决定**：幂等键实现、事件中间件、数据库表结构、是否新建聚合。**比较与持久化（2026-11-15 业务裁定）**：compare 是高频只读展示，不持久化比较结果，也不保存 `merge_comparisons`/JSONB；用户决策及所选差异证据随 MergeRound 持久化。MergeRound 的规模、分页与保留策略仍为后续专项。
+- 本文件**不决定**：幂等键实现、事件中间件、数据库表结构、是否新建聚合。**比较与持久化（2026-11-15 业务裁定）**：compare 是高频只读展示，不持久化比较结果，也不保存 `merge_comparisons`/JSONB；用户决策及所选差异证据随 MergeRound 持久化。MergeRound 的规模、分页与保留策略见[规模压测与保留专题](../implementation/performance-testing.md)。
 - 本文件**不重新裁定**：直接父子准入、决策优先、BC 整体校验与提交、KEEP_TARGET 语义、COW 机制、轮次终态判定规则。
 
 ## 1. 范围
@@ -84,12 +84,11 @@ compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较
 | 行为 | 入参 | 返回 | 前置 | 失败语义 |
 | --- | --- | --- | --- | --- |
 | `startRound` | 源范围、目标范围、方向、范围参数、发起人 | `MergeRoundId`、状态 `Preparing` | 直接父子准入（POL-004、D-019）；非共享 Tracker；双方可读 | `MergeNotAllowed`（兄弟/跨代、共享 Tracker、不可读） |
-| `registerEntries` | `MergeRoundId`、条目集合（`entryKey`、所选差异证据、`ItemMergeDecision`） | 已登记条目 ID 列表 | 轮次 `Preparing` 且未终态；证据属于本轮 source/target 与候选范围；同一 `entryKey` 不重复 | 重复登记 → 幂等返回原条目（幂等键形式待定）；`DEFER + markAsMerged=true` → 拒绝该条；证据与当前状态不一致 → 该条 `StaleEvidence`，要求重新比较；终态轮次 → `RoundClosed` |
 | `executeEntry` | `MergeRoundId`、`MergeEntryId` | `EntryResult` | 轮次处于执行阶段（`Running`）；条目已登记且非终态 | 见 §5 状态机；终态条目不可重复执行；轮次终态后拒绝执行 |
 | `reportProgress` | `MergeRoundId` | `RoundProgress`（各状态计数与条目摘要） | 只读 | — |
 | `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态或显式结束）；轮次非终态 | 不存在未终态条目时方可结束；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
 
-**异步 LRO（2026-11-15）**：`startRound` 可携带用户决策与所选差异证据；服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmitted`，由异步消费者逐条执行。同一 requestId 重复提交返回原轮次，不同 source/target 冲突。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 保留为幂等触发器，重复调用返回原 `ApplyResult`。
+**异步 LRO（2026-11-16 收敛）**：`startRound` 即「提交一页决策」：`decisions` 必填 1–50 条、`requestId` 必填且不超过 128 字符，空决策、缺键或超限直接拒绝；**不再提供空轮次与分批登记入口**，一页决策要么整页登记成功、要么整轮回滚。服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmitted`，由异步消费者逐条执行。同一 requestId 返回原轮次，不同 source/target 返回 `Conflict`。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 是幂等触发器，重复调用返回原 `ApplyResult`。
 
 `executeEntry` 的内部步骤（一次执行的完整行为契约）：
 
@@ -108,7 +107,7 @@ compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较
 
 | 状态 | 含义 | 可迁移到 |
 | --- | --- | --- |
-| `Compared` | Diff 已产生、决定未提交 | 随 `registerEntries` 进入 `Decided` |
+| `Compared` | Diff 已产生、决定未提交 | 随一页决策提交进入 `Decided` |
 | `Decided` | 决定已登记，等待执行 | `Applying`、`StaleEvidence`、`Deferred` |
 | `Applying` | 已提交业务 BC，等待结果 | `Applied`、`Rejected` |
 | `Applied` | 业务操作成功（含 `KEEP_TARGET` 的无写入） | `Confirmed`（markAsMerged=true） |

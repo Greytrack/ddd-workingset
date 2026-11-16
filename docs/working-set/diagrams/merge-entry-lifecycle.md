@@ -2,6 +2,8 @@
 
 **状态：Draft / Candidate（契约候选配套图；Q1～Q4 的语义已由 ADR-0005 及其 2026-11-11 补充裁定确认，图本身未纳入正式基线）**
 
+> **2026-11-16 更新**：图中 `ComparisonToken` 与 `registerEntries` 已被整页决策提交取代——compare 只读瞬时、不返回可回读 token；`POST /api/worksets/{target}/merge-rounds` 一次提交 1–50 条决策并以 `requestId` 幂等。时序结构仍有效，token 相关标注按此理解，见 [T6-E 验收](../implementation/t6-e-merge-round-verification.md)。
+
 - 目的：表达一条 MergeEntry 从 Diff、提交决策、执行、业务 BC 提交、LightTrackerItem 维护到 Checkpoint 确认的协作顺序，以及 MergeRound 的一次执行与终态。
 - 适用范围：直属父子非共享 Tracker。证据分界见 [S7 实施裁定](../reviews/2026-11-12-s7-merge-implementation-decisions.md)。
 - 依据：[Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)、D-019（FACT-027、INV-061～063、SCN-055/056/059/060）、FACT-007/008、INV-006～010、POL-004、R08～R11、B06/B08/B09/B10。

@@ -13,6 +13,6 @@ QUESTION-010 已于 2026-11-15 裁定 C，见[裁定记录](../reviews/2026-11-1
 
 ## T7-F 规模、保留与恢复
 
-验证受理快照耗时、并发创建与连接池压力、批大小、失败明细规模、保留与清理。补验证进程中断后的接续。规模决策见 [QUESTION-012](../domain/open-questions.md)，与 [T6-E](t6-next-stage-outline.md) 的 Merge 规模和回填范围协调。
+验证受理快照耗时、并发创建与连接池压力、批大小、失败明细规模、保留与清理。补验证进程中断后的接续。规模与保留统一见[规模压测与保留专题](performance-testing.md)，阈值依赖 [QUESTION-012](../domain/open-questions.md)。
 
 实施与验证遵循 [AGENTS.md](../../../AGENTS.md)。各片的场景、验收与裁定登记见 [SCN-075](../scenarios/core-scenarios.md#scn-075-按范围异步创建工作集)和 [BASELINE](../BASELINE.md)。

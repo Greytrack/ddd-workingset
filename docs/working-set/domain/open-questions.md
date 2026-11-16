@@ -87,7 +87,7 @@ D-004 已确认裁剪根的 parentId=null、sourceId 仍指直接来源；其他
 
 QUESTION-009.a（**2026-11-12 已关闭，不再存在停用概念**）：用户 2026-11-12 裁定 Working Set/Tracker 没有“停用”生命周期；相关设计与代码不得再引入停用状态、命令或前置校验。历史评审中的“停用”表述仅作为历史记录保留，不再构成开放问题或验收依据。
 
-多级 WorkingSet 谱系（FACT-028）的剩余问题见[多级 WorkingSet 谱系设计 §8](working-set-lineage-design.md#8-开放问题)。已兑现的准入和回填范围见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。
+多级 WorkingSet 谱系（FACT-028）的剩余问题见[多级 WorkingSet 谱系设计 §8](working-set-lineage-design.md#8-开放问题)。已兑现的准入范围见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。
 
 “创建完成”的可观察时点、与 Working Set 纳入/发布的关系及失败重试属于待细化协议；不预建复杂 Draft Tracker 状态机。组织位置冻结不关闭 Working Set 加入新 Tracker 的能力。
 
