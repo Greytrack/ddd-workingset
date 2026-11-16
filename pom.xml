@@ -202,6 +202,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.2</version>
+        <configuration>
+          <!-- 测试上下文不需要 API 文档；非 web 测试缺少 springdoc 配置时会拖垮 knife4j 自动配置。 -->
+          <argLine>-Dspring.autoconfigure.exclude=com.github.xiaoymin.knife4j.spring.configuration.Knife4jAutoConfiguration</argLine>
+        </configuration>
       </plugin>
     </plugins>
   </build>
