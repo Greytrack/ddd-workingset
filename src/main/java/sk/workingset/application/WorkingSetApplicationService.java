@@ -355,7 +355,7 @@ public class WorkingSetApplicationService {
 
         TrackerItemReadPort port = readPorts.apply(contentLocalId);
         if (!port.authorize(Operation.READ, caller)) {
-            throw new UnsupportedOperationException("authorization is not enforced in S1");
+            throw new ApplicationFailure(FailureReason.DENIED, contentLocalId.value());
         }
         TrackerItemContent content = item.materialized() ? port.readAt(contentRevision)
                 : port.readInheritedAt(contentRevision);

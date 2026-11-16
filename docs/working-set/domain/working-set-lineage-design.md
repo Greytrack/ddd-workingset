@@ -125,11 +125,14 @@ CREATE INDEX IF NOT EXISTS idx_working_sets_parent
 
 ## 8. 开放问题
 
+T6-F（2026-11-16）已关闭：Shared 父级一致性（允许悬挂）、同源多派生（允许 + `is_default`）、`sourceId` 可变性（不可变）、批量派生原子性（整批 LRO 原子）、创建完成可见性（完成即可见）。剩余：
+
 1. 空范围子 WS 的实际 Merge/Compare 响应。S6 准入策略返回空候选。
 2. 跨工作集的批量删除顺序。单工作集先保护默认根，再拒绝有子 WS（`WorkingSetHasChildren`），叶子按 T2 K3 执行。
-3. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验。
+3. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验；T6-F 已定 `sourceId` 不可变，联合校验仍待设计。
 4. 真实平台元数据中既有 WorkingSet 的父级回填来源与校验方式。
 5. 父 WS 解绑/删除 Tracker 后，子 WS 已存在的绑定是否保留、如何清理。
+6. `is_default` 的承载对象与多 Tracker 配对规则，见 `QUESTION-002.j/k`。
 
 ## 9. 状态与下一步
 

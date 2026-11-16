@@ -15,7 +15,7 @@
 | 提交一页决策 | `POST /api/worksets/{target}/merge-rounds`，body `{sourceWorkingSetId, requestId, decisions}` |
 | 轮询轮次 | `GET /api/merge-rounds/{id}`（完整 entries/result，不分页） |
 | 执行触发器 | `POST /api/merge-rounds/{id}/apply`（幂等，重复调用返回原结果） |
-| 撤销 Checkpoint | `POST /api/worksets/{target}/merge-checkpoints/{source}/{family}/revoke` |
+| 撤销 Checkpoint | `POST /api/merge-checkpoints/{trackerA}/{trackerB}/{family}/revoke` |
 
 ## 语义
 

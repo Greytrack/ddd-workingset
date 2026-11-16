@@ -112,7 +112,7 @@ public final class JdbcMergeStore implements MergeStore {
                     revision_a = EXCLUDED.revision_a, revision_b = EXCLUDED.revision_b,
                     change_kind = EXCLUDED.change_kind, merge_direction = EXCLUDED.merge_direction,
                     decision_version = EXCLUDED.decision_version, revoked = EXCLUDED.revoked,
-                    operator = EXCLUDED.operator, updated_at = now()
+                    operator = EXCLUDED.operator, confirmed_at = now(), updated_at = now()
                 WHERE merge_checkpoints.decision_version < EXCLUDED.decision_version
                    OR (merge_checkpoints.decision_version = EXCLUDED.decision_version
                        AND EXCLUDED.revoked AND NOT merge_checkpoints.revoked)

@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | 组合并发布工作范围 | 核心域 | 用户通过 Working Set 选择可工作的范围 |
 | Tracker 共享、派生与谱系治理 | 核心域 | 解释共享与独立演进 |
-| TrackerItem 公共契约与 LightTrackerItem 索引 | 核心域契约 + 候选聚合 | TrackerItem 是公共契约（D-007 已确认）；LightTrackerItem 边界与权威性待定 |
+| TrackerItem 公共契约与 LightTrackerItem | 核心域契约 + 独立聚合 | TrackerItem 是公共契约（D-007 已确认）；LightTrackerItem 是独立聚合与身份/来源权威（D-008 已确认），物化协议见 T3 |
 | 具体业务对象生命周期 | GateFlow、ALM、DQA、PLM 各自业务域 | 各 BC 拥有自身业务对象的内容、状态机和合法性 |
 | Compare／Merge | 核心域候选 | 需要有向证据、决定与可审计结果 |
 | Reference／Association | 核心邻域候选 | 关系有独立语义、钉版和悬空状态 |
@@ -28,7 +28,7 @@
 
 | 编号 | 候选上下文 | 拥有的语言与责任 | 不拥有 | 状态／主要风险 |
 | --- | --- | --- | --- | --- |
-| `CTX-001` | Workspace Composition | Working Set、Manifest/Binding、准备与发布范围 | Tracker 谱系、Item 内容、关系 | Candidate；`QUESTION-012` 未决（`QUESTION-001` 已关闭） |
+| `CTX-001` | Workspace Composition | Working Set、SpaceBinding/TrackerBinding、创建工作范围 | Tracker 谱系、Item 内容、关系 | Candidate；`QUESTION-012` 未决（`QUESTION-001` 已关闭） |
 | `CTX-002` | Tracker Lineage | Tracker 身份、Sharing Mode、来源谱系、生命周期 | Working Set 的选择、完整 Item 内容 | Candidate；可能与 CTX-001 同部署但语言边界应可见 |
 | `CTX-003` | Item Variant & Materialization | LightTrackerItem 已确认独立聚合（身份/来源/有效变体定位权威）、COW 延迟物化、Source Cut | Requirement/Bug 的业务字段与状态机（业务 BC 拥有） | LightTrackerItem 已确认聚合（D-008）；物化协议/权威细节候选 |
 | `CTX-004` | GateFlow／ALM／DQA／PLM Business Object Contexts | 各 BC 的 Item 内容、revision、状态机、整体合法性 | Working Set 私有索引、对其他 BC 的通用字段覆盖 | 企业四 BC 外框 Confirmed；内部对象合同 Candidate |

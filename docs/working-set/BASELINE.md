@@ -1,16 +1,16 @@
 # Working Set Design Baseline
 
-- **Status**: Accepted（事实与政策主题基线 + 首版领域模型候选基线 + ADR-0001～0005 全部 Accepted；未正式发布）
-- **Baseline Version**: 首版领域模型候选基线 v1（阶段 4，基于 D-001～D-019 及阶段 4 补充）
+- **Status**: Accepted（事实与政策主题基线 + 首版领域模型候选基线 + ADR-0001～0005 全部 Accepted；T6-E/T6-F/Checkpoint 裁定已登记；未正式发布）
+- **Baseline Version**: 首版领域模型候选基线 v1（阶段 4，基于 D-001～D-019 及阶段 4 补充；后续 T1～T7 以契约和验收记录增量登记）
 - **Release Status**: Unreleased
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
-- **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）
+- **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）；`8231d33`（2026-11-16 Checkpoint 身份改为两侧 Tracker 对）
 - **Released Git Tag**: None
-- **Last Updated**: 2026-11-15
+- **Last Updated**: 2026-11-16
 
 ## 当前基线状态
 
-本页维护接受范围、版本与确认依据。实施证据与后续切片见[实施与验收索引](implementation/README.md)。事实与政策主题、首版领域模型候选及 ADR-0001～0005 已接受；T1～T4 契约保持 Reviewed，具体裁定范围见下文。正式发布仍为 Unreleased。
+本页维护接受范围、版本与确认依据。实施证据与后续切片见[实施与验收索引](implementation/README.md)。事实与政策主题、首版领域模型候选及 ADR-0001～0005 已接受；T1～T4 契约保持 Reviewed，具体裁定范围见下文。T6-E 的 compare 不持久化、T6-F 的谱系约束与 Checkpoint 的 Tracker 对身份已由 2026-11-16 裁定登记；其未实现部分不属于已兑现基线。正式发布仍为 Unreleased。
 
 ## 候选基线（用户已接受，未正式发布）
 
@@ -40,7 +40,7 @@
 - [ADR-0002：LightTrackerItem 作为 Working Set 权威聚合](adr/0002-lighttrackeritem-authoritative-aggregate.md)：Accepted（D-007/D-008/D-012，2026-11-10）。
 - [ADR-0003：COW 采用事件驱动最终一致与首次快照优先](adr/0003-cow-event-driven-final-consistency.md)：Accepted（D-009～D-018，2026-11-10）。
 - [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md)：Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054；2026-11-10）。
-- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（Q1～Q3 裁定：MergeEntry 为 MergeRound 内 Entity、ComparisonToken 必须绑双侧内容证据、Checkpoint 由 MergeRound 发起；2026-11-10）。
+- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（Q1～Q3 裁定：MergeEntry 为 MergeRound 内 Entity、所选差异证据必须绑双侧内容证据、Checkpoint 由 MergeRound 发起；2026-11-10）。2026-11-15 补充：compare 不持久化，不再要求持久化 `ComparisonToken`。
 
 ## 相关验收标准
 
@@ -73,6 +73,7 @@
 
 | 日期 | 变更主题与依据 |
 | --- | --- |
+| 2026-11-16 | 文档收敛：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；不改变业务语义。见 [收敛记录](reviews/2026-11-16-doc-consolidation.md)。 |
 | 2026-11-14 | T7-D：受理时冻结父 Item 快照、批量 LTI 索引与 `TrackerItemsIndexed`；见 [T7 设计](domain/working-set-creation-lro-design.md) 与 [T7-D 验收](implementation/t7-d-index-verification.md)。 |
 | 2026-11-15 | QUESTION-010 裁定 C：Reference 使用逻辑 Family + 可选钉版/物理定位，Association 使用具体 Variant 端点；T7-E 只做构建/修复，见 [裁定记录](reviews/2026-11-15-question-010-relation-identity-decision.md)。 |
 | 2026-11-15 | Compare 不持久化：比较结果仅瞬时展示，不保存 `merge_comparisons`/JSONB；用户决策与所选差异证据随 MergeRound 持久化，MergeRound 以异步 LRO 轮询推进，apply 按轮次决策范围执行；见 [裁定记录](reviews/2026-11-15-compare-not-persisted-decision.md)。 |

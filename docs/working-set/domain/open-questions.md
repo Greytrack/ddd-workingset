@@ -1,248 +1,70 @@
 # Working Set 开放问题
 
-**状态：Draft**
+**状态：Draft（只列当前仍需裁定的问题；已关闭问题见文末索引）**
 
-排序先看对身份、历史和合法状态的影响，再看是否阻塞聚合与契约设计。来源代号见 [证据登记](evidence-register.md)。
+本页只保留会影响身份、历史、合法状态、契约或实现的开放问题。历史裁定过程不在此重复：D-001～D-019 见[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)，D-019 与阶段 4 见[阶段 4 评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md)，T1～T7 见各契约与实施验收记录。
 
-| 优先级／编号 | 问题与重要性 | 可选答案 | 对模型的影响 | 建议验证 | 阻塞 |
+## 当前开放问题
+
+| 优先级 | 编号 | 问题 | 可选答案 | 影响与阻塞 | 建议验证 |
 | --- | --- | --- | --- | --- | --- |
-| 已关闭 `QUESTION-001` | **Working Set 的业务身份**：2026-11-12 用户按 A（工作视图/范围清单）收尾关闭；实现与 BASELINE 已按该模型落地。 | A 工作视图/范围清单；不再作为分支本体或 Workspace+Release Scope 的开放问题。 | Working Set 继续作为范围/清单聚合；Binding 与成员模型沿用现有实现。 | S1～S7 实施证据；[BASELINE](../BASELINE.md) | 已关闭 |
-| 部分关闭 `QUESTION-002` | **Tracker 双维关系剩余约束与 Item 归属** | D-003 已确认同工作集结构父、直接父工作集来源及逐级派生；剩余六项见下表 | 结构与来源不可统一为派生；Shared 范围须独立检查 | SCN-014、双维关系图 | 父级一致性、可变性、同源数量、树继承、Item 边界 |
-| 本阶段不接入（D11） `QUESTION-003` | **共享权限与可见性如何实现和验收？**（2026-11-12 用户裁定：现阶段不考虑权限，等权限模型开发完毕后再接入） | 默认工作集修改、所有绑定工作集同时可见已确认；`POL-003` 已确认分类约束创建选择及 Tracker 共享特性不可变。 | Tracker 模式变更与分类共享特性变更均已关闭：后者为不可修改的出厂设定。权限实现与验收整体延后；本版 `Caller`/`authorize` 保持占位，不落地 `Denied`。 | 依据 `SCN-002` 和共享特性创建场景验收；补充权限与读取面指标（延后） | 权限模型就绪后再接入；不阻塞当前实现 |
-| P0 `QUESTION-004` | **CommonId 的唯一作用域及标识分配如何定义？** | 已确认派生链同 CommonId、不同 LocalId，默认工作集二者相等，非默认工作集二者不等。已确认无关 Item 跨类型、跨 Tracker 也不能拥有相同 CommonId，CommonId/LocalId 均为雪花 ID。已确认单工作集 CommonId 唯一、只允许一个有效变体（POL-005）；**软删即占用身份，只能恢复或永久删除（D16）**；**T6-C（2026-11-13）：创建请求不携带 CommonId，默认工作集服务端生成同一个雪花作为 LocalId/CommonId，非默认工作集生成两个不等雪花；派生沿用来源 CommonId、LocalId 与之不等；唯一冲突统一 409**。剩余为跨实例并发与更细的去重协议。 | 决定 ItemFamilyKey、唯一约束、引用与对齐算法。 | 验证新建、派生、回并的标识分配与同族变体选择。 | 身份模型、Merge、Reference |
-| P0 `QUESTION-006` | **什么历史必须按 Source Cut 回读，保留多久？** | B04 已确认首次编辑所需派生内容必须可读，来源删除不得破坏此保证；附件、关系均固定为派生时状态已由阶段 3.1 用户裁定；**永久删除的对象不保留历史与内容（D7，2026-11-12），查询返回 `NotFound`**；剩余为其他对象的保留期限、读取和删除守卫实现。 | 固定快照或独立副本均可候选；不得选择破坏已确认首次编辑行为的方案。 | 对现有历史接口做 worked example/spike，覆盖单版次对象和 delete2。 | COW、Snapshot、Compare |
-| 部分关闭 `QUESTION-008` | **字段级 Merge Decision 遇到执行中竞态时如何处理？** | 已实现部分（2026-11-12）：登记前/后证据分界、普通字段决策优先、部分成功、新轮次、Checkpoint；见 [S7 验证](../implementation/t5-s7-verification-result.md)。剩余内部并发、重试及结果恢复协议见 `QUESTION-008.a`。 | 决定比较证据、目标业务命令、部分成功和 Checkpoint。 | 用交叉字段不变量、并发编辑、KEEP_TARGET/DEFER 组合验证。 | Merge 契约 |
-| T6-B 已验证 `QUESTION-008.a` | **Merge 执行中并发与结果恢复** | [T1 §8.1](merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b) | 轮次独占、业务提交凭据和跨实例接续。 | [SCN-074](../scenarios/core-scenarios.md#scn-074)、[T6-B 验证](../implementation/t6-b-merge-recovery-verification.md) | 旧版未终态轮次须核对业务事实 |
-| 已关闭 `QUESTION-005` | **原生新建 Item 的家族身份及回并规则** | D10/T6-C 已确定归属和身份分配；用户确认 [T6-D 回并规则](merge-execution-contract-v1.md#8-轮次终态与结果表达)。 | 回并来源由 Merge 审计承载。 | [T6-D 验收](../implementation/t6-d-merge-back-verification.md) | 已关闭 |
-| 已确认 `QUESTION-007` | **Compare/Merge 的工作集关系范围** | 只允许直接父子之间，两个方向均支持新增、删除、修改；兄弟和跨代不允许直接操作。 | 准入依据为直接父子关系，source/target 表达本次方向；历史内容替换按自身合同。 | 验证父子双向新增、删除、修改六种接收效果及兄弟/跨代拒绝行为。 | 准入实现与验证；`POL-004` |
-| 已裁定 `QUESTION-009` | **各对象删除、归档、恢复分别意味着什么？** | 删除语义已于 2026-11-11 裁定（K1～K3）：仅支持不可恢复的领域删除；软删、归档、恢复不纳入本版契约（POL-016）；Tracker 删除受组织子级、派生子级与 TrackerItem 约束（K2）；子 WorkingSet 删除受成员关系约束（K3）；绑定移除与聚合删除分开（INV-064）。Item 删除可经直接父子双向合并传递，目标 BC 校验提交。 | 区分绑定移除、Tracker/ProductSpace/WorkingSet 删除与业务 TrackerItem 删除；旧「一旦加入禁止移除」已由 POL-014 修订，不能两套规则并存。 | SCN-052/053/061～065；删除、归档、恢复分别确认。 | 生命周期与删除（2026-11-12 用户裁定：不存在停用概念） |
-| 已裁定 C（2026-11-15） `QUESTION-010` | **跨 Working Set 的 Reference/Association 如何解析、钉版和修复？** | **C 按关系类型**：Reference 用逻辑 Family + 可选钉版/可空物理定位；Association 用具体 Variant 端点，缺端点不建行。A/B 备选见[裁定记录](../reviews/2026-11-15-question-010-relation-identity-decision.md)。 | 关系身份、悬空、版本记录和修复事件按类型拆分；D6 禁止关系参与 Compare/Merge。 | 以目标缺失、无权、软删、永久删除、后续纳入、钉版不可读六类场景确认剩余可见性与删除守卫。 | 关系上下文；T7-E 实现 |
-| P1 `QUESTION-011` | **Baseline 的业务含义是什么？** | A Snapshot；B 发布清单；C Merge Base；D 多概念并存但分别命名。 | 决定不可变性、保留和引用语义，避免与仓库 Design Baseline 混淆。 | 收集业务人员使用“基线”的原句和操作。 | 统一语言、历史 |
-| P2 `QUESTION-012` | **Working Set 与 Binding 的规模和并发上限是多少？** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备+发布指针。 | 决定 `AP-001` 与 `AP-003` 的可行性及热点。 | 采集 P95/P99 数量、写并发、发布频率和允许时延。 | 物理聚合伸缩，不阻塞术语确认 |
-| Working Set 侧已收敛 `QUESTION-013` | **跨 BC 责任与公共契约**：T4 K1″/K2″ 已冻结；用户选择 B，业务聚合接口与 Adapter 并存。 | 当前定义见 [T4](cross-bc-contract-v1.md)；BC 专有能力仍由各 BC 确认。 | 不重开提交权与两层接口责任。 | SCN-069/070/073；单 BC 首切片验证。 | 版本治理转 QUESTION-014；不阻塞首切片准备 |
-| **团队开放项（待访）** `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本和兼容性？** | A 共同发布；B 版本化 Published Language（讨论推荐）；C 适配器／ACL 隔离演进。 | 决定共享模型范围、契约版本、弃用策略和团队协作方式。 | 访谈发布责任、升级节奏、兼容期限和变更审批者。 | **不作为当前实现重点**；不阻塞 T4 的 K1″/K2″ 与 T5；需四 BC 访谈后裁定（讨论稿见[跨 BC 契约图 §6](../diagrams/cross-bc-contract.md)） |
-| 已关闭（S7 范围已验证） `QUESTION-015` | **Diff/Merge 行为契约已关闭**：Q1～Q4 已裁定。 | [T1](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)；不重开原 A/B/C 选择。 | Token、幂等、因果更新及字段映射见 [S7 验证](../implementation/t5-s7-verification-result.md)。 | SCN-057～060；[T1 关闭评审](../reviews/2026-11-11-t1-contract-review.md)。 | 保留 S7 切片边界 |
+| P0 | `QUESTION-002.j` | **同一（空间，分类）有多个 Tracker 时，Compare/Merge 如何配对？** | A 左侧全部 Tracker × 右侧全部 Tracker；B 只按直接 `sourceId` 关系配对；C 先按 `source_id`／`is_default`／名称过滤再配对 | 决定候选对生成、条目身份与 UI 展示；T6-F 已允许同源多派生，但未定配对规则 | 以“同源两个派生子 Tracker”和“同空间不同来源”两个场景验证，确保不产生伪配对 |
+| P0 | `QUESTION-002.k` | **`is_default` 落在 Tracker 还是 TrackerBinding？** 每个（工作集，空间，分类）一个默认，但 Shared Tracker 跨工作集复用同一聚合 | A `Tracker.is_default` 全局标记（Shared 在所有绑定工作集均为默认）；B `TrackerBinding.is_default` 按工作集标记；C 由 `source_id`／创建顺序推导，不落标记 | 决定默认 Tracker 的唯一索引、产品空间创建投影、名称唯一作用域；当前 schema 尚无该列 | 以 Shared + 同空间非共享 Tracker 混用场景验证每个工作集恰有一个默认 |
+| P0 | `QUESTION-002.l` | **T6-F“批量派生整批原子”与 T7 创建工作集“允许部分成功”是否是同一范围？** | A 两个不同操作：T6-F 批量派生全成或全不成，T7 创建按步骤允许部分成功（推荐）；B 统一为部分成功；C 统一为整批原子 | 决定 T7 的复制/绑定/索引失败语义，以及 T6-F 批量派生任务的可见性；当前 T7 已实现部分成功，T6-F 未实现 | 以“部分 Tracker 复制失败”验证 T7；以“批量派生一项失败”验证 T6-F |
+| P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
+| P0 | `QUESTION-010` | **Reference/Association 剩余可见性与删除守卫** | 已裁定 C：Reference = 逻辑 Family + 可选钉版/物理定位；Association = 具体 Variant 端点。剩余：目标缺失、无权、软删、永久删除、后续纳入、钉版不可读六类的可见性与守卫 | 决定 T7-E 的关系表、悬空表示、修复事件与删除顺序 | 按六类场景做关系构建/修复验收；关系不参与 Compare/Merge（D6） |
+| P1 | `QUESTION-004` | **CommonId 跨实例并发与去重协议** | 已确认：默认 WS 同一雪花、非默认两个不等雪花、派生继承 CommonId、软删占键、冲突 409。剩余：多实例并发生成/校验、重试与唯一约束的兜底边界 | 决定唯一索引、ID 生成器与冲突重试；不重开身份语义 | 并发创建/派生/回并 + 唯一约束冲突注入 |
+| P1 | `QUESTION-008.b` | **同一 MergeEntry 内字段级 `DEFER` 与 `ACCEPT` 能否混用？** | A 任一 `DEFER` 使整条条目 `Deferred`，不写任何字段（当前实现）；B 应用 `ACCEPT` 字段，`DEFER` 字段留待新轮次；C 禁止同一条目混用 | 决定 `MergeDecision` 校验、`EntryResult` 表达与 Checkpoint 确认条件；当前实现选择 A 但契约未明确 | 以“一字段接受、一字段延迟”验证结果与后续轮次 |
+| P1 | `QUESTION-008.c` | **Checkpoint 命中使用的“版次”口径** | A 统一用变体业务 Revision（Source-backed 侧为 LTI Revision；当前实现）；B 用实际读取的内容版次（Source-backed 侧为 `SourceRevision`）；C 双侧分别按状态取版次并同时保存两者 | 决定 Compare 隐藏已处理差异与 Confirm 写入的 revisionA/B 是否总能对齐；D-018 允许 LTI Revision 与业务 Revision 不同步 | 以 Source-backed 目标 + 普通编辑 + 显式升级三类组合验证命中/过时 |
+| P1 | `QUESTION-011` | **业务 Baseline 的含义** | A Snapshot；B 发布清单；C Merge Base；D 多概念并存但分别命名 | 决定不可变性、保留、引用语义；避免与仓库 Design Baseline、Merge Base 混淆 | 收集业务人员使用“基线”的原句与操作；T6-G |
+| P2 | `QUESTION-012` | **Working Set 与 Binding 的规模、并发上限** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备 + 发布指针 | 决定 WorkingSet 聚合装载/热点与是否引入 Manifest；不阻塞当前语义 | 采集 P95/P99 数量、写并发、发布频率与允许时延 |
+| P2 | `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本与兼容性** | A 共同发布；B 版本化 Published Language；C Adapter/ACL 隔离演进 | 团队治理待办，不阻塞 T5/T6/T7 当前实现 | 访谈四 BC 的发布责任、升级节奏、兼容期限和变更审批者 |
+| P2 | `QUESTION-017` | **T7 创建任务的取消、补齐与结果保留** | A 不提供取消/补齐，失败后人工按 T2 删除叶子 WS；B 提供取消；C 提供基于已有子 WS 的补齐任务；结果保留期另定 | 决定任务表生命周期、失败明细保留与恢复入口；当前只支持终态轮询 | 以长任务中断、部分成功、终态后清理验证 |
+| P2 | `QUESTION-018` | **T7-E 关系构建失败后的重试与修复边界** | A 只记录失败明细，人工修复；B 自动重投；C 定时对账修复 | 决定 Reference/Association 的最终一致责任与幂等键 | 与 `QUESTION-010` 六类场景合并验证 |
 
-## 建议确认顺序（阶段 3 历史规划）
+`QUESTION-002.k` 还包含默认 Tracker 删除后的处理：A 禁止删除默认（推荐，除非删除整个产品空间）；B 自动提升同槽位另一个 Tracker；C 允许暂时没有默认。该子项与 `is_default` 的承载对象一并决定。
 
-**当前推进范围（2026-11-12）**：T5 首切片采用已确认模型及 T3/T4；内容固定与接口责任两项歧义已关闭，见[一致性修正记录](../reviews/2026-11-11-consistency-reconciliation.md)。QUESTION-001 已按 A 关闭，QUESTION-008 已关闭实现部分、剩余转 `QUESTION-008.a`；保留期限、共享读取 SLA、关系修复和规模验证按相关切片处理，不代表整个领域已验证。
+## 已关闭问题索引
 
-阶段 3.1 当前仅需裁定事项见 [收敛报告](../reviews/2026-11-09-stage-3-1-rule-convergence.md)，已确认子项不重复提问。以下为原阶段规划，不表示重开已确认规则：先以 `AC-001` 为固定外部边界完成 `QUESTION-013`，再确认 `QUESTION-001 → 002 → 003/004 → 006 → 008`。它们决定共享能力边界、身份、历史和合法性；在这些问题未闭合前，不宜确认最终内部模型边界或聚合方案。
+以下问题已经用户裁定或由后续契约关闭；保留一行结论和依据，不再作为当前待裁定项。历史论证见对应评审与契约。
 
-## GateFlow 专项进展
-
-QUESTION-001 在 GateFlow 场景下已部分确认（2026-11-12 已按 A“工作视图/范围清单”整体关闭，以下为历史确认记录），一个 Process 有多个版次，每个版次对应一个工作集，工作集父子链构成版次链路。支持历史版次全部内容替换叶子草稿内容。替换时保留草稿版次身份、工作集 ID 及原父子链已确认。准备期间继续使用当前完整内容并允许编辑、全部准备成功后整体切换且可覆盖期间编辑已确认。对象范围已确认为过程元素业务对象、裁剪问题、裁剪答案、合规映射四类，不含共享 Tracker。其内部细节业务逻辑由 GateFlow 专项设计，本阶段仅需细化跨边界身份与切换协议。见 [GateFlow 职责与场景](shared-kernel-boundary.md#gateflow-process-与版次用户已确认)。
-
-## DQA 接入进展
-
-QUESTION-013 的 DQA 接入范围已确认，八类对象均通过共享 Tracker 纳入查看，由 DQA 自行管理业务逻辑。工作集比对、合并及非共享派生不适用。范围见 [DQA 共享查看](shared-kernel-boundary.md#dqa-共享查看范围用户已确认)。
-
-## 阶段 3 决策入口
-
-GateFlow 替换已确认移除草稿独有、来源历史版次中不存在的流程元素。当前内容集合以所选历史版次为准，后续设计处理跨边界身份和引用、切换瞬间的并发提交及失败恢复协议。四类对象内部业务细节依用户要求留在 GateFlow 专项设计中。
-
-QUESTION-013 的四 BC 合并校验与提交职责已确认，Part 也已确认通过共享 Tracker 纳入查看，工作集派生、比对、合并不适用。具体记录见 [职责边界](shared-kernel-boundary.md)。参与工作集的对象由各自 BC 校验整个对象并决定提交，Working Set 管理合并选择、协调和结果。QUESTION-013 的对象接入范围、其他能力契约，以及 QUESTION-014 的版本治理仍待确定。决策与证据见 [裁定进度](../reviews/2026-11-09-stage-3-architecture-review.md#裁定进度)。
-
-<a id="question-002d-002-后保留的子问题"></a>
-## QUESTION-002：D-002 后保留的子问题（历史清单，状态以下方 D-003 为准）
-
-这些是原问题的分解，不创建冲突编号。D-001 的独立性与 D-002 的非共享派生新身份均已关闭。
-
-| 子问题 | 真正待裁定的选项 | 模型影响 |
+| 编号 | 结论 | 依据 |
 | --- | --- | --- |
-| QUESTION-002.a parentId | 指直接父 Tracker；或另一种业务层级父级（须定义） | 直接派生边与管理层级是否分离 |
-| QUESTION-002.b sourceId | 指最初来源；或本次派生来源（须定义） | 溯源根与直接来源的维护方式 |
-| QUESTION-002.c 多级派生 | 允许派生 Tracker 再派生；或仅允许一层 | 深度、历史与无环验证范围 |
-| QUESTION-002.d 谱系修改 | 建立后不可修改；或允许受控修改 | 身份连续性、审计及引用修复责任 |
-| QUESTION-002.e 同谱系共存 | 同一工作集可纳入多个同谱系 Tracker；或最多一个 | 范围准入；即便允许也须满足 POL-005 的单工作集 Item CommonId 唯一性，不自动放宽该规则 |
-
-另保留 Item 属于 Tracker 聚合还是独立聚合的原问题，本轮不裁定。Working Set/Tracker 独立聚合协作及 Lineage 暂不设根是候选设计推论，不借业务身份结论一并接受。
-
-## QUESTION-002：D-003 当前状态
-
-QUESTION-002.a 已关闭：parentId 是同工作集直属结构父；b 已关闭：sourceId 是直接父工作集来源，不是最初来源；c 已关闭：用户多级示例确认逐级派生。d 拆分为 d1/d2，e 收窄为同源数量问题，保留旧编号追溯。
-
-| 子问题 | 真实选项 | 影响 |
-| --- | --- | --- |
-| QUESTION-002.f Shared 父级一致性 | 各引用工作集必须一致；或允许工作集上下文差异 | parentId 的有效解释与范围校验；不先选择存储位置 |
-| QUESTION-002.e 同源多派生 | 同一工作集同一来源最多一个；或允许多个 | 派生唯一性及准入；仍须遵守 Item CommonId 唯一政策 |
-| 已关闭 QUESTION-002.d1 parentId 修改 | D-006：创建完成后不可修改，创建前确定合法位置 | 不再设计运行期移动；创建协议仍待定 |
-| QUESTION-002.d2 sourceId 修改 | 创建后不可变；或允许受控变更 | 派生追溯稳定性与审计 |
-| 已关闭 QUESTION-002.g 组织树继承业务选择 | D-004 父未选可根；D-005 父也选默认继承，D-006 创建完成前可显式重组 | 映射、提交与范围校验协议待设计，不重复询问默认/重组选择 |
-| QUESTION-002.h Item 聚合归属 | Tracker 内部；或独立边界 | Item 不变量、加载和事务边界 |
-
-D-004 已确认裁剪根的 parentId=null、sourceId 仍指直接来源；其他根来源空值、删除后的断链处理、并发无环协议未定义；后续契约细化，不在本轮自动补全。
-
-## D-004 后的未决范围
-
-已关闭：父未选择时必须补齐原树的要求；该非共享派生允许为根、sourceId 保留直接来源。不同工作集可以有不同组织树不等于同一 Shared Tracker 允许不同父级。
-
-本轮保留五项：QUESTION-002.g 父也选中时是否必须保留关系；d1 派生完成后能否调整 parentId；f 扩展为 Shared/非共享混合树有效父解析（跨工作集父级一致性仍开放）；e 同一来源能否在同目标多次派生；新增 QUESTION-002.i 派生是否整批原子（全部一起提交，或允许分项准备/完成，需明示可见性与恢复）。
-
-既有 QUESTION-002.d2 sourceId 创建后可变性及 h Item 聚合归属继续待评审，本轮不关闭。整批原子性不能套用 GateFlow 整体替换或 Merge 部分成功政策。
-
-## D-006 后的当前未决项
-
-上述 D-003/D-004 阶段清单保留历史进展，QUESTION-002.d1/g 已按 D-005/D-006 关闭。继续开放：Shared 混合树有效父和跨工作集一致性、同源多派生、sourceId 创建后可变性、派生整批原子性、Item 聚合归属。
-
-QUESTION-009.a（**2026-11-12 已关闭，不再存在停用概念**）：用户 2026-11-12 裁定 Working Set/Tracker 没有“停用”生命周期；相关设计与代码不得再引入停用状态、命令或前置校验。历史评审中的“停用”表述仅作为历史记录保留，不再构成开放问题或验收依据。
-
-多级 WorkingSet 谱系（FACT-028）的剩余问题见[多级 WorkingSet 谱系设计 §8](working-set-lineage-design.md#8-开放问题)。已兑现的准入范围见 [S6 验证结果](../implementation/t5-s6-verification-result.md)。
-
-“创建完成”的可观察时点、与 Working Set 纳入/发布的关系及失败重试属于待细化协议；不预建复杂 Draft Tracker 状态机。组织位置冻结不关闭 Working Set 加入新 Tracker 的能力。
-
-## D-007 后的当前未决项
-
-QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具体业务对象聚合（Requirement/Part/Process 等完整独立聚合），Working Set 通过 TrackerItem 公共契约协作，只负责公共身份与工作集机制，不拥有业务对象状态、生命周期与不变量。原「Tracker 内部或独立边界」二选一不再成立。
-
-继续开放（均为候选，不自动批准）：
-
-- **LightTrackerItem 聚合边界**：完整边界、内部属性与领域行为；是否拥有有效变体及版本定位的权威状态；不得因已有索引表就判定其必为聚合根，也不否定候选聚合定位。
-- **身份信息分配**：CommonId、LocalId、Revision、Version 如何分配到 TrackerItem 契约与 LightTrackerItem。
-- **跨 BC 首次 COW 一致性**：新业务对象与 LightTrackerItem 如何一致；业务对象修改成功但索引更新失败如何处理。
-- **业务 revision 与 Working Set revision 的关系**：是否同一概念、由谁权威。
-- **TrackerItem 接口的最小共同语义**：应提供哪些公共能力。
-- **协调职责**：跨 BC 业务校验与公共工作集操作由谁协调（沿用已确认的「BC 校验并提交、SK 管选择/协调/结果」职责，具体协议仍候选）。
-
-## D-008 后的尚待裁定
-
-1. 源端 Revision 在派生后发生变化，未物化的子工作集读取哪个版本（SourceRevision 的版本选择策略）。
-2. LightTrackerItem.LocalId 是否直接作为业务聚合变体的 LocalId。
-3. 首次物化时是否必须使用派生时预分配的 LocalId。
-4. 首次物化的完成标志和有效内容指针如何定义。
-5. 业务内容与 LightTrackerItem 更新是否必须同步原子完成。
-
-以上均为候选，不自动确认；不得因已有 `air_ws_items_index` 数据库表反向决定领域模型，只可作实现映射参考。
-
-## D-009 后的尚待裁定
-
-特别评审的设计问题：
-
-1. 来源修改前的完整业务事实如何被可靠保存并交给物化 Handler（不可变快照还是稳定引用，谁拥有该事实）。
-2. 业务修改保存后、物化完成前，派生变体的查询可见性（反例一：得到 A、B 还是业务允许的延迟可见状态，未裁定）。
-3. 派生历史来源与当前有效内容来源是否需要分别建模（反例三：物化切换后如何追溯 R1 来源于 R0）。
-4. SourceVersion / SourceRevision 的严格定义（是否同义，是否指向不可变快照）。
-5. COW 物化的唯一性、重复事件与并发处理（反例四：连续修改多事件乱序是否重复/错误覆盖）。
-
-另需确认：事件与事务之间的准确可见性协议；查询到修改前数据不保证异步 Handler 之后仍能取得该数据。
-
-## D-010 后的剩余未决项
-
-已由 D-010 关闭：反例一查询可见性（COW 未完成期间允许派生工作集暂时读到修改后内容）、反例二修改前事实（事件关联不可变内容快照）。
-
-仍待裁定：
-
-1. SourceLocalId 字段是否拆分：历史派生来源与当前有效内容来源分别建模（反例三）。
-2. 连续修改时首次快照的业务选择规则：如何避免 R1 被第二次事件错误覆盖，并保留首次快照（反例四）。
-3. 不可变快照的事件序列化、可靠交付机制与持久化策略（实施设计）。
-4. SourceVersion / SourceRevision 的严格定义。
-
-不得提前使用数据库锁、消息队列偏移量等实现细节替代业务裁定。
-
-## D-011 后的剩余候选
-
-已由 D-011 关闭：连续修改「首次快照」业务选择规则（确认为首次快照优先、按来源修改实际先后顺序）。
-
-仍为候选领域协议/设计概念（不自动建聚合/表）：
-
-1. **Source Change Order 如何表达**：复用已有乐观锁 `lock_version` 表达来源修改顺序，还是需要独立变更序列。
-2. **如何确认首次相关修改**：一条事件相对于目标变体派生基准（Derivation Baseline）是否为首次相关修改（重点 A）。
-3. **Materialization Claim 的确定性证据**：首次快照选择记录如何保留、是否需要持久状态（不擅自建独立聚合）。
-4. **多级派生目标识别**：多级派生中如何识别各层需要保护的目标变体（重点 E）。
-5. 不可变快照的事件序列化、可靠交付与持久化策略（实施设计）。
-
-不提前确定数据库锁、消息队列、Outbox 或分布式事务方案。
-
-## D-012 后的剩余开放问题
-
-已由 D-012 关闭：SourceLocalId 是否为历史派生来源（确认为当前有效内容来源，历史关系不要求由 LightTrackerItem 保存）；SourceVersion 表述错误（统一为 SourceRevision）。
-
-仍保持开放（其中 1/2/3 已被后续裁定闭合，见标注）：
-
-1. 历史谱系的最终承载方式 —— 已由 D-018 确认不需要（移除）。
-2. 多级事件传播机制 —— 已由 D-013（直接有效来源定位+扇出）/D-017（消费时确定）闭合。
-3. Source Change Order 表达机制 —— 已由 D-018 确认由事件框架顺序消费兜底，不是领域模型关注点；Derivation Baseline / Materialization Claim 仍候选。
-4. 快照序列化、可靠交付与持久化策略（实施设计）。
-
-不得因职责分离自动新增谱系聚合、OriginLocalId 或完整事件传播策略。
-
-## D-013 后的剩余开放问题
-
-已由 D-013 关闭：多级派生是否逐级递归解析未物化中间变体（确认为直接有效来源定位，SourceLocalId 直接指向实际拥有完整内容的变体）。
-
-仍需审查的边界/协议（不自行添加新聚合解决）：
-
-1. **来源修改与新派生并发**：如何界定目标派生变体继承的是修改前还是修改后的事实。
-2. **事件延迟/乱序的首次来源确认**：如何确认每个目标变体对应的首次有效来源修改。
-3. **依赖者集合确定时机**：来源依赖者查询在事件生成时确定集合，还是消费时发现；两方案如何满足既有业务规则。
-4. **上游新物化节点的重新定位**：新上游物化节点出现后，已存在的下游未物化变体是否需要重新定位。
-5. **SourceRevision 指向可变头版次时派生基准的稳定表达**。
-
-## D-014 后的剩余开放问题
-
-已由 D-014 关闭：上游新物化节点出现后，已存在下游未物化变体是否需要重新定位（确认为不自动重定向，SourceLocalId 固定至自身物化）。
-
-仍保持开放：**并发派生时间边界**——来源修改与新派生操作并发时，如何界定新派生变体继承的是修改前还是修改后的事实（沿用 D-013 开放问题第 1 条）。
-
-## D-015 后的待裁定问题
-
-已确认：派生时间基准（Derivation Time Basis，Snapshot/Head）用于选 Revision、不固定内容；命名 Snapshot 不是完整业务内容快照；派生不复制完整业务数据。
-
-保持 Open（反例第五节，本轮未裁定）：
-
-1. **同一 Revision 内时间基准与具体内容状态的关系**：R0 Revision 3 在 10:20 A→B、10:40 B→C，10:30 Head 派生 R1 选 Revision 3；SourceRevision=3 是否足以表达派生基准，R1 应保留哪一时刻内容事实。
-2. 第一次对 R1 有效的来源修改如何识别；事件乱序时如何避免误用 10:20 快照 A。
-3. 是否需要额外的内容状态位置或时间顺序语义。
-
-不得自行决定新增字段、聚合或表。
-
-## D-016 后的剩余候选
-
-已由 D-016 关闭：D-015 反例中「SourceRevision 是否足以表达派生基准」——确认为派生仅固定业务版次，COW 保护从完整派生完成（Derivation Completion）开始，派生完成前来源修改不触发 COW。
-
-## D-017 后的评审边界
-
-已由 D-017 关闭：完整派生完成与来源修改实际先后的判定协议、场景 C 竞态（确认为 COW 目标集合在事件 Handler 消费时确定，不比较修改开始时间与派生完成时间）。
-
-继续保留：
-
-- D-011 首次快照优先的乱序事件处理算法、幂等实现细节，留待实施评审，本轮不展开、不新增业务裁定问题。
-- Source Change Order、Materialization Claim 证据保留（沿用 D-011 候选）。
-
-并发交错的边缘行为列入实施评审关注点，不新增业务裁定问题。
-
-## D-018 后的关闭项
-
-已由 D-018 关闭（整体验证收敛）：
-
-1. 缺失 1（Source Change Order 判定）：由事件框架顺序记录、顺序消费兜底，不是领域模型关注细节。
-2. 缺失 2（LightTrackerItem 自身 Revision）：LightTrackerItem 持有 Revision 字段、与 SourceRevision 分离（可不同步），业务 BC 的 TrackerItem 也持有 Revision、两者通过事件同步。
-3. 缺失 3（Revision 升级触发 COW）：触发。
-
-仍保留：事件同步细节、幂等去重留待实施；Source Cut（物化固定依据）与 SourceRevision（未物化读取来源 Revision）的区分已由 D-018 澄清。
-
-## D-019 后的执行协议（QUESTION-015）
-
-领域裁定见 [T1 执行契约](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)与[关闭评审](../reviews/2026-11-11-t1-contract-review.md)。证据、幂等和 Checkpoint 的落地及未覆盖范围见 [S7 验证](../implementation/t5-s7-verification-result.md)。原备选方案与轮次重试裁定由 ADR 和评审保留。
-
-## 2026-11-16 T6-F 裁定
-
-用户逐项裁定，记录见 [T6-F 谱系约束裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)：
-
-| 子问题 | 裁定 |
-| --- | --- |
-| QUESTION-002.f Shared 父级一致性 | 允许悬挂：Shared `parentId` 由默认工作集维护、始终不变；子工作集可不绑定其父，能构树则构树 |
-| QUESTION-002.e 同源多派生 | 允许同一工作集、同一（空间，分类）多个 Tracker；新增 `is_default`，每个组合恰好一个默认；产品空间创建时同步建默认 Tracker；名称不得重复 |
-| QUESTION-002.d2 `sourceId` 可变性 | 不可变 |
-| QUESTION-002.i 派生整批原子 | 整批原子（LRO 范式） |
-| 创建完成可见性 | 完成即可见；发布/基线语义留给 T6-G |
-
-以下为 2026-11-16 补充裁定（细化）：
-
-1. 默认 Tracker：每个（工作集，空间，分类）恰好一个默认。
-2. 名称唯一：同一（产品空间，分类）内唯一。
-3. 多派生后的 compare/merge 条目身份 = 左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次。
-4. Shared 分类也参与 `is_default`：每个（工作集，空间，分类）都有默认 Tracker。
-5. 产品空间创建入口：`POST /api/workspaces/1/product-spaces`，同时创建默认 Tracker。
-
-仍待确认：候选对生成方式（同一（空间，分类）下取左右全部组合，还是先按 `source_id`／`is_default`／名称过滤后再配对）。
+| `QUESTION-001` | Working Set 是工作视图/范围清单，不是分支本体或 Workspace+Release Scope | 2026-11-12 用户裁定；[S1～S7 验收](../implementation/README.md) |
+| `QUESTION-002.a` | `parentId` 是同工作集直属结构父 | D-003；[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-003) |
+| `QUESTION-002.b` | `sourceId` 是直接父级工作集来源，不是最初来源 | D-003 |
+| `QUESTION-002.c` | 允许多级逐级派生 | D-003 |
+| `QUESTION-002.d1` | 创建完成后 `parentId` 不可修改 | D-006 |
+| `QUESTION-002.d2` | `sourceId` 创建后不可变 | T6-F（2026-11-16） |
+| `QUESTION-002.e` | 同一工作集、同一（空间，分类）允许多个 Tracker；引入 `is_default` | T6-F（2026-11-16） |
+| `QUESTION-002.f` | Shared `parentId` 由默认工作集维护；子工作集允许悬挂，能构树则构树 | T6-F（2026-11-16） |
+| `QUESTION-002.g` | 父也选中时默认继承，创建前可显式重组 | D-005/D-006 |
+| `QUESTION-002.h` | Item 归属关闭：业务 BC 拥有业务对象聚合，SK 只负责公共身份与工作集机制 | D-007 |
+| `QUESTION-002.i` | 批量派生整批原子（LRO 范式） | T6-F（2026-11-16） |
+| `QUESTION-003` | 现阶段不接入权限；`Caller`/`authorize` 保持占位，待权限模型完成后接入 | D11（2026-11-12） |
+| `QUESTION-005` | 原生新建 Item 由服务端分配身份；回并经直属父子 Merge CREATE 承载 | D10、T6-C、T6-D |
+| `QUESTION-007` | Compare/Merge 只允许直属父子双向，兄弟/跨代拒绝 | POL-004、FACT-007 |
+| `QUESTION-008` | 字段级 Merge 的执行部分已由 S7 落地；剩余并发恢复转 `QUESTION-008.a` | [S7 验证](../implementation/t5-s7-verification-result.md) |
+| `QUESTION-008.a` | 执行中断后接续原轮次；并发 Apply 返回 `RoundInProgress`；业务提交凭据恢复 | T6-B、T1 §8.1 |
+| `QUESTION-009` | 仅支持不可恢复的领域删除；软删/归档/恢复不纳入 T2 本版；绑定移除与聚合删除分开 | T2 K1～K3、POL-016 |
+| `QUESTION-009.a` | WorkingSet/Tracker 不存在“停用”生命周期 | 2026-11-12 用户裁定 |
+| `QUESTION-013` | 四 BC 各自校验整个对象并决定提交；SK 管理选择、协调与结果；两层接口并存 | T4 K1″/K2″ |
+| `QUESTION-016` | 所有 BC 的所有 Object 都具备 `delete`/`undelete`/`delete2` 能力声明；具体规则/guard 由各 BC 实现 | D14（2026-11-12） |
+| `QUESTION-015` | Diff/Merge 行为契约关闭；Q1～Q4 已裁定，重做须新建轮次 | T1、ADR-0005 |
+| T6-E | Compare 不持久化；一页 1～50 条决策；`requestId` 幂等；异步 LRO | [2026-11-15 裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)、[T6-E 验收](../implementation/t6-e-merge-round-verification.md) |
+| T6-F | Shared 允许悬挂；同源多派生 + `is_default`；`sourceId` 不可变；批量派生整批原子；完成即可见 | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
+| Checkpoint | 身份 = 两侧 Tracker 分支 + 家族；方向只是属性；WorkingSet 不参与；同一 Tracker 对禁止并发合并 | [Checkpoint 修正](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md) |
+
+## 当前推进顺序
+
+1. 先敲定 `QUESTION-002.j`、`QUESTION-002.k`、`QUESTION-002.l`、`QUESTION-006`、`QUESTION-010`，它们分别阻塞 T6-F 实现、T7-E 关系构建、T7 部分成功语义和 COW/历史边界。
+2. 再敲定 `QUESTION-008.b`、`QUESTION-008.c`，收口 Merge 的字段级 `DEFER` 与 Checkpoint 版次口径。
+3. `QUESTION-011`（Baseline）与 `QUESTION-014`（SK 版本治理）作为 T6-G 主题，需要业务/四 BC 参与。
+4. `QUESTION-012`、`QUESTION-017`、`QUESTION-018` 作为规模与运维专题，不阻塞当前实现。
+
+## 历史入口
+
+- D-001～D-018 的逐项裁定与反例：[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)。
+- D-019、ProductSpace/Classification、Diff/Merge 衔接：[阶段 4 评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md)。
+- 不变量证据与接受范围：[不变量审查](../reviews/2026-11-10-invariant-evidence-review.md)、[事实与政策基线](facts-policy-baseline-v1.md)。
+- GateFlow/DQA/Part 的接入范围：[Shared Kernel 边界](shared-kernel-boundary.md)。

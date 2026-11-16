@@ -94,7 +94,7 @@ D4 的源字段取值已按用户裁定更新。D6 若数据表明整体配置�
 
 - **QUESTION-005 创建能力及归属已确认。** 子工作集可在已有非共享 Tracker 下新建 Item，共享 Tracker 下从子工作集入口新建的 Item 实际归属默认工作集。子工作集不能创建 Tracker。详见 [创建场景](../scenarios/core-scenarios.md#子工作集新建-item-与-tracker-边界)。用户进一步确认允许子工作集新增 Item 通过合并在父工作集创建对应 Item。见 [新增回并场景](../scenarios/core-scenarios.md#子工作集新增-item-回并父工作集)。家族身份分配与去重协议继续设计。
 
-- **QUESTION-004/005 的 Item 身份等值关系已确认。** 用户明确沿工作集派生的 Item 共用 CommonId、各自 LocalId 不同，默认工作集 CommonId=LocalId，非默认工作集 CommonId!=LocalId；新增回并的父子对象同样使用相同 CommonId、不同 LocalId。用户进一步确认按 Item 实际归属判断，子工作集查看共享 Tracker 中的默认工作集 Item 时，仍是同一个 Item，CommonId=LocalId。详见 [身份规则](../domain/glossary.md#item-身份规则用户已确认)。用户进一步确认无关 Item 跨类型/Tracker 不共用 CommonId，CommonId 与 LocalId 都是雪花 ID。标识分配协议及单工作集内同族变体选择继续细化。
+- **QUESTION-004/005 的 Item 身份等值关系已确认。** 用户明确沿工作集派生的 Item 共用 CommonId、各自 LocalId 不同，默认工作集 CommonId=LocalId，非默认工作集 CommonId!=LocalId；新增回并的父子对象同样使用相同 CommonId、不同 LocalId。用户进一步确认按 Item 实际归属判断，子工作集查看共享 Tracker 中的默认工作集 Item 时，仍是同一个 Item，CommonId=LocalId。详见 [身份规则](../domain/glossary.md#item-身份规则已确认)。用户进一步确认无关 Item 跨类型/Tracker 不共用 CommonId，CommonId 与 LocalId 都是雪花 ID。标识分配协议及单工作集内同族变体选择继续细化。
 
 - **QUESTION-007 / POL-004 已确认。** 用户明确比对和合并仅允许直接父子工作集之间进行，兄弟和跨代不能直接操作。关系准入与各类型能力条件共同适用。GateFlow 历史内容替换按独立合同处理。见 [准入边界](../domain/shared-kernel-boundary.md#比对与合并的关系准入用户已确认)。
 
@@ -155,7 +155,7 @@ QUESTION-002 的独立性问题关闭。跨 Working Set 的 Tracker 身份关系
 
 设计影响：按身份引用表达谱系、Working Set/Tracker 独立聚合协作、Lineage 暂不单设根仍为 Draft 推论；Item 边界仍待评审。AP-002 修订方向解释力增强，不代表接受 AP-002，也不恢复原 Branch 根；AP-001/003 同样可以承载不同 Tracker 身份，完整方案未批准。
 
-仍待用户裁定：parentId 是否为直接父、sourceId 是否为最初来源、是否允许多级派生、谱系能否修改、同一 Working Set 能否有同谱系多个 Tracker。POL-005 的 Item CommonId 唯一性不能反推 Tracker 共存政策。对应 [问题与影响](../domain/open-questions.md#question-002d-002-后保留的子问题)。
+仍待用户裁定：parentId 是否为直接父、sourceId 是否为最初来源、是否允许多级派生、谱系能否修改、同一 Working Set 能否有同谱系多个 Tracker。POL-005 的 Item CommonId 唯一性不能反推 Tracker 共存政策。对应 [已关闭问题索引](../domain/open-questions.md#已关闭问题索引)。
 
 一致性注意：POL-002 原生创建入口限制不因派生产生新身份自动放宽；不把新身份等同允许用户任意创建。已接受 Shared 规则不参与本次修改。新的 Tracker 关系也不改变已确认的 Item 身份规则。
 
@@ -191,7 +191,7 @@ parentId 表达同工作集的直属结构父子关系；sourceId 表达直接�
 
 本轮五项未决：父也选择是否必须保留关系、派生后能否修改 parentId、Shared/非共享混合树有效父、同目标同源多派生、整批派生原子性。此前 sourceId 可变性、Item 归属继续开放，不自动关闭。
 
-追溯：[POL-009](../domain/facts.md#pol-009非共享派生组织裁剪用户已确认)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[完整双维及裁剪图](../diagrams/tracker-dual-relations.md)、[候选方案影响](../proposals/aggregate-boundary-options.md)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+追溯：[POL-009](../domain/facts.md)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[完整双维及裁剪图](../diagrams/tracker-dual-relations.md)、[候选方案影响](../proposals/aggregate-boundary-options.md)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
 
 <a id="d-005"></a>
 ## D-005：父也选择时的默认继承与创建前显式重组（2026-11-10）
@@ -200,11 +200,11 @@ parentId 表达同工作集的直属结构父子关系；sourceId 表达直接�
 
 确认：非共享派生时，若原结构父也被选择，默认继承已选节点间的组织关系（子仍以已选父为结构父）；用户可在创建完成前显式指定新的合法组织结构，包括使子节点成为根（parentId=null）。未选择原父时仍适用 POL-009（裁剪为根），不自动补派生未选父。以上两种组织结果均不改变直接 sourceId。
 
-知识分类：`POL-010`（业务政策，见 [facts](../domain/facts.md#pol-010默认继承与创建前显式重组d-005用户已确认)）。默认继承、显式重组能力与最终结构合法性分别成立，均不等于创建后允许修改（后者由 D-006 关闭）。
+知识分类：`POL-010`（业务政策，见 [facts](../domain/facts.md)）。默认继承、显式重组能力与最终结构合法性分别成立，均不等于创建后允许修改（后者由 D-006 关闭）。
 
 关闭项：QUESTION-002.g（父也选中时是否必须保留关系）。仍未决：组织树映射、提交与范围校验协议、创建批次原子性。
 
-追溯：[POL-010](../domain/facts.md#pol-010默认继承与创建前显式重组d-005用户已确认)、[INV-023](../domain/invariants.md)、[SCN-016](../scenarios/core-scenarios.md#scn-016-创建前显式重组)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+追溯：[POL-010](../domain/facts.md)、[INV-023](../domain/invariants.md)、[SCN-016](../scenarios/core-scenarios.md#scn-016-创建前显式重组)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
 
 <a id="d-006"></a>
 ## D-006：Tracker 创建后组织关系不可变（2026-11-10）
@@ -222,11 +222,11 @@ parentId 表达同工作集的直属结构父子关系；sourceId 表达直接�
 7. Tracker 的 `sourceId` 继续表示直接父级 Working Set 中的来源 Tracker，不受组织结构裁剪和重组影响。
 8. Tracker 仍然是独立聚合，统一领域语言不使用 Tracker Branch。
 
-知识分类：`POL-011`（业务政策，见 [facts](../domain/facts.md#pol-011创建完成后组织位置不可变d-006用户已确认)）；对应候选约束 `INV-022/023`。此裁定只冻结组织位置，不冻结 Tracker 的其他业务状态、身份生命周期，也不封闭 Working Set 的成员扩展；不扩大 `POL-002` 的原生创建入口。`sourceId` 直接来源语义不变，但不由此自动批准其生命周期可变性规则。无需为此设计复杂 Draft Tracker 状态机。
+知识分类：`POL-011`（业务政策，见 [facts](../domain/facts.md)）；对应候选约束 `INV-022/023`。此裁定只冻结组织位置，不冻结 Tracker 的其他业务状态、身份生命周期，也不封闭 Working Set 的成员扩展；不扩大 `POL-002` 的原生创建入口。`sourceId` 直接来源语义不变，但不由此自动批准其生命周期可变性规则。无需为此设计复杂 Draft Tracker 状态机。
 
 关闭项：QUESTION-002.d1（创建后 parentId 可修改 → 不可修改）。仍未决：Shared 混合树有效父及跨工作集一致性、同源多派生、sourceId 创建后可变性、派生整批原子性、Item 聚合归属。父 Tracker 后续删除或停用时子节点如何处理属于 QUESTION-009.a 的独立生命周期问题，本轮不选择：不自动清空或重挂 parentId、不级联删除，也不因此重新开放移动权限。（2026-11-11 更新：删除部分已由 [T2 K2 裁定](2026-11-11-t2-binding-deletion-review.md)关闭——存在组织子级/派生子级/Item 时禁止删除。2026-11-12 更新：用户裁定 WorkingSet/Tracker 不存在“停用”概念，`QUESTION-009.a` 已关闭，本段“停用”相关待决不再成立。）
 
-追溯：[POL-011](../domain/facts.md#pol-011创建完成后组织位置不可变d-006用户已确认)、[INV-022/023](../domain/invariants.md#d-005--d-006组织位置的创建边界)、[生命周期图](../diagrams/tracker-creation-lifecycle.md)、[SCN-017](../scenarios/core-scenarios.md#scn-017-创建后组织位置不可变)、[SCN-018](../scenarios/core-scenarios.md#scn-018-创建时父缺失与组织环反例)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+追溯：[POL-011](../domain/facts.md)、[INV-022/023](../domain/invariants.md)、[生命周期图](../diagrams/tracker-creation-lifecycle.md)、[SCN-017](../scenarios/core-scenarios.md#scn-017-创建后组织位置不可变)、[SCN-018](../scenarios/core-scenarios.md#scn-018-创建时父缺失与组织环反例)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
 
 <a id="d-007"></a>
 ## D-007：TrackerItem 公共契约与业务 BC 聚合边界（2026-11-10）

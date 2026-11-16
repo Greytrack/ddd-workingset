@@ -58,8 +58,7 @@ Diff 产生有向瞬时差异
 
 | 操作 | 入参 | 返回 | 说明 |
 | --- | --- | --- | --- |
-| `compare` | source 范围（WorkingSetId）、target 范围、方向、条目范围（可选）、offset/limit | `TrackerItemDiff` 页 | 有向；只读、瞬时；分页通过重复 compare，不承诺跨请求冻结 |
-| `readDiffPage` | — | — | 已由重复 compare 取代；不再按持久化 token 回读 |
+| `compare` | source 范围（WorkingSetId）、target 范围、方向、条目范围（可选）、offset/limit | `TrackerItemDiff` 页 | 有向；只读、瞬时；分页通过重复 compare，不承诺跨请求冻结。不提供按持久化 token 回读的入口。 |
 
 `TrackerItemDiff` 至少包含（契约级抽象，不是表结构）：
 

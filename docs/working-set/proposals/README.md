@@ -8,5 +8,5 @@
 
 ## 当前提案
 
-- [aggregate-boundary-options.md](aggregate-boundary-options.md)：Working Set 主导、原 AP-002（Branch 根不兼容 D-001，附修订建议）、版本化 Manifest 的方案比较。
-- [diff-merge-knowledge-extraction.md](diff-merge-knowledge-extraction.md)：从 pre-design 历史输入提炼的 Diff/Merge 知识，含与当前 D-001～D-019 的映射、适配与冲突标注；探索层知识，不构成基线。
+- [aggregate-boundary-options.md](aggregate-boundary-options.md)：**Historical**。Working Set 主导、原 AP-002（Branch 根不兼容 D-001，附修订建议）、版本化 Manifest 的方案比较；D-010 已收敛为最小模型。
+- [diff-merge-knowledge-extraction.md](diff-merge-knowledge-extraction.md)：**Historical**。从 pre-design 历史输入提炼的 Diff/Merge 知识，含与 D-001～D-019 的映射、适配与冲突标注；执行部分已由 T1/T6-E 收敛，不构成基线。

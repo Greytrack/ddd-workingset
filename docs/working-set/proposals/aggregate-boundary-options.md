@@ -1,8 +1,10 @@
 # Working Set 聚合边界竞争方案
 
-**状态：Draft — Architecture Proposals**
+**状态：Historical（比较材料；D-010 已收敛，不再是当前候选方案）**
 
-三套方案均为候选，不构成 ADR。证据来源见 [证据登记](../domain/evidence-register.md)，候选不变量见 [invariants.md](../domain/invariants.md)。方案类图和聚合边界图遵循 [图表渐进交付清单](../diagrams/README.md)，只在对应方案进入正式比较时逐个补充。
+> **结论（2026-11-10，D-010）**：现行模型采用最小模型——Working Set、Tracker、LightTrackerItem 三类核心聚合（外加 ProductSpace 独立聚合）；不采用 AP-003 的 Manifest/ItemVariant；AP-002 的独立 Tracker Branch 根与 D-001 不兼容。AP-001 的“范围配置 + 绑定”视角保留在 Working Set 聚合中，但不得把 Tracker/LTI/业务对象组合进去。当前聚合结论见[聚合边界](../domain/aggregate-model.md)；本页只保留备选方案、反例与放弃条件，供重新评估时追溯。
+
+三套方案均不构成 ADR。证据来源见 [证据登记](../domain/evidence-register.md)，候选不变量见 [invariants.md](../domain/invariants.md)。方案类图和聚合边界图见[候选聚合图](../diagrams/aggregate-candidates.md)（Historical）。
 
 ## `AP-001`：Working Set 主导的配置聚合
 

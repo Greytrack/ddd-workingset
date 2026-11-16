@@ -84,48 +84,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
 
 ## 6. 目标表结构（`merge_checkpoints`）
 
-```sql
-CREATE TABLE IF NOT EXISTS merge_checkpoints (
-    checkpoint_id    BIGSERIAL PRIMARY KEY,
-    round_id         VARCHAR(64) NOT NULL,
-    tracker_a_id     VARCHAR(64) NOT NULL,
-    tracker_b_id     VARCHAR(64) NOT NULL,
-    common_id        VARCHAR(64) NOT NULL,
-    local_id_a       VARCHAR(64),
-    local_id_b       VARCHAR(64),
-    revision_a       INTEGER,
-    revision_b       INTEGER,
-    change_kind      VARCHAR(16),
-    merge_direction  VARCHAR(8)  NOT NULL,
-    decision_version BIGINT      NOT NULL,
-    revoked          BOOLEAN     NOT NULL DEFAULT FALSE,
-    remark           TEXT,
-    operator         VARCHAR(64),
-    confirmed_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+目标列：`checkpoint_id`（代理主键）、`round_id`（确认时的 MergeRound）、`tracker_a_id`/`tracker_b_id`（规范化 Tracker 对，A≤B）、`common_id`（家族）、`local_id_a/b` 与 `revision_a/b`（双侧证据，`revision` 为命中锚点）、`change_kind`、`merge_direction`（属性）、`decision_version`（晚到保护）、`revoked`、`operator`/`remark`、`confirmed_at`/`updated_at`。
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_checkpoints_tracker_pair_family
-    ON merge_checkpoints (tracker_a_id, tracker_b_id, common_id);
-CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_round  ON merge_checkpoints (round_id);
-CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_family ON merge_checkpoints (common_id);
-```
+唯一键 `(tracker_a_id, tracker_b_id, common_id)`；命中条件为唯一键 + `revision_a`/`revision_b` 且 `revoked = false`；`local_id` 只作证据，不参与命中。
 
-| 列 | 含义 |
-| --- | --- |
-| `checkpoint_id` | 代理主键，仅用于行定位 |
-| `round_id` | 最近一次确认的 `MergeRound` ID（替代旧 `batch_id`） |
-| `tracker_a_id` | 规范化后的 Tracker 分支 A（字符串排序较小者） |
-| `tracker_b_id` | 规范化后的 Tracker 分支 B；A/B 是这对 Tracker 的唯一物理表示 |
-| `common_id` | Item 家族（`CommonId`），即“已接收、无差异”的锚点 |
-| `local_id_a` / `local_id_b` | 确认时 A/B 侧的具体变体，证据与审计用，不参与命中 |
-| `revision_a` / `revision_b` | 确认时 A/B 侧的业务版次，命中锚点 |
-| `change_kind` | 接收时的差异类型：`ADDED` / `MODIFIED` / `DELETED` |
-| `merge_direction` | `A_TO_B` 或 `B_TO_A`：本次确认的方向；不影响唯一性 |
-| `decision_version` | 晚到保护：撤销与再确认都递增 |
-| `revoked` | 撤销标记；方向无关 |
-| `remark` / `operator` | 备注与操作人 |
-| `confirmed_at` / `updated_at` | 确认时间与最近更新时间 |
+完整 DDL、索引与迁移步骤见[Checkpoint 重构实施方案](../implementation/merge-checkpoint-rework-plan.md) §1，避免在本裁定中复制第二份表结构。
 
 ## 7. 关联
 

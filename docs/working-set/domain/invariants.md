@@ -1,266 +1,113 @@
-# Working Set 候选业务不变量
+# Working Set 业务不变量
 
-**状态：Draft**
+**状态：Draft（混合登记；已接受子集以[事实与政策基线](facts-policy-baseline-v1.md)为准）**
 
-本页的 INV 完整陈述尚未逐条获批，但其中已有被接受事实与政策直接支持的业务子句；这些子句可按 [事实与政策主题基线](facts-policy-baseline-v1.md) 用于测试，不重新退回 Pending。`INV-*` 的完整约束与实现列仍为候选；来源代号见 [证据登记](evidence-register.md)。“强一致范围”是待验证建议，不是预先选定的事务方案。
+本页只保留不变量的当前陈述、状态与验证入口，不重复裁定过程。状态含义：
 
-| 编号 | 候选不变量 | 必须一直成立／违反后果 | 强一致与允许窗口 | 是否可能只是策略 | 候选保护者 | 状态、来源与验证 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `INV-001` | SHARED 的所有 Binding 解析到同一权威 Tracker、Item Variant 和权威内容。 | 若否，会出现名为共享、实为复制同步的冲突状态。 | 权威写入与点查应一致；列表／搜索验收须兑现已确认的 `POL-008`，不能自行允许业务可见延迟。 | “所有投影零延迟”是政策，不是该不变量。 | Tracker／业务 Item 写入口 | Candidate；`FACT-002`；跨 Working Set 并发写验证 |
-| `INV-002` | UNSHARED 派生后，目标本地修改不回写来源，来源变化不覆盖目标已提交本地事实。 | 违反会破坏独立演进并丢失用户修改。 | 单个目标写入需强一致；来源事件与目标摘要可最终一致但不得覆盖。 | 派生实现方式可替换。 | Item Variant + 业务 Item | Candidate；`FACT-003`；来源写／目标写交错测试 |
-| `INV-003` | Item Variant 的家族身份、LocalId 和所属 Tracker 在查询、重试、实例化时保持稳定。 | 违反会破坏引用、审计、幂等和历史连续性。 | 单变体身份转换内强一致。 | ID 编码方式不是不变量。 | Item Variant | Candidate；`FACT-004/005`；多次重试与 COW 场景 |
-| `INV-004` | VIRTUAL Item 的固定来源在依赖存续期间可按 Source Cut 回读；历史缺失不得以当前值冒充。 | 违反会让派生、比较和审计得到错误事实。 | 历史保留建立需先于发布；读取失败可显式等待／失败。 | 具体 History 技术是架构选择。 | History/Snapshot + Item Variant | Candidate；`FACT-006`；历史内容、附件、关系、删除态 spike |
-| `INV-005` | COW 只改变内容承载，不改变既有逻辑变体身份和直接谱系。 | 违反会把存储转换误当新业务对象。 | 首次本地写提交内需保证身份与内容对应；索引摘要可短暂滞后。 | 主动复制还是不可变版本可替换。 | 业务 Item + Item Variant 协议 | Candidate；`FACT-004/006`；并发首次写验证 |
-| `INV-006` | Compare／Merge 的 source、target、审阅成员范围与双侧审阅证据固定且有方向；执行读取源最新值并另记实际证据。 | 违反会把过期或反向证据应用到错误目标。 | 签发比较证据时固定；执行校验与重试协议须兑现用户决策优先政策，不因接收方变化要求重新裁定。 | 仅父子范围是 `POL-004`。 | Compare & Merge | Candidate；`FACT-007`；反向与过期 token 测试 |
-| `INV-007` | 存在性差异必须显式裁决；一侧缺失不能自动推导 CREATE、RESTORE 或 DELETE。 | 自动推导可能删除独立演进目标或错误复活对象。 | 单条目标业务操作内强一致；批次可部分成功。 | 默认 UI 建议属于政策。 | Merge Decision + 目标业务聚合 | Candidate；`EXT-ARCH §3.1/10`；来源删除、目标已编辑反例 |
-| `INV-008` | `markAsMerged=true` 前，所有适用差异必须明确为 ACCEPT 或 KEEP_TARGET；DEFER 不得伪装成已处理。 | 违反会隐藏未决差异并破坏审计。 | 单条决定归一化与提交内强一致。 | 决定枚举命名可调整。 | Merge Decision | Candidate；`FACT-008`、`MERGE §4.2`；四组合契约测试 |
-| `INV-009` | 字段级决定应用后，目标整体仍须通过其业务不变量；Merge 不能直接绕过目标能力写字段。 | 合法字段组合后仍可能形成非法整体。 | 每个目标业务聚合提交内强一致；整轮不必原子。 | 合并 UI 粒度是政策。 | 目标业务聚合 | Candidate；`EXT-ARCH §10/11.10`；构造交叉字段反例 |
-| `INV-010` | 同一幂等操作重试不得重复分配身份或重复应用；旧确认不得覆盖更新的撤销／决定。 | 违反会重复对象、重复写入或重新隐藏差异。 | 单幂等键和有向 Checkpoint 更新需 CAS／因果顺序。 | 具体 fencing/锁机制是技术选择。 | 用例受理 + Merge Checkpoint | Candidate；`EXT-ARCH §8`；重投和乱序测试 |
-| `INV-011` | 发布的工作范围必须引用一组封闭、可读、身份确定的成员与必要关系；准备失败不能冒充发布成功。 | 用户会观察到缺成员、错身份或不可恢复来源。 | 最终发布切换需原子；准备过程允许显式中间态。 | “封闭”范围待裁定；D-004 已排除必须补齐来源组织祖先的解释。 | Working Set／Manifest | Candidate；`FACT-010`；半批失败、取消、重启场景 |
-| `INV-012` | 删除不得破坏仍存活的派生变体、Snapshot、审计或有效关系；无本地行不能证明不存在。 | 会造成历史不可读、引用断裂或迟到事件复活。 | 删除守卫需使用权威依赖；投影落后时同步核验或等待。 | 保留期限和软删政策可变。 | 各对象生命周期所有者 + History/Reference | Candidate；`EXT-ARCH §9.2/11`；删除与修复竞态 |
-| `INV-013` | 有效 Reference 的逻辑身份不会因端点暂不可解析而丢失；修复不能复活已删除或已换目标关系。 | 否则查询漏关系或迟到事件覆盖用户决定。 | 单 Reference 更新内强一致；修复可最终一致。 | 哪些关系允许悬空是业务政策。 | Reference | Candidate；`FACT-009`；事件重投、乱序、删除竞态 |
+- **Confirmed**：业务规则已由用户确认，可作为测试期望；
+- **Confirmed / Draft formal**：业务子句已确认，形式化、保护者或事务方案仍候选；
+- **Candidate**：完整陈述尚未获批；
+- **Superseded**：已被后续裁定取代，保留历史编号。
+
+## 核心不变量（INV-001～013）
+
+| 编号 | 约束 | 状态与依据 | 验证 |
+| --- | --- | --- | --- |
+| `INV-001` | Shared 的所有绑定解析到同一权威 Tracker、同一 Item 变体和同一权威内容。 | Candidate；FACT-002；`POL-008` 的可见性要求已确认 | 跨 WS 并发写；列表/搜索读取面 |
+| `INV-002` | 非共享派生后，目标本地修改不回写来源，来源变化不覆盖目标已提交本地事实。 | Candidate；FACT-003 | 来源写/目标写交错 |
+| `INV-003` | Item 变体的家族身份、`LocalId` 和所属 Tracker 在查询、重试、物化时保持稳定。 | Candidate；FACT-004/005；T3 已兑现 `LocalId` 稳定 | 重试与 COW |
+| `INV-004` | 未物化变体的固定来源在依赖存续期间可按 Source Cut 回读；历史缺失不得以当前值冒充。 | Candidate；FACT-006；`QUESTION-006` 保留期 | 历史、附件、关系、删除态 |
+| `INV-005` | COW 只改变内容承载，不改变既有逻辑变体身份与直接来源。 | Candidate；D-012/D-013 | 并发首次写 |
+| `INV-006` | Compare/Merge 的方向、范围与双侧证据固定；执行读取源最新值并另记实际证据。 | Candidate；FACT-007；R08/B09 | 反向与过期证据 |
+| `INV-007` | 存在性差异必须显式裁决；一侧缺失不能自动推导 CREATE、RESTORE 或 DELETE。 | Candidate；FACT-007；T1 §7 | 来源删除、目标已编辑反例 |
+| `INV-008` | `markAsMerged=true` 前所有适用差异必须明确为 ACCEPT 或 KEEP_TARGET；DEFER 不得伪装已处理。 | Candidate；FACT-008；T1 §7 | 四组合契约测试 |
+| `INV-009` | 字段级决定应用后目标整体仍须通过其业务不变量；Merge 不能绕过目标能力写字段。 | Candidate；B06；T4 | 交叉字段反例 |
+| `INV-010` | 同一幂等操作重试不重复分配身份或重复应用；旧确认不得覆盖更新的撤销/决定。 | Candidate；T1 CK-1/CK-2 | 重投和乱序 |
+| `INV-011` | 发布的工作范围必须引用封闭、可读、身份确定的成员与必要关系；准备失败不能冒充发布成功。 | Candidate；FACT-010；T7 创建任务 | 半批失败、取消、重启 |
+| `INV-012` | 删除不得破坏仍存活的派生变体、Snapshot、审计或有效关系；无本地行不能证明不存在。 | Candidate；FACT-006/009 | 删除与修复竞态 |
+| `INV-013` | 有效 Reference 的逻辑身份不因端点暂不可解析而丢失；修复不能复活已删除或已换目标关系。 | Candidate；FACT-009；`QUESTION-010` | 事件重投、删除竞态 |
+
+## Tracker 谱系与组织（INV-014～023）
+
+| 编号 | 约束 | 状态与依据 | 验证 |
+| --- | --- | --- | --- |
+| `INV-014` | 有结构父时，父节点在同一 Working Set 的有效组织范围内。 | Confirmed / Draft formal；D-003 | SCN-014；Shared 引用范围另行核验 |
+| `INV-015` | Tracker 结构关系不形成循环。 | Candidate；D-003/D-006 推导 | 自环、A.parent=B/B.parent=A 反例 |
+| `INV-016` | 派生 Tracker 的直接来源位于直接父级 Working Set。 | Confirmed / Draft formal；D-003 | T1.source=T0，T2.source=T1 |
+| `INV-017` | 派生来源不跳过中间 Working Set。 | Confirmed / Draft formal；D-003 | WS0→WS1→WS2 |
+| `INV-018` | 结构父子与派生来源分开表达，不相互替代。 | Confirmed / Draft formal；D-003 | B1.parent=A1 且 B1.source=B0 |
+| `INV-019` | 未选原结构父的非共享派生允许 `parentId=null` 成为目标根，不强制补派生该父。 | Confirmed / Draft formal；D-004 | SCN-015 |
+| `INV-020` | 组织裁剪不改变直接派生来源语义；`parentId=null` 不推导 `sourceId=null` 或跨级来源。 | Confirmed / Draft formal；D-004 | B1.parent=null 且 B1.source=B |
+| `INV-021` | 目标组织结构只需在目标有效范围内合法，不必与源树完整同构。 | Confirmed / Draft formal；D-004 | 父也选中时的映射 |
+| `INV-022` | 创建完成后 `parentId` 保持不变。 | Confirmed；D-006 | SCN-017 |
+| `INV-023` | 完成创建前必须确定符合当前范围组织规则的位置；允许的结构重组在此前完成。 | Confirmed；D-005/D-006 | SCN-016/018 |
+
+## LightTrackerItem 身份与 COW（INV-024～052）
+
+| 编号 | 约束 | 状态与依据 | 验证 |
+| --- | --- | --- | --- |
+| `INV-024` | 首次 COW 建立本地业务对象时，该对象与 LTI 的 `CommonId`/`LocalId` 一致。 | Confirmed 业务规则 / Draft formal；D-007、T3 | SCN-019 |
+| `INV-025` | 业务对象修改成功但索引更新失败时，系统状态与可恢复结果一致，不伪造成功也不丢失已提交内容。 | Candidate；D-007、T3 双事实 | SCN-020 |
+| `INV-026` | LTI 派生时具有明确的当前 `LocalId` 与 `CommonId`。 | Confirmed / Draft formal；D-008 | SCN-021 |
+| `INV-027` | 派生变体的来源信息可追溯（`SourceLocalId`/`SourceRevision`）。 | Confirmed / Draft formal；D-008、D-012 | SCN-021/022 |
+| `INV-028` | LTI 经 `TrackerId`/`WorkingSetId` 指向的 Tracker 与 WorkingSet 满足工作范围约束。 | Confirmed / Draft formal；D-008 | SCN-022 |
+| `INV-029` | 未物化不代表业务变体不存在。 | Confirmed / Draft formal；D-008 | SCN-023 |
+| `INV-030` | 业务对象内部不变量由业务 BC 负责，Working Set 不拥有或重建。 | Confirmed；D-007/D-008 | 跨 BC 合并/COW |
+| `INV-031` | 同一 LTI 首次物化后仅一个有效业务对象身份。 | Candidate；D-008 | SCN-024 并发反例 |
+| `INV-032` | LTI 与业务对象持久化之间的可观察一致性。 | Candidate；D-008、T3 | SCN-024 |
+| `INV-033` | 物化完成后有效内容来源定位到自身 `LocalId` 及自身有效版次。 | Confirmed；D-009 | SCN-025 |
+| `INV-034` | 来源修改前的完整业务事实可被物化 Handler 可靠取得。 | Confirmed 方案：事件关联不可变内容快照；D-010 | SCN-026 |
+| `INV-035` | 已物化变体不被重复或错误覆盖。 | Candidate；D-009/D-011 | SCN-028 |
+| `INV-036` | 派生历史来源与当前有效内容来源分别保持，物化切换不丢失来源追溯。 | **Superseded by D-012**：历史派生链不要求保存 | SCN-027（历史） |
+| `INV-037` | 首次快照确定性：目标变体最终内容由首次相关来源变更之前的事实决定。 | Confirmed；D-011 | SCN-030 |
+| `INV-038` | 物化结果唯一性：重放/乱序/并发不产生互相竞争的有效物化结果。 | Confirmed；D-011 | SCN-030/031 |
+| `INV-039` | Local-backed 后来源后续事件不改变已物化内容。 | Confirmed；D-011 | SCN-032 |
+| `INV-040` | COW 不改变 `LocalId`、`CommonId`。 | Confirmed；D-012 | SCN-035 |
+| `INV-041` | Source-backed 时有效内容由 `SourceLocalId` + `SourceRevision` 解析。 | Confirmed；D-012 | SCN-035/036 |
+| `INV-042` | Local-backed 时 `SourceLocalId = LocalId` 且 `SourceRevision = Revision`。 | Confirmed；D-012 | SCN-035 |
+| `INV-043` | 未物化变体直接指向实际拥有完整业务内容的来源，不逐级递归。 | Confirmed；D-013 | SCN-037 |
+| `INV-044` | 同一实际来源修改时保护所有直接内容依赖者，不限派生深度（扇出）。 | Confirmed；D-013 | SCN-038 |
+| `INV-045` | 已有未物化变体不因其他变体物化而自动重定向有效来源。 | Confirmed；D-014 | SCN-039 |
+| `INV-046` | 派生身份建立与完整业务内容复制解耦（派生不复制完整数据）。 | Confirmed；D-015 | SCN-043 |
+| `INV-047` | 选定业务 Revision 后，派生不冻结该 Revision 的普通内容。 | Confirmed；D-016 | SCN-044 |
+| `INV-048` | 来源修改事件目标发现除 `SourceLocalId` 相等外，还需限定 `SourceRevision`。 | Candidate；D-015 | SCN-044 |
+| `INV-049` | 完整派生完成前的来源修改不为该变体触发 COW。 | **Superseded by D-017/INV-050** | SCN-045（历史） |
+| `INV-050` | COW 目标集合在 Handler 消费时确定：当前 `SourceLocalId`/`SourceRevision` 匹配且未物化的 LTI 都参与。 | Confirmed；D-017 | SCN-048 |
+| `INV-051` | LTI 持有自身 Revision 字段，与 `SourceRevision` 分离。 | Confirmed；D-018 | SCN-049 |
+| `INV-052` | 显式升级业务 Revision 触发依赖变体 COW。 | Confirmed；D-018 | SCN-049 |
+
+## ProductSpace、绑定与删除（INV-053～068）
+
+| 编号 | 约束 | 状态与依据 | 验证 |
+| --- | --- | --- | --- |
+| `INV-053` | SpaceBinding 是 TrackerBinding 的业务前置。 | Confirmed；`POL-012` | SCN-050 |
+| `INV-054` | Tracker 的 `productSpaceId` 必须等于其 TrackerBinding 的空间 ID。 | Confirmed；`POL-012` | SCN-050 |
+| `INV-055` | 同一 WorkingSet 内 ProductSpace 绑定唯一。 | Confirmed；`POL-012` | SCN-050 |
+| `INV-056` | 同一 WorkingSet/ProductSpace/Classification 组合下 Tracker 槽位唯一。 | Confirmed；`POL-012`；**多 Tracker 例外见 T6-F，本条的“唯一”需按新政策重述** | SCN-051 |
+| `INV-057` | Shared Tracker 在多个 WS 共享同一聚合身份；非共享在子 WS 拥有独立派生身份。 | Confirmed；`POL-013` | SCN-052 |
+| `INV-058` | 删除/移除八条语义（见 `POL-014`）。 | Confirmed；`POL-014`；边界由 `INV-064` 澄清 | SCN-052/053 |
+| `INV-059` | 默认 WS 不可删除/隐藏；Tracker `parentId` 创建后不可变。 | Confirmed；FACT-026、`INV-022` | SCN-054 |
+| `INV-060` | SpaceBinding、TrackerBinding 是 WorkingSet 聚合内 Entity；ProductSpace/Tracker 不持有绑定。 | Confirmed；`POL-015` | SCN-050/052 |
+| `INV-061` | 未物化变体可以参与 Diff。 | Confirmed；FACT-027 | SCN-055 |
+| `INV-062` | 未物化目标被 Merge 修改时构建业务聚合正常 save（物化与修改一体）。 | Confirmed；FACT-027 | SCN-055 |
+| `INV-063` | MergeRound 记录参数/进度/结果；决策归 MergeRound；MergeCheckpoint 独立。 | Confirmed；FACT-027 | SCN-056/059/060 |
+| `INV-064` | “有 TrackerItem 不允许移除”只约束聚合删除；Shared 解绑不受该约束。 | Confirmed；T2 K1/K3 | SCN-052/061 |
+| `INV-065` | 非共享 Tracker 解绑/删除必须同时满足：无 TrackerItem、无组织子级、无派生子级。 | Confirmed；T2 K2 | SCN-061/062 |
+| `INV-066` | 删除 ProductSpace 前所有 WorkingSet 无指向它的 SpaceBinding，且空间下无 Tracker。 | Confirmed；T2 | SCN-064 |
+| `INV-067` | 删除 WorkingSet 前全部 TrackerBinding/SpaceBinding 可合法解除；默认 WS 始终不可删。 | Confirmed；T2 K3 | SCN-063 |
+| `INV-068` | 删除后不可恢复；软删/归档/恢复不属于 T2 本版；彻底删除不强制物理 DELETE。 | Confirmed；`POL-016` | SCN-061/065 |
+
+## Merge 与物化（INV-069～071）
+
+| 编号 | 约束 | 状态与依据 | 验证 |
+| --- | --- | --- | --- |
+| `INV-069` | LTI 持有独立 `materialized` 字段，与 `sourceLocalId`/`sourceRevision` 在同一次聚合状态变更中一致更新。 | Confirmed；T3 K1′ | SCN-066 |
+| `INV-070` | `localId` 派生时预分配、首次物化复用、COW 前后不变；BC 必须能按稳定 `localId` 定位或创建变体。 | Confirmed；T3 K2′ | SCN-068 |
+| `INV-071` | 物化完成 = 业务保存成功 **且** LTI 切换成功；保存成功而切换失败不回滚，幂等重试只补未完成步骤。 | Confirmed；T3 K3′ | SCN-067 |
 
 ## 当前判断
 
-- 完整 INV 正式接受：**0**；不代表已确认业务约束为零。逐条依据与边界见 [13 条审查](../reviews/2026-11-10-invariant-evidence-review.md)。
-- 原 INV-001—013 的完整条目仍为候选；D-003 新增 INV-014—018 的逐条分类见下文，不批量接受。
-- INV-001/009 的业务核心已有直接支持；其他条目的局部支持、缺口及禁止泛化范围按上述审查处理，不重复开放已接受规则。
-- `TC-002` 的“单聚合事务”只能作为兑现这些语义的候选架构，不能反向证明聚合边界。
-
-## 阶段 3 验证关联（不新增已确认规则）
-
-INV-001→B02/03；INV-002—005→B04；INV-006→B05/09；INV-007—009→B06/07/08；INV-010→B09/10；INV-011→B01/12；INV-012→B04（来源彻底删除后子 Requirement 仍可编辑的已确认场景）/B11；INV-013→B11。参见 [边界场景](../scenarios/shared-kernel-boundary-scenarios.md) 与 [阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)。所有 INV 保持候选。特别是源端最新性、发布封闭范围及删除保留尚无实现验证，不能以接口检查冒充已兑现。
-
-阶段 3.1 的限定确认矩阵、候选首版清单及不变量推导见 [规则收敛报告](../reviews/2026-11-09-stage-3-1-rule-convergence.md)。全部推导仍待批准。
-
-阶段 3.1 补充：用户接受 POL-005 的单工作集 CommonId 唯一性，确认派生附件和关系固定为派生时状态。它们为候选唯一性约束及 INV-004/012 提供已确认依据；不自动批准 INV 全文、永久保留或具体一致性实现。
-
-## D-003 双维关系约束审查
-
-**业务规则按 D-003 保持用户确认；以下 INV 形式化与技术保护方案保持 Draft。** 来源：[D-003 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-003)。
-
-| 编号 | 约束 | 证据等级与推导边界 | 验证场景 / 未定实现 |
-| --- | --- | --- | --- |
-| INV-014 | 有结构父时，父节点在同一 Working Set 的有效组织范围内 | “同工作集直属结构父”直接确认；有效范围检查是其必要解释，不等于数据库归属相等 | SCN-014；Shared 引用范围单独核验，父级跨上下文一致性待裁定 |
-| INV-015 | Tracker 结构关系不形成循环 | 从“组织树”推导的候选合法性约束，未独立批准；不据此确定算法或锁 | 自环、创建候选 A.parent=B/B.parent=A 为反例；D-006 禁止创建后调整，创建并发协议待定 |
-| INV-016 | 派生 Tracker 的直接来源位于直接父级 Working Set | D-003 直接确认 | T1.source=T0，T2.source=T1；如何核验有效来源范围待设计 |
-| INV-017 | 派生来源不跳过中间工作集 | D-003 直接确认，不推出 sourceId 永久不可变 | 在 WS0→WS1→WS2 下不能用 T2.source=T0 替代 T1；SCN-014 |
-| INV-018 | 结构父子与派生来源分开表达，不相互替代 | D-003 直接确认 | B1.parent=A1 与 B1.source=B0 可并存；不批准结构继承算法 |
-
-直接确认的业务子句可作为测试期望；完整 INV 文档、事务边界和聚合方案不随之 Accepted。所有 Tracker 仍是独立聚合，树或链不自动形成大聚合。
-
-## D-004 组织裁剪约束审查
-
-规则依据：POL-009、[D-004](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)；业务子句用户已确认，形式化和保护方案仍 Draft。
-
-| 编号 | 规则 / 推论 | 状态与限定 | 验证 |
-| --- | --- | --- | --- |
-| INV-019 | 未选原结构父的非共享派生允许 parentId=null 成为目标根，不强制补派生该父 | 直接确认的合法性与选择范围政策；不等于任意操作都禁止创建父或必有唯一结果 | SCN-015：B1 为根，不自动创建 A1 |
-| INV-020 | 组织裁剪不改变直接派生来源语义，不能把 parentId=null 推导为 sourceId=null 或跨级来源 | D-004 直接确认；不批准派生完成后 parentId 可修改或 sourceId 永久不可修改 | B1.parentId=null 且 B1.sourceId=B |
-| INV-021 | 目标组织结构只需在目标有效范围内合法，不必与源树完整同构 | D-004 不同工作集可有不同树、可裁剪的推论；完整合法性规则仍待定 | 源 A→B、目标仅 B1；父也选中时如何映射仍待裁定 |
-
-INV-014 的“有结构父时”不要求所有 Tracker 非空父；INV-011 的“封闭清单”不得解释为来源祖先闭包，不能以封闭性拒绝 SCN-015 或自动派生 A1。整批派生是否原子仍开放，不能从合法终态反推事务策略。
-
-## D-005 / D-006：组织位置的创建边界
-
-沿用 INV-014 的父节点有效范围要求，创建时必须确定合法父或 null 根；不另造重复“父有效”编号。INV-015 的无环检查集中于创建候选结构，不再将“创建后并发移动”作为合法用例。具体无环算法、创建批次原子性与可见性未批准。
-
-| 编号 | 规则 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-022 | 创建完成后 parentId 保持不变 | D-006 用户直接确认；只冻结组织位置，不冻结其他业务状态/工作集成员扩展。技术守卫仍 Draft | SCN-017：移动、换父、改根均不得改变已完成对象 |
-| INV-023 | 完成创建前必须确定符合当前范围组织规则的位置，允许的结构重组在此前完成 | D-005/D-006 直接确认；合法父范围复用 INV-014，默认继承属于 POL-010，不提升为永不例外的真理 | SCN-016/018：合法显式重组、缺父和环反例 |
-
-已确认业务子句可作测试期望，不批准整份 INV 的实现列。父后续**删除**已由 2026-11-11 K2 与 INV-065 裁定（存在组织子级/派生子级/Item 即拒绝，不自动断链、重挂或级联）；WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），`QUESTION-009.a` 已关闭，不能拿 INV-014 自动决定清空父或级联。INV-020 的“未批准创建后可改”现收敛为 INV-022 明确禁止。INV-021 中父也选的默认关系现由 POL-010 补齐，显式重组仍允许。
-
-## D-007：LightTrackerItem 与业务对象的身份一致性（候选）
-
-业务规则按 D-007 保持用户确认（TrackerItem 契约、业务 BC 拥有聚合、SK 管公共身份）；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-007 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-007)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-024 | 首次 COW 建立本地业务对象时，该对象与对应 LightTrackerItem 的公共身份（CommonId/LocalId）保持一致 | 候选；D-007 提出但未确认事务/一致性协议，LightTrackerItem 是否权威待定 | [SCN-019](../scenarios/core-scenarios.md#scn-019) |
-| INV-025 | 业务对象修改成功但索引更新失败时，系统状态与可恢复结果一致（不伪造成功，也不丢失已提交业务内容） | 候选；业务提交与索引是双事实，收敛协议待设计 | [SCN-020](../scenarios/core-scenarios.md#scn-020) |
-
-已确认的「业务 BC 拥有完整领域状态与不变量、SK 只负责公共身份与工作集机制」是职责边界，不因此自动批准 LightTrackerItem 的聚合边界、权威性、CommonId/LocalId/Revision/Version 分配或跨 BC 事务方案。
-
-## D-008：LightTrackerItem 权威聚合与 COW 派生（候选审查）
-
-业务规则按 D-008 保持用户确认（LightTrackerItem 是独立聚合、COW 延迟物化、身份与来源字段、CQRS 工厂重建）；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-008 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-008)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-026 | LightTrackerItem 派生时具有明确当前 LocalId 与 CommonId | D-008 第 7 条直接确认；编码与并发分配协议候选 | SCN-021 |
-| INV-027 | 派生变体的来源信息可追溯（SourceLocalId/SourceRevision） | D-008 第 8 条直接确认；SourceRevision 快照语义候选 | SCN-021/022 |
-| INV-028 | LightTrackerItem 经 TrackerId/WorkingSetId 指向的 Tracker 与 Working Set 满足工作范围约束 | D-008 第 9 条指向确认；范围约束具体规则候选 | SCN-022 |
-| INV-029 | 未物化不代表业务变体不存在 | D-008 第 6 条 COW 不立即物化直接确认；VIRTUAL 是合法状态 | SCN-023 |
-| INV-030 | 业务对象内部不变量由业务 BC 负责，Working Set 不拥有或重建 | D-008 第 2/12 条直接确认 | 跨 BC 合并/COW 场景 |
-| INV-031 | 同一 LightTrackerItem 首次物化后仅一个有效业务对象身份 | 候选；LocalId 是否等同业务聚合变体身份未定 | SCN-024（并发反例） |
-| INV-032 | LightTrackerItem 与业务对象持久化之间的可观察一致性 | 候选；同步原子性未定 | SCN-024 |
-
-已确认子句可作测试期望，不批准完整 INV 实现列、物化完成标志、有效内容指针或跨 BC 事务方案。
-
-## D-009：来源变更 COW 的事件时序与内容保护（候选审查）
-
-业务规则按 D-009 保持用户确认（事件驱动 COW 机制、Revision 不随普通修改升级、物化后有效来源切换到自身）；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-009 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-009)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-033 | 物化完成后有效内容来源定位到自身 LocalId 及自身有效版次 | D-009 第 9 条直接确认；「自身有效版次」定义候选 | SCN-025 |
-| INV-034 | 来源修改前的完整业务事实可被物化 Handler 可靠取得 | 候选；不可变快照还是稳定引用、谁拥有该事实未定（反例二） | SCN-026 |
-| INV-035 | 已物化变体不被重复或错误覆盖 | 候选；连续多次来源修改的多事件乱序与幂等未定（反例四） | SCN-028 |
-| INV-036 | 派生历史来源（Derivation Origin）与当前有效内容来源（Effective Content Source）分别保持，物化切换不丢失来源追溯 | 候选；不未经确认新增数据库字段（反例三） | SCN-027 |
-
-已确认子句可作测试期望，不批准完整 INV 实现列、事件与事务的可见性协议、历史内容保护或来源身份建模。
-
-## D-010：COW 最终一致与不可变快照（候选审查更新）
-
-D-010 确认修改前事实作为事件关联的不可变内容快照（原 INV-034 的快照方案由候选转为已确认方案支撑），并确认最终一致性语义（来源修改已保存、COW 未完成期间允许派生工作集暂时读到修改后内容）。据此更新：
-
-- INV-034「修改前事实可靠取得」由候选转为有确认方案支撑：事件关联不可变内容快照（D-010 第 3 条）；快照的事件序列化、可靠交付与持久化策略仍属实施设计。
-- INV-035（已物化变体不被重复/错误覆盖）与连续修改「首次快照」的业务选择规则仍候选，不提前用数据库锁或消息队列偏移量替代业务裁定。
-- INV-036（派生历史来源与有效内容来源分别保持）仍候选，字段是否拆分待设计。
-
-不因最小模型收敛自动批准全部聚合设计，不引入全局事务、跨 BC 大聚合或复杂安全门。
-
-## D-011：首次快照优先与物化唯一性（候选审查）
-
-业务规则按 D-011 保持用户确认（首次快照优先、按来源修改实际先后顺序、Local-backed 后不可被源事件覆盖）；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-011 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-011)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-037 | 首次快照确定性：目标变体最终内容由首次相关来源变更之前的事实决定 | D-011 第 1/2 条直接确认；如何确认「首次相关修改」仍候选 | SCN-030 |
-| INV-038 | 物化结果唯一性：同一 LightTrackerItem 不因事件重放、乱序或并发生成互相竞争的有效物化结果 | D-011 第 5 条直接确认；幂等与收敛协议候选 | SCN-030/031 |
-| INV-039 | 本地化后不可被源事件覆盖：Local-backed 后来源后续事件不改变已物化内容 | D-011 第 6 条直接确认 | SCN-032 |
-
-已确认子句可作测试期望，不批准完整 INV 实现列；不将消息队列偏移量、数据库锁等技术实现写成领域不变量。
-
-## D-012：SourceLocalId / SourceRevision 职责分离（候选审查去重）
-
-业务规则按 D-012 保持用户确认；以下 INV 形式化与技术保护方案保持 Draft，并与 D-011 的 INV-037/039 去重。来源：[D-012 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-012)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-040 | COW 不改变 LocalId、CommonId | D-012 第 6 条直接确认 | SCN-035 |
-| INV-041 | Source-backed 时有效内容由 SourceLocalId + SourceRevision 解析 | D-012 第 4 条直接确认 | SCN-035/036 |
-| INV-042 | Local-backed 时 SourceLocalId = LocalId 且 SourceRevision = Revision | D-012 第 5 条直接确认 | SCN-035 |
-
-去重说明：首次 COW 采用首次脱离来源时的修改前快照（第 4 条）与物化完成后不被后续来源事件覆盖（第 5 条）已分别记录为 D-011 的 INV-037/039，不重复编号。「完成事件不得早于实际业务聚合物化成功」（第 6 条）属事件处理技术约束，不作为领域不变量编号。
-
-## D-013：直接有效来源定位与依赖者批量 COW（候选审查去重）
-
-业务规则按 D-013 保持用户确认；以下 INV 形式化与技术保护方案保持 Draft，并与 D-011/D-012 的 INV 去重。来源：[D-013 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-013)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-043 | 未物化变体直接指向实际拥有完整业务内容的来源（SourceLocalId 直接定位，非逐级递归） | D-013 第 1/3/4 条直接确认 | SCN-037 |
-| INV-044 | 同一实际来源修改时，保护所有符合条件的直接内容依赖者，不限工作集派生深度（扇出） | D-013 第 8/9 条直接确认 | SCN-038 |
-
-去重说明：COW 不改变 LocalId/CommonId（第 2 条）与 Local-backed 有效来源指向自身（第 3 条）已由 D-012 的 INV-040/042 覆盖；首次快照选择由实际来源修改顺序决定（第 5 条）与重复事件/并发不产生不同物化内容（第 6 条）已由 D-011 的 INV-037/038 覆盖。不将 SQL 查询、锁、消息消费偏移量视为领域不变量。
-
-## D-014：已有下游不随中间上游物化重定向（候选审查去重）
-
-业务规则按 D-014 保持用户确认；以下 INV 与 D-011~D-013 去重。来源：[D-014 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-014)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-045 | 已有未物化变体不因其他变体物化而自动重定向有效来源（SourceLocalId 固定至自身物化） | D-014 第 2/3 条直接确认 | SCN-039 |
-
-去重说明：LocalId/CommonId 稳定（第 1 条）、Source-backed 直接定位（第 2 条）、完成物化切换自身（第 4 条）、首次快照优先（第 5 条）、事件消费顺序不改变保护内容（第 6 条）已分别由 INV-040/043/042/037/039/038 覆盖，不重复编号。不将 SQL 索引、消息投递机制、数据库锁当作领域不变量。
-
-## D-015：派生时间基准与不复制内容（候选审查）
-
-业务规则按 D-015 保持用户确认；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-015 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-015)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-046 | 派生身份建立与完整业务内容复制解耦（派生不复制完整数据） | D-015 第 1/2 条直接确认 | SCN-043 |
-| INV-047 | 选定业务 Revision 后，派生不冻结该 Revision 的普通内容 | D-015 第 8 条 + 反例；SourceRevision 不足以表达同一 Revision 内内容变化，保持 Open | SCN-044 |
-| INV-048 | 来源修改事件目标发现除 SourceLocalId 相等外，还需限定 SourceRevision | 候选；不能仅凭 SourceLocalId 相等推断所有不同 Revision 变体都参与 COW | SCN-044 |
-
-已确认子句可作测试期望，不批准完整 INV 实现列；不提前选定数据库锁、时间戳生成方式、事务隔离级别或消息基础设施。
-
-## D-016：派生仅固定版次与 COW 保护边界（候选审查去重）
-
-业务规则按 D-016 保持用户确认；以下 INV 与 D-011~D-015 去重。来源：[D-016 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-016)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-049（Superseded） | 完整派生完成前发生的来源修改不为该派生变体触发 COW | 历史：D-016 第 5/7 条；现由 D-017 的 INV-050 取代——消费时确定目标，不再比较派生完成与修改先后 | SCN-045（历史） |
-
-去重说明：派生身份建立与内容复制解耦（第 1 条）与派生不冻结 Revision 普通内容（第 2 条）已由 D-015 的 INV-046/047 覆盖；完整派生完成后首次相关来源修改决定需保护快照（第 4 条）已由 D-011 的 INV-037 限定覆盖；COW 完成后保持 LocalId/CommonId 并切换自身（第 5 条）与事件乱序不改变内容事实（第 6 条）已由 INV-040/042/038 覆盖。
-
-## D-017：COW 目标集合在事件消费时确定（候选审查）
-
-业务规则按 D-017 保持用户确认；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-017 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-017)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-050 | COW 目标集合在事件 Handler 消费时确定：查询当前 SourceLocalId/SourceRevision 匹配且未物化的 LightTrackerItem，命中的均参与物化 | D-017 第 1/2/4 条直接确认 | SCN-048 |
-
-修订说明：D-016 的 INV-049「完整派生完成前发生的来源修改不为该变体触发 COW」的历史时间边界由 D-017 取代——不再比较派生完成时间与修改开始时间，改为消费时按当前有效引用关系确定目标集合。D-011 首次快照优先的乱序/幂等实现细节留待实施评审，不作为本轮业务裁定。
-
-## D-018：Revision 字段与事件顺序（整体验证收敛，候选审查）
-
-业务规则按 D-018 保持用户确认；以下 INV 形式化与技术保护方案保持 Draft。来源：[D-018 裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-018)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-051 | LightTrackerItem 持有自身 Revision 字段，与 SourceRevision 分离（可不同步） | D-018 第 2 条直接确认 | SCN-049 |
-| INV-052 | Revision 显式升级触发依赖变体 COW | D-018 第 3 条直接确认 | SCN-049 |
-
-事件顺序由事件框架顺序记录、顺序消费兜底（D-018 第 1 条），Source Change Order 不作为领域不变量。
-
-## 阶段 4 补充：ProductSpace / Classification / 绑定（候选审查）
-
-业务规则按用户 2026-11-10 补充裁定保持确认；以下 INV 形式化与技术保护方案保持 Draft。来源：[阶段 4 集中补充评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md)。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-053 | SpaceBinding 是 TrackerBinding 的业务前置约束（先有 SpaceBinding 才能建 TrackerBinding） | 用户确认（POL-012） | SCN-050 |
-| INV-054 | Tracker.productSpaceId 必须等于其 TrackerBinding 的空间 ID | 用户确认（POL-012） | SCN-050 |
-| INV-055 | 同一 WorkingSet 内 ProductSpace 绑定唯一 | 用户确认（POL-012） | SCN-050 |
-| INV-056 | 同一 WorkingSet/ProductSpace/Classification 组合下 Tracker 槽位唯一 | 用户确认（POL-012） | SCN-051 |
-| INV-057 | Shared Tracker 在多个 WorkingSet 共享同一聚合身份；非共享 Tracker 在子 WorkingSet 拥有独立派生身份 | 用户确认（POL-013） | SCN-052 |
-| INV-058 | Tracker 删除/移除语义：共享从子 WS 移除仅解除 TrackerBinding；非共享无 Item 且无派生子 Tracker 才可删除；有派生子 Tracker 不允许删除；有 TrackerItem 不允许移除；有组织子节点但无派生子节点不允许删除；移除最后 Tracker 不触发空间移除；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 共享 Tracker 空且无子可删 | 用户确认（POL-014，修订 POL-006） | SCN-052/053 |
-| INV-059 | 默认 WorkingSet 不可删除、不可隐藏；Tracker parentId 创建后不可变（沿用 INV-022） | 用户确认（FACT-026） | SCN-054 |
-| INV-060 | SpaceBinding、TrackerBinding 是两个 Entity，归属于 WorkingSet 聚合；ProductSpace、Tracker 只维护自身归属身份，不持有绑定 | 用户确认（POL-015） | SCN-050/052 |
-
-区分：INV-053~060 为已确认规则；绑定 Entity 内部结构、软删/彻底删除机制为待确认实现细节。
-
-## 阶段 4 补充：Diff/Merge 衔接（候选审查）
-
-业务规则按用户 2026-11-10 裁定保持确认。
-
-| 编号 | 约束 | 确认与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-061 | 未物化变体可以参与 Diff（不要求已物化） | 用户确认 | SCN-055 |
-| INV-062 | 未物化目标被 Merge 修改时，构建业务聚合正常 save（物化与修改一体） | 用户确认 | SCN-055 |
-| INV-063 | MergeRound 聚合记录参数/进度/成功失败；合并决策作为 VO 归属 MergeRound；MergeCheckpoint 独立聚合 | 用户确认 | SCN-056/059/060 |
-
-证据：FACT-027；场景 SCN-055/056。
-
-## 阶段 5 T2：绑定与删除契约（用户确认，2026-11-11）
-
-业务规则依据 POL-012～016、INV-053～060（已确认）与用户 2026-11-11 的最终裁定（K1=A、K2=A、K3=A）。以下约束已由用户正式确认；不改写 INV-058 的原文，只澄清其适用边界。
-
-| 编号 | 约束 | 依据与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-064 | 「有 TrackerItem 不允许移除」只约束**聚合删除**；Shared Tracker 从子 WorkingSet 移除仅解除 TrackerBinding，不受该约束 | 用户确认（2026-11-11，K1/K3）；澄清 INV-058 边界，不改其文字 | SCN-052、SCN-061 |
-| INV-065 | 非共享 Tracker 的解绑/删除必须**同时**满足：无 TrackerItem、无组织子级（`parentId` 指向它）、无派生子级（`sourceId` 指向它） | POL-014 + 用户确认（2026-11-11，K2）；三项并列必要条件 | SCN-061、SCN-062 |
-| INV-066 | 删除 ProductSpace 前必须确认：所有 WorkingSet 中无指向它的 SpaceBinding，且空间下无 Tracker 聚合 | 用户确认（2026-11-11，引用完整性采纳）；由 SB-3 推得，只查 TrackerBinding 不足以防止悬空 | SCN-064 |
-| INV-067 | 删除 WorkingSet 前，其全部 TrackerBinding 与 SpaceBinding 均可合法解除；任一不可解除即阻止删除；默认 WorkingSet 始终不可删除 | FACT-026 + 用户确认（2026-11-11，K3） | SCN-063 |
-| INV-068 | 删除后不可恢复；软删、归档、恢复不属于本版契约；领域彻底删除不强制映射为数据库物理删除 | 用户确认（2026-11-11，K1）；POL-016 | SCN-061、SCN-065 |
-
-状态说明：INV-064～068 已由用户于 2026-11-11 确认，可作为对应行为测试的依据；实现映射与运行测试证据仍待建立，不得据此宣称已实现。
-
-## 阶段 5 T3：物化协议契约（用户确认，2026-11-11）
-
-业务规则依据 D-008～D-019、ADR-0002/0003 与用户 2026-11-11 的最终裁定（K1′、K2′、K3′）。
-
-| 编号 | 约束 | 依据与边界 | 验证 |
-| --- | --- | --- | --- |
-| INV-069 | LightTrackerItem 持有独立 `materialized` 字段（`false`=Source-backed、`true`=Local-backed），与 `sourceLocalId`/`sourceRevision` 在**同一次聚合状态变更**中一致更新；外部服务不得绕过聚合行为修改 | 用户确认（2026-11-11，K1′）；不一致属元数据一致性缺陷，不是第三种业务状态 | SCN-066 |
-| INV-070 | `localId` 派生时预分配、首次物化复用、COW 前后不变；业务 BC 必须能通过稳定 `localId` 定位或创建对应业务变体（不强制其存储主键等于 `localId`） | 用户确认（2026-11-11，K2′）；不持久化内容指针 | SCN-068 |
-| INV-071 | 物化完成 = 业务 BC 保存成功 **且** LightTrackerItem 切换成功；保存成功而切换失败不回滚业务内容，幂等重试只补未完成步骤、不覆盖已有业务对象 | 用户确认（2026-11-11，K3′）；保存失败不切换；`Materializing` 不纳入领域枚举 | SCN-067 |
-
-状态说明：INV-069～071 已由用户 2026-11-11 确认，可作为 Query / COW / Merge 行为测试的依据；实现映射与运行测试证据仍待建立，不得据此宣称已实现。
+- 完整 INV 正式接受：**0**；这不代表已确认业务约束为零。已确认子句按上表状态和[事实与政策基线](facts-policy-baseline-v1.md)使用。
+- `INV-001`～`013` 的完整形式仍候选；`INV-014`～`023` 的业务子句已确认；`INV-024`～`052` 多数业务子句已确认，但事务/保护方案仍候选；`INV-053`～`071` 多数已确认。
+- `INV-036`、`INV-049` 已由后续裁定取代，不再作为当前验收依据；`INV-056` 的槽位唯一性需按 T6-F 多 Tracker 政策重述。
+- `TC-002` 的“单聚合事务”只是兑现上述语义的候选架构，不能反向证明聚合边界。

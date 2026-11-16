@@ -1,6 +1,6 @@
 # Diff / Merge 知识提取（来自 pre-design 历史输入）
 
-**状态：Draft / Candidate（探索层知识提炼；不构成正式基线）**
+**状态：Historical（探索层知识提炼；不构成正式基线。Diff/Merge 执行已由 T1/ADR-0005 与 T6-E 收敛，本页保留提炼过程与备选思路）**
 
 - 来源：`pre-design/merge&diff/09-merge-domain-design.md`（v2.21）、`pre-design/workingsetModel-V4/00～10`。
 - 依据：AGENTS.md 第 13 节（`pre-design/` 为历史设计输入，需吸收和挑战，不是已确认基线）；当前 D-001～D-019 与阶段 4 补充。
@@ -62,7 +62,7 @@
 
 | 旧术语 / 设计 | 当前基线 | 适配说明 |
 | --- | --- | --- |
-| TrackerItem 继承 BusinessObject | TrackerItem 是 Shared Kernel 顶级接口（D-007） | 当前不强制 BusinessObject 继承；delete/undelete/delete2 是否进入公共契约待定 |
+| TrackerItem 继承 BusinessObject | TrackerItem 是 Shared Kernel 顶级接口（D-007） | 已由 D14 落地：`TrackerItem extends BusinessObject`，声明 delete/undelete/delete2；实际规则由各 BC 拥有 |
 | LightTrackerItem 私有聚合 | LightTrackerItem 独立聚合（D-008） | 一致；当前进一步明确身份/来源/Revision/COW |
 | VIRTUAL / INSTANTIATED | Source-backed / Local-backed（D-010） | 术语映射；Materializing 是技术状态 |
 | sourceVersion / targetVersion | SourceRevision / Revision（D-012/D-018） | MergeCheckpoint 双侧版次应对齐当前业务 Revision，而非 SourceRevision（来源内容版次） |
@@ -98,7 +98,7 @@
 - **MergeRound**：合并载体（LRO 发起后记录参数、进度、成功/失败信息）。
 - 共享 Tracker 不参与 Merge；非共享只允许直接父子准入（已确认）。
 
-仍待（执行协议，留实施）：差异冻结/比较令牌、幂等键、乱序确认、MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 的精确字段映射。
+仍待（执行协议，留实施）：所选差异证据的编码、幂等键、乱序确认、MergeCheckpoint 的「业务 Revision」与 SourceRevision/Revision 的精确字段映射。2026-11-15 后 compare 不持久化，比较令牌仅作为历史候选。
 
 ## 6. 来源与证据边界
 

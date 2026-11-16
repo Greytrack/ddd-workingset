@@ -73,6 +73,6 @@ public interface TrackerItem extends BusinessObject {
 
 1. ~~`LifecycleCommand` / `LifecycleResult` 的精确字段与返回类型。~~ D14 已定（见 §2）。
 2. ~~`delete2` 是聚合方法、应用服务方法，还是两者分层。~~ D14 已定：聚合提供 guard，应用服务编排实际删除。
-3. 所有 BC 是否必须实现三个方法，还是允许能力声明 + 拒绝不支持的操作（仍开放）。
+3. ~~所有 BC 是否必须实现三个方法，还是允许能力声明 + 拒绝不支持的操作。~~ D14 已定：所有 BC 的所有 Object 都具备 `delete`/`undelete`/`delete2` 能力声明；具体规则、guard 与拒绝语义由各 BC 实现，不以“能力不支持”作为默认缺口。
 4. 跨 BC 删除是否只经各 BC 的公开 Port，是否需要统一事件——D4/D13 已用 `RequirementPurged` 事件驱动 SK 侧清理；其他 BC 接入时沿用同一模式。
 5. ~~T4 §3.1 的修订方式：补充说明、ADR-0006，还是新契约版本。~~ D14 已按补充说明更新 T4 §3.1/§8。

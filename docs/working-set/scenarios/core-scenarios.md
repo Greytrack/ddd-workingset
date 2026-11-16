@@ -185,7 +185,7 @@
 
 ## 合并删除覆盖接收方修改
 
-**状态**：业务政策已获用户确认，执行协议待设计。**来源**：本对话用户明确答复“一切以用户决策为准”，见 [决策优先政策](../domain/facts.md#合并决策优先于接收方变动已确认业务政策)。
+**状态**：业务政策已获用户确认，执行协议待设计。**来源**：本对话用户明确答复“一切以用户决策为准”，见 [决策优先政策](../domain/facts.md#合并决策优先已确认业务政策)。
 
 - **Given** 直接父子工作集有对应 Requirement，子侧已删除该对象，父侧随后又修改它。
 - **When** 用户选择将子侧删除合并到父侧。
@@ -672,11 +672,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 **业务规则：Q2 裁定（ADR-0005，2026-11-10）；验收表述 Draft。** 关联 INV-006、D-015 反例、[契约 §3.2/§5](../domain/merge-execution-contract-v1.md)。
 
-- Given R0 与 R1 已 `compare` 产生 `TrackerItemDiff` 与 `ComparisonToken`，用户已查看字段差异。
+- Given R0 与 R1 已 `compare` 产生 `TrackerItemDiff` 与双侧瞬时证据，用户已查看字段差异。
 - When 审阅期间 R0 某字段再次被修改（业务 Revision 未升级，仅乐观锁 `lock_version` 增加），随后用户提交 `ACCEPT`。
-- Then MergeRound 复核 token 与当前双侧证据不一致，该条为 `StaleEvidence`：不写任何业务内容、不建 Checkpoint、要求重新比较。
-- 反例：若仅比较 Revision 是否相等就判定证据未变，本条会错误应用旧值——这正是 Q2 要求 token 绑定双侧内容证据的原因。
-- 边界：重新比较后以新 token 提交属新的执行；旧 token 不得复用。
+- Then MergeRound 复核所选差异证据与当前双侧证据不一致，该条为 `StaleEvidence`：不写任何业务内容、不建 Checkpoint、要求重新比较。
+- 反例：若仅比较 Revision 是否相等就判定证据未变，本条会错误应用旧值——这正是 Q2 要求证据绑定双侧内容的原因。
+- 边界：重新比较后以新的所选差异证据提交属新的执行；旧证据不得复用。
 
 <a id="scn-058"></a>
 ## SCN-058 撤销晚到：旧确认不得覆盖新撤销
@@ -695,7 +695,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 - Given 一轮三项：A `ACCEPT`、B `KEEP_TARGET`、C `DEFER`；A、B 均成功。
 - When 用户对 C 提交 `DEFER + markAsMerged=true`；或以 `DEFER + markAsMerged=false` 登记后结束本轮执行。
-- Then ① `DEFER + markAsMerged=true` 在 `registerEntries` 阶段被拒绝（非法组合）；② `DEFER + markAsMerged=false` 合法，条目不执行、不建 Checkpoint；③ 本轮存在其他成功项时，`completeRound` 返回唯一 `ApplyResult`，状态 `PartiallySucceeded`；④ 未处理差异进入后续新轮次，不要求先处理 C 才能关闭本轮。
+- Then ① `DEFER + markAsMerged=true` 在提交一页决策时被拒绝（非法组合）；② `DEFER + markAsMerged=false` 合法，条目不执行、不建 Checkpoint；③ 本轮存在其他成功项时，本次执行结束返回唯一 `ApplyResult`，状态 `PartiallySucceeded`；④ 未处理差异进入后续新轮次，不要求先处理 C 才能关闭本轮。
 - 可观察结果：C 在 `ApplyResult` 中为 `Deferred` 并计入未完成计数；轮次进入终态后不可重开、不可再登记或重新执行条目。
 - 边界：`KEEP_TARGET + markAsMerged=true` 属于**成功处理项**（未写内容但已处理），与 `DEFER` 不同；纯 `DEFER` 轮次按现行终态判定规则归入 `Failed`，本轮不新增专用状态枚举。
 
@@ -708,7 +708,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When M1 本次执行结束。
 - Then M1 生成唯一 `ApplyResult`，状态 `PartiallySucceeded`，进入终态且不可重开。
 - When 用户重新比较 B、C，创建 M2 并提交新的用户决定。
-- Then M2 使用新的 `mergeRoundId` 与有效 `ComparisonToken`；A 不在 M2 的自动重做范围；M1 的 A 成功事实保持不变。
+- Then M2 使用新的 `mergeRoundId` 与新的有效差异证据；A 不在 M2 的自动重做范围；M1 的 A 成功事实保持不变。
 - 可观察结果：M1 的 `ApplyResult` 不被修改；M2 有独立 ID、比较凭据与执行结果；A 的成功不被重复计算。
 - 边界：不存在「同一 MergeRound 内重试 B/C」；旧轮次结果保留可追溯；消息重复投递的幂等处理不属于业务重试。
 

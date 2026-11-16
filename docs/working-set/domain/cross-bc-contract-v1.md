@@ -42,9 +42,11 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 | 绑定移除/删除语义（POL-014 修订、2026-11-11 K1～K3）：Shared 移除仅解绑、非共享删除受三项检查、删除不可恢复 | POL-014、POL-016、T2 契约 |
 | 分类共享特性不可变；Tracker 共享特性创建时确定、不可修改 | POL-003 |
 
-## 3. 契约结构：只读契约 + 写入协作 Port
+## 3. 契约结构：只读应用 Port + 写入协作 Port
 
-**K1″（用户确认，2026-11-11）**：Shared Kernel 定义 `TrackerItem` **只读**公共契约与能力声明；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属业务 BC 执行。SK 可以协调 COW、Merge 等跨 BC 流程，但**不能绕过**业务 BC 聚合、领域规则或 Repository 执行通用 Save。
+**K1″（用户确认，2026-11-11）**：Shared Kernel 定义 `TrackerItem` 公共能力契约与只读应用 Port；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属业务 BC 执行。SK 可以协调 COW、Merge 等跨 BC 流程，但**不能绕过**业务 BC 聚合、领域规则或 Repository 执行通用 Save。
+
+> **“只读”的准确范围**：`TrackerItemReadPort` 是应用层只读 Port，不提供通用校验/保存/删除。领域接口 `TrackerItem` 继承 `BusinessObject` 后包含 `delete`/`undelete`/`delete2` 的能力声明（D14），但这些能力由各 BC 实现，不是 SK 的通用写入口。两者不矛盾：只读约束的是跨 BC Port，不是业务聚合对自身生命周期的能力声明。
 
 ### 3.1 `TrackerItemReadPort`（SK 定义，各 BC 实现，**只读**）
 

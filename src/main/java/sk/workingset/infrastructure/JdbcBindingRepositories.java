@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
@@ -24,6 +25,14 @@ import sk.workingset.domain.WorkingSetId;
 
 /** WorkingSet/Tracker/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。 */
 public final class JdbcBindingRepositories implements WorkingSetRepository, TrackerRepository, ProductSpaceRepository {
+    private static final String TRACKER_COLUMNS =
+            "tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id";
+    private static final RowMapper<Tracker> TRACKER_MAPPER = (rs, row) -> new Tracker(
+            TrackerId.of(rs.getString("tracker_id")), rs.getString("name"),
+            optionalId(rs, "source_id"), WorkingSetId.of(rs.getString("working_set_id")),
+            rs.getString("product_space_id"), rs.getString("classification_id"),
+            SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id"));
+
     private final JdbcTemplate jdbc;
 
     public JdbcBindingRepositories(JdbcTemplate jdbc) {
@@ -42,9 +51,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
 
     private Optional<WorkingSet> loadReadyWorkingSet(WorkingSetId id, boolean lock) {
         requireReady(id);
-        var workingSet = loadWorkingSet(id, lock);
-        requireReady(id);
-        return workingSet;
+        return loadWorkingSet(id, lock);
     }
 
     @Override
@@ -179,29 +186,15 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     }
 
     private Optional<Tracker> loadTracker(TrackerId id, boolean lock) {
-        String sql = """
-                SELECT tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
-                       parent_id FROM trackers WHERE tracker_id = ?
-                """;
-        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, (rs, row) -> new Tracker(
-                TrackerId.of(rs.getString("tracker_id")), rs.getString("name"),
-                optionalId(rs, "source_id"),
-                WorkingSetId.of(rs.getString("working_set_id")), rs.getString("product_space_id"),
-                rs.getString("classification_id"), SharingMode.valueOf(rs.getString("sharing_mode")),
-                optionalId(rs, "parent_id")), id.value()).stream().findFirst();
+        String sql = "SELECT " + TRACKER_COLUMNS + " FROM trackers WHERE tracker_id = ?";
+        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, TRACKER_MAPPER, id.value()).stream().findFirst();
     }
 
     @Override
     public List<Tracker> findTrackers(WorkingSetId workingSetId) {
-        return jdbc.query("""
-                SELECT tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode,
-                       parent_id FROM trackers WHERE working_set_id = ? ORDER BY tracker_id
-                """, (rs, row) -> new Tracker(TrackerId.of(rs.getString("tracker_id")),
-                rs.getString("name"), optionalId(rs, "source_id"),
-                WorkingSetId.of(rs.getString("working_set_id")),
-                rs.getString("product_space_id"), rs.getString("classification_id"),
-                SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id")),
-                workingSetId.value());
+        return jdbc.query("SELECT " + TRACKER_COLUMNS
+                + " FROM trackers WHERE working_set_id = ? ORDER BY tracker_id",
+                TRACKER_MAPPER, workingSetId.value());
     }
 
     @Override
