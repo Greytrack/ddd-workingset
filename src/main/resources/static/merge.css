@@ -43,3 +43,25 @@
   font-size: 11px;
   padding: 2px 4px;
 }
+
+.merge-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.merge-picker select {
+  font-size: 12px;
+  padding: 2px 4px;
+  max-width: 320px;
+}
+
+.merge-picker .muted {
+  color: var(--muted);
+}

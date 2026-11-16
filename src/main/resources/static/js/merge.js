@@ -60,6 +60,11 @@ async function openMerge() {
 }
 
 function renderMergeShell() {
+  const pickers = flattenWorksets();
+  const sourceOptions = pickers.map((node) =>
+    `<option value="${escapeHtml(node.id)}"${node.id === mergeView.source ? ' selected' : ''}>${escapeHtml(node.label)}</option>`).join('');
+  const targetOptions = pickers.map((node) =>
+    `<option value="${escapeHtml(node.id)}"${node.id === mergeView.target ? ' selected' : ''}>${escapeHtml(node.label)}</option>`).join('');
   $('#mergeContent').innerHTML = `
     <div class="modal-head">
       <div>
@@ -69,6 +74,11 @@ function renderMergeShell() {
       <button type="button" class="modal-close" onclick="closeMerge()">✕</button>
     </div>
     <div class="modal-body">
+      <div class="merge-picker">
+        <label>源 <select id="mergeSourceSelect" onchange="changeMergeDirection()">${sourceOptions}</select></label>
+        <label>目标 <select id="mergeTargetSelect" onchange="changeMergeDirection()">${targetOptions}</select></label>
+        <span class="muted">方向为「源 → 目标」；只允许直接父子工作集，其他组合会被服务端拒绝。</span>
+      </div>
       <div id="mergeBody"><div class="empty">正在比较…</div></div>
     </div>
     <div class="modal-foot">
@@ -77,6 +87,52 @@ function renderMergeShell() {
       <button type="button" class="btn" onclick="closeMerge()">关闭</button>
       <button type="button" class="btn primary" id="mergeSubmit" onclick="submitMerge()" disabled>提交本页决策</button>
     </div>`;
+}
+
+function flattenWorksets() {
+  const list = [];
+  const walk = (nodes, depth) => {
+    (nodes || []).forEach((node) => {
+      const name = node.ws && node.ws.name ? node.ws.name : (node.ws && node.ws.defaultWorkingSet ? '默认工作集' : node.id);
+      list.push({ id: node.id, label: '　'.repeat(depth) + name + '（' + shortId(node.id) + '）' });
+      walk(node.children, depth + 1);
+    });
+  };
+  walk(state.worksets, 0);
+  return list;
+}
+
+async function changeMergeDirection() {
+  const source = $('#mergeSourceSelect').value;
+  const target = $('#mergeTargetSelect').value;
+  mergeView.source = source;
+  mergeView.target = target;
+  mergeView.offset = 0;
+  mergeView.rows = [];
+  mergeView.round = null;
+  if (mergeView.poller) {
+    clearInterval(mergeView.poller);
+    mergeView.poller = null;
+  }
+  if (source === target) {
+    $('#mergeSubtitle').textContent = '源与目标相同';
+    $('#mergeBody').innerHTML = '<div class="empty">请选择不同的源与目标</div>';
+    $('#mergeSubmit').disabled = true;
+    return;
+  }
+  if (!isDirectParentChild(source, target)) {
+    $('#mergeSubtitle').textContent = '源 → 目标不是直接父子';
+    $('#mergeBody').innerHTML = '<div class="empty">仅允许直接父子工作集：父 → 子或子 → 父</div>';
+    $('#mergeSubmit').disabled = true;
+    return;
+  }
+  await loadMergePage();
+}
+
+function isDirectParentChild(source, target) {
+  const sourceNode = findNode(state.worksets, source);
+  const targetNode = findNode(state.worksets, target);
+  return sourceNode?.ws?.parentWorkingSetId === target || targetNode?.ws?.parentWorkingSetId === source;
 }
 
 async function loadMergePage() {
