@@ -11,7 +11,8 @@ import sk.workingset.domain.merge.MergeRound;
  * <p>Compare 结果是瞬时展示数据，不写入本端口；MergeRound 保存用户决策及其所选差异证据。
  */
 public interface MergeStore {
-    boolean insertRound(MergeRound round);
+    /** 插入新轮次；`requestId` 已存在时返回已有轮次，保持幂等。 */
+    Optional<MergeRound> insertOrFindRound(MergeRound round);
     Optional<MergeRound> findRound(String id, boolean lock);
     Optional<MergeRound> findRoundByRequest(String requestId);
     void updateRound(MergeRound round);

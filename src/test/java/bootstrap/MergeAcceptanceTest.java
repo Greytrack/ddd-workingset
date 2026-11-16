@@ -240,6 +240,61 @@ class MergeAcceptanceTest {
     }
 
     @Test
+    void concurrentSubmissionsWithSameRequestIdReturnOneRound() throws Exception {
+        String family = id("concurrent-submit");
+        seed(rootTracker, family, "concurrent submit probe");
+        var difference = diff(compare("1", child), family);
+        String requestId = id("concurrent-request");
+        var body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
+                "decisions", List.of(existence(difference, "CREATE")));
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var one = executor.submit(() -> {
+                start.await();
+                return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
+            });
+            var two = executor.submit(() -> {
+                start.await();
+                return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
+            });
+            start.countDown();
+            var first = one.get(20, TimeUnit.SECONDS);
+            var second = two.get(20, TimeUnit.SECONDS);
+            assertStatus(HttpStatus.CREATED, first);
+            assertStatus(HttpStatus.CREATED, second);
+            assertEquals(first.getBody().get("id"), second.getBody().get("id"));
+            rounds.add((String) first.getBody().get("id"));
+            tokens.add((String) first.getBody().get("token"));
+        }
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM merge_rounds WHERE request_id = ?",
+                Integer.class, requestId));
+    }
+
+    @Test
+    void failedSubmissionLeavesNoRoundBehind() {
+        String family = id("failed-submit");
+        String source = seed(rootTracker, family, "failed submit probe");
+        var frozen = compare("1", child);
+        change(source, "changed before submit", 0);
+        String requestId = id("failed-submit-request");
+        var body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
+                "decisions", List.of(field(diff(frozen, family), "ACCEPT", false)));
+        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM merge_rounds WHERE request_id = ?",
+                Integer.class, requestId));
+    }
+
+    @Test
+    void rejectsRequestIdLongerThanStorageColumn() {
+        String family = id("long-request");
+        seed(rootTracker, family, "long request id probe");
+        var difference = diff(compare("1", child), family);
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+                Map.of("sourceWorkingSetId", "1", "requestId", "x".repeat(129),
+                        "decisions", List.of(field(difference, "ACCEPT", false))), Map.class));
+    }
+
+    @Test
     void requestIdCannotBeReusedForAnotherDirection() {
         String family = id("conflict");
         seed(rootTracker, family, "conflict probe");

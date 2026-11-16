@@ -24,11 +24,13 @@ public final class JdbcMergeStore implements MergeStore {
     }
 
     @Override
-    public boolean insertRound(MergeRound round) {
-        return jdbc.update("""
+    public Optional<MergeRound> insertOrFindRound(MergeRound round) {
+        return jdbc.query("""
                 INSERT INTO merge_rounds (id, token, request_id, state) VALUES (?, ?, ?, CAST(? AS jsonb))
-                ON CONFLICT DO NOTHING
-                """, round.id(), round.token(), round.requestId(), encode(round)) == 1;
+                ON CONFLICT (request_id) DO UPDATE SET request_id = EXCLUDED.request_id
+                RETURNING state
+                """, (rs, row) -> decode(rs.getString(1), MergeRound.class),
+                round.id(), round.token(), round.requestId(), encode(round)).stream().findFirst();
     }
 
     @Override

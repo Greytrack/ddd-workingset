@@ -84,10 +84,11 @@ public class MergeExecutionService {
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
-        var round = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
-        if (!store.insertRound(round)) {
-            return matching(store.findRoundByRequest(requestId).orElseThrow(
-                    () -> new MergeFailure(Reason.Conflict, requestId)), source, target);
+        var prepared = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
+        var round = store.insertOrFindRound(prepared).orElseThrow(
+                () -> new MergeFailure(Reason.Conflict, requestId));
+        if (!round.id().equals(prepared.id())) {
+            return matching(round, source, target);
         }
         registerDecisions(round, decisions);
         events.publishEvent(new MergeRoundSubmitted(round.id()));
