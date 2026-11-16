@@ -23,7 +23,7 @@
 - 同 `requestId` 返回原轮次；同键换方向 409 `Conflict`；登记阶段证据过期 409 `StaleEvidence`，整轮回滚，不留半成品轮次。
 - 并发同键：`insertOrFindRound` 以 `ON CONFLICT (request_id) DO UPDATE … RETURNING state` 单条语句返回已提交轮次，不依赖"插入失败后再查询"的可见性。
 - 提交后由 `MergeRoundSubmitted` 异步逐条执行；`apply` 仅作幂等触发器与恢复入口。
-- Checkpoint 的业务身份是方向 + 家族（`source_id, target_id, common_id`）；左右 `local_id` 只作为确认时的变体证据。
+- Checkpoint 的业务身份是**两侧 Tracker 分支 + 家族**（`tracker_a_id, tracker_b_id, common_id`）；**WorkingSet 不参与**；左右 `local_id` 只作为确认时的变体证据。
 
 ## 验证
 

@@ -84,15 +84,46 @@ public class MergeExecutionService {
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
+        var pair = trackerPair(decisions);
+        if (store.hasActiveRoundForTrackerPair(pair.a(), pair.b())) {
+            throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
+        }
         var prepared = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
-        var round = store.insertOrFindRound(prepared).orElseThrow(
-                () -> new MergeFailure(Reason.Conflict, requestId));
+        MergeRound round;
+        try {
+            round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
+                    () -> new MergeFailure(Reason.Conflict, requestId));
+        } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
+            throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
+        }
         if (!round.id().equals(prepared.id())) {
             return matching(round, source, target);
         }
         registerDecisions(round, decisions);
         events.publishEvent(new MergeRoundSubmitted(round.id()));
         return round(round.id(), false);
+    }
+
+    /** 一页决策必须同属一个 Tracker 分支对；返回规范化后的键。 */
+    private static MergeCheckpoint.Key trackerPair(List<EntryRequest> decisions) {
+        var evidence = decisions.getFirst().evidence();
+        if (evidence == null) {
+            throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
+        }
+        var pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
+                evidence.family());
+        boolean mixed = decisions.stream().anyMatch(request -> {
+            if (request.evidence() == null) {
+                return true;
+            }
+            var other = new MergeCheckpoint.Key(request.evidence().trackers().source(),
+                    request.evidence().trackers().target(), request.evidence().family());
+            return !other.a().equals(pair.a()) || !other.b().equals(pair.b());
+        });
+        if (mixed) {
+            throw new MergeFailure(Reason.InvalidDecision, "decisions must belong to one tracker pair");
+        }
+        return pair;
     }
 
     /** 一页决策要么整页登记成功，要么整轮回滚；失败原因决定客户端下一步动作。 */
@@ -311,11 +342,20 @@ public class MergeExecutionService {
         String operation = operation(entry);
         String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
         if (entry.decision().markAsMerged()) {
-            var key = new MergeCheckpoint.Key(round.source(), round.target(), entry.evidence().family());
-            var sourceId = entry.evidence().source().localId();
-            var targetId = receipt.businessRef() != null ? receipt.businessRef() : entry.evidence().target().localId();
+            var trackers = entry.evidence().trackers();
+            var key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), entry.evidence().family());
+            boolean sourceIsA = key.a().equals(trackers.source());
+            var sourceLocal = entry.evidence().source().localId();
+            var targetLocal = receipt.businessRef() != null ? receipt.businessRef()
+                    : entry.evidence().target().localId();
+            var localA = sourceIsA ? sourceLocal : targetLocal;
+            var localB = sourceIsA ? targetLocal : sourceLocal;
+            var revisionA = sourceIsA ? receipt.sourceRevision() : receipt.targetRevision();
+            var revisionB = sourceIsA ? receipt.targetRevision() : receipt.sourceRevision();
+            var direction = sourceIsA ? MergeCheckpoint.Direction.A_TO_B : MergeCheckpoint.Direction.B_TO_A;
             boolean confirmed = store.recordCheckpoint(new MergeCheckpoint(key, entry.decisionVersion(),
-                    receipt.sourceRevision(), receipt.targetRevision(), sourceId, targetId, round.token(), false));
+                    revisionA, revisionB, localA, localB, round.id(), entry.evidence().kind(), direction, false,
+                    round.caller()));
             return result(entry, confirmed ? Outcome.Confirmed : Outcome.Applied, operation, businessRef,
                     confirmed ? "Confirmed" : "Superseded", null);
         }

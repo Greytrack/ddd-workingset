@@ -91,11 +91,11 @@ public class MergeController {
         return rounds.get(id);
     }
 
-    @PostMapping("/worksets/{target}/merge-checkpoints/{source}/{family}/revoke")
+    @PostMapping("/merge-checkpoints/{trackerA}/{trackerB}/{family}/revoke")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revoke(@PathVariable String target, @PathVariable String source, @PathVariable String family,
+    public void revoke(@PathVariable String trackerA, @PathVariable String trackerB, @PathVariable String family,
                        @RequestBody RevokeRequest request) {
-        rounds.revokeCheckpoint(new MergeCheckpoint.Key(WorkingSetId.of(source), WorkingSetId.of(target),
+        rounds.revokeCheckpoint(new MergeCheckpoint.Key(TrackerId.of(trackerA), TrackerId.of(trackerB),
                 CommonId.of(family)), request.expectedDecisionVersion());
     }
 

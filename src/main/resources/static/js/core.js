@@ -56,6 +56,7 @@ const REASON_TEXT = {
   DELETED: '对象已删除',
   HISTORY_UNAVAILABLE: '所需历史版本不可读',
   DEPENDENCY_UNAVAILABLE: '依赖服务暂不可用',
+  PairMergeInProgress: '同一对 Tracker 正在合并，请等待本轮结束',
   UNKNOWN: '发生未知错误'
 };
 

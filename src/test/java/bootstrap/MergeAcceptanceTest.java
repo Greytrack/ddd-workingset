@@ -48,6 +48,7 @@ import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
@@ -100,10 +101,8 @@ class MergeAcceptanceTest {
     @AfterEach
     void cleanup() {
         for (String round : rounds) {
+            jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", round);
             jdbc.update("DELETE FROM merge_rounds WHERE id = ?", round);
-        }
-        for (String token : tokens) {
-            jdbc.update("DELETE FROM merge_checkpoints WHERE token = ?", token);
         }
         var itemIds = jdbc.queryForList("""
                 SELECT local_id FROM requirements WHERE tracker_id IN
@@ -440,11 +439,12 @@ class MergeAcceptanceTest {
         assertEquals(0, requirement(kept).lockVersion());
         assertEquals("target", requirement(rejectedTarget).title());
 
-        var key = new MergeCheckpoint.Key(WorkingSetId.of("1"), WorkingSetId.of(child), CommonId.of(keep));
+        var key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
+                CommonId.of(keep));
         var checkpoint = store.findCheckpoint(key).orElseThrow();
-        assertNotNull(checkpoint.sourceLocalId());
-        assertNotNull(checkpoint.targetLocalId());
-        assertEquals(kept, checkpoint.targetLocalId().value());
+        assertNotNull(checkpoint.localIdA());
+        assertNotNull(checkpoint.localIdB());
+        assertTrue(kept.equals(checkpoint.localIdA().value()) || kept.equals(checkpoint.localIdB().value()));
         change(kept, "changed after checkpoint", 0);
         var afterCheckpointEdit = compare("1", child);
         assertFalse(afterCheckpointEdit.differences().stream().anyMatch(item -> keep.equals(item.family().value())));
@@ -456,7 +456,8 @@ class MergeAcceptanceTest {
         assertEquals("valid on retry", requirement(rejectedTarget).title());
         assertEquals(partial, rest.getForObject(roundPath(round), MergeRound.class).result());
 
-        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(ws(child) + "/merge-checkpoints/1/" + keep + "/revoke",
+        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(
+                "/api/merge-checkpoints/" + key.a().value() + "/" + key.b().value() + "/" + keep + "/revoke",
                 Map.of("expectedDecisionVersion", checkpoint.decisionVersion()), Void.class));
         assertFalse(store.recordCheckpoint(checkpoint));
         assertTrue(store.findCheckpoint(key).orElseThrow().revoked());
@@ -526,8 +527,8 @@ class MergeAcceptanceTest {
         assertEquals("local edit after commit", requirement(target).title());
         assertEquals(2, requirement(target).lockVersion());
         var checkpoint = store.findCheckpoint(new MergeCheckpoint.Key(
-                WorkingSetId.of("1"), WorkingSetId.of(child), CommonId.of(family))).orElseThrow();
-        assertEquals(3, checkpoint.sourceRevision().value());
+                TrackerId.of(rootTracker), TrackerId.of(childTracker), CommonId.of(family))).orElseThrow();
+        assertTrue(checkpoint.revisionA().value() == 3 || checkpoint.revisionB().value() == 3);
     }
 
     @Test

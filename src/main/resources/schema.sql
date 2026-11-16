@@ -224,25 +224,43 @@ CREATE TABLE IF NOT EXISTS merge_rounds (
     execution_lock_id BIGSERIAL UNIQUE
 );
 
+-- 一页决策同属一个 Tracker 对；Preparing/Running 期间占用该对，作为并发合并闸门。
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_a_id VARCHAR(64);
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_b_id VARCHAR(64);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
+    ON merge_rounds (tracker_a_id, tracker_b_id)
+    WHERE (state->>'state') IN ('Preparing', 'Running');
+
 CREATE SEQUENCE IF NOT EXISTS merge_decision_version;
 
--- 有向「已处理」事实：同一方向 (source_id, target_id) 的同一家族 (common_id) 至多一行。
--- 业务身份是方向 + 家族；source_local_id / target_local_id 只是确认时的变体证据，
--- 会随物化、派生和切换而变化，若作为主键会让同一家族累积多行并失去撤销的唯一定位。
--- source_revision / target_revision 是业务版次（R11），decision_version 防止晚到确认覆盖新事实。
+-- 「已处理」锚点：同一 Tracker 分支对 (tracker_a_id, tracker_b_id) 的同一家族 (common_id) 至多一行；
+-- WorkingSet 不参与 Checkpoint 身份；merge_direction 只是本次确认的方向属性；
+-- local_id_a/b 只是确认时的变体证据，revision_a/b 是命中锚点，decision_version 防止晚到确认覆盖新事实。
 CREATE TABLE IF NOT EXISTS merge_checkpoints (
-    source_id VARCHAR(128) NOT NULL,
-    target_id VARCHAR(128) NOT NULL,
-    common_id VARCHAR(64) NOT NULL,
-    decision_version BIGINT NOT NULL,
-    source_revision INTEGER,
-    target_revision INTEGER,
-    source_local_id VARCHAR(64),
-    target_local_id VARCHAR(64),
-    token VARCHAR(64) NOT NULL,
-    revoked BOOLEAN NOT NULL,
-    PRIMARY KEY (source_id, target_id, common_id)
+    checkpoint_id    BIGSERIAL PRIMARY KEY,
+    round_id         VARCHAR(64) NOT NULL,
+    tracker_a_id     VARCHAR(64) NOT NULL,
+    tracker_b_id     VARCHAR(64) NOT NULL,
+    common_id        VARCHAR(64) NOT NULL,
+    local_id_a       VARCHAR(64),
+    local_id_b       VARCHAR(64),
+    revision_a       INTEGER,
+    revision_b       INTEGER,
+    change_kind      VARCHAR(16),
+    merge_direction  VARCHAR(8)  NOT NULL,
+    decision_version BIGINT      NOT NULL,
+    revoked          BOOLEAN     NOT NULL DEFAULT FALSE,
+    remark           TEXT,
+    operator         VARCHAR(64),
+    confirmed_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_checkpoints_tracker_pair_family
+    ON merge_checkpoints (tracker_a_id, tracker_b_id, common_id);
+CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_round ON merge_checkpoints (round_id);
+CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_family ON merge_checkpoints (common_id);
 
 CREATE TABLE IF NOT EXISTS merge_commit_receipts (
     round_id VARCHAR(64) NOT NULL REFERENCES merge_rounds (id) ON DELETE CASCADE,

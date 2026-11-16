@@ -10,7 +10,10 @@ import sk.workingset.application.port.MergeCommitReceipt;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.MergeCheckpoint;
+import sk.workingset.domain.merge.MergeCheckpoint.Direction;
 import sk.workingset.domain.merge.MergeRound;
 
 /** Merge 存储的 JDBC 实现：轮次状态按 JSONB 保存，比较结果不持久化。 */
@@ -24,13 +27,15 @@ public final class JdbcMergeStore implements MergeStore {
     }
 
     @Override
-    public Optional<MergeRound> insertOrFindRound(MergeRound round) {
+    public Optional<MergeRound> insertOrFindRound(MergeRound round, TrackerId trackerA, TrackerId trackerB) {
         return jdbc.query("""
-                INSERT INTO merge_rounds (id, token, request_id, state) VALUES (?, ?, ?, CAST(? AS jsonb))
+                INSERT INTO merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
+                VALUES (?, ?, ?, CAST(? AS jsonb), ?, ?)
                 ON CONFLICT (request_id) DO UPDATE SET request_id = EXCLUDED.request_id
                 RETURNING state
                 """, (rs, row) -> decode(rs.getString(1), MergeRound.class),
-                round.id(), round.token(), round.requestId(), encode(round)).stream().findFirst();
+                round.id(), round.token(), round.requestId(), encode(round),
+                trackerA.value(), trackerB.value()).stream().findFirst();
     }
 
     @Override
@@ -49,6 +54,15 @@ public final class JdbcMergeStore implements MergeStore {
     @Override
     public void updateRound(MergeRound round) {
         jdbc.update("UPDATE merge_rounds SET state = CAST(? AS jsonb) WHERE id = ?", encode(round), round.id());
+    }
+
+    @Override
+    public boolean hasActiveRoundForTrackerPair(TrackerId trackerA, TrackerId trackerB) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM merge_rounds
+                    WHERE tracker_a_id = ? AND tracker_b_id = ?
+                      AND state->>'state' IN ('Preparing', 'Running'))
+                """, Boolean.class, trackerA.value(), trackerB.value()));
     }
 
     @Override
@@ -88,44 +102,57 @@ public final class JdbcMergeStore implements MergeStore {
     public boolean recordCheckpoint(MergeCheckpoint checkpoint) {
         var key = checkpoint.key();
         return jdbc.update("""
-                INSERT INTO merge_checkpoints (source_id, target_id, common_id, decision_version,
-                    source_revision, target_revision, source_local_id, target_local_id, token, revoked)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (source_id, target_id, common_id) DO UPDATE SET
-                    decision_version = EXCLUDED.decision_version, source_revision = EXCLUDED.source_revision,
-                    target_revision = EXCLUDED.target_revision, source_local_id = EXCLUDED.source_local_id,
-                    target_local_id = EXCLUDED.target_local_id, token = EXCLUDED.token,
-                    revoked = EXCLUDED.revoked
+                INSERT INTO merge_checkpoints (round_id, tracker_a_id, tracker_b_id, common_id,
+                    local_id_a, local_id_b, revision_a, revision_b, change_kind, merge_direction,
+                    decision_version, revoked, operator)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (tracker_a_id, tracker_b_id, common_id) DO UPDATE SET
+                    round_id = EXCLUDED.round_id,
+                    local_id_a = EXCLUDED.local_id_a, local_id_b = EXCLUDED.local_id_b,
+                    revision_a = EXCLUDED.revision_a, revision_b = EXCLUDED.revision_b,
+                    change_kind = EXCLUDED.change_kind, merge_direction = EXCLUDED.merge_direction,
+                    decision_version = EXCLUDED.decision_version, revoked = EXCLUDED.revoked,
+                    operator = EXCLUDED.operator, updated_at = now()
                 WHERE merge_checkpoints.decision_version < EXCLUDED.decision_version
                    OR (merge_checkpoints.decision_version = EXCLUDED.decision_version
                        AND EXCLUDED.revoked AND NOT merge_checkpoints.revoked)
-                """, key.source().value(), key.target().value(), key.family().value(), checkpoint.decisionVersion(),
-                revision(checkpoint.sourceRevision()), revision(checkpoint.targetRevision()),
-                localId(checkpoint.sourceLocalId()), localId(checkpoint.targetLocalId()),
-                checkpoint.token(), checkpoint.revoked()) == 1;
+                """, checkpoint.roundId(), key.a().value(), key.b().value(), key.family().value(),
+                localId(checkpoint.localIdA()), localId(checkpoint.localIdB()),
+                revision(checkpoint.revisionA()), revision(checkpoint.revisionB()),
+                checkpoint.changeKind() == null ? null : checkpoint.changeKind().name(),
+                checkpoint.direction().name(), checkpoint.decisionVersion(), checkpoint.revoked(),
+                checkpoint.operator()) == 1;
     }
 
     @Override
     public Optional<MergeCheckpoint> findCheckpoint(MergeCheckpoint.Key key) {
         return jdbc.query("""
-                SELECT decision_version, source_revision, target_revision, source_local_id, target_local_id,
-                       token, revoked
-                FROM merge_checkpoints WHERE source_id = ? AND target_id = ? AND common_id = ?
-                """, (rs, row) -> new MergeCheckpoint(key, rs.getLong(1),
-                revision(rs.getObject(2, Integer.class)), revision(rs.getObject(3, Integer.class)),
-                localId(rs.getString(4)), localId(rs.getString(5)), rs.getString(6), rs.getBoolean(7)),
-                key.source().value(), key.target().value(), key.family().value())
-                .stream().findFirst();
+                SELECT round_id, local_id_a, local_id_b, revision_a, revision_b, change_kind,
+                       merge_direction, decision_version, revoked, operator
+                FROM merge_checkpoints
+                WHERE tracker_a_id = ? AND tracker_b_id = ? AND common_id = ?
+                """, (rs, row) -> new MergeCheckpoint(key, rs.getLong(8),
+                revision(rs.getObject(4, Integer.class)), revision(rs.getObject(5, Integer.class)),
+                localId(rs.getString(2)), localId(rs.getString(3)), rs.getString(1),
+                changeKind(rs.getString(6)), direction(rs.getString(7)), rs.getBoolean(9), rs.getString(10)),
+                key.a().value(), key.b().value(), key.family().value()).stream().findFirst();
     }
 
     @Override
     public boolean revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion, long newVersion) {
         return jdbc.update("""
-                UPDATE merge_checkpoints SET revoked = TRUE, decision_version = ?
-                WHERE source_id = ? AND target_id = ? AND common_id = ?
+                UPDATE merge_checkpoints SET revoked = TRUE, decision_version = ?, updated_at = now()
+                WHERE tracker_a_id = ? AND tracker_b_id = ? AND common_id = ?
                     AND decision_version = ? AND NOT revoked
-                """, newVersion, key.source().value(), key.target().value(), key.family().value(),
-                expectedVersion) == 1;
+                """, newVersion, key.a().value(), key.b().value(), key.family().value(), expectedVersion) == 1;
+    }
+
+    private static ChangeKind changeKind(String value) {
+        return value == null ? null : ChangeKind.valueOf(value);
+    }
+
+    private static Direction direction(String value) {
+        return value == null ? null : Direction.valueOf(value);
     }
 
     private static Integer revision(Revision revision) { return revision == null ? null : revision.value(); }

@@ -42,7 +42,7 @@ Diff 产生有向瞬时差异
 | **Diff 能力**（Compare & Merge 区域） | 查询能力／领域服务，非聚合 | 产生有向、可追溯的 `TrackerItemDiff` 与瞬时比较证据；只读双侧证据 | 不写业务内容；不持决定；不记录「已处理」 |
 | **MergeRound** | 聚合根（合并载体，D-019） | 轮次参数、条目集合、进度、单项结果、最终 `ApplyResult`；持有本轮合并决策 | 不直接写业务字段；不判定 BC 业务合法性；不拥有 Checkpoint |
 | **MergeEntry** | MergeRound 内 **Entity**（已裁定：ADR-0005） | 一次合并事项的生命周期与状态；绑定 token、决定、目标操作、结果 | 不是独立聚合；不跨轮次复用 |
-| **MergeCheckpoint** | 独立聚合（D-019） | 「差异已处理」的确认/撤销事实与因果单调；按范围+家族键+双侧版次定位 | 不拥有业务内容；不证明内容相等；不替代 ApplyResult |
+| **MergeCheckpoint** | 独立聚合（D-019） | 「差异已处理」的确认/撤销事实与因果单调；按两侧 **Tracker 分支** + 家族键 + 双侧版次定位（WorkingSet 不参与身份） | 不拥有业务内容；不证明内容相等；不替代 ApplyResult |
 | **业务 BC 聚合** | 各 BC 独立聚合 | 构建目标聚合、整体校验、提交（Save）、返回真实结果与业务 Revision | 不做合并选择；不记录 Checkpoint |
 | **LightTrackerItem** | 独立聚合（D-008） | 身份（LocalId/CommonId）、有效内容来源、自身 Revision 的维护 | 不构造业务内容；不判定合并合法性 |
 
@@ -125,23 +125,25 @@ compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较
 
 ## 6. MergeCheckpoint 主要领域行为与不变量
 
+**身份声明（2026-11-16 修正）**：Checkpoint 的身份是**两侧 Tracker 分支 + 家族键**，**不含 WorkingSet**。合并以 Tracker 为单位进行（MergeEntry 的 TrackerItem 对来自 Tracker 对）；WorkingSet 只是发起轮次的上下文，不进入 Checkpoint 键。
+
 ### 6.1 行为
 
 | 行为 | 入参 | 返回 | 说明 |
 | --- | --- | --- | --- |
-| `confirm` | 范围、家族键、决定版本、双侧业务 Revision、证据引用 | `CheckpointId` | 记录「已处理」；KEEP_TARGET 亦可确认 |
-| `revoke` | 范围、家族键、被撤销的确认、原因 | `CheckpointId` | 记录撤销事实与因果位置 |
-| `lookup` | 范围、家族键、双侧业务 Revision | `Handled` / `Outdated` / `Unknown` | 供 Diff 隐藏已处理差异 |
+| `confirm` | 两侧 Tracker 分支（trackerA / trackerB）、家族键、决定版本、双侧业务 Revision、证据引用 | `CheckpointId` | 记录「已处理」；KEEP_TARGET 亦可确认 |
+| `revoke` | 两侧 Tracker 分支、家族键、被撤销的确认、原因 | `CheckpointId` | 记录撤销事实与因果位置 |
+| `lookup` | 两侧 Tracker 分支、家族键、双侧业务 Revision | `Handled` / `Outdated` / `Unknown` | 供 Diff 隐藏已处理差异 |
 
 ### 6.2 不变量（契约候选，标注 Candidate）
 
 | 编号 | 不变量 | 依据 |
 | --- | --- | --- |
-| CK-1 | 同一（范围、家族键）的确认必须基于不低于已存决定版本的决定；更旧的决定版本不得覆盖新确认 | INV-010 的 Checkpoint 因果顺序；B10 |
+| CK-1 | 同一（两侧 Tracker 分支、家族键）的确认必须基于不低于已存决定版本的决定；更旧的决定版本不得覆盖新确认 | INV-010 的 Checkpoint 因果顺序；B10 |
 | CK-2 | 撤销一经记录，晚到的同版本或更旧确认不得使其失效 | 「旧确认不得覆盖更新的撤销」（INV-010） |
 | CK-3 | 确认不等于内容相等：`KEEP_TARGET` 可确认；确认不写业务内容、不改变业务 Revision | R11；CONCEPT-015 |
 | CK-4 | 任一侧业务 Revision 显式升级后，旧 Checkpoint 对该版本组合过时；普通编辑只增乐观锁 `lock_version` 时不失效 | R11/R12（已确认；2026-11-11 术语修正） |
-| CK-5 | Checkpoint 独立聚合，不持有业务内容、不以 MergeRound 为父，只按范围+家族键+决定版本关联 | D-019 |
+| CK-5 | Checkpoint 独立聚合，不持有业务内容、不以 MergeRound 为父，只按两侧 Tracker 分支 + 家族键 + 决定版本关联；WorkingSet 不参与 | D-019 |
 
 ## 7. ACCEPT / KEEP_TARGET / DEFER 与 markAsMerged 行为矩阵
 

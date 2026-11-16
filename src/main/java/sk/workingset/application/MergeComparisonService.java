@@ -78,7 +78,7 @@ public class MergeComparisonService {
             for (var family : families) {
                 Side left = read(sources.get(family), caller);
                 Side right = read(targets.get(family), caller);
-                if (handled(source, target, family, left, right)) {
+                if (handled(pair, family, left, right)) {
                     continue;
                 }
                 if (left.presence() == Presence.ABSENT && right.presence() == Presence.ABSENT) {
@@ -99,13 +99,15 @@ public class MergeComparisonService {
         return new Comparison(source, target, Instant.now(), candidates, differences);
     }
 
-    private boolean handled(WorkingSetId source, WorkingSetId target, CommonId family, Side left, Side right) {
-        return store.findCheckpoint(new MergeCheckpoint.Key(source, target, family))
+    private boolean handled(Comparison.TrackerPair trackers, CommonId family, Side left, Side right) {
+        var key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), family);
+        boolean leftIsA = key.a().equals(trackers.source());
+        var aRevision = leftIsA ? left.revision() : right.revision();
+        var bRevision = leftIsA ? right.revision() : left.revision();
+        return store.findCheckpoint(key)
                 .filter(checkpoint -> !checkpoint.revoked())
-                .filter(checkpoint -> java.util.Objects.equals(checkpoint.sourceRevision(), left.revision())
-                        && java.util.Objects.equals(checkpoint.targetRevision(), right.revision())
-                        && java.util.Objects.equals(checkpoint.sourceLocalId(), left.localId())
-                        && java.util.Objects.equals(checkpoint.targetLocalId(), right.localId()))
+                .filter(checkpoint -> java.util.Objects.equals(checkpoint.revisionA(), aRevision)
+                        && java.util.Objects.equals(checkpoint.revisionB(), bRevision))
                 .isPresent();
     }
 

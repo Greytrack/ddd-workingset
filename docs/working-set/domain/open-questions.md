@@ -224,3 +224,25 @@ QUESTION-002.h（Item 聚合归属）已由 D-007 关闭：业务 BC 拥有具�
 ## D-019 后的执行协议（QUESTION-015）
 
 领域裁定见 [T1 执行契约](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)与[关闭评审](../reviews/2026-11-11-t1-contract-review.md)。证据、幂等和 Checkpoint 的落地及未覆盖范围见 [S7 验证](../implementation/t5-s7-verification-result.md)。原备选方案与轮次重试裁定由 ADR 和评审保留。
+
+## 2026-11-16 T6-F 裁定
+
+用户逐项裁定，记录见 [T6-F 谱系约束裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)：
+
+| 子问题 | 裁定 |
+| --- | --- |
+| QUESTION-002.f Shared 父级一致性 | 允许悬挂：Shared `parentId` 由默认工作集维护、始终不变；子工作集可不绑定其父，能构树则构树 |
+| QUESTION-002.e 同源多派生 | 允许同一工作集、同一（空间，分类）多个 Tracker；新增 `is_default`，每个组合恰好一个默认；产品空间创建时同步建默认 Tracker；名称不得重复 |
+| QUESTION-002.d2 `sourceId` 可变性 | 不可变 |
+| QUESTION-002.i 派生整批原子 | 整批原子（LRO 范式） |
+| 创建完成可见性 | 完成即可见；发布/基线语义留给 T6-G |
+
+以下为 2026-11-16 补充裁定（细化）：
+
+1. 默认 Tracker：每个（工作集，空间，分类）恰好一个默认。
+2. 名称唯一：同一（产品空间，分类）内唯一。
+3. 多派生后的 compare/merge 条目身份 = 左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次。
+4. Shared 分类也参与 `is_default`：每个（工作集，空间，分类）都有默认 Tracker。
+5. 产品空间创建入口：`POST /api/workspaces/1/product-spaces`，同时创建默认 Tracker。
+
+仍待确认：候选对生成方式（同一（空间，分类）下取左右全部组合，还是先按 `source_id`／`is_default`／名称过滤后再配对）。

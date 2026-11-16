@@ -3,7 +3,7 @@ package sk.workingset.domain.merge;
 /** Merge 失败：冲突、拒绝、证据过期、轮次关闭等，区别于业务 BC 的 ApplicationFailure。 */
 public final class MergeFailure extends RuntimeException {
     public enum Reason {
-        MergeNotAllowed, RoundNotFound, RoundClosed, RoundInProgress, StaleEvidence,
+        MergeNotAllowed, RoundNotFound, RoundClosed, RoundInProgress, PairMergeInProgress, StaleEvidence,
         InvalidDecision, Rejected, Conflict
     }
 
