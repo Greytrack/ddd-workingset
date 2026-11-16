@@ -57,12 +57,6 @@ public final class JdbcMergeStore implements MergeStore {
     }
 
     @Override
-    public boolean supportsCommitRecovery(String roundId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT supports_commit_recovery FROM merge_rounds WHERE id = ?", Boolean.class, roundId));
-    }
-
-    @Override
     public Optional<MergeCommitReceipt> findCommitReceipt(String roundId, String entryId) {
         return jdbc.query("""
                 SELECT business_ref, source_revision, target_revision FROM merge_commit_receipts

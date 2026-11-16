@@ -45,9 +45,6 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
                              Side source, Side target, List<String> fields) {
         public Difference {
             fields = List.copyOf(fields);
-            if (kind == null) {
-                kind = classify(source, target);
-            }
         }
 
         public Difference(String key, CommonId family, TrackerPair trackers, Side source, Side target,

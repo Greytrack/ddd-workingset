@@ -43,7 +43,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.application.MergeExecutionService.Registration;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
@@ -157,10 +156,9 @@ class MergeAcceptanceTest {
         assertTrue(diff(compared, remove).fields().isEmpty());
         assertTrue(diff(compared, edit).fields().contains("title"));
         assertFalse(compared.differences().stream().anyMatch(item -> anchor.equals(item.family().value())));
-        var round = start(target, compared);
-        register(round, existence(diff(compared, add), "CREATE"), existence(diff(compared, remove), "DELETE"),
-                field(diff(compared, edit), "ACCEPT", false));
-        var result = apply(round);
+        var round = submit(target, compared, existence(diff(compared, add), "CREATE"),
+                existence(diff(compared, remove), "DELETE"), field(diff(compared, edit), "ACCEPT", false));
+        var result = awaitResult(round);
         assertEquals(State.Succeeded, result.state());
         assertEquals(3, result.summary().applied());
         assertEquals("source", requirement(editedId).title());
@@ -227,6 +225,38 @@ class MergeAcceptanceTest {
     }
 
     @Test
+    void rejectsMissingDecisionsMissingRequestIdAndOversizedPage() {
+        String family = id("limits");
+        seed(rootTracker, family, "limit probe");
+        var difference = diff(compare("1", child), family);
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+                Map.of("sourceWorkingSetId", "1", "requestId", id("empty")), Map.class));
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+                Map.of("sourceWorkingSetId", "1", "decisions", List.of(field(difference, "ACCEPT", false))), Map.class));
+        var oversized = java.util.stream.IntStream.range(0, 51)
+                .mapToObj(index -> field(difference, "ACCEPT", false)).toList();
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+                Map.of("sourceWorkingSetId", "1", "requestId", id("oversized"), "decisions", oversized), Map.class));
+    }
+
+    @Test
+    void requestIdCannotBeReusedForAnotherDirection() {
+        String family = id("conflict");
+        seed(rootTracker, family, "conflict probe");
+        var difference = diff(compare("1", child), family);
+        String requestId = id("same-request");
+        var accepted = rest.postForEntity(ws(child) + "/merge-rounds", Map.of("sourceWorkingSetId", "1",
+                "requestId", requestId, "decisions", List.of(existence(difference, "CREATE"))), MergeRound.class);
+        assertStatus(HttpStatus.CREATED, accepted);
+        rounds.add(accepted.getBody().id());
+        tokens.add(accepted.getBody().token());
+        var conflict = rest.postForEntity(ws("1") + "/merge-rounds", Map.of("sourceWorkingSetId", child,
+                "requestId", requestId, "decisions", List.of(existence(difference, "CREATE"))), Map.class);
+        assertStatus(HttpStatus.CONFLICT, conflict);
+        assertEquals("Conflict", conflict.getBody().get("reason"));
+    }
+
+    @Test
     void mergesNativeChildItemBackToDefaultParentWithFamilyIdentity() {
         assertNativeMergeBack("1", child, rootTracker, childTracker);
     }
@@ -245,9 +275,8 @@ class MergeAcceptanceTest {
         var comparison = compare(sourceWs, parent);
         var difference = diff(comparison, source.commonId());
         assertEquals(Presence.ABSENT, difference.target().presence());
-        String round = start(parent, comparison);
-        assertNotNull(register(round, existence(difference, "CREATE"))[0].entryId());
-        var created = apply(round);
+        String round = submit(parent, comparison, existence(difference, "CREATE"));
+        var created = awaitResult(round);
         assertEquals(State.Succeeded, created.state());
         String parentLocal = created.itemResults().getFirst().businessRef();
         var target = requirement(parentLocal);
@@ -265,7 +294,7 @@ class MergeAcceptanceTest {
         change(source.localId(), "updated child", 0);
         var active = compare(sourceWs, parent);
         assertEquals(Presence.PRESENT, diff(active, source.commonId()).target().presence());
-        assertNotNull(register(start(parent, active), existence(diff(active, source.commonId()), "CREATE"))[0].failure());
+        assertTrue(submitFails(parent, active, existence(diff(active, source.commonId()), "CREATE")));
 
         assertStatus(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + parentLocal + "/delete", null, Void.class));
@@ -273,11 +302,10 @@ class MergeAcceptanceTest {
         var afterDelete = compare(sourceWs, parent);
         var absent = diff(afterDelete, source.commonId());
         assertEquals(Presence.ABSENT, absent.target().presence());
-        assertNotNull(register(start(parent, afterDelete), existence(absent, "RESTORE"))[0].failure());
+        assertTrue(submitFails(parent, afterDelete, existence(absent, "RESTORE")));
         var fresh = compare(sourceWs, parent);
-        String restoreRound = start(parent, fresh);
-        assertNotNull(register(restoreRound, existence(diff(fresh, source.commonId()), "CREATE"))[0].entryId());
-        var restored = apply(restoreRound);
+        String restoreRound = submit(parent, fresh, existence(diff(fresh, source.commonId()), "CREATE"));
+        var restored = awaitResult(restoreRound);
         assertEquals(State.Succeeded, restored.state(), restored::toString);
         assertEquals(parentLocal, restored.itemResults().getFirst().businessRef());
         assertEquals("updated child", requirement(parentLocal).title());
@@ -289,31 +317,13 @@ class MergeAcceptanceTest {
     }
 
     @Test
-    void concurrentMergeBackRoundsCommitOnlyOneVariant() throws Exception {
-        var source = createRequirement(child, childTracker, "concurrent child item");
+    void secondRoundWithRacedEvidenceCannotCommitTheSameFamilyTwice() {
+        var source = createRequirement(child, childTracker, "raced child item");
         var first = compare(child, "1");
-        var second = compare(child, "1");
-        String firstRound = start("1", first);
-        String secondRound = start("1", second);
-        assertNotNull(register(firstRound, existence(diff(first, source.commonId()), "CREATE"))[0].entryId());
-        assertNotNull(register(secondRound, existence(diff(second, source.commonId()), "CREATE"))[0].entryId());
-
-        var start = new CountDownLatch(1);
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            var one = executor.submit(() -> {
-                start.await();
-                return apply(firstRound);
-            });
-            var two = executor.submit(() -> {
-                start.await();
-                return apply(secondRound);
-            });
-            start.countDown();
-            var outcomes = List.of(one.get(10, TimeUnit.SECONDS).itemResults().getFirst().outcome(),
-                    two.get(10, TimeUnit.SECONDS).itemResults().getFirst().outcome());
-            assertTrue(outcomes.contains(Outcome.Applied), outcomes::toString);
-            assertTrue(outcomes.contains(Outcome.StaleEvidence), outcomes::toString);
-        }
+        var stale = compare(child, "1");
+        String firstRound = submit("1", first, existence(diff(first, source.commonId()), "CREATE"));
+        assertEquals(Outcome.Applied, awaitResult(firstRound).itemResults().getFirst().outcome());
+        assertEquals("StaleEvidence", submitFailure("1", stale, existence(diff(stale, source.commonId()), "CREATE")));
         assertEquals(source.title(), requirement(source.commonId()).title());
     }
 
@@ -331,24 +341,21 @@ class MergeAcceptanceTest {
         String source = seed(rootTracker, edit, "source");
         String target = seed(childTracker, edit, "target");
         var frozen = compare("1", child);
-        String staleRound = start(child, frozen);
-        change(source, "changed before registration", 0);
-        assertEquals("StaleEvidence", register(staleRound, field(diff(frozen, edit), "ACCEPT", false))[0].failure().name());
+        change(source, "changed before submit", 0);
+        assertEquals("StaleEvidence",
+                submitFailure(child, frozen, field(diff(frozen, edit), "ACCEPT", false)));
 
-        var fresh = compare("1", child);
-        String round = start(child, fresh);
-        register(round, field(diff(fresh, edit), "ACCEPT", false));
         change(source, "latest source", 1);
-        change(target, "latest target", 0);
-        assertEquals(State.Succeeded, apply(round).state());
+        var fresh = compare("1", child);
+        String round = submit(child, fresh, field(diff(fresh, edit), "ACCEPT", false));
+        assertEquals(State.Succeeded, awaitResult(round).state());
         assertEquals("latest source", requirement(target).title());
 
         change(source, "different", 2);
         var beforeRevision = compare("1", child);
-        String revisionRound = start(child, beforeRevision);
-        register(revisionRound, field(diff(beforeRevision, edit), "ACCEPT", false));
-        requirements.upgradeRevision(LocalId.of(target), LockVersion.of(2));
-        assertEquals(Outcome.StaleEvidence, apply(revisionRound).itemResults().getFirst().outcome());
+        requirements.upgradeRevision(LocalId.of(target), LockVersion.of(1));
+        assertEquals("StaleEvidence",
+                submitFailure(child, beforeRevision, field(diff(beforeRevision, edit), "ACCEPT", false)));
         assertEquals("latest source", requirement(target).title());
     }
 
@@ -364,13 +371,14 @@ class MergeAcceptanceTest {
         seed(rootTracker, deferred, "source");
         seed(childTracker, deferred, "target");
         var comparison = compare("1", child);
-        String round = start(child, comparison);
         assertEquals("InvalidDecision",
-                register(round, field(diff(comparison, deferred), "DEFER", true))[0].failure().name());
-        register(round, field(diff(comparison, keep), "KEEP_TARGET", true),
-                field(diff(comparison, rejected), "ACCEPT", false), field(diff(comparison, deferred), "DEFER", false));
+                submitFailure(child, comparison, field(diff(comparison, deferred), "DEFER", true)));
         jdbc.update("UPDATE requirements SET title = '', lock_version = 1 WHERE local_id = ?", rejectedSource);
-        var partial = apply(round);
+        var withInvalidSource = compare("1", child);
+        String round = submit(child, withInvalidSource, field(diff(withInvalidSource, keep), "KEEP_TARGET", true),
+                field(diff(withInvalidSource, rejected), "ACCEPT", false),
+                field(diff(withInvalidSource, deferred), "DEFER", false));
+        var partial = awaitResult(round);
         assertEquals(State.PartiallySucceeded, partial.state());
         assertEquals(List.of(Outcome.Confirmed, Outcome.Rejected, Outcome.Deferred),
                 partial.itemResults().stream().map(MergeRound.ItemResult::outcome).toList());
@@ -388,9 +396,8 @@ class MergeAcceptanceTest {
         change(rejectedSource, "valid on retry", 1);
         var retryComparison = compare("1", child);
         assertFalse(retryComparison.differences().stream().anyMatch(item -> keep.equals(item.family().value())));
-        String retryRound = start(child, retryComparison);
-        register(retryRound, field(diff(retryComparison, rejected), "ACCEPT", false));
-        assertEquals(1, apply(retryRound).summary().applied());
+        String retryRound = submit(child, retryComparison, field(diff(retryComparison, rejected), "ACCEPT", false));
+        assertEquals(1, awaitResult(retryRound).summary().applied());
         assertEquals("valid on retry", requirement(rejectedTarget).title());
         assertEquals(partial, rest.getForObject(roundPath(round), MergeRound.class).result());
 
@@ -410,9 +417,6 @@ class MergeAcceptanceTest {
         seed(rootTracker, laterFamily, "later accepted");
         String laterTarget = seed(childTracker, laterFamily, "later before");
         var allDifferences = compare("1", child);
-        String round = start(child, allDifferences);
-        register(round, field(diff(allDifferences, family), "ACCEPT", true),
-                field(diff(allDifferences, laterFamily), "ACCEPT", false));
 
         var recording = new CountDownLatch(1);
         var interrupt = new CountDownLatch(1);
@@ -422,15 +426,18 @@ class MergeAcceptanceTest {
                 throw new AssertionError("Timed out waiting to interrupt result recording");
             }
             throw new TransientDataAccessResourceException("simulated result transaction failure");
-        }).doCallRealMethod().when(store).updateRound(argThat(value -> round.equals(value.id())
-                && value.state() == State.Running && value.entries().getFirst().result() != null));
+        }).doCallRealMethod().when(store).updateRound(argThat(value -> value.state() == State.Running
+                && value.source().value().equals("1") && value.target().value().equals(child)
+                && value.entries().getFirst().result() != null));
 
+        String round;
         try (var otherNode = new SpringApplicationBuilder(WorkingsetApplication.class)
-                    .run("--server.port=0", "--spring.modulith.republish-outstanding-events-on-restart=false");
-                var executor = Executors.newSingleThreadExecutor()) {
-            int otherPort = ((ServletWebServerApplicationContext) otherNode).getWebServer().getPort();
-            String otherApplyUrl = "http://127.0.0.1:" + otherPort + roundPath(round) + "/apply";
-            var first = executor.submit(() -> rest.postForEntity(roundPath(round) + "/apply", null, Map.class));
+                .run("--server.port=0", "--spring.modulith.republish-outstanding-events-on-restart=false")) {
+            round = submit(child, allDifferences, field(diff(allDifferences, family), "ACCEPT", true),
+                    field(diff(allDifferences, laterFamily), "ACCEPT", false));
+            String otherApplyUrl = "http://127.0.0.1:"
+                    + ((ServletWebServerApplicationContext) otherNode).getWebServer().getPort()
+                    + roundPath(round) + "/apply";
             try {
                 assertTrue(recording.await(10, TimeUnit.SECONDS));
                 assertEquals("accepted", requirement(target).title());
@@ -440,9 +447,6 @@ class MergeAcceptanceTest {
             } finally {
                 interrupt.countDown();
             }
-            var interrupted = first.get(12, TimeUnit.SECONDS);
-            assertStatus(HttpStatus.SERVICE_UNAVAILABLE, interrupted);
-            assertEquals("UNKNOWN", interrupted.getBody().get("reason"));
 
             var progress = rest.getForObject(roundPath(round), MergeRound.class);
             assertEquals(State.Running, progress.state());
@@ -451,9 +455,11 @@ class MergeAcceptanceTest {
             requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
             change(target, "local edit after commit", 1);
 
-            var recovered = rest.postForEntity(otherApplyUrl, null, ApplyResult.class);
-            assertStatus(HttpStatus.OK, recovered);
-            assertEquals(recovered.getBody(), apply(round));
+            await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+                var resumed = rest.postForEntity(otherApplyUrl, null, ApplyResult.class);
+                assertStatus(HttpStatus.OK, resumed);
+            });
+            assertEquals(awaitResult(round), apply(round));
         }
 
         var recovered = apply(round);
@@ -474,8 +480,6 @@ class MergeAcceptanceTest {
         String family = id("replay");
         seed(rootTracker, family, "copied once");
         var comparison = compare("1", child);
-        String round = start(child, comparison);
-        register(round, existence(diff(comparison, family), "CREATE"));
 
         var attempted = new CountDownLatch(1);
         doAnswer(call -> {
@@ -483,7 +487,8 @@ class MergeAcceptanceTest {
             throw new IllegalStateException("simulated LTI listener failure");
         }).doCallRealMethod().when(lifecycle).applyMergeTarget(argThat(target -> family.equals(target.commonId().value())));
 
-        var result = apply(round);
+        String round = submit(child, comparison, existence(diff(comparison, family), "CREATE"));
+        var result = awaitResult(round);
         assertEquals(State.Succeeded, result.state());
         String localId = result.itemResults().getFirst().businessRef();
         await().atMost(Duration.ofSeconds(8)).until(() -> attempted.getCount() == 0);
@@ -531,9 +536,8 @@ class MergeAcceptanceTest {
         var item = diff(compared, anchor);
         assertEquals(grand.item().localId(), item.target().localId().value());
         assertFalse(item.target().localId().equals(item.target().contentId()));
-        String round = start(grandchild, compared);
-        register(round, field(item, "ACCEPT", false));
-        assertEquals(State.Succeeded, apply(round).state());
+        String round = submit(grandchild, compared, field(item, "ACCEPT", false));
+        assertEquals(State.Succeeded, awaitResult(round).state());
         assertEquals("parent local", requirement(grand.item().localId()).title());
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT materialized FROM light_tracker_items WHERE local_id = ?",
@@ -568,7 +572,6 @@ class MergeAcceptanceTest {
         var empty = compare(child, grandchild);
         assertTrue(empty.candidates().isEmpty());
         assertTrue(empty.differences().isEmpty());
-        assertEquals(State.Failed, apply(start(grandchild, empty)).state());
     }
 
     @Test
@@ -647,9 +650,12 @@ class MergeAcceptanceTest {
         return response.getBody();
     }
 
-    private String start(String target, ComparisonPage compared) {
-        var response = rest.postForEntity(ws(target) + "/merge-rounds",
-                Map.of("sourceWorkingSetId", compared.source().value()), MergeRound.class);
+    @SafeVarargs
+    private final String submit(String target, ComparisonPage compared, Map<String, Object>... entries) {
+        var response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", compared.source().value(),
+                "requestId", UUID.randomUUID().toString(),
+                "decisions", List.of(entries)), MergeRound.class);
         assertStatus(HttpStatus.CREATED, response);
         String id = response.getBody().id();
         rounds.add(id);
@@ -657,12 +663,32 @@ class MergeAcceptanceTest {
         return id;
     }
 
+    private MergeRound roundState(String round) {
+        return rest.getForObject(roundPath(round), MergeRound.class);
+    }
+
+    private ApplyResult awaitResult(String round) {
+        await().atMost(Duration.ofSeconds(10)).until(() -> roundState(round).result() != null);
+        return roundState(round).result();
+    }
+
     @SafeVarargs
-    private final Registration[] register(String round, Map<String, Object>... entries) {
-        var response = rest.postForEntity(roundPath(round) + "/entries", Map.of("entries", List.of(entries)),
-                Registration[].class);
-        assertStatus(HttpStatus.OK, response);
-        return response.getBody();
+    private final boolean submitFails(String target, ComparisonPage compared, Map<String, Object>... entries) {
+        var response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", compared.source().value(),
+                "requestId", UUID.randomUUID().toString(),
+                "decisions", List.of(entries)), Map.class);
+        return response.getStatusCode().is4xxClientError();
+    }
+
+    @SafeVarargs
+    private final String submitFailure(String target, ComparisonPage compared, Map<String, Object>... entries) {
+        var response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", compared.source().value(),
+                "requestId", UUID.randomUUID().toString(),
+                "decisions", List.of(entries)), Map.class);
+        assertTrue(response.getStatusCode().is4xxClientError(), () -> String.valueOf(response.getBody()));
+        return String.valueOf(response.getBody().get("reason"));
     }
 
     private ApplyResult apply(String round) {

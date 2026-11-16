@@ -3,6 +3,7 @@ package sk.workingset.domain.merge;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import sk.workingset.domain.WorkingSetId;
@@ -43,6 +44,7 @@ public record MergeRound(String id, String token, String requestId, WorkingSetId
     }
 
     public MergeRound {
+        Objects.requireNonNull(requestId, "requestId");
         entries = List.copyOf(entries);
     }
 

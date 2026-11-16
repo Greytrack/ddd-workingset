@@ -77,49 +77,52 @@ public class MergeExecutionService {
     }
 
     public record EntryRequest(String entryKey, Difference evidence, MergeDecision decision) {}
-    public record Registration(String entryKey, String entryId, Reason failure, String detail) {}
-
-    @Transactional
-    public MergeRound start(WorkingSetId target, WorkingSetId source, Caller caller) {
-        return start(target, source, null, caller);
-    }
-
-    @Transactional
-    public MergeRound start(WorkingSetId target, WorkingSetId source, String requestId, Caller caller) {
-        var round = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
-        if (!store.insertRound(round)) {
-            throw new MergeFailure(Reason.ComparisonAlreadyUsed, round.token());
-        }
-        return round;
-    }
-
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, Caller caller) {
-        if (requestId == null || requestId.isBlank()) {
-            throw new MergeFailure(Reason.InvalidDecision, "requestId is required");
-        }
         var existing = store.findRoundByRequest(requestId);
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
-        MergeRound round;
-        try {
-            round = start(target, source, requestId, caller);
-        } catch (MergeFailure failure) {
-            var current = store.findRoundByRequest(requestId);
-            if (current.isPresent()) {
-                return matching(current.get(), source, target);
-            }
-            throw failure;
+        var round = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
+        if (!store.insertRound(round)) {
+            return matching(store.findRoundByRequest(requestId).orElseThrow(
+                    () -> new MergeFailure(Reason.Conflict, requestId)), source, target);
         }
-        var failures = register(round.id(), decisions).stream()
-                .filter(result -> result.failure() != null).toList();
-        if (!failures.isEmpty()) {
-            throw new MergeFailure(Reason.InvalidDecision, failures.toString());
-        }
+        registerDecisions(round, decisions);
         events.publishEvent(new MergeRoundSubmitted(round.id()));
         return round(round.id(), false);
+    }
+
+    /** 一页决策要么整页登记成功，要么整轮回滚；失败原因决定客户端下一步动作。 */
+    private void registerDecisions(MergeRound round, List<EntryRequest> requests) {
+        var caller = Caller.of(round.caller());
+        var candidates = comparisons.candidates(round.source(), round.target());
+        var updated = round;
+        for (var request : requests) {
+            var frozen = request.evidence();
+            if (frozen == null) {
+                throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
+            }
+            if (!frozen.key().equals(request.entryKey())) {
+                throw new MergeFailure(Reason.InvalidDecision, request.entryKey());
+            }
+            if (!candidates.contains(frozen.trackers())) {
+                throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
+            }
+            lockEvidence(frozen);
+            var current = comparisons.current(frozen, caller);
+            if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
+                throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
+            }
+            if (request.decision() == null) {
+                throw new MergeFailure(Reason.InvalidDecision, "decision is required");
+            }
+            request.decision().validate(frozen);
+            updated = updated.register(new Entry(UUID.randomUUID().toString(), store.nextDecisionVersion(),
+                    frozen, request.decision(), null));
+        }
+        store.updateRound(updated);
     }
 
     private static MergeRound matching(MergeRound round, WorkingSetId source, WorkingSetId target) {
@@ -127,53 +130,6 @@ public class MergeExecutionService {
             throw new MergeFailure(Reason.Conflict, "requestId is already used by another merge round");
         }
         return round;
-    }
-
-    @Transactional
-    public List<Registration> register(String roundId, List<EntryRequest> requests) {
-        var round = round(roundId, true);
-        if (round.state() != State.Preparing) {
-            throw new MergeFailure(Reason.RoundClosed, roundId);
-        }
-        var results = new ArrayList<Registration>();
-        var caller = Caller.of(round.caller());
-        var candidates = comparisons.candidates(round.source(), round.target());
-        for (var request : requests) {
-            try {
-                var duplicate = round.entries().stream()
-                        .filter(entry -> entry.evidence().key().equals(request.entryKey())).findFirst();
-                if (duplicate.isPresent()) {
-                    results.add(new Registration(request.entryKey(), duplicate.get().id(), null, null));
-                    continue;
-                }
-                var frozen = request.evidence();
-                if (frozen == null) {
-                    throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
-                }
-                if (!frozen.key().equals(request.entryKey())) {
-                    throw new MergeFailure(Reason.InvalidDecision, request.entryKey());
-                }
-                if (!candidates.contains(frozen.trackers())) {
-                    throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
-                }
-                lockEvidence(frozen);
-                var current = comparisons.current(frozen, caller);
-                if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
-                    throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
-                }
-                if (request.decision() == null) {
-                    throw new MergeFailure(Reason.InvalidDecision, "decision is required");
-                }
-                request.decision().validate(frozen);
-                String entryId = UUID.randomUUID().toString();
-                round = round.register(new Entry(entryId, store.nextDecisionVersion(), frozen, request.decision(), null));
-                results.add(new Registration(request.entryKey(), entryId, null, null));
-            } catch (MergeFailure failure) {
-                results.add(new Registration(request.entryKey(), null, failure.reason(), failure.getMessage()));
-            }
-        }
-        store.updateRound(round);
-        return List.copyOf(results);
     }
 
     public MergeRound get(String id) { return round(id, false); }
@@ -206,9 +162,6 @@ public class MergeExecutionService {
                 return result;
             }
             throw new MergeFailure(Reason.RoundInProgress, id);
-        }
-        if (!store.supportsCommitRecovery(id)) {
-            throw new ApplicationFailure(FailureReason.UNKNOWN, "legacy round requires reconciliation: " + id);
         }
 
         var round = transaction.execute(status -> startExecution(id));

@@ -17,24 +17,28 @@ import sk.workingset.application.Caller;
 import sk.workingset.application.MergeComparisonService;
 import sk.workingset.application.MergeExecutionService;
 import sk.workingset.application.MergeExecutionService.EntryRequest;
-import sk.workingset.application.MergeExecutionService.Registration;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison;
-import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeCheckpoint;
+import sk.workingset.domain.merge.MergeRound;
 
 /**
  * Compare / Merge 的 HTTP 入口。
  *
- * <p>负责请求/响应映射；比较证据、轮次状态与条目执行由 {@code MergeComparisonService}
- * 与 {@code MergeExecutionService} 承担。
+ * <p>Compare 只读瞬时，按 offset/limit 分页，不承诺跨请求冻结。Merge 只接受一页决策的整页提交：
+ * requestId 是幂等键，同键返回原轮次、同键换方向返回冲突；轮次由 {@code MergeRoundSubmitted}
+ * 异步执行，客户端轮询 {@code GET /api/merge-rounds/{id}} 至终态。
  */
 @RestController
 @RequestMapping("/api")
 public class MergeController {
     private static final Caller CALLER = Caller.of("web");
+    /** UI 一页差异约 20–50 条；超出应重新 compare 分页，而不是提交一轮更大的决策。 */
+    private static final int MAX_DECISIONS = 50;
+    private static final int MAX_REQUEST_ID = 128;
+    private static final int MAX_COMPARE_LIMIT = 500;
 
     private final MergeComparisonService comparisons;
     private final MergeExecutionService rounds;
@@ -57,26 +61,24 @@ public class MergeController {
 
     @PostMapping("/worksets/{target}/merge-rounds")
     @ResponseStatus(HttpStatus.CREATED)
-    public MergeRound start(@PathVariable String target, @RequestBody StartRequest request) {
+    public MergeRound submit(@PathVariable String target, @RequestBody SubmitRequest request) {
         if (request.sourceWorkingSetId() == null || request.sourceWorkingSetId().isBlank()) {
             throw new IllegalArgumentException("sourceWorkingSetId is required");
         }
-        var source = WorkingSetId.of(request.sourceWorkingSetId());
-        if (request.decisions() != null && !request.decisions().isEmpty()) {
-            if (request.requestId() == null || request.requestId().isBlank()) {
-                throw new IllegalArgumentException("requestId is required when decisions are submitted");
-            }
-            return rounds.submit(WorkingSetId.of(target), source, request.requestId(), request.decisions(), CALLER);
+        if (request.requestId() == null || request.requestId().isBlank()) {
+            throw new IllegalArgumentException("requestId is required");
         }
-        return rounds.start(WorkingSetId.of(target), source, request.requestId(), CALLER);
-    }
-
-    @PostMapping("/merge-rounds/{id}/entries")
-    public List<Registration> register(@PathVariable String id, @RequestBody EntriesRequest request) {
-        if (request.entries() == null) {
-            throw new IllegalArgumentException("entries are required");
+        if (request.requestId().length() > MAX_REQUEST_ID) {
+            throw new IllegalArgumentException("requestId must be at most " + MAX_REQUEST_ID + " characters");
         }
-        return rounds.register(id, List.copyOf(request.entries()));
+        if (request.decisions() == null || request.decisions().isEmpty()) {
+            throw new IllegalArgumentException("decisions must contain at least one entry");
+        }
+        if (request.decisions().size() > MAX_DECISIONS) {
+            throw new IllegalArgumentException("decisions must contain at most " + MAX_DECISIONS + " entries");
+        }
+        return rounds.submit(WorkingSetId.of(target), WorkingSetId.of(request.sourceWorkingSetId()),
+                request.requestId(), List.copyOf(request.decisions()), CALLER);
     }
 
     @PostMapping("/merge-rounds/{id}/apply")
@@ -98,8 +100,9 @@ public class MergeController {
     }
 
     private static void checkPage(int offset, int limit) {
-        if (offset < 0 || limit < 1 || limit > 500) {
-            throw new IllegalArgumentException("offset must be nonnegative and limit must be between 1 and 500");
+        if (offset < 0 || limit < 1 || limit > MAX_COMPARE_LIMIT) {
+            throw new IllegalArgumentException("offset must be nonnegative and limit must be between 1 and "
+                    + MAX_COMPARE_LIMIT);
         }
     }
 
@@ -111,9 +114,8 @@ public class MergeController {
                 end < comparison.differences().size() ? end : null);
     }
 
-    public record StartRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {}
+    public record SubmitRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {}
     public record RevokeRequest(long expectedDecisionVersion) {}
-    public record EntriesRequest(List<EntryRequest> entries) {}
     public record ComparisonPage(WorkingSetId source, WorkingSetId target, Instant comparedAt,
                                  List<Comparison.TrackerPair> candidates, List<Comparison.Difference> differences,
                                  Integer nextOffset) {}
