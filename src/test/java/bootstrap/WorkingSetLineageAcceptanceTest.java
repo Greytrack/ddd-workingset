@@ -84,20 +84,26 @@ class WorkingSetLineageAcceptanceTest {
         assertTrue(WorkingSetLineagePolicy.comparableBindings(child, root).isEmpty());
     }
 
+    /**
+     * The schema is a development baseline without legacy migration, so it must be
+     * repeatable on a database it initialized itself: a second run keeps explicit
+     * parents and the default Working Set preset.
+     */
     @Test
-    void migratesS5RowsAndKeepsExplicitParentOnRepeatedSchemaInitialization() throws Exception {
+    void repeatedSchemaInitializationKeepsExplicitParentAndDefaultPreset() throws Exception {
         try (var connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
             try (var sql = connection.createStatement()) {
-                String schema = "s6_" + suffix.replace("-", "");
+                String schema = "baseline_" + suffix.replace("-", "");
                 sql.execute("CREATE SCHEMA " + schema);
                 sql.execute("SET LOCAL search_path TO " + schema);
-                sql.execute("CREATE TABLE working_sets (working_set_id VARCHAR(128) PRIMARY KEY)");
-                sql.execute("INSERT INTO working_sets VALUES ('1'), ('s5-child')");
 
                 var schemaScript = new ResourceDatabasePopulator(new ClassPathResource("schema.sql"));
                 schemaScript.populate(connection);
-                sql.execute("INSERT INTO working_sets VALUES ('s6-grandchild', 's5-child')");
+                sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
+                        + " VALUES ('baseline-child', '1')");
+                sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
+                        + " VALUES ('baseline-grandchild', 'baseline-child')");
                 schemaScript.populate(connection);
 
                 try (var rows = sql.executeQuery("""
@@ -107,11 +113,11 @@ class WorkingSetLineageAcceptanceTest {
                     assertEquals("1", rows.getString(1));
                     assertNull(rows.getString(2));
                     assertTrue(rows.next());
-                    assertEquals("s5-child", rows.getString(1));
+                    assertEquals("baseline-child", rows.getString(1));
                     assertEquals("1", rows.getString(2));
                     assertTrue(rows.next());
-                    assertEquals("s6-grandchild", rows.getString(1));
-                    assertEquals("s5-child", rows.getString(2));
+                    assertEquals("baseline-grandchild", rows.getString(1));
+                    assertEquals("baseline-child", rows.getString(2));
                 }
             } finally {
                 connection.rollback();
