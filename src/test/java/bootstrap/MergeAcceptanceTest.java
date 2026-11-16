@@ -631,6 +631,86 @@ class MergeAcceptanceTest {
     }
 
     @Test
+    void checkpointHitIsDirectionAgnostic() {
+        String family = id("direction-agnostic");
+        seed(rootTracker, family, "source");
+        seed(childTracker, family, "target");
+        var forward = compare("1", child);
+        assertEquals(State.Succeeded, awaitResult(submit(child, forward,
+                field(diff(forward, family), "ACCEPT", false))).state());
+        var backward = compare(child, "1");
+        assertFalse(backward.differences().stream().anyMatch(item -> family.equals(item.family().value())));
+    }
+
+    @Test
+    void concurrentPairSubmissionIsRejected() {
+        String family = id("pair-busy");
+        seed(rootTracker, family, "source");
+        var difference = diff(compare("1", child), family);
+        String low = rootTracker.compareTo(childTracker) < 0 ? rootTracker : childTracker;
+        String high = low.equals(rootTracker) ? childTracker : rootTracker;
+        jdbc.update("""
+                INSERT INTO merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
+                VALUES (?, ?, ?, CAST('{"state":"Running"}' AS jsonb), ?, ?)
+                """, id("busy-round"), id("busy-token"), id("busy-request"), low, high);
+        rounds.add(id("busy-round"));
+        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", "1", "requestId", id("pair-request"),
+                "decisions", List.of(existence(difference, "CREATE"))), Map.class));
+    }
+
+    @Test
+    void pairCanMergeAgainAfterTerminal() {
+        String family = id("pair-again");
+        seed(rootTracker, family, "source");
+        var first = diff(compare("1", child), family);
+        assertEquals(State.Succeeded, awaitResult(submit(child, compare("1", child),
+                existence(first, "CREATE"))).state());
+        String sourceLocal = jdbc.queryForObject(
+                "SELECT local_id FROM requirements WHERE tracker_id = ? AND common_id = ?",
+                String.class, rootTracker, family);
+        change(sourceLocal, "changed after first round", 0);
+        var second = diff(compare("1", child), family);
+        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", "1", "requestId", id("pair-again-request"),
+                "decisions", List.of(field(second, "ACCEPT", false))), Map.class));
+    }
+
+    @Test
+    void mixedTrackerPairsAreRejected() {
+        String family = id("mixed");
+        seed(rootTracker, family, "source");
+        var difference = diff(compare("1", child), family);
+        var other = new Difference(difference.key(), difference.kind(), difference.family(),
+                new sk.workingset.domain.merge.Comparison.TrackerPair(TrackerId.of("tracker-x"),
+                        TrackerId.of("tracker-y")),
+                difference.source(), difference.target(), difference.fields());
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", "1", "requestId", id("mixed-request"),
+                "decisions", List.of(existence(difference, "CREATE"), existence(other, "CREATE"))), Map.class));
+    }
+
+    @Test
+    void supersededCheckpointsAreCleanedUp() {
+        String oldFamily = id("cleanup-old");
+        String keepFamily = id("cleanup-keep");
+        String low = rootTracker.compareTo(childTracker) < 0 ? rootTracker : childTracker;
+        String high = low.equals(rootTracker) ? childTracker : rootTracker;
+        insertCheckpoint(low, high, oldFamily, 2, 6);
+        insertCheckpoint(low, high, keepFamily, 5, 8);
+        insertItem(low, oldFamily, 3, low.equals(rootTracker) ? "1" : child);
+        insertItem(high, oldFamily, 7, high.equals(rootTracker) ? "1" : child);
+        insertItem(low, keepFamily, 5, low.equals(rootTracker) ? "1" : child);
+        insertItem(high, keepFamily, 8, high.equals(rootTracker) ? "1" : child);
+
+        assertEquals(1, store.deleteSupersededCheckpoints());
+        var oldKey = new MergeCheckpoint.Key(TrackerId.of(low), TrackerId.of(high), CommonId.of(oldFamily));
+        var keepKey = new MergeCheckpoint.Key(TrackerId.of(low), TrackerId.of(high), CommonId.of(keepFamily));
+        assertTrue(store.findCheckpoint(oldKey).isEmpty());
+        assertTrue(store.findCheckpoint(keepKey).isPresent());
+    }
+
+    @Test
     void publicDeleteUndeleteAndDelete2DistinguishMarkedAndPermanentlyRemovedItems() {
         String local = seed(rootTracker, id("life"), "lifecycle");
         String path = "/api/requirements/" + local;
@@ -680,6 +760,25 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.CREATED,
                 rest.postForEntity(ws(parent) + "/children", Map.of("workingSetId", next), Void.class));
         worksets.add(next);
+    }
+
+    private void insertCheckpoint(String trackerA, String trackerB, String family, int revisionA, int revisionB) {
+        jdbc.update("""
+                INSERT INTO merge_checkpoints (round_id, tracker_a_id, tracker_b_id, common_id,
+                    local_id_a, local_id_b, revision_a, revision_b, change_kind, merge_direction, decision_version)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'MODIFIED', 'A_TO_B', ?)
+                """, id("cleanup-round"), trackerA, trackerB, family,
+                "la-" + family, "lb-" + family, revisionA, revisionB, store.nextDecisionVersion());
+    }
+
+    private void insertItem(String tracker, String family, int revision, String workset) {
+        String local = "li-" + Integer.toHexString(family.hashCode()) + "-"
+                + Integer.toHexString(tracker.hashCode());
+        jdbc.update("""
+                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id,
+                    revision, source_local_id, source_revision, materialized)
+                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
+                """, local, family, tracker, workset, revision, local, revision);
     }
 
     private String seed(String tracker, String common, String title) {

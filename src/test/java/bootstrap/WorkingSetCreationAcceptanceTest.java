@@ -202,21 +202,17 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
-    void retainsCopiedTrackerWhenItsBindingLosesTheSlot() {
+    void bindsCopiedTrackersThatShareSpaceAndClassification() {
         seedRange();
         String sameSlot = "z-" + child;
         seedTracker(sameSlot, space, unshared, "UNSHARED");
         var completed = awaitStatus(submit(new Request("1", child, "slot", List.of(space), List.of(),
-                List.of(unshared, sameSlot))), Status.PartiallySucceeded);
+                List.of(unshared, sameSlot))), Status.Succeeded);
 
         assertEquals(2, completed.stageProgress().get(Stage.COPY_UNSHARED_TRACKERS).succeeded());
-        assertEquals(1, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).succeeded());
-        assertEquals(1, completed.failures().size());
-        var failure = completed.failures().getFirst();
-        assertEquals(Stage.BIND_UNSHARED_TRACKERS, failure.stage());
-        assertEquals(sameSlot, failure.trackerId());
-        assertEquals("SlotOccupied", failure.reason());
-        assertEquals(1, bindings().trackers().size());
+        assertEquals(2, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).succeeded());
+        assertTrue(completed.failures().isEmpty());
+        assertEquals(2, bindings().trackers().size());
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
     }

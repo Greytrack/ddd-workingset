@@ -85,9 +85,6 @@ public class MergeExecutionService {
             return matching(existing.get(), source, target);
         }
         var pair = trackerPair(decisions);
-        if (store.hasActiveRoundForTrackerPair(pair.a(), pair.b())) {
-            throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
-        }
         var prepared = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
         MergeRound round;
         try {
@@ -112,7 +109,7 @@ public class MergeExecutionService {
         }
         var pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
                 evidence.family());
-        boolean mixed = decisions.stream().anyMatch(request -> {
+        var mixed = decisions.stream().anyMatch(request -> {
             if (request.evidence() == null) {
                 return true;
             }
@@ -121,7 +118,7 @@ public class MergeExecutionService {
             return !other.a().equals(pair.a()) || !other.b().equals(pair.b());
         });
         if (mixed) {
-            throw new MergeFailure(Reason.InvalidDecision, "decisions must belong to one tracker pair");
+            throw new IllegalArgumentException("decisions must belong to one tracker pair");
         }
         return pair;
     }

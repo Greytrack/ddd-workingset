@@ -148,10 +148,6 @@ public final class WorkingSet {
         if (trackers.containsKey(tracker.trackerId())) {
             throw new BindingFailure(Reason.TrackerAlreadyBound, tracker.trackerId().value());
         }
-        if (trackers.values().stream().anyMatch(existing -> existing.productSpaceId().equals(tracker.productSpaceId())
-                && existing.classificationId().equals(classification.id()))) {
-            throw new BindingFailure(Reason.SlotOccupied, tracker.productSpaceId() + "/" + classification.id());
-        }
         var origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
         var binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.id(),
                 requestedMode, origin);

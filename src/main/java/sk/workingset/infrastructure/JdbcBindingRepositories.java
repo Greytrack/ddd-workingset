@@ -26,12 +26,13 @@ import sk.workingset.domain.WorkingSetId;
 /** WorkingSet/Tracker/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。 */
 public final class JdbcBindingRepositories implements WorkingSetRepository, TrackerRepository, ProductSpaceRepository {
     private static final String TRACKER_COLUMNS =
-            "tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id";
+            "tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id, is_default";
     private static final RowMapper<Tracker> TRACKER_MAPPER = (rs, row) -> new Tracker(
             TrackerId.of(rs.getString("tracker_id")), rs.getString("name"),
             optionalId(rs, "source_id"), WorkingSetId.of(rs.getString("working_set_id")),
             rs.getString("product_space_id"), rs.getString("classification_id"),
-            SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id"));
+            SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id"),
+            rs.getBoolean("is_default"));
 
     private final JdbcTemplate jdbc;
 
@@ -201,12 +202,14 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     public void insertTracker(Tracker tracker) {
         jdbc.update("""
                 INSERT INTO trackers
-                    (tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (tracker_id, name, source_id, working_set_id, product_space_id, classification_id,
+                     sharing_mode, parent_id, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, tracker.trackerId().value(), tracker.name(),
                 tracker.sourceId() == null ? null : tracker.sourceId().value(),
                 tracker.workingSetId().value(), tracker.productSpaceId(), tracker.classificationId(),
-                tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().value());
+                tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().value(),
+                tracker.isDefault());
     }
 
     @Override
@@ -220,6 +223,26 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         return jdbc.query("SELECT classification_id, sharing_mode FROM classifications WHERE classification_id = ?",
                 (rs, row) -> new Classification(rs.getString(1), SharingMode.valueOf(rs.getString(2))),
                 id).stream().findFirst();
+    }
+
+    @Override
+    public List<Classification> findClassifications() {
+        return jdbc.query("SELECT classification_id, sharing_mode FROM classifications ORDER BY classification_id",
+                (rs, row) -> new Classification(rs.getString(1), SharingMode.valueOf(rs.getString(2))));
+    }
+
+    @Override
+    public void insertProductSpace(ProductSpace space) {
+        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
+                space.id(), space.name());
+    }
+
+    @Override
+    public boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM trackers
+                    WHERE working_set_id = ? AND product_space_id = ? AND classification_id = ? AND is_default)
+                """, Boolean.class, workingSetId.value(), spaceId, classificationId));
     }
 
     @Override

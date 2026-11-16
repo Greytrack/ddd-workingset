@@ -90,6 +90,14 @@ public class WorkingSetController {
                 workingSet.trackers().stream().map(TrackerBindingView::from).toList());
     }
 
+    @PostMapping("/{workingSetId}/product-spaces")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProductSpaceView createProductSpace(@PathVariable String workingSetId,
+                                               @RequestBody CreateProductSpaceRequest request) {
+        return ProductSpaceView.from(applicationService.createProductSpace(
+                request.productSpaceId(), request.name()));
+    }
+
     @PostMapping("/{workingSetId}/spaces/{spaceId}")
     @ResponseStatus(HttpStatus.CREATED)
     public SpaceBindingView bindSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
@@ -139,6 +147,14 @@ public class WorkingSetController {
         ReadResult result = applicationService.read(
                 WorkingSetId.of(workingSetId), LocalId.of(localId), WEB_CALLER);
         return ReadView.from(result);
+    }
+
+    public record CreateProductSpaceRequest(String productSpaceId, String name) {}
+
+    public record ProductSpaceView(String productSpaceId, String name) {
+        static ProductSpaceView from(sk.workingset.domain.ProductSpace space) {
+            return new ProductSpaceView(space.id(), space.name());
+        }
     }
 
     public record CreateChildRequest(String workingSetId) {}

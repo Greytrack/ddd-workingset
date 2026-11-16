@@ -133,6 +133,18 @@ public class WorkingSetApplicationService {
     /** UI read model: LTI plus the readable name of its effective content source. */
     public record IndexedItem(LightTrackerItem item, String name) {}
 
+    /** 创建产品空间，并为每个分类同步创建该空间的默认 Tracker。 */
+    @Transactional
+    public ProductSpace createProductSpace(String spaceId, String name) {
+        var space = new ProductSpace(spaceId, name);
+        spaces.insertProductSpace(space);
+        for (var classification : spaces.findClassifications()) {
+            trackers.insertTracker(Tracker.original(
+                    TrackerId.of(String.valueOf(identifierGenerator.nextId())), space, classification, null, true));
+        }
+        return space;
+    }
+
     @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
         return bindSpace(writable(id), lockSpace(spaceId));
@@ -282,7 +294,10 @@ public class WorkingSetApplicationService {
     }
 
     private Tracker derivedTracker(WorkingSet target, Tracker source) {
-        return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())), source, target.id());
+        boolean isDefault = !spaces.existsDefaultTracker(target.id(), source.productSpaceId(),
+                source.classificationId());
+        return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())), source, target.id(),
+                isDefault);
     }
 
     private LocalId nextDistinctLocalId(CommonId commonId) {

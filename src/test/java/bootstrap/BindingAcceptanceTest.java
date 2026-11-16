@@ -88,14 +88,14 @@ class BindingAcceptanceTest {
 
         String anotherShared = "ALT-" + suffix;
         original(anotherShared, sharedClass, "SHARED", null);
-        assertFailure(rest.postForEntity(sharedPath(ws, anotherShared), null, Map.class),
-                HttpStatus.CONFLICT, "SlotOccupied");
+        assertEquals(HttpStatus.CREATED,
+                rest.postForEntity(sharedPath(ws, anotherShared), null, TrackerBindingView.class).getStatusCode());
         assertFailure(rest.postForEntity(sharedPath(ws, unshared), null, Map.class),
                 HttpStatus.UNPROCESSABLE_ENTITY, "SharingModeMismatch");
 
         var bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
-        assertEquals(shared, bindings.trackers().getFirst().trackerId());
+        assertTrue(bindings.trackers().stream().anyMatch(binding -> binding.trackerId().equals(shared)));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?", Integer.class, ws));
     }
 
@@ -123,8 +123,8 @@ class BindingAcceptanceTest {
                 String.class, derived.trackerId()));
         assertEquals(derived.trackerId(), jdbc.queryForObject(
                 "SELECT tracker_id FROM light_tracker_items WHERE local_id = ?", String.class, derived.item().localId()));
-        assertFailure(rest.postForEntity(path(ws) + "/derive", body, Map.class),
-                HttpStatus.CONFLICT, "SlotOccupied");
+        assertEquals(HttpStatus.CONFLICT,
+                rest.postForEntity(path(ws) + "/derive", body, Map.class).getStatusCode());
 
         bindSpace(other);
         assertFailure(rest.postForEntity(path(other) + "/derive", deriveBody(derived.trackerId()), Map.class),

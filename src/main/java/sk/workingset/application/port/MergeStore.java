@@ -27,6 +27,9 @@ public interface MergeStore {
     Optional<MergeCommitReceipt> findCommitReceipt(String roundId, String entryId);
     void insertCommitReceipt(String roundId, String entryId, MergeCommitReceipt receipt);
 
+    /** 清理已被两侧更新版次超越的 Checkpoint；返回删除行数。 */
+    int deleteSupersededCheckpoints();
+
     long nextDecisionVersion();
     boolean recordCheckpoint(MergeCheckpoint checkpoint);
     Optional<MergeCheckpoint> findCheckpoint(MergeCheckpoint.Key key);

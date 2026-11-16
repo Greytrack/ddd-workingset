@@ -4,13 +4,22 @@ import java.util.Objects;
 
 import sk.workingset.domain.Classification.SharingMode;
 
-/** sourceId 表示直接派生来源，parentId 表示同工作集内的组织父级。name 仅用于界面可读展示。 */
+/**
+ * sourceId 表示直接派生来源，parentId 表示同工作集内的组织父级；
+ * isDefault 表示该（工作集，空间，分类）的默认 Tracker。
+ */
 public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
-                      String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
+                      String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId,
+                      boolean isDefault) {
+
+    public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
+                   String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
+        this(trackerId, name, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId, false);
+    }
 
     public Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId,
                    String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
-        this(trackerId, null, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId);
+        this(trackerId, null, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId, false);
     }
 
     public Tracker {
@@ -28,13 +37,22 @@ public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, Work
     }
 
     public static Tracker original(TrackerId id, ProductSpace space, Classification classification, TrackerId parentId) {
-        return new Tracker(id, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
-                classification.sharingMode(), parentId);
+        return original(id, space, classification, parentId, false);
+    }
+
+    public static Tracker original(TrackerId id, ProductSpace space, Classification classification, TrackerId parentId,
+                                   boolean isDefault) {
+        return new Tracker(id, null, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
+                classification.sharingMode(), parentId, isDefault);
     }
 
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target) {
+        return derived(id, source, target, false);
+    }
+
+    public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault) {
         return new Tracker(id, source.name(), source.trackerId(), target, source.productSpaceId(),
-                source.classificationId(), source.sharingMode(), null);
+                source.classificationId(), source.sharingMode(), null, isDefault);
     }
 
     public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {

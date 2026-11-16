@@ -155,6 +155,20 @@ public final class JdbcMergeStore implements MergeStore {
         return value == null ? null : Direction.valueOf(value);
     }
 
+    @Override
+    public int deleteSupersededCheckpoints() {
+        return jdbc.update("""
+                DELETE FROM merge_checkpoints c
+                WHERE c.revoked = FALSE
+                  AND EXISTS (SELECT 1 FROM light_tracker_items a
+                              WHERE a.tracker_id = c.tracker_a_id AND a.common_id = c.common_id
+                                AND a.revision > c.revision_a)
+                  AND EXISTS (SELECT 1 FROM light_tracker_items b
+                              WHERE b.tracker_id = c.tracker_b_id AND b.common_id = c.common_id
+                                AND b.revision > c.revision_b)
+                """);
+    }
+
     private static Integer revision(Revision revision) { return revision == null ? null : revision.value(); }
     private static Revision revision(Integer revision) { return revision == null ? null : Revision.of(revision); }
     private static String localId(LocalId localId) { return localId == null ? null : localId.value(); }
