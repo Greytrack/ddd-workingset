@@ -1,0 +1,45 @@
+/* Compare / Merge 面板样式（复用 app.css 的 modal / btn 基础类）。 */
+.merge-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.merge-table th,
+.merge-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  text-align: left;
+  vertical-align: top;
+}
+
+.merge-table th {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.merge-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.merge-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.merge-table select {
+  font-size: 11px;
+  padding: 2px 4px;
+}
