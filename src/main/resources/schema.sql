@@ -215,22 +215,21 @@ CREATE INDEX IF NOT EXISTS idx_cow_materializations_status ON cow_materializatio
 -- Merge LRO (compare itself is not persisted)
 -- ---------------------------------------------------------------------------
 
+-- 一轮 MergeRound 承载一页用户决策。requestId 是幂等键，必填且全局唯一。
 CREATE TABLE IF NOT EXISTS merge_rounds (
     id VARCHAR(64) PRIMARY KEY,
-    token VARCHAR(64) NOT NULL,
-    request_id VARCHAR(128),
+    token VARCHAR(64) NOT NULL UNIQUE,
+    request_id VARCHAR(128) NOT NULL UNIQUE,
     state JSONB NOT NULL,
-    execution_lock_id BIGSERIAL,
-    supports_commit_recovery BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (token),
-    UNIQUE (execution_lock_id)
+    execution_lock_id BIGSERIAL UNIQUE
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_request
-    ON merge_rounds (request_id) WHERE request_id IS NOT NULL;
 
 CREATE SEQUENCE IF NOT EXISTS merge_decision_version;
 
+-- 有向「已处理」事实：同一方向 (source_id, target_id) 的同一家族 (common_id) 至多一行。
+-- 业务身份是方向 + 家族；source_local_id / target_local_id 只是确认时的变体证据，
+-- 会随物化、派生和切换而变化，若作为主键会让同一家族累积多行并失去撤销的唯一定位。
+-- source_revision / target_revision 是业务版次（R11），decision_version 防止晚到确认覆盖新事实。
 CREATE TABLE IF NOT EXISTS merge_checkpoints (
     source_id VARCHAR(128) NOT NULL,
     target_id VARCHAR(128) NOT NULL,
