@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS trackers (
     classification_id VARCHAR(64) NOT NULL,
     sharing_mode      VARCHAR(8) NOT NULL,
     parent_id         VARCHAR(64),
+    is_default        BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (tracker_id, working_set_id),
     UNIQUE (tracker_id, product_space_id, classification_id, sharing_mode),
     FOREIGN KEY (classification_id, sharing_mode)
@@ -61,6 +62,17 @@ CREATE TABLE IF NOT EXISTS trackers (
     CHECK ((source_id IS NULL AND working_set_id = '1')
         OR (source_id IS NOT NULL AND working_set_id <> '1' AND sharing_mode = 'UNSHARED'))
 );
+
+ALTER TABLE trackers ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 每个（工作集，空间，分类）恰好一个默认 Tracker
+CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_default_slot
+    ON trackers (working_set_id, product_space_id, classification_id) WHERE is_default;
+
+-- 同一（工作集，空间，分类）内业务原生 Tracker 名称唯一；派生 Tracker 继承来源名称，不参与该约束。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_name_slot
+    ON trackers (working_set_id, product_space_id, classification_id, name)
+    WHERE name IS NOT NULL AND source_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_trackers_org_parent ON trackers (parent_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_source ON trackers (source_id);
@@ -84,7 +96,6 @@ CREATE TABLE IF NOT EXISTS tracker_bindings (
     sharing_mode     VARCHAR(8) NOT NULL,
     origin           VARCHAR(24) NOT NULL,
     PRIMARY KEY (working_set_id, tracker_id),
-    UNIQUE (working_set_id, product_space_id, classification_id),
     FOREIGN KEY (working_set_id, product_space_id)
         REFERENCES space_bindings (working_set_id, product_space_id),
     FOREIGN KEY (tracker_id, product_space_id, classification_id, sharing_mode)
@@ -94,6 +105,8 @@ CREATE TABLE IF NOT EXISTS tracker_bindings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tracker_bindings_tracker ON tracker_bindings (tracker_id);
+
+-- T6-F e 裁定：同一（工作集，空间，分类）允许多个 Tracker（建表时已不包含该唯一键）。
 
 -- ---------------------------------------------------------------------------
 -- Requirements and LightTrackerItem index

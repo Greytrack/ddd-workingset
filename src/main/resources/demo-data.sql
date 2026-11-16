@@ -191,3 +191,6 @@ VALUES
     ('LTI-V3-PT-1', 'FAM-PT-1', 'T-PT-REQ-V3', 'WS-POWERTRAIN-V3', 1, 'REQ-PT-1', 1, FALSE),
     ('LTI-V3-PT-2', 'FAM-PT-2', 'T-PT-REQ-V3', 'WS-POWERTRAIN-V3', 3, 'REQ-PT-2', 3, FALSE),
     ('LTI-CK-COCKPIT-1', 'FAM-COCKPIT-1', 'T-COCKPIT-REQ-V1', 'WS-COCKPIT-V1', 1, 'REQ-COCKPIT-1', 1, FALSE);
+
+-- 每个（工作集，空间，分类）恰好一个默认 Tracker（演示数据中每个组合只有一个 Tracker）。
+UPDATE trackers SET is_default = TRUE;
