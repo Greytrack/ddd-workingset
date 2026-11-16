@@ -60,7 +60,7 @@ async function openMerge() {
 }
 
 function renderMergeShell() {
-  const pickers = flattenWorksets();
+  const pickers = mergeWorksetOptions();
   const sourceOptions = pickers.map((node) =>
     `<option value="${escapeHtml(node.id)}"${node.id === mergeView.source ? ' selected' : ''}>${escapeHtml(node.label)}</option>`).join('');
   const targetOptions = pickers.map((node) =>
@@ -89,7 +89,7 @@ function renderMergeShell() {
     </div>`;
 }
 
-function flattenWorksets() {
+function mergeWorksetOptions() {
   const list = [];
   const walk = (nodes, depth) => {
     (nodes || []).forEach((node) => {
