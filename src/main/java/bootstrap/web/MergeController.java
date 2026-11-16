@@ -63,9 +63,12 @@ public class MergeController {
         }
         var source = WorkingSetId.of(request.sourceWorkingSetId());
         if (request.decisions() != null && !request.decisions().isEmpty()) {
-            return rounds.submit(WorkingSetId.of(target), source, request.decisions(), CALLER);
+            if (request.requestId() == null || request.requestId().isBlank()) {
+                throw new IllegalArgumentException("requestId is required when decisions are submitted");
+            }
+            return rounds.submit(WorkingSetId.of(target), source, request.requestId(), request.decisions(), CALLER);
         }
-        return rounds.start(WorkingSetId.of(target), source, CALLER);
+        return rounds.start(WorkingSetId.of(target), source, request.requestId(), CALLER);
     }
 
     @PostMapping("/merge-rounds/{id}/entries")
@@ -108,7 +111,7 @@ public class MergeController {
                 end < comparison.differences().size() ? end : null);
     }
 
-    public record StartRequest(String sourceWorkingSetId, List<EntryRequest> decisions) {}
+    public record StartRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {}
     public record RevokeRequest(long expectedDecisionVersion) {}
     public record EntriesRequest(List<EntryRequest> entries) {}
     public record ComparisonPage(WorkingSetId source, WorkingSetId target, Instant comparedAt,

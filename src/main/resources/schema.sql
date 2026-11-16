@@ -240,8 +240,12 @@ CREATE INDEX IF NOT EXISTS idx_space_bindings_space ON space_bindings (product_s
 CREATE TABLE IF NOT EXISTS merge_rounds (
     id VARCHAR(64) PRIMARY KEY,
     token VARCHAR(64) NOT NULL,
+    request_id VARCHAR(128),
     state JSONB NOT NULL
 );
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS request_id VARCHAR(128);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_request
+    ON merge_rounds (request_id) WHERE request_id IS NOT NULL;
 
 -- 2026-11-15：compare 结果不持久化；轮次 token 仅用于本轮次审计。
 ALTER TABLE merge_rounds DROP CONSTRAINT IF EXISTS merge_rounds_token_fkey;

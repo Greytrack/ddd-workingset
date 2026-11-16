@@ -89,7 +89,7 @@ compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较
 | `reportProgress` | `MergeRoundId` | `RoundProgress`（各状态计数与条目摘要） | 只读 | — |
 | `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态或显式结束）；轮次非终态 | 不存在未终态条目时方可结束；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
 
-**异步 LRO（2026-11-15）**：`startRound` 可携带用户决策与所选差异证据；服务端创建 MergeRound 后发布 `MergeRoundSubmitted`，由异步消费者逐条执行。`GET /api/merge-rounds/{id}` 轮询状态与结果；`apply` 保留为幂等触发器，重复调用返回原 `ApplyResult`。
+**异步 LRO（2026-11-15）**：`startRound` 可携带用户决策与所选差异证据；服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmitted`，由异步消费者逐条执行。同一 requestId 重复提交返回原轮次，不同 source/target 冲突。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 保留为幂等触发器，重复调用返回原 `ApplyResult`。
 
 `executeEntry` 的内部步骤（一次执行的完整行为契约）：
 

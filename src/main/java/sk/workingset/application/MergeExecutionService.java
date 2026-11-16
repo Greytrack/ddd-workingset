@@ -81,7 +81,12 @@ public class MergeExecutionService {
 
     @Transactional
     public MergeRound start(WorkingSetId target, WorkingSetId source, Caller caller) {
-        var round = MergeRound.prepare(UUID.randomUUID().toString(), source, target, caller.id());
+        return start(target, source, null, caller);
+    }
+
+    @Transactional
+    public MergeRound start(WorkingSetId target, WorkingSetId source, String requestId, Caller caller) {
+        var round = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
         if (!store.insertRound(round)) {
             throw new MergeFailure(Reason.ComparisonAlreadyUsed, round.token());
         }
@@ -89,8 +94,25 @@ public class MergeExecutionService {
     }
 
     @Transactional
-    public MergeRound submit(WorkingSetId target, WorkingSetId source, List<EntryRequest> decisions, Caller caller) {
-        var round = start(target, source, caller);
+    public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
+                             List<EntryRequest> decisions, Caller caller) {
+        if (requestId == null || requestId.isBlank()) {
+            throw new MergeFailure(Reason.InvalidDecision, "requestId is required");
+        }
+        var existing = store.findRoundByRequest(requestId);
+        if (existing.isPresent()) {
+            return matching(existing.get(), source, target);
+        }
+        MergeRound round;
+        try {
+            round = start(target, source, requestId, caller);
+        } catch (MergeFailure failure) {
+            var current = store.findRoundByRequest(requestId);
+            if (current.isPresent()) {
+                return matching(current.get(), source, target);
+            }
+            throw failure;
+        }
         var failures = register(round.id(), decisions).stream()
                 .filter(result -> result.failure() != null).toList();
         if (!failures.isEmpty()) {
@@ -98,6 +120,13 @@ public class MergeExecutionService {
         }
         events.publishEvent(new MergeRoundSubmitted(round.id()));
         return round(round.id(), false);
+    }
+
+    private static MergeRound matching(MergeRound round, WorkingSetId source, WorkingSetId target) {
+        if (!round.source().equals(source) || !round.target().equals(target)) {
+            throw new MergeFailure(Reason.Conflict, "requestId is already used by another merge round");
+        }
+        return round;
     }
 
     @Transactional

@@ -185,7 +185,7 @@ class MergeAcceptanceTest {
         var compared = compare("1", child);
         var difference = diff(compared, family);
         var response = rest.postForEntity(ws(child) + "/merge-rounds",
-                Map.of("sourceWorkingSetId", "1",
+                Map.of("sourceWorkingSetId", "1", "requestId", "async-" + family,
                         "decisions", List.of(field(difference, "ACCEPT", false))), MergeRound.class);
         assertStatus(HttpStatus.CREATED, response);
         String round = response.getBody().id();
@@ -197,6 +197,33 @@ class MergeAcceptanceTest {
             assertEquals(State.Succeeded, current.result().state());
         });
         assertEquals("source", requirement(target).title());
+    }
+
+    @Test
+    void duplicateSubmittedDecisionsReturnTheSameRound() {
+        String family = id("idem");
+        seed(rootTracker, family, "source");
+        String target = seed(childTracker, family, "target");
+        var difference = diff(compare("1", child), family);
+        String requestId = id("request");
+        var body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
+                "decisions", List.of(field(difference, "ACCEPT", false)));
+        var first = rest.postForEntity(ws(child) + "/merge-rounds", body, MergeRound.class);
+        assertStatus(HttpStatus.CREATED, first);
+        var second = rest.postForEntity(ws(child) + "/merge-rounds", body, MergeRound.class);
+        assertStatus(HttpStatus.CREATED, second);
+        assertEquals(first.getBody().id(), second.getBody().id());
+        String round = first.getBody().id();
+        rounds.add(round);
+        tokens.add(first.getBody().token());
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var current = rest.getForObject(roundPath(round), MergeRound.class);
+            assertNotNull(current.result());
+            assertEquals(State.Succeeded, current.result().state());
+        });
+        assertEquals("source", requirement(target).title());
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT count(*) FROM merge_rounds WHERE request_id = ?", Integer.class, requestId));
     }
 
     @Test

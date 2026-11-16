@@ -13,6 +13,7 @@ import sk.workingset.domain.merge.MergeRound;
 public interface MergeStore {
     boolean insertRound(MergeRound round);
     Optional<MergeRound> findRound(String id, boolean lock);
+    Optional<MergeRound> findRoundByRequest(String requestId);
     void updateRound(MergeRound round);
 
     /** 在当前事务内独占一个轮次的执行权，事务结束时释放。 */

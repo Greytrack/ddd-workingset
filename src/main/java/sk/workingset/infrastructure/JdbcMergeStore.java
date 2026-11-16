@@ -26,9 +26,9 @@ public final class JdbcMergeStore implements MergeStore {
     @Override
     public boolean insertRound(MergeRound round) {
         return jdbc.update("""
-                INSERT INTO merge_rounds (id, token, state) VALUES (?, ?, CAST(? AS jsonb))
-                ON CONFLICT (token) DO NOTHING
-                """, round.id(), round.token(), encode(round)) == 1;
+                INSERT INTO merge_rounds (id, token, request_id, state) VALUES (?, ?, ?, CAST(? AS jsonb))
+                ON CONFLICT DO NOTHING
+                """, round.id(), round.token(), round.requestId(), encode(round)) == 1;
     }
 
     @Override
@@ -36,6 +36,12 @@ public final class JdbcMergeStore implements MergeStore {
         String sql = "SELECT state FROM merge_rounds WHERE id = ?";
         return jdbc.query(lock ? sql + " FOR UPDATE" : sql,
                 (rs, row) -> decode(rs.getString(1), MergeRound.class), id).stream().findFirst();
+    }
+
+    @Override
+    public Optional<MergeRound> findRoundByRequest(String requestId) {
+        return jdbc.query("SELECT state FROM merge_rounds WHERE request_id = ?",
+                (rs, row) -> decode(rs.getString(1), MergeRound.class), requestId).stream().findFirst();
     }
 
     @Override
