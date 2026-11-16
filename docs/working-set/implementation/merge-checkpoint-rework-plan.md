@@ -102,3 +102,22 @@ CREATE UNIQUE INDEX uq_merge_rounds_active_tracker_pair
 | 一页决策跨 Tracker 对 | `submit` 显式拒绝（400），UI 按 Tracker 比较 |
 | 旧 Checkpoint 数据 | 开发基线直接重建，不迁移 |
 | TrackerId 排序 | 统一用字符串比较；索引与 Java 规范化一致 |
+
+## 7. 实施状态（2026-11-16）
+
+已完成：
+
+- `merge_checkpoints` 重建为 Tracker 分支对身份；`merge_rounds` 增加 `tracker_a_id`/`tracker_b_id` 与并发闸门索引；
+- 代码：`MergeCheckpoint`、`MergeStore`、`JdbcMergeStore`、`MergeComparisonService`、`MergeExecutionService`、`MergeController`、`MergeFailure`、`core.js`；
+- 定时清理 `MergeCheckpointCleanupJob`（`@Scheduled`，默认每天 03:00，可用 `workingset.merge.checkpoint-cleanup-cron` 配置），清理两侧版次都已被超越的未撤销锚点；
+- 新增验收用例：反向命中、同 Tracker 对并发 409、终态后可再提交、跨 Tracker 对 400、被超越锚点清理；
+- 全量测试 118 项通过。
+
+T6-F e（2026-11-16 已完成）：
+
+- `trackers.is_default` + 部分唯一索引：每个（工作集，空间，分类）恰好一个默认 Tracker；
+- 名称唯一：同一（工作集，空间，分类）内业务原生 Tracker 名称唯一，派生 Tracker 继承来源名称不参与；
+- 去掉 `tracker_bindings` 的 `(工作集, 空间, 分类)` 三元唯一键，同槽位允许多个 Tracker；
+- `POST /api/worksets/1/product-spaces`：创建产品空间并为每个分类同步创建默认 Tracker；
+- 派生时按“目标工作集是否已有默认”设置 `is_default`；
+- 新增 `TrackerDefaultAcceptanceTest`（4 项）覆盖默认唯一、名称唯一、产品空间创建、绑定约束移除。

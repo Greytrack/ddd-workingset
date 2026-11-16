@@ -72,7 +72,19 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 候选对的生成方式：同一（空间，分类）下取“左侧全部 Tracker × 右侧全部 Tracker”的全部组合，还是先按 `source_id`/`is_default`/名称过滤后再配对？
 
-## 5. 关联材料
+## 5. 实施状态（2026-11-16）
+
+已落地：
+
+- `trackers.is_default` + 部分唯一索引：每个（工作集，空间，分类）恰好一个默认 Tracker；
+- 名称唯一：同一（工作集，空间，分类）内业务原生 Tracker 名称唯一；派生 Tracker 继承来源名称，不参与该约束；
+- 去掉 `tracker_bindings` 的 `(工作集, 空间, 分类)` 三元唯一键；`WorkingSet.bindTracker` 不再抛 `SlotOccupied`；
+- `POST /api/worksets/1/product-spaces`：创建产品空间，并为每个分类同步创建默认 Tracker；
+- 派生时按“目标工作集是否已有默认”设置 `is_default`；
+- `TrackerDefaultAcceptanceTest` 覆盖默认唯一、名称唯一、产品空间创建、绑定约束移除；
+- 全量测试 122 项通过。
+
+## 6. 关联材料
 
 - [QUESTION-002](../domain/open-questions.md)、[多级 WorkingSet 谱系设计](../domain/working-set-lineage-design.md)、[T6 后续大纲](../implementation/t6-next-stage-outline.md)
 - 场景：SCN-014、SCN-057～060（Compare/Merge）、T5-S6 谱系验证
