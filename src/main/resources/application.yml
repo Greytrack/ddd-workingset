@@ -1,6 +1,23 @@
 server:
   port: ${SERVER_PORT:7102}
 
+springdoc:
+  packages-to-scan: bootstrap.web
+  paths-to-match: /api/**
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:true}
+    path: /v3/api-docs
+    version: openapi_3_0
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:true}
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    tags-sorter: alpha
+    operations-sorter: method
+
+knife4j:
+  enable: ${API_DOCS_ENABLED:true}
+
 workingset:
   cow:
     order-gap-wait: ${COW_ORDER_GAP_WAIT:1s}

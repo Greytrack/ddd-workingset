@@ -15,6 +15,8 @@
     <junit.version>5.11.3</junit.version>
     <archunit.version>1.3.0</archunit.version>
     <spring-boot.version>3.3.5</spring-boot.version>
+    <springdoc.version>2.6.0</springdoc.version>
+    <knife4j.version>4.5.0</knife4j.version>
     <spring-modulith.version>1.2.13</spring-modulith.version>
     <commons-lang3.version>3.20.0</commons-lang3.version>
     <commons-collections4.version>4.6.0</commons-collections4.version>
@@ -41,6 +43,24 @@
   </dependencyManagement>
 
   <dependencies>
+    <!-- Swagger UI 和 Knife4j 共用 Spring Boot 3.3 对应的 Springdoc。 -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>${springdoc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.xiaoymin</groupId>
+      <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+      <version>${knife4j.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springdoc</groupId>
+          <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <!-- StringUtils、ArrayUtils、NumberUtils，以及兼容旧 Date 的 DateUtils。
          新的日期时间逻辑优先使用 Java 21 自带的 java.time。 -->
     <dependency>
