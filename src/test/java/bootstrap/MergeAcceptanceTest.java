@@ -101,6 +101,11 @@ class MergeAcceptanceTest {
 
     @AfterEach
     void cleanup() {
+        // Also remove rows created by tests that never produce a tracked MergeRound
+        // (for example the direct checkpoint-insert test).
+        jdbc.update("DELETE FROM merge_checkpoints WHERE round_id LIKE ?", "%" + suffix + "%");
+        jdbc.update("DELETE FROM merge_checkpoints WHERE round_id LIKE 'cleanup-round-%'");
+        jdbc.update("DELETE FROM merge_rounds WHERE request_id LIKE ?", "%" + suffix + "%");
         for (String round : rounds) {
             jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", round);
             jdbc.update("DELETE FROM merge_rounds WHERE id = ?", round);
@@ -674,9 +679,11 @@ class MergeAcceptanceTest {
                 String.class, rootTracker, family);
         change(sourceLocal, "changed after first round", 0);
         var second = diff(compare("1", child), family);
-        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+        var secondRound = rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("pair-again-request"),
-                "decisions", List.of(field(second, "ACCEPT", false))), Map.class));
+                "decisions", List.of(field(second, "ACCEPT", false))), MergeRound.class);
+        assertStatus(HttpStatus.CREATED, secondRound);
+        rounds.add(secondRound.getBody().id());
     }
 
     @Test

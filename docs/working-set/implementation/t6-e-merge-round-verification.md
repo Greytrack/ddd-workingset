@@ -21,6 +21,7 @@
 
 - 请求校验前置：`decisions` 1–50 条、`requestId` 非空且 ≤128；不满足直接 400，不存在空轮次或分批登记入口。
 - 每个 decision 只含 `evidence` + `decision`；`entryKey` 已于 2026-11-17 废弃。轮次内条目身份由服务端生成的 `Entry.id` 承担，跨轮次审计使用完整 evidence。
+- **旧数据不兼容**：旧 `merge_rounds.state` 中的 `Difference.key`/`entryKey` 不读取、不迁移；开发库清空 `merge_commit_receipts`、`merge_checkpoints`、`merge_rounds` 后重跑。
 - 同 `requestId` 返回原轮次；同键换方向 409 `Conflict`；登记阶段证据过期 409 `StaleEvidence`，整轮回滚，不留半成品轮次。
 - 并发同键：`insertOrFindRound` 以 `ON CONFLICT (request_id) DO UPDATE … RETURNING state` 单条语句返回已提交轮次，不依赖"插入失败后再查询"的可见性。
 - 提交后由 `MergeRoundSubmitted` 异步逐条执行；`apply` 仅作幂等触发器与恢复入口。
@@ -28,7 +29,7 @@
 
 ## 验证
 
-`mvn -B -Dspring.profiles.active=default test`：113 项通过（22 个测试类；T6-F、错误码契约、TrackerPair 四元组与 sourceId 配对测试后全量为 133 项），其中 `MergeAcceptanceTest` 26 项覆盖：
+`mvn -B -Dspring.profiles.active=default test`：113 项通过（22 个测试类；T6-F、错误码契约、TrackerPair 四元组与 sourceId 配对测试后全量为 133 项），其中 `MergeAcceptanceTest` 27 项覆盖：
 
 - `submittedDecisionsRunAsAsyncRoundAndPollToTerminal`、`duplicateSubmittedDecisionsReturnTheSameRound`：异步轮询与串行同键重放。
 - `concurrentSubmissionsWithSameRequestIdReturnOneRound`：两线程同键并发提交返回同一轮次，库中只有一行。

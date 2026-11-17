@@ -229,6 +229,8 @@ CREATE INDEX IF NOT EXISTS idx_cow_materializations_status ON cow_materializatio
 -- ---------------------------------------------------------------------------
 
 -- 一轮 MergeRound 承载一页用户决策。requestId 是幂等键，必填且全局唯一。
+-- 旧版 state JSON 中的 Difference.key / ItemResult.entryKey 不兼容：开发基线清理
+-- merge_commit_receipts、merge_checkpoints、merge_rounds 后重建，不做 JSON 迁移。
 CREATE TABLE IF NOT EXISTS merge_rounds (
     id VARCHAR(64) PRIMARY KEY,
     token VARCHAR(64) NOT NULL UNIQUE,

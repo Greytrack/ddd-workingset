@@ -16,6 +16,18 @@
 - 新增用例：反向命中、同 Tracker 对并发 409、终态后可再提交、跨 Tracker 对 400、被超越锚点清理；
 - 开发库按 `schema.sql` 重建，`merge_checkpoints` 无 `source_id`/`target_id`。
 
+## 旧数据与兼容性（2026-11-17）
+
+`Difference.key` / `entryKey` 已废弃，**旧 `merge_rounds.state` JSON 不做兼容迁移**。开发库按以下顺序清理后重跑测试：
+
+```sql
+DELETE FROM merge_commit_receipts;
+DELETE FROM merge_checkpoints;
+DELETE FROM merge_rounds;
+```
+
+开发基线不保留旧轮次审计；如未来需要保留生产数据，应按新格式重建而不是在旧 JSON 上做双读。
+
 ## 风险（已接受）
 
 - `merge_rounds` 部分唯一索引依赖 `state->>'state'`；状态由服务端单一入口维护。
