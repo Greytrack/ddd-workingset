@@ -1,0 +1,18 @@
+# Lattice Framework Configuration — AirEdge Backend 2.1
+# Paths are relative to repository root.
+# Refine further: /knowledge-priming-refiner, /language-idioms-refiner, /architecture-refiner, etc.
+
+version: 1
+language: java
+architecture_mode: custom
+requirements_layout: sharded
+
+paths:
+  language_idioms: .lattice/standards/language-idioms.md
+  knowledge_base: .lattice/standards/knowledge-base.md
+  clean_code: .lattice/standards/clean-code.md
+  architecture: .lattice/standards/architecture.md
+  ddd_principles: .lattice/standards/ddd-principles.md
+  review_standards: .lattice/standards/review-standards.md
+  context_base: .lattice/context/
+  operational_learnings: .lattice/learnings/operational-learnings.md
