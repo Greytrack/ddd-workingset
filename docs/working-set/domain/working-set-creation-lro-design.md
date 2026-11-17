@@ -121,7 +121,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ### 7.1 持久化
 
-`working_set_creations.result` 保存规范化请求、发起人、进度与明细。快照标记和冻结身份分别存入 `working_set_creation_snapshots` 和 `working_set_creation_items`，由任务身份关联。DDL 见 [schema.sql](../../../src/main/resources/schema.sql)。
+`working_set_creations.result` 保存规范化请求、发起人、进度与明细。快照标记和冻结身份分别存入 `working_set_creation_snapshots` 和 `working_set_creation_items`，由任务身份关联。DDL 见 [schema.sql](../../../deploys/src/main/resources/schema.sql)。
 
 ### 7.2 端口
 

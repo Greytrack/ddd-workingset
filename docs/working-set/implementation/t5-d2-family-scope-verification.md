@@ -28,8 +28,8 @@
 
 ## 3. 测试
 
-- 新增 [RequirementFamilyScopeTest](../../../src/test/java/bootstrap/RequirementFamilyScopeTest.java)：同 WS 跨 Tracker 重复被拒；跨 WS 允许；清理时先删派生子 Tracker 再删父 Tracker。
-- 更新 [BindingAcceptanceTest](../../../src/test/java/bootstrap/BindingAcceptanceTest.java) 的测试夹具：每个业务 Item 使用独立 CommonId，避免同一 WS 内多人造 Item 共享家族；这是测试数据修正，不是放宽领域约束。
+- 新增 [RequirementFamilyScopeTest](../../../deploys/src/test/java/bootstrap/RequirementFamilyScopeTest.java)：同 WS 跨 Tracker 重复被拒；跨 WS 允许；清理时先删派生子 Tracker 再删父 Tracker。
+- 更新 [BindingAcceptanceTest](../../../deploys/src/test/java/bootstrap/BindingAcceptanceTest.java) 的测试夹具：每个业务 Item 使用独立 CommonId，避免同一 WS 内多人造 Item 共享家族；这是测试数据修正，不是放宽领域约束。
 - `mvn -B test`：**77 项通过，0 失败、0 错误、0 跳过**（含真实 PostgreSQL、Redis、Tomcat、ArchUnit）。
 
 ## 4. 迁移注意

@@ -82,7 +82,7 @@
 
 ## 5. 实施与验收
 
-S6 的父级回填、查询与防环、直属父来源、双向 Merge 准入和叶子删除，见 [S6 验证](../implementation/t5-s6-verification-result.md)。数据库映射见 [schema.sql](../../../src/main/resources/schema.sql)。
+S6 的父级回填、查询与防环、直属父来源、双向 Merge 准入和叶子删除，见 [S6 验证](../implementation/t5-s6-verification-result.md)。数据库映射见 [schema.sql](../../../deploys/src/main/resources/schema.sql)。
 
 ## 6. 开放问题
 

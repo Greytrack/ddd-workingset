@@ -31,7 +31,7 @@
 
 ## 3. 测试证据
 
-[WorkingSetCreationAcceptanceTest](../../../src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)：
+[WorkingSetCreationAcceptanceTest](../../../deploys/src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)：
 
 - `extendsAnExistingChildWithBatchDerivationAndFiltersAlreadyDerivedTrackers`
   - 两个父 Tracker 批量派生、索引、绑定；

@@ -6,6 +6,6 @@
 - 测试持有父工作集的数据库行锁，验证任务仍可轮询为 `Running`，工作集查询和以目标为父的创建命令返回 `Preparing`。放开锁后任务成功，目标工作集可访问。同一请求返回原任务，另一请求争用相同目标返回 HTTP 409。
 - 父级不存在时轮询返回 `Failed` 与本体阶段的具体原因。T7-B 当时拒绝非空范围，该限制由 [T7-C](t7-c-binding-verification.md) 移除。
 
-公开验收见 [WorkingSetCreationAcceptanceTest](../../../src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)。非共享 Tracker 复制与空间、Tracker 绑定由 T7-C 接入，分页 LTI 与部分成功在 T7-D 验证。关系处理与规模验证继续按 [T7 实施顺序](t7-implementation-prompt.md) 推进。
+公开验收见 [WorkingSetCreationAcceptanceTest](../../../deploys/src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)。非共享 Tracker 复制与空间、Tracker 绑定由 T7-C 接入，分页 LTI 与部分成功在 T7-D 验证。关系处理与规模验证继续按 [T7 实施顺序](t7-implementation-prompt.md) 推进。
 
 `mvn -B clean test` 使用 PostgreSQL、Redis 和内嵌 Tomcat，包含 ArchUnit。94 项通过，0 失败、0 错误、0 跳过。

@@ -210,7 +210,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 2. 同一 `reason` 的语义变化属于破坏性变更，必须新建/升级契约版本，不能只改消息。
 3. 业务 BC 的内部错误码不得直接暴露；Adapter 必须映射到本契约的公共码或已登记的 BC 专用码段。
 4. HTTP 状态码按用例/端点映射，不替代 `code`/`reason`；客户端不得仅凭状态码推断具体失败。
-5. 当前实现枚举以 [`WorkingsetResultCode`](../../../src/main/java/sk/common/error/WorkingsetResultCode.java) 为准；新增/修改该枚举必须同步本表并经 T4 评审。
+5. 当前实现枚举以 [`WorkingsetResultCode`](../../../sharedkernel/src/main/java/sk/workingset/error/WorkingsetResultCode.java) 为准；新增/修改该枚举必须同步本表并经 T4 评审。
 6. 数值码不进入领域不变量、聚合状态或事件载荷；它们只描述对外失败语义。
 
 **归属**：Shared Kernel 维护公共码表与响应结构；各业务 BC 维护自身内部错误到公共码的映射；跨 BC 新增码段需四 BC 共同评审（与 K3″ 版本治理衔接）。

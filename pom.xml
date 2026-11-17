@@ -7,7 +7,14 @@
   <groupId>com.example</groupId>
   <artifactId>ddd-workingset</artifactId>
   <version>0.1.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>exception</module>
+    <module>sharedkernel</module>
+    <module>alm</module>
+    <module>deploys</module>
+  </modules>
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
@@ -39,95 +46,23 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>com.example</groupId>
+        <artifactId>exception</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.example</groupId>
+        <artifactId>sharedkernel</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.example</groupId>
+        <artifactId>alm</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <dependencies>
-    <!-- Swagger UI 和 Knife4j 共用 Spring Boot 3.3 对应的 Springdoc。 -->
-    <dependency>
-      <groupId>org.springdoc</groupId>
-      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>${springdoc.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.xiaoymin</groupId>
-      <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
-      <version>${knife4j.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.springdoc</groupId>
-          <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <!-- StringUtils、ArrayUtils、NumberUtils，以及兼容旧 Date 的 DateUtils。
-         新的日期时间逻辑优先使用 Java 21 自带的 java.time。 -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>${commons-lang3.version}</version>
-    </dependency>
-    <!-- CollectionUtils、ListUtils、SetUtils、MapUtils 等集合工具。 -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-collections4</artifactId>
-      <version>${commons-collections4.version}</version>
-    </dependency>
-
-    <!-- Web 使用内嵌 Tomcat；领域模型保持纯 Java。 -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <!-- JDBC starter 提供 HikariCP 连接池及 Spring JDBC。 -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-jdbc</artifactId>
-    </dependency>
-    <!-- Redis starter 使用 Lettuce；连接池需要 commons-pool2。 -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-redis</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-pool2</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.modulith</groupId>
-      <artifactId>spring-modulith-starter-jdbc</artifactId>
-    </dependency>
-    <!-- 显式引入事件持久化模块：自动注册 PersistentApplicationEventMulticaster 与 EventPublicationRepository -->
-    <dependency>
-      <groupId>org.springframework.modulith</groupId>
-      <artifactId>spring-modulith-events-jdbc</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-
-    <!-- 测试 -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.tngtech.archunit</groupId>
-      <artifactId>archunit-junit5</artifactId>
-      <version>${archunit.version}</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
 
   <!-- IDEA Maven 面板中每次选择一个环境 Profile，重新构建后生效。 -->
   <profiles>
@@ -155,41 +90,7 @@
   </profiles>
 
   <build>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-        <includes>
-          <include>application.yml</include>
-        </includes>
-      </resource>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>false</filtering>
-        <excludes>
-          <exclude>application.yml</exclude>
-        </excludes>
-      </resource>
-    </resources>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.3.1</version>
-        <configuration>
-          <encoding>UTF-8</encoding>
-          <delimiters>
-            <delimiter>@</delimiter>
-          </delimiters>
-          <useDefaultDelimiters>false</useDefaultDelimiters>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <version>${spring-boot.version}</version>
-        <executions><execution><goals><goal>repackage</goal></goals></execution></executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -202,10 +103,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.2</version>
-        <configuration>
-          <!-- 测试上下文不需要 API 文档；非 web 测试缺少 springdoc 配置时会拖垮 knife4j 自动配置。 -->
-          <argLine>-Dspring.autoconfigure.exclude=com.github.xiaoymin.knife4j.spring.configuration.Knife4jAutoConfiguration</argLine>
-        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -35,7 +35,7 @@
 
 ### P1：T7-E 关系事件
 
-- 事件契约、发布器和 T7 `PUBLISH_RELATION_EVENTS` 已实现；见 [RelationSourcePort](../../../src/main/java/sk/workingset/application/port/RelationSourcePort.java)、[RelationEventPublisher](../../../src/main/java/sk/workingset/application/RelationEventPublisher.java)、[RelationEventStep](../../../src/main/java/sk/workingset/application/RelationEventStep.java)。
+- 事件契约、发布器和 T7 `PUBLISH_RELATION_EVENTS` 已实现；见 [RelationSourcePort](../../../sharedkernel/src/main/java/sk/workingset/application/port/RelationSourcePort.java)、[RelationEventPublisher](../../../sharedkernel/src/main/java/sk/workingset/application/RelationEventPublisher.java)、[RelationEventStep](../../../sharedkernel/src/main/java/sk/workingset/application/RelationEventStep.java)。
 - Merge 已接入 `MergeRelationRepairStep`：终态后按实际变化目标发布修复事件，失败不影响 Merge 终态。
 - 下一步是关系服务消费方与真实业务 BC `RelationSourcePort` Adapter。
 - WorkingSet 不操作 Reference/Association 聚合，只发布：

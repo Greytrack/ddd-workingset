@@ -41,4 +41,4 @@
 
 ## 前端
 
-`src/main/resources/static/js/merge.js`：面板顶部「源 / 目标」下拉（默认当前工作集 → 其父；默认工作集取第一个子），前端预判直接父子并禁用非法组合；compare 分页、按差异类型给默认决策（`ADDED`/`MODIFIED` 采纳源，`DELETED` 保留目标），整页决策以 `crypto.randomUUID()` 作为 `requestId` 提交，随后轮询轮次终态并展示摘要与条目结果。全局函数带 `merge` 前缀（避免覆盖 `features.js` 的 `flattenWorksets`），静态资源按 `?v=N` 版本化；约定见 [前端脚本约定](../../../src/main/resources/static/js/README.md)。
+`src/main/resources/static/js/merge.js`：面板顶部「源 / 目标」下拉（默认当前工作集 → 其父；默认工作集取第一个子），前端预判直接父子并禁用非法组合；compare 分页、按差异类型给默认决策（`ADDED`/`MODIFIED` 采纳源，`DELETED` 保留目标），整页决策以 `crypto.randomUUID()` 作为 `requestId` 提交，随后轮询轮次终态并展示摘要与条目结果。全局函数带 `merge` 前缀（避免覆盖 `features.js` 的 `flattenWorksets`），静态资源按 `?v=N` 版本化；约定见 [前端脚本约定](../../../deploys/src/main/resources/static/js/README.md)。

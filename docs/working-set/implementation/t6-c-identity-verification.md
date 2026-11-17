@@ -13,18 +13,18 @@
 
 ## 2. 实现
 
-- [RequirementApplicationService](../../../src/main/java/alm/requirement/application/RequirementApplicationService.java)：创建入口按 `TrackerScopePort` 判定归属工作集，生成同一或两个不等雪花；显式指定非默认工作集时，非共享 Tracker 必须属于该工作集。
-- [CreateRequirementRequest](../../../src/main/java/bootstrap/web/CreateRequirementRequest.java)：不再包含 `commonId`，身份由服务端分配。
-- [MergeExecutionService](../../../src/main/java/sk/workingset/application/MergeExecutionService.java)：`CREATE` 到默认工作集时使用 CommonId 作为 LocalId，保证二者相等；非默认工作集使用新雪花。
-- [WorkingSetApplicationService](../../../src/main/java/sk/workingset/application/WorkingSetApplicationService.java)：派生生成新 LocalId，并确保与来源 CommonId 不等。
+- [RequirementApplicationService](../../../alm/src/main/java/alm/requirement/application/RequirementApplicationService.java)：创建入口按 `TrackerScopePort` 判定归属工作集，生成同一或两个不等雪花；显式指定非默认工作集时，非共享 Tracker 必须属于该工作集。
+- [CreateRequirementRequest](../../../alm/src/main/java/alm/requirement/adapters/CreateRequirementRequest.java)：不再包含 `commonId`，身份由服务端分配。
+- [MergeExecutionService](../../../sharedkernel/src/main/java/sk/workingset/application/MergeExecutionService.java)：`CREATE` 到默认工作集时使用 CommonId 作为 LocalId，保证二者相等；非默认工作集使用新雪花。
+- [WorkingSetApplicationService](../../../sharedkernel/src/main/java/sk/workingset/application/WorkingSetApplicationService.java)：派生生成新 LocalId，并确保与来源 CommonId 不等。
 - Tracker 不存在时不提前拦截身份分配，交由持久化层按既有约束返回冲突（与 D10 的兼容行为一致）。
 
 ## 3. 验收
 
-- [RequirementCreateScopeTest](../../../src/test/java/alm/requirement/application/RequirementCreateScopeTest.java)：默认 WS 同一 ID、非默认 WS 两个不等 ID、共享 Tracker 任意工作集、非共享错误工作集 `NotIncluded`、Tracker 不存在交给持久化层（5 项）。
-- [RequirementAcceptanceTest](../../../src/test/java/bootstrap/RequirementAcceptanceTest.java)：HTTP 创建默认工作集 Requirement，断言 `commonId == localId`。
-- [BindingAcceptanceTest](../../../src/test/java/bootstrap/BindingAcceptanceTest.java)：删除 Tracker 后创建返回 409 `DATA_INTEGRITY_CONFLICT`；并发创建与删除场景保持通过。
-- [RequirementFamilyScopeTest](../../../src/test/java/bootstrap/RequirementFamilyScopeTest.java)：requirements 与 LTI 的同工作集家族唯一索引、软删占键。
+- [RequirementCreateScopeTest](../../../alm/src/test/java/alm/requirement/application/RequirementCreateScopeTest.java)：默认 WS 同一 ID、非默认 WS 两个不等 ID、共享 Tracker 任意工作集、非共享错误工作集 `NotIncluded`、Tracker 不存在交给持久化层（5 项）。
+- [RequirementAcceptanceTest](../../../deploys/src/test/java/bootstrap/RequirementAcceptanceTest.java)：HTTP 创建默认工作集 Requirement，断言 `commonId == localId`。
+- [BindingAcceptanceTest](../../../deploys/src/test/java/bootstrap/BindingAcceptanceTest.java)：删除 Tracker 后创建返回 409 `DATA_INTEGRITY_CONFLICT`；并发创建与删除场景保持通过。
+- [RequirementFamilyScopeTest](../../../deploys/src/test/java/bootstrap/RequirementFamilyScopeTest.java)：requirements 与 LTI 的同工作集家族唯一索引、软删占键。
 
 `mvn -B clean test`：**88 项通过，0 失败、0 错误、0 跳过**（含 ArchUnit、真实 PostgreSQL/Redis/Tomcat）。
 

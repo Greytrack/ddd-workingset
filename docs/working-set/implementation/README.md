@@ -20,6 +20,6 @@
 | T5 首个纵向切片 | [S1 查询](t5-s1-verification-result.md)、[S2 保存与事件](t5-s2-verification-result.md)、[S3 首次物化](t5-s3-verification-result.md)、[S4 恢复](t5-s4-verification-result.md)、[S5 绑定与删除](t5-s5-verification-result.md)、[S6 谱系](t5-s6-verification-result.md)、[S7 Merge](t5-s7-verification-result.md) |
 | T5 支撑证据 | [运行时](t5-runtime-verification.md)、[D2 家族作用域](t5-d2-family-scope-verification.md)、[D4 SK 边界](t5-d4-sk-boundary-verification.md) |
 
-**分类共享能力的已知差距**：POL-003 允许非共享分类创建两种共享模式的 Tracker。当前 PostgreSQL 切片要求 Tracker 共享模式与分类相同。实施此能力时以 [POL-003](../domain/facts.md) 为准，具体约束见 [schema.sql](../../../src/main/resources/schema.sql)。
+**分类共享能力的已知差距**：POL-003 允许非共享分类创建两种共享模式的 Tracker。当前 PostgreSQL 切片要求 Tracker 共享模式与分类相同。实施此能力时以 [POL-003](../domain/facts.md) 为准，具体约束见 [schema.sql](../../../deploys/src/main/resources/schema.sql)。
 
 领域待裁定事项见[开放问题](../domain/open-questions.md)。已完成的 T6/T7 实施提示词及阶段 2 概念旧图已从当前索引移除，必要时从 Git 历史查阅。
