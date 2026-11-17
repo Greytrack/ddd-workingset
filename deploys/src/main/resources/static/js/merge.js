@@ -23,6 +23,7 @@ const mergeView = {
 };
 
 function mergeOverlay() { return $('#mergeOverlay'); }
+let mergeTrigger = null;
 
 function closeMerge() {
   if (mergeView.poller) clearInterval(mergeView.poller);
@@ -33,9 +34,12 @@ function closeMerge() {
   mergeView.rows = [];
   mergeOverlay().classList.add('hidden');
   $('#mergeContent').innerHTML = '';
+  mergeTrigger?.focus();
+  mergeTrigger = null;
 }
 
 async function openMerge() {
+  const trigger = document.activeElement;
   const selected = state.selectedTracker;
   const workingSetId = state.selectedWs;
   const node = findNode(state.worksets, workingSetId);
@@ -60,11 +64,13 @@ async function openMerge() {
   if (state.selectedTracker !== selected || state.selectedWs !== workingSetId) return;
 
   closeMerge();
+  mergeTrigger = trigger;
   mergeView.open = true;
   mergeView.anchor = anchor;
   mergeView.peers = ranges.flat();
   mergeOverlay().classList.remove('hidden');
   renderMergeShell();
+  $('#mergeTrackerSelect').focus();
 }
 
 function renderMergeShell() {
@@ -75,10 +81,10 @@ function renderMergeShell() {
   $('#mergeContent').innerHTML = `
     <div class="modal-head">
       <div>
-        <h3>比较 / 合并</h3>
+        <h3 id="mergeTitle">比较 / 合并</h3>
         <p id="mergeSubtitle"></p>
       </div>
-      <button type="button" class="modal-close" onclick="closeMerge()">✕</button>
+      <button type="button" class="modal-close" aria-label="关闭" onclick="closeMerge()">✕</button>
     </div>
     <div class="modal-body">
       <div class="merge-picker">

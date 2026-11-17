@@ -1,22 +1,34 @@
 /* ---------- modal shell ---------- */
+let modalTrigger = null;
+
 function modalHeader(title, subtitle = '') {
   return `<div class="modal-head">
-    <div><h3>${escapeHtml(title)}</h3>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div>
+    <div><h3 id="modalTitle">${escapeHtml(title)}</h3>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div>
     <button type="button" class="modal-close" data-close-modal aria-label="关闭">×</button>
   </div>`;
 }
 
 function openModal(html, wide = false) {
+  const overlay = $('#modalOverlay');
+  const opening = overlay.classList.contains('hidden');
+  const restoreCloseFocus = !opening && overlay.contains(document.activeElement);
+  if (opening) modalTrigger = document.activeElement;
   $('#modalContent').innerHTML = html;
   $('#modalPanel').classList.toggle('wide', wide);
-  $('#modalOverlay').classList.remove('hidden');
+  overlay.classList.remove('hidden');
+  if (opening || restoreCloseFocus) {
+    (overlay.querySelector('input:not([type="checkbox"]), select') || overlay.querySelector('[data-close-modal]')).focus();
+  }
 }
 
 function closeModal() {
+  if ($('#modalOverlay').classList.contains('hidden')) return;
   $('#modalOverlay').classList.add('hidden');
   $('#modalContent').innerHTML = '';
   taskCenterOpen = false;
   requirementContext = null;
+  modalTrigger?.focus();
+  modalTrigger = null;
 }
 
 /* ---------- LRO task centre ---------- */
@@ -125,7 +137,7 @@ function renderTaskCenter() {
   const body = state.tasks.length
     ? `<div class="task-list">${state.tasks.map(renderTaskCard).join('')}</div>`
     : '<div class="empty">暂无任务。点击“创建工作集”发起一个。</div>';
-  openModal(`${modalHeader('任务中心', '创建工作集 LRO 的阶段与进度')}
+  openModal(`${modalHeader('任务中心')}
     <div class="modal-body">${body}</div>
     <div class="modal-foot"><button type="button" class="btn" data-close-modal>关闭</button></div>`, true);
   taskCenterOpen = true;
@@ -382,6 +394,10 @@ async function openRequirementEdit(item) {
 
 async function submitRequirement(form) {
   const errorBox = $('#requirementFormError');
+  const submit = form.querySelector('[type="submit"]');
+  if (submit.disabled) return;
+  submit.disabled = true;
+  submit.textContent = '保存中…';
   if (errorBox) errorBox.textContent = '';
   const title = form.title.value.trim();
   const description = form.description.value;
@@ -412,6 +428,9 @@ async function submitRequirement(form) {
     if (trackerId) await selectTracker(trackerId);
   } catch (error) {
     if (errorBox) errorBox.textContent = reasonText(error.body) || error.message;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = '保存';
   }
 }
 
@@ -428,36 +447,76 @@ async function deleteRequirement(item) {
 }
 
 async function refresh() {
-  const current = state.selectedWs;
-  state.selectedWs = null;
-  state.selectedTracker = null;
-  state.selectedItem = null;
-  state.items = [];
-  state.content = null;
-  await loadWorksetTree();
-  const root = state.worksets[0];
-  const target = current && findNode(state.worksets, current) ? current : root?.id;
-  if (target) await selectWorkset(target);
+  const button = $('#refresh');
+  button.disabled = true;
+  try {
+    await loadWorksetTree();
+    const current = state.selectedWs;
+    const space = state.selectedSpace;
+    const tracker = state.selectedTracker?.trackerId;
+    const item = state.selectedItem?.localId;
+    const filter = $('#itemFilter').value;
+    const target = current && findNode(state.worksets, current) ? current : state.worksets[0]?.id;
+    if (!target) return;
+    await selectWorkset(target);
+    if (state.selectedWs !== target || target !== current) return;
+    if (currentSpaces().has(space)) selectSpace(space);
+    if (!tracker) return;
+    if (!state.trackers.some((candidate) => candidate.trackerId === tracker)) return;
+    $('#itemFilter').value = filter;
+    await selectTracker(tracker, { keepFilter: true });
+    const selected = state.items.find((candidate) => candidate.localId === item);
+    if (selected) await loadContent(selected.localId, selected.workingSetId);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function bindEvents() {
+  $('.pane-nav').addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-pane]');
+    if (tab) showPane(tab.dataset.pane);
+  });
   $('#worksetTree').addEventListener('click', (event) => {
     const row = event.target.closest('[data-ws-id]');
-    if (row) selectWorkset(row.dataset.wsId);
+    if (!row) return;
+    $('#worksetPicker').open = false;
+    $('#worksetPicker summary').focus();
+    if (row.dataset.wsId !== state.selectedWs) {
+      selectWorkset(row.dataset.wsId);
+      showPane('spaces');
+    }
   });
 
   $('#spaceList').addEventListener('click', (event) => {
-    const toggle = event.target.closest('[data-space-toggle]');
-    if (toggle) {
-      const spaceId = toggle.dataset.spaceToggle;
-      state.selectedSpace = spaceId;
-      if (state.expandedSpaces.has(spaceId)) state.expandedSpaces.delete(spaceId);
-      else state.expandedSpaces.add(spaceId);
-      renderSpaces();
-      return;
-    }
+    const space = event.target.closest('[data-space-id]');
+    if (!space) return;
+    selectSpace(space.dataset.spaceId);
+    $('#spaceList [aria-current="true"]')?.focus({ preventScroll: true });
+    showPane('trackers', true);
+  });
+  $('#trackerList').addEventListener('click', (event) => {
     const tracker = event.target.closest('[data-tracker-id]');
-    if (tracker) selectTracker(tracker.dataset.trackerId);
+    if (tracker) {
+      selectTracker(tracker.dataset.trackerId);
+      $('#trackerList .tracker-node.selected')?.focus({ preventScroll: true });
+      showPane('items', true);
+    }
+  });
+  document.addEventListener('click', (event) => {
+    const picker = $('#worksetPicker');
+    if (picker.open && !picker.contains(event.target)) picker.open = false;
+  });
+
+  $('#itemFilter').addEventListener('input', renderItems);
+  $('#itemDetail').addEventListener('click', (event) => {
+    if (!event.target.closest('[data-close-detail]')) return;
+    const item = state.selectedItem;
+    ++contentRequest;
+    state.selectedItem = null;
+    state.contentLoading = false;
+    renderItemDetail();
+    $('#itemArea').querySelector(`[data-local-id="${CSS.escape(item.localId)}"] .item-open`)?.focus();
   });
 
   $('#itemArea').addEventListener('click', (event) => {
@@ -540,7 +599,28 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeModal();
+    const picker = $('#worksetPicker');
+    if (event.key === 'Escape' && picker.open) {
+      picker.open = false;
+      picker.querySelector('summary').focus();
+    }
+    const overlay = document.querySelector('.modal-overlay:not(.hidden)');
+    if (!overlay) return;
+    if (event.key === 'Escape') {
+      if (overlay.id === 'mergeOverlay') closeMerge();
+      else closeModal();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll('button, input, select, textarea, a[href]')]
+      .filter((element) => !element.disabled && element.getClientRects().length);
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    const edge = event.shiftKey ? first : last;
+    if (document.activeElement === edge || !overlay.contains(document.activeElement)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first)?.focus();
+    }
   });
 }
 

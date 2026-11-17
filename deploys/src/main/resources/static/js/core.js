@@ -6,7 +6,6 @@ const state = {
   selectedWs: null,
   bindings: { spaces: [], trackers: [] },
   trackers: [],
-  expandedSpaces: new Set(),
   selectedSpace: null,
   selectedTracker: null,
   items: [],

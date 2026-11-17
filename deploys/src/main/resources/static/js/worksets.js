@@ -1,3 +1,17 @@
+let worksetRequest = 0;
+let trackerRequest = 0;
+let contentRequest = 0;
+
+function showPane(pane, moveFocus = false) {
+  const layout = $('.layout');
+  layout.dataset.activePane = pane;
+  document.querySelectorAll('[data-pane]').forEach((button) => {
+    const active = button.dataset.pane === pane;
+    button.setAttribute('aria-pressed', String(active));
+    if (active && moveFocus && button.offsetWidth) button.focus();
+  });
+}
+
 async function loadWorksetTree() {
   setStatus('加载工作集…');
   const seen = new Set();
@@ -22,7 +36,7 @@ async function loadWorksetTree() {
   const root = await build('1');
   state.worksets = root ? [root] : [];
   renderWorksetTree();
-  setStatus(root ? '工作集已加载' : '无法加载默认工作集', root ? 'ok' : 'error');
+  setStatus(root && !root.error ? '工作集已加载' : '无法加载默认工作集', root && !root.error ? 'ok' : 'error');
 }
 
 function renderWorksetTree() {
@@ -31,9 +45,11 @@ function renderWorksetTree() {
   let count = 0;
   const walk = (node, depth) => {
     count += 1;
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'tree-node' + (state.selectedWs === node.id ? ' selected' : '');
     row.dataset.wsId = node.id;
+    row.setAttribute('aria-current', state.selectedWs === node.id ? 'true' : 'false');
     row.title = node.id;
     row.style.paddingLeft = (9 + Math.min(depth, 10) * 14) + 'px';
     const label = node.ws?.name || (node.ws?.defaultWorkingSet ? '默认工作集 (1)' : shortId(node.id));
@@ -49,20 +65,18 @@ function renderWorksetTree() {
 }
 
 async function selectWorkset(id) {
+  const request = ++worksetRequest;
+  ++trackerRequest;
+  ++contentRequest;
   state.selectedWs = id;
   state.selectedSpace = null;
-  state.selectedTracker = null;
-  state.selectedItem = null;
-  state.items = [];
-  state.itemsLoading = false;
-  state.itemsError = null;
-  state.content = null;
-  state.contentError = null;
+  clearTrackerSelection();
   state.bindings = { spaces: [], trackers: [] };
   state.trackers = [];
-  state.expandedSpaces.clear();
+  $('#activeWorkset').textContent = worksetLabel(id);
   renderWorksetTree();
   renderSpaces();
+  renderSpaceTrackers();
   renderTracker();
   renderItems();
   setStatus('加载 ' + shortId(id) + ' 的绑定范围…');
@@ -70,34 +84,27 @@ async function selectWorkset(id) {
   try {
     const base = '/api/worksets/' + encodeURIComponent(id);
     const [bindings, trackers] = await Promise.all([api(base + '/bindings'), api(base + '/trackers')]);
+    if (request !== worksetRequest) return;
     state.bindings = bindings || { spaces: [], trackers: [] };
     state.trackers = trackers || [];
     renderSpaces();
+    renderSpaceTrackers();
     const bound = (state.bindings.trackers || []).length;
     setStatus('已加载 ' + (state.bindings.spaces || []).length + ' 个空间 · ' + state.trackers.length + ' 个 Tracker（绑定 ' + bound + '）', 'ok');
   } catch (error) {
+    if (request !== worksetRequest) return;
     renderSpaces();
     setStatus(reasonText(error.body) || error.message, 'error');
   }
 }
 
-function renderSpaces() {
-  const info = $('#selectedWorkset');
-  const list = $('#spaceList');
-
-  if (!state.selectedWs) {
-    info.innerHTML = '<div class="empty">从左侧选择工作集</div>';
-    list.innerHTML = '';
-    $('#spaceCount').textContent = '';
-    return;
-  }
-
-  const node = findNode(state.worksets, state.selectedWs);
+function worksetLabel(id) {
+  const node = findNode(state.worksets, id);
   const ws = node?.ws;
-  info.innerHTML = `
-    <div class="ws-title">${escapeHtml(ws?.name || (ws?.defaultWorkingSet ? '默认工作集' : shortId(state.selectedWs)))} <span class="mono">${escapeHtml(state.selectedWs)}</span></div>
-    <div class="ws-meta">父级：${ws?.parentWorkingSetId ? `<span class="mono">${escapeHtml(ws.parentWorkingSetId)}</span>` : '无（根）'}</div>`;
+  return ws?.name || (ws?.defaultWorkingSet ? '默认工作集' : shortId(id));
+}
 
+function currentSpaces() {
   const spaces = new Map();
   (state.bindings?.spaces || []).forEach((space) => {
     spaces.set(space.productSpaceId, { ...space, bound: true });
@@ -112,7 +119,17 @@ function renderSpaces() {
       });
     }
   });
+  return spaces;
+}
 
+function renderSpaces() {
+  const list = $('#spaceList');
+  if (!state.selectedWs) {
+    list.innerHTML = '<div class="empty">请先选择工作集</div>';
+    $('#spaceCount').textContent = '';
+    return;
+  }
+  const spaces = currentSpaces();
   if (!spaces.size) {
     list.innerHTML = '<div class="empty">该工作集还没有绑定产品空间或 Tracker</div>';
     $('#spaceCount').textContent = '';
@@ -124,23 +141,67 @@ function renderSpaces() {
   spaces.forEach((space, spaceId) => {
     const trackers = state.trackers.filter((tracker) => tracker.productSpaceId === spaceId);
     const boundCount = trackers.filter((tracker) => boundIds.has(tracker.trackerId)).length;
-    const expanded = state.expandedSpaces.has(spaceId);
+    const selected = state.selectedSpace === spaceId;
     const origin = space.origin || (space.bound ? '' : '未绑定空间');
-    const spaceName = space.name || (space.bound ? shortId(spaceId) : '未绑定空间');
+    const spaceName = space.name || shortId(spaceId);
+    const meta = [space.name ? spaceId : '', origin, space.state].filter(Boolean).join(' · ');
     html += `
-      <div class="space-card ${expanded ? 'expanded' : ''}">
-        <button type="button" class="space-head" data-space-toggle="${escapeHtml(spaceId)}" title="${escapeHtml(spaceId)}">
+      <div class="space-card ${selected ? 'selected' : ''}">
+        <button type="button" class="space-head" data-space-id="${escapeHtml(spaceId)}" aria-current="${selected}" title="${escapeHtml(spaceId)}">
           <span class="space-main">
             <span class="space-id">${escapeHtml(spaceName)}</span>
-            <span class="space-meta"><span class="mono">${escapeHtml(spaceId)}</span> · ${escapeHtml(origin)}${space.state ? ' · ' + escapeHtml(space.state) : ''} · ${trackers.length} 个 Tracker${boundCount !== trackers.length ? '（已绑定 ' + boundCount + '）' : ''}</span>
+            ${meta ? `<span class="space-meta">${escapeHtml(meta)}</span>` : ''}
+            <span class="space-meta">${trackers.length} 个 Tracker${boundCount !== trackers.length ? ' · 已绑定 ' + boundCount : ''}</span>
           </span>
-          <span class="chevron">${expanded ? '⌄' : '›'}</span>
+          <span class="chevron" aria-hidden="true">›</span>
         </button>
-        ${expanded ? `<div class="tracker-tree">${renderTrackerTree(trackers, boundIds)}</div>` : ''}
       </div>`;
   });
   list.innerHTML = html;
   $('#spaceCount').textContent = spaces.size + ' 个空间';
+}
+
+function renderSpaceTrackers() {
+  const space = currentSpaces().get(state.selectedSpace);
+  const heading = $('#selectedSpace');
+  const list = $('#trackerList');
+  heading.classList.toggle('hidden', !space);
+  if (!space) {
+    list.innerHTML = '<div class="empty item-empty"><strong>尚未选择产品空间</strong><span>选择产品空间后查看当前工作集下的 Tracker。</span></div>';
+    $('#trackerCount').textContent = '';
+    return;
+  }
+  const trackers = state.trackers.filter((tracker) => tracker.productSpaceId === space.productSpaceId);
+  const boundIds = new Set((state.bindings?.trackers || []).map((item) => item.trackerId));
+  heading.innerHTML = `<div class="ws-title">${escapeHtml(space.name || space.productSpaceId)}</div>
+    <div class="ws-meta">${escapeHtml(worksetLabel(state.selectedWs))}</div>`;
+  list.innerHTML = renderTrackerTree(trackers, boundIds);
+  $('#trackerCount').textContent = trackers.length + ' 个';
+}
+
+function clearTrackerSelection() {
+  state.selectedTracker = null;
+  state.selectedItem = null;
+  state.items = [];
+  state.itemsLoading = false;
+  state.itemsError = null;
+  state.content = null;
+  state.contentLoading = false;
+  state.contentError = null;
+  $('#itemFilter').value = '';
+}
+
+function selectSpace(spaceId) {
+  if (spaceId !== state.selectedSpace) {
+    state.selectedSpace = spaceId;
+    ++trackerRequest;
+    ++contentRequest;
+    clearTrackerSelection();
+    renderSpaces();
+    renderTracker();
+    renderItems();
+  }
+  renderSpaceTrackers();
 }
 
 function renderTrackerTree(trackers, boundIds) {
@@ -170,14 +231,14 @@ function renderTrackerTree(trackers, boundIds) {
     const bound = boundIds.has(tracker.trackerId);
     const trackerName = tracker.name || shortId(tracker.trackerId);
     return `
-      <div class="tracker-node${selected}" data-tracker-id="${escapeHtml(tracker.trackerId)}"
+      <button type="button" class="tracker-node${selected}" data-tracker-id="${escapeHtml(tracker.trackerId)}"
+           aria-current="${Boolean(selected)}"
            style="padding-left:${8 + Math.min(depth, 8) * 14}px" title="${escapeHtml(tracker.trackerId)}">
         <span class="tracker-label">${escapeHtml(trackerName)}</span>
-        <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${escapeHtml(tracker.sharingMode)}</span>
+        <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${tracker.sharingMode === 'SHARED' ? '共享' : '非共享'}</span>
         ${tracker.isDefault ? '<span class="badge">默认</span>' : ''}
-        ${tracker.sourceId ? `<span class="badge source">源 ${escapeHtml(shortId(tracker.sourceId))}</span>` : ''}
         ${bound ? '' : '<span class="badge unbound">未绑定</span>'}
-      </div>` + kids.map((child) => walk(child, depth + 1)).join('');
+      </button>` + kids.map((child) => walk(child, depth + 1)).join('');
   };
 
   let html = sort(roots).map((tracker) => walk(tracker, 0)).join('');
@@ -187,21 +248,26 @@ function renderTrackerTree(trackers, boundIds) {
   return html || '<div class="empty small">该空间下没有可显示的 Tracker</div>';
 }
 
-async function selectTracker(trackerId) {
+async function selectTracker(trackerId, { keepFilter = false } = {}) {
   const tracker = state.trackers.find((item) => item.trackerId === trackerId);
   if (!tracker) return;
+  const request = ++trackerRequest;
+  ++contentRequest;
+  const workingSetId = state.selectedWs;
+  if (!keepFilter && state.selectedTracker?.trackerId !== trackerId) $('#itemFilter').value = '';
 
   state.selectedTracker = tracker;
   state.selectedSpace = tracker.productSpaceId;
-  state.expandedSpaces.add(tracker.productSpaceId);
   state.selectedItem = null;
   state.content = null;
+  state.contentLoading = false;
   state.contentError = null;
   state.items = [];
   state.itemsError = null;
 
   const bound = (state.bindings?.trackers || []).some((item) => item.trackerId === trackerId);
   renderSpaces();
+  renderSpaceTrackers();
   renderTracker();
 
   if (!bound) {
@@ -216,15 +282,20 @@ async function selectTracker(trackerId) {
   renderItems();
   setStatus('加载 Tracker Item…');
   try {
-    state.items = await api('/api/worksets/' + encodeURIComponent(state.selectedWs) +
+    const items = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
       '/trackers/' + encodeURIComponent(trackerId) + '/items') || [];
+    if (request !== trackerRequest) return;
+    state.items = items;
     setStatus('已加载 ' + state.items.length + ' 个 Item', 'ok');
   } catch (error) {
+    if (request !== trackerRequest) return;
     state.itemsError = reasonText(error.body) || error.message;
     setStatus(state.itemsError, 'error');
   } finally {
-    state.itemsLoading = false;
-    renderItems();
+    if (request === trackerRequest) {
+      state.itemsLoading = false;
+      renderItems();
+    }
   }
 }
 
@@ -254,13 +325,16 @@ function renderTracker() {
 
 function renderItems() {
   const area = $('#itemArea');
+  $('#itemToolbar').classList.toggle('hidden', !state.items.length);
+  area.setAttribute('aria-busy', String(state.itemsLoading));
+  renderItemDetail();
   if (!state.selectedTracker) {
-    area.innerHTML = '<div class="empty">选择 Tracker 后显示 Item 列表</div>';
+    area.innerHTML = '<div class="empty item-empty"><strong>尚未选择 Tracker</strong><span>选择一个 Tracker，查看它的 Item。</span></div>';
     $('#itemCount').textContent = '';
     return;
   }
   if (state.itemsLoading) {
-    area.innerHTML = '<div class="empty">加载 Item…</div>';
+    area.innerHTML = '<div class="empty item-empty" role="status"><span class="spinner" aria-hidden="true"></span>正在加载 Item…</div>';
     $('#itemCount').textContent = '';
     return;
   }
@@ -270,72 +344,95 @@ function renderItems() {
     return;
   }
   if (!state.items.length) {
-    area.innerHTML = '<div class="empty">该 Tracker 下没有 Item</div>';
+    area.innerHTML = '<div class="empty item-empty"><strong>暂无 Item</strong><span>可从上方新建需求。</span></div>';
     $('#itemCount').textContent = '0 个';
     return;
   }
 
-  const rows = state.items.map((item) => {
+  const query = $('#itemFilter').value.trim().toLocaleLowerCase();
+  const visibleItems = state.items.filter((item) => [item.name, item.localId, item.commonId]
+    .some((value) => String(value ?? '').toLocaleLowerCase().includes(query)));
+  $('#itemCount').textContent = query ? visibleItems.length + ' / ' + state.items.length + ' 个' : state.items.length + ' 个';
+  if (!visibleItems.length) {
+    area.innerHTML = '<div class="empty item-empty"><strong>没有匹配的 Item</strong><span>试试其他名称或 ID。</span></div>';
+    return;
+  }
+  const rows = visibleItems.map((item) => {
     const selected = state.selectedItem?.localId === item.localId ? ' selected' : '';
     return `
       <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
-        <td class="item-name" title="${escapeHtml(item.name || item.commonId)}">${escapeHtml(item.name || shortId(item.commonId))}</td>
-        <td class="mono" title="${escapeHtml(item.localId)}">${escapeHtml(shortId(item.localId))}</td>
-        <td class="mono" title="${escapeHtml(item.commonId)}">${escapeHtml(shortId(item.commonId))}</td>
-        <td>${escapeHtml(item.revision)}</td>
-        <td class="mono" title="${escapeHtml(item.sourceLocalId)}">${escapeHtml(shortId(item.sourceLocalId))}</td>
-        <td>${escapeHtml(item.sourceRevision)}</td>
-        <td>${item.materialized ? '<span class="badge shared">是</span>' : '<span class="badge unshared">否</span>'}</td>
-        <td class="row-actions">
+        <td><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || shortId(item.commonId))}</button>
+          <div class="item-identity mono" title="${escapeHtml(item.localId)}">${escapeHtml(shortId(item.localId))}</div></td>
+        <td class="item-revision">${escapeHtml(item.revision)}</td>
+        <td>${item.materialized ? '<span class="badge shared">本地物化</span>' : '<span class="badge source">来源继承</span>'}</td>
+        <td><div class="row-actions">
           <button type="button" class="btn small" data-edit-requirement="${escapeHtml(item.localId)}">编辑</button>
           <button type="button" class="btn small danger" data-delete-requirement="${escapeHtml(item.localId)}">删除</button>
+          </div>
         </td>
       </tr>`;
   }).join('');
 
   area.innerHTML = `
-    <table>
+    <table class="item-table">
       <thead>
-        <tr><th>名称</th><th>Local ID</th><th>Common ID</th><th>Rev</th><th>来源 Local</th><th>来源 Rev</th><th>本地物化</th><th>操作</th></tr>
+        <tr><th>名称 / Local ID</th><th class="item-revision">版次</th><th>内容状态</th><th>操作</th></tr>
       </thead>
       <tbody>${rows}</tbody>
-    </table>
-    ${state.selectedItem ? renderItemDetail() : '<div class="hint">点击一行查看 Item 内容</div>'}`;
-  $('#itemCount').textContent = state.items.length + ' 个';
+    </table>`;
 }
 
 function renderItemDetail() {
-  if (state.contentLoading) {
-    return '<div class="detail"><div class="empty small">加载内容…</div></div>';
-  }
-  if (state.contentError) {
-    return `<div class="detail"><div class="empty small error-text">${escapeHtml(state.contentError)}</div></div>`;
+  const detail = $('#itemDetail');
+  const item = state.selectedItem;
+  detail.classList.toggle('hidden', !item);
+  detail.setAttribute('aria-busy', String(state.contentLoading));
+  $('#itemArea').querySelectorAll('[data-local-id]').forEach((row) => {
+    const active = row.dataset.localId === item?.localId;
+    row.classList.toggle('selected', active);
+    row.querySelector('.item-open').setAttribute('aria-expanded', String(active));
+  });
+  if (!item) {
+    detail.innerHTML = '';
+    return;
   }
   const content = state.content;
-  const fields = content?.fields || {};
-  const rows = Object.entries(fields).map(([key, value]) =>
-    `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(formatValue(value))}</dd>`).join('');
-  return `
-    <div class="detail">
-      <div class="detail-title">${escapeHtml(state.selectedItem?.name || 'Item 内容')} <span class="mono">${escapeHtml(shortId(state.selectedItem?.localId))}</span></div>
-      <div class="detail-meta">内容来源 <span class="mono">${escapeHtml(content?.contentLocalId || '—')}</span> · 版本 ${escapeHtml(content?.contentRevision ?? '—')} · ${content?.materialized ? '本地物化' : '来源继承'}</div>
-      <dl class="fields">${rows || '<dt>内容</dt><dd>—</dd>'}</dl>
-    </div>`;
+  const rows = Object.entries(content?.fields || {}).map(([key, value]) =>
+    `<dt>${escapeHtml(({ title: '标题', description: '描述' })[key] ?? key)}</dt><dd>${escapeHtml(formatValue(value))}</dd>`).join('');
+  const header = `<header class="detail-head">
+    <h3 class="detail-title">${escapeHtml(item.name || 'Item 详情')}</h3>
+    <button type="button" class="modal-close" data-close-detail aria-label="关闭 Item 详情">×</button>
+  </header>`;
+  const body = state.contentLoading ? '<div class="empty small" role="status">正在加载内容…</div>'
+    : state.contentError ? `<div class="empty small error-text">${escapeHtml(state.contentError)}</div>`
+    : `<div class="detail-meta">
+      <span>Local ID <span class="mono">${escapeHtml(item.localId)}</span></span>
+      <span>Common ID <span class="mono">${escapeHtml(item.commonId)}</span></span>
+      <span>版次 ${escapeHtml(item.revision ?? '—')}</span>
+      <span>内容来源 <span class="mono">${escapeHtml(content?.contentLocalId || '—')}</span> · 版次 ${escapeHtml(content?.contentRevision ?? '—')}</span>
+      </div><dl class="fields">${rows || '<dt>内容</dt><dd>—</dd>'}</dl>`;
+  const focused = detail.contains(document.activeElement);
+  detail.innerHTML = header + body;
+  if (focused) detail.querySelector('[data-close-detail]').focus();
 }
 
 async function loadContent(localId, workingSetId) {
+  const request = ++contentRequest;
   state.selectedItem = state.items.find((item) => item.localId === localId) || { localId, workingSetId };
   state.content = null;
   state.contentError = null;
   state.contentLoading = true;
-  renderItems();
+  renderItemDetail();
   try {
-    state.content = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
+    const content = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
       '/items/' + encodeURIComponent(localId) + '/content');
+    if (request === contentRequest) state.content = content;
   } catch (error) {
-    state.contentError = reasonText(error.body) || error.message;
+    if (request === contentRequest) state.contentError = reasonText(error.body) || error.message;
   } finally {
-    state.contentLoading = false;
-    renderItems();
+    if (request === contentRequest) {
+      state.contentLoading = false;
+      renderItemDetail();
+    }
   }
 }
