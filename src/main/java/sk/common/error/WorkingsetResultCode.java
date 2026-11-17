@@ -1,6 +1,14 @@
 package sk.common.error;
 
-/** Stable numeric codes for Working Set failures. */
+/**
+ * Public API error codes (T4 §5.4, API contract v1).
+ *
+ * <p>Codes are stable and append-only: never renumber, reuse, or change the meaning of an
+ * existing code. {@code reason} is the stable category; {@code message} is not stable.
+ * Ranges: 1000–1099 common, 1100–1199 T4 nine categories, 1200–1299 working set/binding,
+ * 1300–1399 merge, 1400–1499 materialization/lifecycle lock. New codes must be added in
+ * the matching range and registered in the contract before being exposed.
+ */
 public enum WorkingsetResultCode implements ResCode {
     APPLICATION_NOT_FOUND(1101, "Not found"),
     APPLICATION_NOT_INCLUDED(1102, "Not included"),

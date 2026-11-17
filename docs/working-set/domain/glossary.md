@@ -9,7 +9,7 @@
 | 编号 | 术语 | 定义 | 应避免的混用 |
 | --- | --- | --- | --- |
 | `CONCEPT-001` | **Working Set／工作集** | 有身份和生命周期、选择 Tracker 并形成有效工作范围的工作上下文或范围清单。 | 不等同 Git Branch；不预设拥有全部 Item；不等同分支本体。 |
-| `CONCEPT-002` | **Tracker** | 具有独立业务身份、状态、生命周期与管理行为的独立聚合。 | 不作为 Working Set 内部实体；不使用 Tracker Branch 作为独立领域概念。 |
+| `CONCEPT-002` | **Tracker** | 具有独立业务身份、状态、生命周期与管理行为的独立聚合。业务原生 Tracker 只能在默认工作集创建；子工作集只能纳入 Shared 或从直属父工作集派生。 | 不作为 Working Set 内部实体；不使用 Tracker Branch 作为独立领域概念；子工作集不独立创建原始 Tracker。 |
 | `CONCEPT-003` | **Shared Tracker／共享 Tracker** | 多个 Working Set 绑定同一权威 Tracker、同一 Item 变体和同一权威内容的协作语义。 | “共享”不等于所有用户有权；不等于复制后同步；修改不通过 Merge 传播。 |
 | `CONCEPT-004` | **Non-shared Tracker／非共享 Tracker** | 非共享协作模式下的 Tracker；派生时产生具有独立身份的新 Tracker，源与派生是不同对象。 | 不等同同一 Tracker 的视图；不引入 Tracker Branch。 |
 | `CONCEPT-007` | **Item Family／Item 家族** | 以 `CommonId` 识别跨派生变体的同一逻辑对象家族。 | 无关 Item 跨类型、跨 Tracker 也不能共享 `CommonId`。 |

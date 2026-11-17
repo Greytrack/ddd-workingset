@@ -19,7 +19,10 @@ import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.merge.MergeFailure;
 
 /**
- * 最小 REST 错误映射：保留 NotFound 与 NotIncluded 的区分，乐观锁冲突显式返回 409。
+ * REST 错误映射：保留 NotFound 与 NotIncluded 的区分，乐观锁冲突显式返回 409。
+ *
+ * <p>响应中的 {@code code}/{@code reason} 属于 T4 §5.4 API 契约 v1：{@code code} 稳定、
+ * {@code reason} 稳定，{@code message} 仅用于展示；HTTP 状态按端点映射，不替代错误码。
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {

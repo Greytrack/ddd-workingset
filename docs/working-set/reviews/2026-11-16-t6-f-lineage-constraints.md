@@ -14,9 +14,10 @@
 
 ### 1.2 e 同源多派生 —— 允许多个，引入 `is_default`
 
-用户裁定：同一工作集、同一来源（同产品空间 + 同分类）允许多个 Tracker；第一个创建的是默认 Tracker，有且仅有一个默认 Tracker；新增 `is_default` 标识；产品空间创建时同步创建默认 Tracker；产品空间创建后可在空间内按分类投影新建同一分类的多个 Tracker；Tracker 名称不能重复。
+用户裁定：同一工作集、同一来源（同产品空间 + 同分类）允许多个 Tracker；第一个创建的是默认 Tracker，默认资格与 Shared 例外见 §4.3（有效范围内至多一个）；新增 `is_default` 标识；产品空间创建时同步创建默认 Tracker；产品空间创建后可在空间内按分类投影新建同一分类的多个 Tracker；Tracker 名称不能重复。
 
 - 默认资格的现行规则见 §4.3。
+- **业务原生 Tracker 只能在默认工作集创建**；子工作集不允许独立创建 Tracker，只能从直属父工作集纳入 Shared Tracker 或派生非共享 Tracker。名称唯一因此是“业务原生 Tracker 创建作用域”的约束，不是绑定作用域。
 - “产品空间创建”同时创建默认 Tracker（业务原生，位于默认工作集）；其余 Tracker 通过既有派生/新建入口创建。
 - Item 层仍受 POL-005 约束：同一工作集同一 CommonId 只有一个有效变体；本裁定不放宽 Item 唯一性。
 
@@ -54,13 +55,13 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 | 项 | 裁定 |
 | --- | --- |
-| 名称唯一作用域 | 同一（产品空间，分类）内唯一；2026-11-17 实施为（工作集，空间，分类），因业务原生 Tracker 只在默认工作集，两者当前等价 |
+| 名称唯一作用域 | 同一（产品空间，分类）内唯一。业务原生 Tracker 只在默认工作集创建，2026-11-17 实施为（工作集，空间，分类）索引；因创建只发生在默认工作集，两者当前等价。子工作集不允许原生创建，故不产生跨工作集同名原生 Tracker；未来若开放子 WS 原生创建，需重新裁定 |
 | 多派生后的 compare/merge 配对 | 条目身份 = 左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次 |
 | 产品空间创建入口 | 新增 `POST /api/worksets/{id}/product-spaces`，同时创建默认 Tracker。产品空间只能在默认工作集创建：`{id}` 仅为入口占位、不参与目标选择，任何调用都固定到默认工作集；入口层不限制调用来源，这是有意设计 |
 
 ### 4.1 实现含义
 
-- 名称唯一按（工作集，空间，分类）实现，仅业务原生 Tracker 参与。由于业务原生 Tracker 只存在于默认工作集，当前等价于原裁定的（产品空间，分类）内唯一；若未来允许子工作集原生创建 Tracker，需要重新确认作用域。
+- 名称唯一按（工作集，空间，分类）实现，仅业务原生 Tracker 参与。业务原生 Tracker 只能在默认工作集创建，因此当前等价于原裁定的（产品空间，分类）内唯一；子工作集不能原生创建 Tracker，故不会出现跨工作集同名原生 Tracker。派生 Tracker 继承来源名称，不参与唯一约束。若未来允许子工作集原生创建，需要重新确认作用域。
 - 条目身份包含双侧 Tracker 与工作集：`Comparison.TrackerPair` 需要携带 workingSetId；`Difference.key` 改为由该复合键派生的稳定串，不再使用序号。**截至 2026-11-17 未实现**，当前仍是页内序号，见 §3.5。
 - 同一家族的 Item 在同一工作集只属于一个 Tracker（POL-005 与 Item 归属），所以“左侧 Tracker 集合 × 右侧 Tracker 集合”不会让同一家族重复出现。
 - Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。条目证据中的双侧定位（含工作集、LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
@@ -79,7 +80,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 - 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
-- 全量测试 122 项通过。
+- 全量测试 130 项通过（含新增错误码契约测试与默认 Tracker 边界测试）。
 
 ## 6. 关联材料
 

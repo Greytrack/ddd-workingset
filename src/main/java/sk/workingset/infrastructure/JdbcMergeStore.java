@@ -57,15 +57,6 @@ public final class JdbcMergeStore implements MergeStore {
     }
 
     @Override
-    public boolean hasActiveRoundForTrackerPair(TrackerId trackerA, TrackerId trackerB) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM merge_rounds
-                    WHERE tracker_a_id = ? AND tracker_b_id = ?
-                      AND state->>'state' IN ('Preparing', 'Running'))
-                """, Boolean.class, trackerA.value(), trackerB.value()));
-    }
-
-    @Override
     public boolean tryLockExecution(String roundId) {
         return jdbc.query("""
                 SELECT pg_try_advisory_xact_lock(execution_lock_id) FROM merge_rounds WHERE id = ?

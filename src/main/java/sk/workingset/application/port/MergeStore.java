@@ -18,9 +18,6 @@ public interface MergeStore {
     Optional<MergeRound> findRoundByRequest(String requestId);
     void updateRound(MergeRound round);
 
-    /** 同一 Tracker 分支对是否已有未终态轮次（并发合并闸门）。 */
-    boolean hasActiveRoundForTrackerPair(TrackerId trackerA, TrackerId trackerB);
-
     /** 在当前事务内独占一个轮次的执行权，事务结束时释放。 */
     boolean tryLockExecution(String roundId);
 

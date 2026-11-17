@@ -74,11 +74,12 @@
 | 日期 | 变更主题与依据 |
 | --- | --- |
 | 2026-11-16 | 文档收敛：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；不改变业务语义。见 [收敛记录](reviews/2026-11-16-doc-consolidation.md)。 |
+| 2026-11-17 | T4 §5.4 登记数值错误码与响应结构为 API 契约 v1：码段、九分类映射、只增不改与版本化规则；实现枚举见 `sk.common.error.WorkingsetResultCode`。 |
 | 2026-11-14 | T7-D：受理时冻结父 Item 快照、批量 LTI 索引与 `TrackerItemsIndexed`；见 [T7 设计](domain/working-set-creation-lro-design.md) 与 [T7-D 验收](implementation/t7-d-index-verification.md)。 |
 | 2026-11-15 | QUESTION-010 裁定 C：Reference 使用逻辑 Family + 可选钉版/物理定位，Association 使用具体 Variant 端点；T7-E 只做构建/修复，见 [裁定记录](reviews/2026-11-15-question-010-relation-identity-decision.md)。 |
 | 2026-11-15 | Compare 不持久化：比较结果仅瞬时展示，不保存 `merge_comparisons`/JSONB；用户决策与所选差异证据随 MergeRound 持久化，MergeRound 以异步 LRO 轮询推进，apply 按轮次决策范围执行；见 [裁定记录](reviews/2026-11-15-compare-not-persisted-decision.md)。 |
 | 2026-11-16 | T6-E 收敛：Merge 只保留整页决策提交（1–50 条、`requestId` 必填幂等、空决策与超限 400），删除空轮次/分批登记、`ComparisonAlreadyUsed` 与 legacy 轮次兼容；规模压测与保留转独立专题，回填取消；见 [T6-E 验收](implementation/t6-e-merge-round-verification.md) 与[规模压测与保留专题](implementation/performance-testing.md)。 |
-| 2026-11-16～17 | T6-F 谱系裁定：Shared 允许悬挂、同源多派生、默认 Tracker、`sourceId` 不可变、批量派生整批原子、完成即可见及比较条目身份。2026-11-17 确认 Shared 默认资格与解绑/删除后的规则，关闭 `QUESTION-002.k`。见 [T6-F 裁定](reviews/2026-11-16-t6-f-lineage-constraints.md)。 |
+| 2026-11-16～17 | T6-F 谱系裁定：Shared 允许悬挂、同源多派生、默认 Tracker、`sourceId` 不可变、批量派生整批原子、完成即可见及比较条目身份。业务原生 Tracker 只能在默认工作集创建，子工作集不能独立创建；名称唯一按该创建作用域实现，当前等价于（空间，分类）内唯一。2026-11-17 确认 Shared 默认资格与解绑/删除后的规则，关闭 `QUESTION-002.k`。见 [T6-F 裁定](reviews/2026-11-16-t6-f-lineage-constraints.md)。 |
 | 2026-11-17 | T6 收尾：B/C/D/E/F 完成；i（批量派生整批原子）实现转 T7-G；`/derive` 公开入口待 T7-G 后删除；T6-G 待 QUESTION-011／014；规模/保留转专题。见 [T6 收尾](implementation/t6-next-stage-outline.md)。 |
 | 2026-11-16 | Checkpoint 身份修正：以**两侧 Tracker 分支**（`tracker_a_id`/`tracker_b_id`）+ 家族 + 双侧版次定位，**WorkingSet 不参与**；`round_id` 取 `MergeRound`（旧 `batch_id` 无对应语义）；唯一键 `(tracker_a_id, tracker_b_id, common_id)`；同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；撤销方向无关。见 [裁定](reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)。 |
 | 2026-11-13 | T7-A/B/C：创建 LRO 契约、任务骨架、范围复制与绑定；见 [T7-A 评审](reviews/2026-11-13-t7-a-creation-lro-review.md)、[T7-B](implementation/t7-b-creation-task-verification.md)、[T7-C](implementation/t7-c-binding-verification.md)。 |
@@ -115,7 +116,7 @@
 | T1 | [Merge 执行](domain/merge-execution-contract-v1.md)，Reviewed | Q1～Q4；ADR-0005 Accepted，含 2026-11-11 补充裁定 | [T1 评审](reviews/2026-11-11-t1-contract-review.md) |
 | T2 | [绑定与删除](domain/binding-deletion-contract-v1.md)，Reviewed | K1～K3；POL-016、INV-064～068 | [T2 评审](reviews/2026-11-11-t2-binding-deletion-review.md) |
 | T3 | [物化协议](domain/lighttrackeritem-materialization-contract-v1.md)，Reviewed | K1′～K3′；INV-069～071 | [T3 评审](reviews/2026-11-11-t3-materialization-review.md) |
-| T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
+| T4 | [跨 BC 公共契约](domain/cross-bc-contract-v1.md)，Reviewed | K1″、K2″及新 DDD 架构前提；§5.4 数值错误码 API 契约 v1；K3″ 保持 Open | [T4 评审](reviews/2026-11-11-t4-cross-bc-review.md) |
 | T5 | [T5-S0 最小纵向切片设计](implementation/t5-s0-minimal-slice-design.md)，Reviewed；S1～S7 已通过各自范围的验证 | ALM Requirement 普通字段；单实例异步 COW、恢复与升级；S5 首层绑定与删除；S6 多级谱系与相邻父子准入；S7 直属父子 Compare/Merge 与 Requirement 最小生命周期 | [实施证据索引](implementation/README.md) |
 
 术语沿用 2026-11-11 裁定。`version` 为可空的发布大版本，`revision` 为手动推进的业务版次，`lock_version` 为提交时递增的乐观锁版本。

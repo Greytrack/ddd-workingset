@@ -90,7 +90,9 @@ public class MergeExecutionService {
         try {
             round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
                     () -> new MergeFailure(Reason.Conflict, requestId));
-        } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
+        } catch (DataIntegrityViolationException conflict) {
+            // The partial unique index on active Tracker pairs is the single concurrency gate.
+            // No application-level pre-check: it would add a TOCTOU window without adding safety.
             throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
         }
         if (!round.id().equals(prepared.id())) {

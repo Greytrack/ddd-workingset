@@ -12,7 +12,7 @@
 
 ## 验收
 
-- 全量测试 122 项通过；
+- 全量测试 130 项通过；
 - 新增用例：反向命中、同 Tracker 对并发 409、终态后可再提交、跨 Tracker 对 400、被超越锚点清理；
 - 开发库按 `schema.sql` 重建，`merge_checkpoints` 无 `source_id`/`target_id`。
 

@@ -1,6 +1,6 @@
 # 跨 BC 公共契约 v1
 
-**状态：Reviewed（T4 契约冻结，2026-11-11；K1″、K2″ 已由用户正式确认；K3″ 保持团队开放项）**
+**状态：Reviewed（T4 契约冻结，2026-11-11；K1″、K2″ 已由用户正式确认；K3″ 保持团队开放项；2026-11-17 补充 §5.4 数值错误码 API 契约 v1）**
 
 - 日期：2026-11-11
 - 阶段：阶段 5 契约层 T4（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
@@ -168,6 +168,58 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 - **T3**：双事实一致性保持；`LightTrackerItem` 切换失败**不得**被解释为业务 BC `Save` 失败（保存成功即成功，切换失败属元数据收敛）。
 - **T2**：绑定/删除的业务拒绝（`TrackerHasItems` 等）保持为具体失败语义，不强行映射为九分类。
 
+### 5.4 数值错误码与错误响应（API 契约 v1，2026-11-17）
+
+数值错误码是 T4 Published Language 的**对外稳定部分**，不是领域对象状态，也不是聚合生命周期。`reason` 是稳定分类名，`code` 是稳定整数，`message` 是人类可读文本、**不承诺稳定**。
+
+**响应结构**（所有映射到本契约的错误）：
+
+```json
+{
+  "code": 1102,
+  "reason": "NotIncluded",
+  "message": "...",
+  "context": {}
+}
+```
+
+`context` 可选，用于携带冲突成员、子级 ID 等可观察细节；不得用它泄露无权内容。
+
+**码段分配**：
+
+| 范围 | 用途 | 当前示例 |
+| --- | --- | --- |
+| `1000–1099` | 通用请求/持久化 | `1001 BAD_REQUEST`、`1002 DATA_INTEGRITY_CONFLICT` |
+| `1100–1199` | T4 九分类公共失败 | `1101 NotFound` … `1109 Unknown` |
+| `1200–1299` | Working Set/Tracker/绑定/删除 | `1201 WorkingSetNotFound`、`1223 TrackerHasItems` |
+| `1300–1399` | Merge 执行 | `1304 RoundInProgress`、`1305 PairMergeInProgress`、`1306 StaleEvidence` |
+| `1400–1499` | 物化/COW/生命周期锁 | `1401 MaterializationRejected`、`1403 LockVersionConflict` |
+
+九分类固定映射：
+
+| 分类 | code |
+| --- | --- |
+| `NotFound` | 1101 |
+| `NotIncluded` | 1102 |
+| `Denied` | 1103 |
+| `Deleted` | 1104 |
+| `HistoryUnavailable` | 1105 |
+| `Preparing` | 1106 |
+| `CapabilityNotSupported` | 1107 |
+| `DependencyUnavailable` | 1108 |
+| `Unknown` | 1109 |
+
+**稳定性规则**：
+
+1. 已发布的码值不得重新编号、复用或改变语义；新增错误只能追加新码。
+2. 同一 `reason` 的语义变化属于破坏性变更，必须新建/升级契约版本，不能只改消息。
+3. 业务 BC 的内部错误码不得直接暴露；Adapter 必须映射到本契约的公共码或已登记的 BC 专用码段。
+4. HTTP 状态码按用例/端点映射，不替代 `code`/`reason`；客户端不得仅凭状态码推断具体失败。
+5. 当前实现枚举以 [`WorkingsetResultCode`](../../../src/main/java/sk/common/error/WorkingsetResultCode.java) 为准；新增/修改该枚举必须同步本表并经 T4 评审。
+6. 数值码不进入领域不变量、聚合状态或事件载荷；它们只描述对外失败语义。
+
+**归属**：Shared Kernel 维护公共码表与响应结构；各业务 BC 维护自身内部错误到公共码的映射；跨 BC 新增码段需四 BC 共同评审（与 K3″ 版本治理衔接）。
+
 ## 6. 契约版本治理（`QUESTION-014`）——团队开放项
 
 **状态：K3″ 保持 Open，不标记 Accepted；待 GateFlow、ALM、DQA、PLM 四个 BC 团队共同评审。**
@@ -191,6 +243,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | 四 BC 提交权与校验职责、Part/DQA 接入范围与不参与派生/比对/合并、GateFlow 版次链、共享可见性、创建入口归属、直接父子双向准入、共享特性不可变 | **已确认**（AC-001、D-007、QUESTION-013、POL-002/003/004/007/008、FACT-007/011/012） |
 | 只读 `TrackerItemReadPort` + 独立写入协作 Port；整体校验与提交归 BC | **用户确认**（2026-11-11，K1″） |
 | 九分类公共失败语义与「跨 BC 词汇表而非生命周期」定位 | **用户确认**（2026-11-11，K2″） |
+| 数值错误码、响应结构与稳定性规则（§5.4） | **API 契约 v1**（2026-11-17 登记；新增/变更需 T4 评审） |
 | 六个用例的边界划分与适用分类矩阵 | **契约 v1（本文件冻结）** |
 | 版本治理（K3″） | **团队开放项**（`QUESTION-014`，未裁定） |
 | SK 独占 Tracker/LightTrackerItem 聚合与仓储；业务 BC 只经 `TrackerItemLifecyclePort` 与 `RequirementPurged` 事件协作（D4） | **用户确认**（2026-11-12，方案 A：移回 SK，跨聚合用事件） |

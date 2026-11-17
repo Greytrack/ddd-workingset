@@ -20,6 +20,11 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.workingset.domain.Classification;
+import sk.workingset.domain.ProductSpace;
+import sk.workingset.domain.Tracker;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 /** T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。 */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -28,18 +33,20 @@ class TrackerDefaultAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
+    private final String child = "WS-CHILD-" + suffix;
 
     @AfterEach
     void cleanup() {
-        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)",
-                "PS-" + suffix);
-        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)",
-                "PS-" + suffix);
-        jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", "PS-" + suffix);
-        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", "WS-MULTI-" + suffix);
+        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id LIKE ?)",
+                "PS-" + suffix + "%");
+        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id LIKE ?)",
+                "PS-" + suffix + "%");
+        jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
+        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
         jdbc.update("DELETE FROM trackers WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
         jdbc.update("DELETE FROM space_bindings WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
-        jdbc.update("DELETE FROM working_sets WHERE working_set_id LIKE ?", "WS-MULTI-" + suffix);
+        jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
+        jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
     }
 
@@ -121,5 +128,59 @@ class TrackerDefaultAcceptanceTest {
                 WHERE tablename = 'tracker_bindings'
                   AND indexdef LIKE '%(working_set_id, product_space_id, classification_id)%'
                 """, Integer.class));
+    }
+
+    @Test
+    void productSpaceCreationFromNonDefaultEntryStillTargetsDefaultWorkingSet() {
+        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
+                Map.of("workingSetId", child), Map.class).getStatusCode());
+        String spaceId = "PS-CHILD-" + suffix;
+        var response = rest.postForEntity("/api/worksets/" + child + "/product-spaces",
+                Map.of("productSpaceId", spaceId, "name", "子工作集入口-" + suffix), Map.class);
+        assertEquals(HttpStatus.CREATED, response.getStatusCode(), () -> String.valueOf(response.getBody()));
+
+        int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
+        assertEquals(classifications, jdbc.queryForObject("""
+                SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'
+                """, Integer.class, spaceId));
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = ?
+                """, Integer.class, spaceId, child));
+
+        var defaultBindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+        assertTrue(defaultBindings.spaces().stream().anyMatch(binding -> spaceId.equals(binding.productSpaceId())),
+                "default working set should own the projected space binding");
+        var childBindings = rest.getForObject("/api/worksets/" + child + "/bindings", BindingsView.class);
+        assertTrue(childBindings.spaces().stream().noneMatch(binding -> spaceId.equals(binding.productSpaceId())),
+                "product space must not be projected into the child working set");
+    }
+
+    @Test
+    void originalTrackerCannotBeCreatedInChildWorkingSet() {
+        var space = new ProductSpace("PS-DOM-" + suffix, "domain");
+        var classification = new Classification("CL-REQ", Classification.SharingMode.UNSHARED);
+        assertThrows(IllegalArgumentException.class, () -> new Tracker(
+                TrackerId.of("T-CHILD-" + suffix), "子工作集原生 Tracker", null,
+                WorkingSetId.of(child), space.id(), classification.id(), classification.sharingMode(), null, false));
+    }
+
+    @Test
+    void trackerNameUniquenessDoesNotCrossProductSpaces() {
+        String firstSpace = "PS-NAME1-" + suffix;
+        String secondSpace = "PS-NAME2-" + suffix;
+        String classification = jdbc.queryForObject(
+                "SELECT classification_id FROM classifications LIMIT 1", String.class);
+        String name = "同名跨空间-" + suffix;
+        for (String spaceId : Arrays.asList(firstSpace, secondSpace)) {
+            jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
+                    spaceId, "空间-" + suffix);
+            jdbc.update("""
+                    INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)
+                    VALUES (?, ?, '1', ?, ?, 'UNSHARED')
+                    """, "T-NAME-" + spaceId, name, spaceId, classification);
+        }
+        assertEquals(2, jdbc.queryForObject(
+                "SELECT count(*) FROM trackers WHERE name = ? AND working_set_id = '1'",
+                Integer.class, name));
     }
 }
