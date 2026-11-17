@@ -42,4 +42,4 @@ INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classificati
 VALUES ('T1', '1', 'DEMO-SPACE', 'DEMO-CLASS', 'UNSHARED');
 ```
 
-使用 `POST /api/worksets/1/children` 创建 `DEMO-WS`（请求体为 `{"workingSetId":"DEMO-WS"}`），再用 `POST /api/worksets/DEMO-WS/spaces/DEMO-SPACE` 绑定空间。用 `POST /api/requirements` 在 `T1` 创建源 Requirement，再用返回的 LocalId、Revision 和 CommonId 调用 `POST /api/worksets/DEMO-WS/derive`。
+使用 `POST /api/worksets/1/children` 创建 `DEMO-WS`（请求体为 `{"workingSetId":"DEMO-WS"}`），再用 `POST /api/worksets/DEMO-WS/spaces/DEMO-SPACE` 绑定空间。用 `POST /api/requirements` 在 `T1` 创建源 Requirement；Historical：当时用返回的 LocalId、Revision 和 CommonId 调用 `POST /api/worksets/DEMO-WS/derive`，T7-G 已删除该单 Item 公开入口，现走扩展任务。

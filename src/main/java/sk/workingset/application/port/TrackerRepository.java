@@ -14,6 +14,11 @@ public interface TrackerRepository {
     /** 只读列出工作集内的 Tracker，供界面构建 Tracker 树；包含尚未绑定的副本。 */
     List<Tracker> findTrackers(WorkingSetId workingSetId);
     void insertTracker(Tracker tracker);
+    /** 扩展任务创建的新 Tracker 在任务终态前不可见。 */
+    void insertInvisibleTracker(Tracker tracker);
+    boolean isVisible(TrackerId trackerId);
+    /** 终态后只揭示已成功建立绑定的新 Tracker。 */
+    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds);
     boolean hasOrgChildren(TrackerId id);
     boolean hasDerivedChildren(TrackerId id);
     boolean hasTrackersInSpace(String spaceId);

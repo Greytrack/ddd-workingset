@@ -27,7 +27,7 @@ public final class JdbcWorkingSetCreationStore implements WorkingSetCreationStor
                 INSERT INTO working_set_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
-                ON CONFLICT (new_working_set_id) DO NOTHING
+                ON CONFLICT DO NOTHING
                 """, creation.id(), request.parentWorkingSetId(), request.newWorkingSetId(), request.requestId(),
                 creation.status().name(), encode(creation), Timestamp.from(creation.createdAt())) == 1;
     }
@@ -39,7 +39,33 @@ public final class JdbcWorkingSetCreationStore implements WorkingSetCreationStor
 
     @Override
     public Optional<WorkingSetCreation> findByTarget(WorkingSetId target) {
-        return load("SELECT result FROM working_set_creations WHERE new_working_set_id = ?", target.value());
+        return load("""
+                SELECT result FROM working_set_creations
+                WHERE new_working_set_id = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """, target.value());
+    }
+
+    @Override
+    public Optional<WorkingSetCreation> findByRequest(String requestId) {
+        return load("""
+                SELECT result FROM working_set_creations
+                WHERE request_id = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """, requestId);
+    }
+
+    @Override
+    public Optional<WorkingSetCreation> findActiveExtension(WorkingSetId target) {
+        return load("""
+                SELECT result FROM working_set_creations
+                WHERE new_working_set_id = ? AND result->'request'->>'mode' = 'EXTEND'
+                  AND status IN ('Pending', 'Running')
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """, target.value());
     }
 
     @Override

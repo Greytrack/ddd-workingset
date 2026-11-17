@@ -12,9 +12,11 @@
 - 子工作集绑定 Shared Tracker 时不要求其父在本工作集已绑定；组织树渲染以“父可解析则挂、不可解析则作根”为准（现状 `renderTrackerTree` 已按此实现）。
 - 非共享派生 Tracker 的 `parentId` 仍由派生时确定，`Tracker.derived` 置 `null`；本裁定不要求派生继承来源的组织父级。
 
-### 1.2 e 同源多派生 —— 允许多个，引入 `is_default`
+### 1.2 e 同槽多 Tracker（独立分类投影）—— 引入 `is_default`
 
-用户裁定：同一工作集、同一来源（同产品空间 + 同分类）允许多个 Tracker；第一个创建的是默认 Tracker，默认资格与 Shared 例外见 §4.3（有效范围内至多一个）；新增 `is_default` 标识；产品空间创建时同步创建默认 Tracker；产品空间创建后可在空间内按分类投影新建同一分类的多个 Tracker；Tracker 名称不能重复。
+用户裁定：同一工作集、同一产品空间 + 同一分类允许多个 Tracker；第一个创建的是默认 Tracker，默认资格与 Shared 例外见 §4.3（有效范围内至多一个）；新增 `is_default` 标识；产品空间创建时同步创建默认 Tracker；产品空间创建后可在空间内按分类投影新建同一分类的多个 Tracker；Tracker 名称不能重复。
+
+> **2026-11-17 语义澄清**：这里“同源”指同一产品空间 + 分类的**分类投影源**，不是多个 Tracker 共享同一个父 Tracker。每个 Tracker 的派生链是 1:1：子 Tracker 的 `sourceId` 指向一个具体父 Tracker，且同一子工作集对同一父 Tracker 至多一个派生 Tracker。多个同分类 Tracker 各自有独立的 `sourceId`/派生链，彼此不是兄弟派生关系。
 
 - 默认资格的现行规则见 §4.3。
 - **业务原生 Tracker 只能在默认工作集创建**；子工作集不允许独立创建 Tracker，只能从直属父工作集纳入 Shared Tracker 或派生非共享 Tracker。名称唯一因此是“业务原生 Tracker 创建作用域”的约束，不是绑定作用域。
@@ -29,6 +31,8 @@
 
 批量派生按 T7 的 LRO 范式：受理时冻结快照、异步执行、全部成功才可见；失败整批不可见、可重试。
 
+> **2026-11-17 T7-G 补充**：创建新子工作集与扩展已有子工作集均允许**部分成功**。因此本节“整批原子”不再适用于 T7 创建/扩展 LRO；扩展按部分成功记录明细、成功项保留。若未来保留独立的“批量派生”入口，其原子性需另行定义，不能直接套用到扩展 LRO。
+
 ### 1.5 创建完成的可见性 —— 完成即可见
 
 LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/基线语义留给 T6-G（QUESTION-011）。
@@ -38,9 +42,9 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 | 项 | 现状 | 需要改动 |
 | --- | --- | --- |
 | f 允许悬挂 | `tracker_bindings` 不校验父可解析；UI 已把不可解析父作根 | **无代码改动**，补读模型与文档说明 |
-| e 多派生 | 原状：`tracker_bindings` 有 `UNIQUE (working_set_id, product_space_id, classification_id)`；无 `is_default`；无产品空间创建入口 | **已于 2026-11-17 完成**（见 §3/§5） |
+| e 同槽多 Tracker | 原状：`tracker_bindings` 有 `UNIQUE (working_set_id, product_space_id, classification_id)`；无 `is_default`；无产品空间创建入口 | **已于 2026-11-17 完成**（见 §3/§5）；分类投影多 Tracker，派生链仍为 1:1 |
 | d2 不可变 | 无更新 `source_id` 的路径 | 无代码改动 |
-| i 整批原子 | 只有单条 `/derive`，天然原子；批量派生未实现 | 新增批量派生 LRO（复用 T7 范式） |
+| i 批量派生 | 只有单条 `/derive`；T7-G 已新增扩展 LRO，按部分成功执行 | **2026-11-17 已由 T7-G 部分成功语义取代**；单 Item `/derive` 公开入口已删除 |
 | 完成即可见 | `requireReady` + creation 状态已实现 | 无代码改动 |
 
 ## 3. e 的实现清单（2026-11-17 已实施，保留原清单）
@@ -56,7 +60,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 | 项 | 裁定 |
 | --- | --- |
 | 名称唯一作用域 | 同一（产品空间，分类）内唯一。业务原生 Tracker 只在默认工作集创建，2026-11-17 实施为（工作集，空间，分类）索引；因创建只发生在默认工作集，两者当前等价。子工作集不允许原生创建，故不产生跨工作集同名原生 Tracker；未来若开放子 WS 原生创建，需重新裁定 |
-| 多派生后的 compare/merge 配对 | 条目证据由左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次组成；轮次内条目身份由 `MergeRound.Entry.id` 承担 |
+| 多 Tracker 下的 compare/merge 配对 | 条目证据由左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次组成；轮次内条目身份由 `MergeRound.Entry.id` 承担 |
 | 产品空间创建入口 | 新增 `POST /api/worksets/{id}/product-spaces`，同时创建默认 Tracker。产品空间只能在默认工作集创建：`{id}` 仅为入口占位、不参与目标选择，任何调用都固定到默认工作集；入口层不限制调用来源，这是有意设计 |
 
 ### 4.1 实现含义
@@ -84,7 +88,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 - 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；`Difference.key`/`entryKey` 已废弃，条目身份改为 `Entry.id` + evidence。
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
-- 全量测试 133 项通过（含错误码契约、默认 Tracker 边界、TrackerPair 四元组与直接 `sourceId` 配对测试）。
+- 全量测试 136 项通过（含错误码契约、默认 Tracker 边界、TrackerPair 四元组、直接 `sourceId` 配对与 T7-G 扩展测试）。
 
 ## 6. 关联材料
 

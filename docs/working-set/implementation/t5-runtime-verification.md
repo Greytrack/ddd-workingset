@@ -32,7 +32,7 @@ Started WorkingsetApplication
 | `POST` | `/api/requirements` | 创建 Requirement（服务端雪花 `localId`） |
 | `GET` | `/api/requirements/{localId}` | 按 `LocalId` 查询 Requirement |
 | `PUT` | `/api/requirements/{localId}/title` | 普通修改标题，携带 `expectedLockVersion` |
-| `POST` | `/api/worksets/{workingSetId}/derive` | 非共享派生，创建 Source-backed LightTrackerItem |
+| `POST` | `/api/worksets/{workingSetId}/derive` | Historical：非共享派生；T7-G 已删除该单 Item 公开入口，批量派生走 `/api/worksets/{target}/extensions` |
 | `GET` | `/api/worksets/{workingSetId}/items/{localId}` | 解析变体元数据 |
 | `GET` | `/api/worksets/{workingSetId}/items/{localId}/content` | 读取有效内容 |
 

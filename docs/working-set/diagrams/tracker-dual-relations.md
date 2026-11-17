@@ -33,7 +33,7 @@ flowchart LR
 
 T0/T1/T2 沿三层工作集逐级派生；T2.sourceId 不能跳到 T0。B1 同时有结构父 A1 和直接来源 B0，二者位于不同工作集，不能合并为一个关系。B0 是说明直接来源位置的示例，不宣称 A1 由谁派生，也不推断 WS0 的树被复制到 WS1。
 
-上图未绘出的 parentId/sourceId 不表示空值；D-004 裁剪根的 parentId=null 见下图。parentId 创建后不可变已由 D-006 确认，父也选择时的默认继承与创建前显式重组已由 D-005 确认。同源多派生、sourceId 不可变与 Shared 悬挂见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
+上图未绘出的 parentId/sourceId 不表示空值；D-004 裁剪根的 parentId=null 见下图。parentId 创建后不可变已由 D-006 确认，父也选择时的默认继承与创建前显式重组已由 D-005 确认。同槽多 Tracker（独立分类投影）、1:1 派生链、sourceId 不可变与 Shared 悬挂见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 Shared 未放入本例：被多个工作集引用的同一权威 Tracker 不能因此复制成不同对象。T6-F 已裁定 Shared 的 `parentId` 由默认工作集维护，子工作集允许悬挂（能构树则构树）；每个工作集的结构有效性仍按有效组织范围核对，不能只检查数据库归属。图不将 Shared 的父级转移到 Binding，也不批准任何全树聚合。
 
@@ -57,7 +57,7 @@ flowchart LR
 
 源组织树为 A 下的 B，目标组织树只有根 B1。B1.parentId=null 与 B1.sourceId=B 同时成立，Tracker Hierarchy 不等于 Tracker Derivation。没有到 A 的跨工作集 parentId 边，也没有容纳整树的聚合。
 
-适用范围：非共享、原父未选择、允许的根节点结果。父也选中时默认继承与创建前显式重组已由 D-005 确认，派生后 parentId 不可修改已由 D-006 确认；T6-F 已定 `sourceId` 不可变、同源多派生允许并引入 `is_default`、批量派生整批原子。Shared 混合树有效父按 T6-F 允许悬挂。见 [POL-009/010/011](../domain/facts.md)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[D-004](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)、[T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
+适用范围：非共享、原父未选择、允许的根节点结果。父也选中时默认继承与创建前显式重组已由 D-005 确认，派生后 parentId 不可修改已由 D-006 确认；T6-F 已定 `sourceId` 不可变、同槽多 Tracker（独立分类投影）并引入 `is_default`、派生链 1:1；T7-G 已将扩展改为部分成功。Shared 混合树有效父按 T6-F 允许悬挂。见 [POL-009/010/011](../domain/facts.md)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[D-004](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)、[T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 <a id="tracker-creation"></a>
 ## 创建时确定组织位置

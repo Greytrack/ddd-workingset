@@ -199,6 +199,10 @@ public class WorkingSetApplicationService {
     }
 
     boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
+        return copyUnsharedTrackerForTask(id, parentTrackerId, true);
+    }
+
+    boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId, boolean visible) {
         var target = lockTaskTarget(id);
         var source = directParentTracker(target, parentTrackerId);
         requireUnshared(source);
@@ -206,8 +210,17 @@ public class WorkingSetApplicationService {
         if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
             return false;
         }
-        trackers.insertTracker(derivedTracker(target, source));
+        var copy = derivedTracker(target, source);
+        if (visible) {
+            trackers.insertTracker(copy);
+        } else {
+            trackers.insertInvisibleTracker(copy);
+        }
         return true;
+    }
+
+    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
+        trackers.revealExtensionTrackers(target, parentTrackerIds);
     }
 
     boolean bindUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
@@ -280,6 +293,9 @@ public class WorkingSetApplicationService {
 
     private DeriveResult bindTrackerDerived(WorkingSet workingSet, Tracker source, DeriveCommand command) {
         requireUnshared(source);
+        if (trackers.findDerivedTracker(workingSet.id(), source.trackerId()).isPresent()) {
+            throw new BindingFailure(Reason.TrackerAlreadyBound, source.trackerId().value());
+        }
         Tracker tracker = derivedTracker(workingSet, source);
         var binding = workingSet.bindTracker(tracker, classification(source), SharingMode.UNSHARED);
         var contentSource = resolveContentSource(source, command);

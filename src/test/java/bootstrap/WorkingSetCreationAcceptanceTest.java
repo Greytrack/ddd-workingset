@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -16,6 +17,7 @@ import bootstrap.web.WorkingSetController.WorkingSetView;
 import bootstrap.web.WorkingSetController.BindingsView;
 import bootstrap.web.WorkingSetCreationController.CreationView;
 import bootstrap.web.LightTrackerItemView;
+import bootstrap.web.WorkingSetController.TrackerView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +32,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import sk.workingset.application.event.TrackerItemsIndexed;
+import sk.workingset.application.DeriveCommand;
+import sk.workingset.application.DeriveResult;
+import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.WorkingSetCreation;
+import sk.workingset.domain.WorkingSetCreation.Mode;
 import sk.workingset.domain.WorkingSetCreation.Request;
 import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.WorkingSetCreation.Status;
@@ -53,6 +65,8 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transaction;
     @Autowired private IndexEvents indexEvents;
+    @Autowired private WorkingSetApplicationService workingSets;
+    @Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
 
     @AfterEach
     void cleanUp() {
@@ -358,11 +372,9 @@ class WorkingSetCreationAcceptanceTest {
                 null, Map.class).getStatusCode());
         String nativeId = "root-" + child;
         seedItem(unshared, nativeId, nativeId, false);
-        var derive = rest.postForEntity("/api/worksets/" + parent + "/derive",
-                Map.of("sourceTrackerId", unshared, "sourceLocalId", nativeId, "commonId", nativeId,
-                        "sourceRevision", 3), bootstrap.web.DeriveView.class);
-        assertEquals(HttpStatus.CREATED, derive.getStatusCode());
-        String parentTracker = derive.getBody().trackerId();
+        DeriveResult derive = workingSets.derive(new DeriveCommand(WorkingSetId.of(parent),
+                TrackerId.of(unshared), LocalId.of(nativeId), Revision.of(3), CommonId.of(nativeId)));
+        String parentTracker = derive.tracker().trackerId().value();
         String overlap = "overlap-" + child;
         seedItem(parentTracker, overlap, overlap, false);
         seedParentLti(parentTracker, overlap, overlap, overlap, true);
@@ -452,6 +464,83 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(1, completed.indexProgress().get(unshared).skipped());
         assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
                 Integer.class, child));
+    }
+
+    @Test
+    void extendsAnExistingChildWithBatchDerivationAndFiltersAlreadyDerivedTrackers() {
+        seedRange();
+        createTarget();
+        String secondSource = "unshared2-" + child;
+        seedTracker(secondSource, space, unshared, "UNSHARED");
+        seedItem(unshared, "extension-" + child, "extension-" + child, false);
+        seedItem(secondSource, "extension2-" + child, "extension2-" + child, false);
+        String first = extension(List.of(unshared, secondSource));
+        awaitStatus(first, Status.Succeeded);
+
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
+                Integer.class, child));
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?",
+                Integer.class, child));
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
+                Integer.class, child));
+        assertTrue(rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length == 2);
+        assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/derive",
+                Map.of("sourceTrackerId", unshared, "sourceLocalId", "extension-" + child,
+                        "sourceRevision", 3, "commonId", "extension-" + child), Map.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/spaces/" + space
+                + "/classifications/" + unshared + "/derive", Map.of(), Map.class).getStatusCode());
+
+        var duplicate = rest.postForEntity("/api/worksets/" + child + "/extensions",
+                Map.of("requestId", "duplicate-" + child, "trackerIds", List.of(unshared, secondSource)), Map.class);
+        assertEquals(HttpStatus.CONFLICT, duplicate.getStatusCode());
+        assertEquals("NoDerivableTracker", duplicate.getBody().get("reason"));
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
+                Integer.class, child));
+    }
+
+    @Test
+    void extensionKeepsValidTrackerWhenAnotherSelectionFails() {
+        seedRange();
+        createTarget();
+        String valid = "valid-" + child;
+        seedItem(unshared, valid, valid, false);
+        String id = extension(List.of(unshared, "missing-" + child));
+        var completed = awaitStatus(id, Status.PartiallySucceeded);
+        assertEquals(1, completed.failures().size());
+        assertEquals("SourceTrackerNotFound", completed.failures().getFirst().reason());
+        assertTrue(rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length == 1);
+    }
+
+    @Test
+    void rejectsAnotherExtensionWhileOneIsUnfinished() throws Exception {
+        seedRange();
+        createTarget();
+        String activeId = "active-" + child;
+        var request = new Request("1", child, "active-request-" + child, List.of(), List.of(),
+                List.of(unshared), null, Mode.EXTEND);
+        var active = WorkingSetCreation.submit(activeId, request, "test", Instant.now()).start(Instant.now());
+        jdbc.update("""
+                INSERT INTO working_set_creations
+                    (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
+                VALUES (?, '1', ?, ?, 'Running', CAST(? AS jsonb), now())
+                """, activeId, child, request.requestId(), mapper.writeValueAsString(active));
+
+        var response = rest.postForEntity("/api/worksets/" + child + "/extensions",
+                Map.of("requestId", "another-" + child, "trackerIds", List.of(unshared)), Map.class);
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("PREPARING", response.getBody().get("reason"));
+    }
+
+    private void createTarget() {
+        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
+                Map.of("workingSetId", child), Map.class).getStatusCode());
+    }
+
+    private String extension(List<String> trackerIds) {
+        var response = rest.postForEntity("/api/worksets/" + child + "/extensions",
+                Map.of("requestId", "extension-" + UUID.randomUUID(), "trackerIds", trackerIds), CreationView.class);
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        return response.getBody().creationId();
     }
 
     private void seedItem(String tracker, String localId, String commonId, boolean deleted) {

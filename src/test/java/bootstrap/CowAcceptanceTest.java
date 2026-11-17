@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import bootstrap.web.DeriveView;
 import bootstrap.web.ReadView;
 import bootstrap.web.RequirementView;
 import org.junit.jupiter.api.AfterEach;
@@ -31,11 +30,17 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.CowFailureLog;
+import sk.workingset.application.DeriveCommand;
+import sk.workingset.application.DeriveResult;
+import sk.workingset.application.WorkingSetApplicationService;
 import alm.requirement.application.RequirementApplicationService;
 import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CowAcceptanceTest {
@@ -43,6 +48,7 @@ class CowAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private StringRedisTemplate redis;
     @Autowired private CowFailureLog failures;
+    @Autowired private WorkingSetApplicationService workingSets;
     @Autowired private RequirementApplicationService requirements;
     @SpyBean private LightTrackerItemRepository items;
 
@@ -286,11 +292,9 @@ class CowAcceptanceTest {
         worksets.add(ws);
         assertEquals(HttpStatus.CREATED,
                 rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());
-        var result = rest.postForEntity("/api/worksets/" + ws + "/derive", Map.of(
-                "sourceLocalId", sourceLocalId, "sourceTrackerId", sourceTracker, "sourceRevision", 3, "commonId", common),
-                DeriveView.class);
-        assertEquals(HttpStatus.CREATED, result.getStatusCode());
-        String id = result.getBody().item().localId();
+        DeriveResult result = workingSets.derive(new DeriveCommand(WorkingSetId.of(ws),
+                TrackerId.of(sourceTracker), LocalId.of(sourceLocalId), Revision.of(3), CommonId.of(common)));
+        String id = result.item().localId().value();
         targets.add(id);
         return new Target(ws, id);
     }

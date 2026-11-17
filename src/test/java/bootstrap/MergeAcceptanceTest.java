@@ -21,7 +21,7 @@ import static org.mockito.Mockito.doAnswer;
 
 import alm.requirement.application.RequirementApplicationService;
 import alm.requirement.infrastructure.JdbcRequirementRepository;
-import bootstrap.web.DeriveView;
+import bootstrap.web.LightTrackerItemView;
 import bootstrap.web.MergeController.ComparisonPage;
 import bootstrap.web.RequirementView;
 import bootstrap.web.WorkingSetController;
@@ -43,11 +43,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.workingset.application.DeriveCommand;
+import sk.workingset.application.DeriveResult;
+import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
@@ -69,6 +73,7 @@ class MergeAcceptanceTest {
     @SpyBean private TrackerItemLifecyclePort lifecycle;
     @Autowired private RequirementApplicationService requirements;
     @Autowired private JdbcRequirementRepository repository;
+    @Autowired private WorkingSetApplicationService workingSets;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String child = id("child");
@@ -807,12 +812,14 @@ class MergeAcceptanceTest {
         assertNotNull(difference.target().localId());
     }
 
-    private DeriveView derive(String target, String tracker, String source, String family) {
-        var response = rest.postForEntity(ws(target) + "/derive", Map.of("sourceTrackerId", tracker,
-                "sourceLocalId", source, "sourceRevision", 3, "commonId", family), DeriveView.class);
-        assertStatus(HttpStatus.CREATED, response);
-        return response.getBody();
+    private Derived derive(String target, String tracker, String source, String family) {
+        DeriveResult result = workingSets.derive(new DeriveCommand(WorkingSetId.of(target), TrackerId.of(tracker),
+                LocalId.of(source), Revision.of(3), CommonId.of(family)));
+        return new Derived(result.tracker().trackerId().value(), result.tracker().sourceId().value(),
+                LightTrackerItemView.from(result.item()));
     }
+
+    private record Derived(String trackerId, String sourceTrackerId, LightTrackerItemView item) {}
 
     private void createChild(String parent, String next) {
         assertStatus(HttpStatus.CREATED,

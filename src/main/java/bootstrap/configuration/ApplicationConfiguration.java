@@ -191,7 +191,8 @@ public class ApplicationConfiguration {
     public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
             JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
             TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer) {
-        return new WorkingSetCreationService(store, bindings, workingSets, newTransactionTemplate, events, indexer);
+        return new WorkingSetCreationService(store, bindings, bindings, workingSets, newTransactionTemplate, events,
+                indexer);
     }
 
     @Bean

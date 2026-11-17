@@ -33,7 +33,8 @@ public final class BindingFailure extends AppException {
         TrackerHasOrgChildren(WorkingsetResultCode.TRACKER_HAS_ORG_CHILDREN),
         TrackerHasDerivedChildren(WorkingsetResultCode.TRACKER_HAS_DERIVED_CHILDREN),
         DefaultWorkingSetUndeletable(WorkingsetResultCode.DEFAULT_WORKING_SET_UNDELETABLE),
-        MemberCannotBeUnbound(WorkingsetResultCode.MEMBER_CANNOT_BE_UNBOUND);
+        MemberCannotBeUnbound(WorkingsetResultCode.MEMBER_CANNOT_BE_UNBOUND),
+        NoDerivableTracker(WorkingsetResultCode.NO_DERIVABLE_TRACKER);
 
         private final WorkingsetResultCode resultCode;
 

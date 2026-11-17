@@ -46,6 +46,7 @@ public enum WorkingsetResultCode implements ResCode {
     TRACKER_HAS_DERIVED_CHILDREN(1225, "Tracker has derived children"),
     DEFAULT_WORKING_SET_UNDELETABLE(1226, "Default working set undeletable"),
     MEMBER_CANNOT_BE_UNBOUND(1227, "Member cannot be unbound"),
+    NO_DERIVABLE_TRACKER(1228, "No derivable tracker"),
     MERGE_MERGE_NOT_ALLOWED(1301, "Merge not allowed"),
     MERGE_ROUND_NOT_FOUND(1302, "Round not found"),
     MERGE_ROUND_CLOSED(1303, "Round closed"),

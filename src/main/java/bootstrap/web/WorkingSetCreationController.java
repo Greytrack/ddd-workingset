@@ -44,13 +44,15 @@ public class WorkingSetCreationController {
         return WorkingSetController.WorkingSetView.from(creations.findTarget(id));
     }
 
-    public record CreationView(String creationId, WorkingSetCreation.Status status, WorkingSetCreation.Stage stage,
+    public record CreationView(String creationId, String mode, WorkingSetCreation.Status status,
+                               WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
                                Instant createdAt, Instant startedAt, Instant completedAt,
                                Map<WorkingSetCreation.Stage, WorkingSetCreation.Progress> stageProgress,
                                Map<String, IndexCounts> indexProgress) {
         static CreationView from(WorkingSetCreation creation) {
-            return new CreationView(creation.id(), creation.status(), creation.stage(), creation.progress(),
+            return new CreationView(creation.id(), creation.request().mode().name(), creation.status(), creation.stage(),
+                    creation.progress(),
                     creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt(),
                     creation.stageProgress(), creation.indexProgress().entrySet().stream().collect(
                             java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey,

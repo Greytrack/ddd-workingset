@@ -195,26 +195,53 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     public List<Tracker> findTrackers(WorkingSetId workingSetId) {
         return jdbc.query("SELECT " + TRACKER_COLUMNS + """
                  FROM trackers t
-                 WHERE t.working_set_id = ? OR EXISTS (
+                 WHERE t.visible AND (t.working_set_id = ? OR EXISTS (
                      SELECT 1 FROM tracker_bindings b
                      WHERE b.working_set_id = ? AND b.tracker_id = t.tracker_id
-                 )
+                 ))
                  ORDER BY t.tracker_id
                 """, TRACKER_MAPPER, workingSetId.value(), workingSetId.value());
     }
 
     @Override
     public void insertTracker(Tracker tracker) {
+        insertTracker(tracker, true);
+    }
+
+    @Override
+    public void insertInvisibleTracker(Tracker tracker) {
+        insertTracker(tracker, false);
+    }
+
+    private void insertTracker(Tracker tracker, boolean visible) {
         jdbc.update("""
                 INSERT INTO trackers
                     (tracker_id, name, source_id, working_set_id, product_space_id, classification_id,
-                     sharing_mode, parent_id, is_default)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     sharing_mode, parent_id, is_default, visible)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, tracker.trackerId().value(), tracker.name(),
                 tracker.sourceId() == null ? null : tracker.sourceId().value(),
                 tracker.workingSetId().value(), tracker.productSpaceId(), tracker.classificationId(),
                 tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().value(),
-                tracker.isDefault());
+                tracker.isDefault(), visible);
+    }
+
+    @Override
+    public boolean isVisible(TrackerId trackerId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT visible FROM trackers WHERE tracker_id = ?", Boolean.class, trackerId.value()));
+    }
+
+    @Override
+    public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
+        for (TrackerId parent : parentTrackerIds) {
+            jdbc.update("""
+                    UPDATE trackers t SET visible = TRUE
+                    WHERE t.working_set_id = ? AND t.source_id = ? AND NOT t.visible
+                      AND EXISTS (SELECT 1 FROM tracker_bindings b
+                                  WHERE b.working_set_id = t.working_set_id AND b.tracker_id = t.tracker_id)
+                    """, target.value(), parent.value());
+        }
     }
 
     @Override

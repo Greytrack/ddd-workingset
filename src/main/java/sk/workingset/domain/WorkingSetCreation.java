@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-/** Durable execution of one request to create and initialize a child working set. */
+/** Durable execution of a working-set materialization request: create a child or extend an existing child. */
 public record WorkingSetCreation(String id, Request request, String requestedBy, Status status,
                                  Stage stage, Progress progress, List<Failure> failures,
                                  Instant createdAt, Instant startedAt, Instant completedAt,
                                  Map<Stage, Progress> stageProgress, Map<String, IndexProgress> indexProgress) {
     public enum Status { Pending, Running, Succeeded, PartiallySucceeded, Failed }
+    public enum Mode { CREATE, EXTEND }
     public enum Stage {
         CREATE_WORKING_SET, BIND_PRODUCT_SPACES, COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
         INDEX_UNSHARED_TRACKERS
@@ -23,12 +24,19 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
 
     public record Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                           List<String> productSpaceIds, List<String> sharedTrackerIds,
-                          List<String> unsharedParentTrackerIds, String name) {
+                          List<String> unsharedParentTrackerIds, String name, Mode mode) {
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds) {
             this(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds, sharedTrackerIds,
-                    unsharedParentTrackerIds, null);
+                    unsharedParentTrackerIds, null, Mode.CREATE);
+        }
+
+        public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
+                       List<String> productSpaceIds, List<String> sharedTrackerIds,
+                       List<String> unsharedParentTrackerIds, String name) {
+            this(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds, sharedTrackerIds,
+                    unsharedParentTrackerIds, name, Mode.CREATE);
         }
 
         public Request {
@@ -39,11 +47,12 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             sharedTrackerIds = normalize(sharedTrackerIds);
             unsharedParentTrackerIds = normalize(unsharedParentTrackerIds);
             name = normalizeName(name);
+            mode = mode == null ? Mode.CREATE : mode;
         }
 
         public List<String> items(Stage stage) {
             return switch (stage) {
-                case CREATE_WORKING_SET -> List.of(newWorkingSetId);
+                case CREATE_WORKING_SET -> mode == Mode.CREATE ? List.of(newWorkingSetId) : List.of();
                 case BIND_PRODUCT_SPACES -> productSpaceIds;
                 case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS -> unsharedParentTrackerIds;
                 case BIND_SHARED_TRACKERS -> sharedTrackerIds;
@@ -112,9 +121,22 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
     }
 
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
+        var initial = firstStage(request);
+        if (initial == null) {
+            throw new IllegalArgumentException("working set request has no work");
+        }
         return new WorkingSetCreation(id, request, caller, Status.Pending,
-                Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, total(request)), List.of(), now, null, null,
-                Map.of(Stage.CREATE_WORKING_SET, new Progress(0, 0, 0, 1)), Map.of());
+                initial, new Progress(0, 0, 0, total(request)), List.of(), now, null, null,
+                Map.of(initial, new Progress(0, 0, 0, request.items(initial).size())), Map.of());
+    }
+
+    private static Stage firstStage(Request request) {
+        for (Stage stage : Stage.values()) {
+            if (!request.items(stage).isEmpty()) {
+                return stage;
+            }
+        }
+        return null;
     }
 
     private static int total(Request request) {

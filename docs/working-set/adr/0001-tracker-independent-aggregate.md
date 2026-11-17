@@ -47,4 +47,4 @@ D-001 已确认：Tracker 为独立聚合，不是 Working Set 内部实体；Wo
 
 本 ADR 已 Accepted，不另起 ADR 编号。上文 D-002 时点的追溯字段与可变性未决项，已由后续裁定逐步关闭：D-003 确认 parentId 为同工作集直属结构父、sourceId 为直接父级工作集来源（双维独立，见 [裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-003)）；D-005 确认父也选择时默认继承、创建完成前可显式重组（POL-010）；D-006 确认创建完成后 parentId 不可变、不支持移动/换父/改根（POL-011，见 [裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)）。
 
-组织位置不可变是 Tracker 独立生命周期约束的一部分，进一步支持 D-001「Tracker 独立聚合、Working Set 不拥有其完整生命周期」的结论，但不推导 Item 归属，也不选择 AP-002 或任何聚合方案。sourceId 可变性、Shared 混合树、同源多派生、派生整批原子性与 Item 聚合归属仍待裁定。原文未决描述保留其时点背景，以此追加记录表达新证据。
+组织位置不可变是 Tracker 独立生命周期约束的一部分，进一步支持 D-001「Tracker 独立聚合、Working Set 不拥有其完整生命周期」的结论，但不推导 Item 归属，也不选择 AP-002 或任何聚合方案。sourceId 可变性、Shared 混合树、同槽多 Tracker、派生整批原子性与 Item 聚合归属仍待裁定。原文未决描述保留其时点背景，以此追加记录表达新证据。（2026-11-17 更新：T6-F 已裁定同槽多 Tracker = 独立分类投影，派生链 1:1；T7-G 将扩展改为部分成功，见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。）

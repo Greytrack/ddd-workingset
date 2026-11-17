@@ -1,6 +1,8 @@
 package sk.workingset.application;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -10,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
 import sk.workingset.application.event.TrackerItemsIndexed;
+import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.WorkingSetCreationStore;
 import sk.workingset.application.port.WorkingSetRepository;
 import sk.workingset.domain.BindingFailure;
@@ -17,6 +20,7 @@ import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetCreation;
 import sk.workingset.domain.WorkingSetCreation.Failure;
+import sk.workingset.domain.WorkingSetCreation.Mode;
 import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
 import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.Stage;
@@ -27,17 +31,19 @@ import sk.workingset.domain.TrackerId;
 public class WorkingSetCreationService {
     private final WorkingSetCreationStore store;
     private final WorkingSetRepository workingSets;
+    private final TrackerRepository trackers;
     private final WorkingSetApplicationService workingSetService;
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
     private final WorkingSetItemIndexer indexer;
 
     public WorkingSetCreationService(WorkingSetCreationStore store, WorkingSetRepository workingSets,
-                                     WorkingSetApplicationService workingSetService,
+                                     TrackerRepository trackers, WorkingSetApplicationService workingSetService,
                                      TransactionTemplate transaction, ApplicationEventPublisher events,
                                      WorkingSetItemIndexer indexer) {
         this.store = store;
         this.workingSets = workingSets;
+        this.trackers = trackers;
         this.workingSetService = workingSetService;
         this.transaction = transaction;
         this.events = events;
@@ -46,6 +52,9 @@ public class WorkingSetCreationService {
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submit(WorkingSetCreation.Request request, Caller caller) {
+        if (request.mode() != Mode.CREATE) {
+            throw new IllegalArgumentException("Use submitExtension for an existing target");
+        }
         var target = WorkingSetId.of(request.newWorkingSetId());
         if (WorkingSet.DEFAULT_ID.equals(target)) {
             throw new IllegalArgumentException("The default working set cannot be a creation target");
@@ -65,6 +74,55 @@ public class WorkingSetCreationService {
             return creation;
         }
         return replay(store.findByTarget(target).orElseThrow(), request);
+    }
+
+    /** 扩展已有子工作集：只派生目标尚未拥有的 Tracker；重复项先过滤，空集返回终态任务。 */
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
+                                              List<String> parentTrackerIds, Caller caller) {
+        var active = store.findActiveExtension(target);
+        if (active.isPresent()) {
+            if (active.get().request().requestId().equals(requestId)) {
+                return active.get();
+            }
+            throw new ApplicationFailure(FailureReason.PREPARING, target.value());
+        }
+        workingSets.requireReady(target);
+        var targetSet = workingSets.findWorkingSet(target)
+                .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, target.value()));
+        var parentId = targetSet.requireParentId();
+        var requested = new TreeSet<>(parentTrackerIds == null ? List.of() : parentTrackerIds);
+        var filtered = requested.stream()
+                .filter(trackerId -> trackers.findDerivedTracker(target, TrackerId.of(trackerId))
+                        .filter(copy -> targetSet.hasTrackerBinding(copy.trackerId())
+                                && trackers.isVisible(copy.trackerId()))
+                        .isEmpty())
+                .toList();
+        if (filtered.isEmpty()) {
+            throw new BindingFailure(Reason.NoDerivableTracker, target.value());
+        }
+        var spaces = new TreeSet<String>();
+        for (String trackerId : filtered) {
+            trackers.findTracker(TrackerId.of(trackerId))
+                    .ifPresent(tracker -> spaces.add(tracker.productSpaceId()));
+        }
+        var request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
+                List.copyOf(spaces), List.of(), filtered, targetSet.name(), Mode.EXTEND);
+        var creation = WorkingSetCreation.submit(UUID.randomUUID().toString(), request, caller.id(), Instant.now());
+        if (store.insert(creation)) {
+            indexer.snapshot(creation);
+            events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
+            return creation;
+        }
+        var concurrent = store.findActiveExtension(target);
+        if (concurrent.isPresent()) {
+            if (concurrent.get().request().requestId().equals(requestId)) {
+                return concurrent.get();
+            }
+            throw new ApplicationFailure(FailureReason.PREPARING, target.value());
+        }
+        return replay(store.findByRequest(requestId)
+                .orElseThrow(() -> new ApplicationFailure(FailureReason.PREPARING, target.value())), request);
     }
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
@@ -103,6 +161,10 @@ public class WorkingSetCreationService {
                 var updated = creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
                         ? indexer.indexBatch(creation, tx) : executeItem(creation);
                 store.update(updated);
+                if (updated.status() != Status.Running && updated.request().mode() == Mode.EXTEND) {
+                    workingSetService.revealExtensionTrackers(WorkingSetId.of(updated.request().newWorkingSetId()),
+                            updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList());
+                }
                 if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS && updated.status() != Status.Running) {
                     var scannedTrackers = updated.indexProgress().values().stream()
                             .map(IndexProgress::scannedChildTrackerId).filter(java.util.Objects::nonNull).sorted().toList();
@@ -132,7 +194,8 @@ public class WorkingSetCreationService {
                     yield true;
                 }
                 case BIND_PRODUCT_SPACES -> workingSetService.bindSpaceForTask(target, item);
-                case COPY_UNSHARED_TRACKERS -> workingSetService.copyUnsharedTrackerForTask(target, TrackerId.of(item));
+                case COPY_UNSHARED_TRACKERS -> workingSetService.copyUnsharedTrackerForTask(target, TrackerId.of(item),
+                        creation.request().mode() == Mode.CREATE);
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
                 case INDEX_UNSHARED_TRACKERS -> throw new IllegalStateException("Indexing requires batch execution");

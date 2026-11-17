@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS trackers (
     sharing_mode      VARCHAR(8) NOT NULL,
     parent_id         VARCHAR(64),
     is_default        BOOLEAN NOT NULL DEFAULT FALSE,
+    visible           BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE (tracker_id, working_set_id),
     UNIQUE (tracker_id, product_space_id, classification_id, sharing_mode),
     FOREIGN KEY (classification_id, sharing_mode)
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS trackers (
 );
 
 ALTER TABLE trackers ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE trackers ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- 每个（所有者工作集，空间，分类）至多一个默认 Tracker
 CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_default_slot
@@ -76,6 +78,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_name_slot
 
 CREATE INDEX IF NOT EXISTS idx_trackers_org_parent ON trackers (parent_id);
 CREATE INDEX IF NOT EXISTS idx_trackers_source ON trackers (source_id);
+-- Tracker lineage is 1:1: a child Working Set has at most one derived Tracker per parent Tracker.
+-- Multiple Tracker projections in the same classification use different parent TrackerIds.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_derived_source
+    ON trackers (working_set_id, source_id) WHERE source_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_trackers_product_space ON trackers (product_space_id);
 
 CREATE TABLE IF NOT EXISTS space_bindings (
@@ -293,7 +299,7 @@ CREATE TABLE IF NOT EXISTS merge_commit_receipts (
 CREATE TABLE IF NOT EXISTS working_set_creations (
     id VARCHAR(64) PRIMARY KEY,
     parent_working_set_id VARCHAR(128) NOT NULL,
-    new_working_set_id VARCHAR(128) NOT NULL UNIQUE,
+    new_working_set_id VARCHAR(128) NOT NULL,
     request_id VARCHAR(128) NOT NULL,
     status VARCHAR(32) NOT NULL,
     result JSONB NOT NULL,
@@ -302,6 +308,19 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
     completed_at TIMESTAMPTZ,
     UNIQUE (parent_working_set_id, new_working_set_id, request_id)
 );
+
+-- Older baselines declared new_working_set_id UNIQUE. A target may now have multiple
+-- extension tasks over time, so uniqueness is scoped by mode/status below.
+ALTER TABLE working_set_creations DROP CONSTRAINT IF EXISTS working_set_creations_new_working_set_id_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_target
+    ON working_set_creations (new_working_set_id)
+    WHERE (COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE');
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_active_extension_target
+    ON working_set_creations (new_working_set_id)
+    WHERE (result->'request'->>'mode' = 'EXTEND'
+       AND status IN ('Pending', 'Running'));
 
 CREATE TABLE IF NOT EXISTS working_set_creation_snapshots (
     creation_id VARCHAR(64) PRIMARY KEY REFERENCES working_set_creations (id) ON DELETE CASCADE,

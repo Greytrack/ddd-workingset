@@ -186,7 +186,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | --- | --- | --- |
 | `1000–1099` | 通用请求/持久化 | `1001 BAD_REQUEST`、`1002 DATA_INTEGRITY_CONFLICT` |
 | `1100–1199` | T4 九分类公共失败 | `1101 NotFound` … `1109 Unknown` |
-| `1200–1299` | Working Set/Tracker/绑定/删除 | `1201 WorkingSetNotFound`、`1223 TrackerHasItems` |
+| `1200–1299` | Working Set/Tracker/绑定/删除 | `1201 WorkingSetNotFound`、`1223 TrackerHasItems`、`1228 NoDerivableTracker` |
 | `1300–1399` | Merge 执行 | `1304 RoundInProgress`、`1305 PairMergeInProgress`、`1306 StaleEvidence` |
 | `1400–1499` | 物化/COW/生命周期锁 | `1401 MaterializationRejected`、`1403 LockVersionConflict` |
 

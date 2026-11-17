@@ -1,6 +1,7 @@
 package bootstrap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -11,7 +12,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import bootstrap.web.DeriveView;
 import bootstrap.web.WorkingSetController.BindingsView;
 import bootstrap.web.WorkingSetController.TrackerBindingView;
 import bootstrap.web.WorkingSetController.TrackerView;
@@ -27,11 +27,21 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.workingset.application.DeriveCommand;
+import sk.workingset.application.DeriveResult;
+import sk.workingset.application.WorkingSetApplicationService;
+import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BindingAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestRestTemplate rest;
+    @Autowired private WorkingSetApplicationService workingSets;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String ws = "WS-" + suffix;
@@ -103,9 +113,7 @@ class BindingAcceptanceTest {
     @Test
     void trackerListIncludesOwnedAndBoundSharedTrackersExactlyOnce() {
         bindSpace(ws);
-        var derived = rest.postForEntity(path(ws) + "/derive", deriveBody(unshared), DeriveView.class);
-        assertEquals(HttpStatus.CREATED, derived.getStatusCode());
-        String owned = derived.getBody().trackerId();
+        String owned = derive(ws, unshared, sourceItem).tracker().trackerId().value();
         String listPath = path(ws) + "/trackers";
         assertEquals(List.of(owned), trackerIds(listPath));
 
@@ -153,39 +161,11 @@ class BindingAcceptanceTest {
     }
 
     @Test
-    void derivePersistsTrackerBindingAndItemAndRejectsNonDirectSource() {
-        var body = deriveBody(unshared);
-        assertFailure(rest.postForEntity(path(ws) + "/derive", body, Map.class),
-                HttpStatus.CONFLICT, "MissingSpaceBinding");
-        assertFailure(rest.postForEntity(path("UNKNOWN-" + suffix) + "/derive", body, Map.class),
-                HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+    void doesNotCreateSecondDerivationForTheSameParentTracker() {
         bindSpace(ws);
-        String explicit = spacePath(ws) + "/classifications/";
-        assertFailure(rest.postForEntity(explicit + sharedClass + "/derive", body, Map.class),
-                HttpStatus.UNPROCESSABLE_ENTITY, "TrackerOutsideSlot");
-
-        String forgedTracker = "FORGED-" + suffix;
-        original(forgedTracker, unsharedClass, "UNSHARED", null);
-        assertFailure(rest.postForEntity(path(ws) + "/derive", deriveBody(forgedTracker), Map.class),
-                HttpStatus.UNPROCESSABLE_ENTITY, "SourceItemMismatch");
-
-        var result = rest.postForEntity(explicit + unsharedClass + "/derive", body, DeriveView.class);
-        assertEquals(HttpStatus.CREATED, result.getStatusCode());
-        var derived = result.getBody();
-        assertEquals(unshared, jdbc.queryForObject("SELECT source_id FROM trackers WHERE tracker_id = ?",
-                String.class, derived.trackerId()));
-        assertEquals(derived.trackerId(), jdbc.queryForObject(
-                "SELECT tracker_id FROM light_tracker_items WHERE local_id = ?", String.class, derived.item().localId()));
-        assertEquals(HttpStatus.CONFLICT,
-                rest.postForEntity(path(ws) + "/derive", body, Map.class).getStatusCode());
-
-        bindSpace(other);
-        assertFailure(rest.postForEntity(path(other) + "/derive", deriveBody(derived.trackerId()), Map.class),
-                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
-        assertFailure(rest.postForEntity(path("1") + "/derive", body, Map.class),
-                HttpStatus.CONFLICT, "WorkingSetNotWritable");
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id IN (?, ?)",
-                Integer.class, ws, other));
+        derive(ws, unshared, sourceItem);
+        var failure = assertThrows(BindingFailure.class, () -> derive(ws, unshared, sourceItem));
+        assertEquals(BindingFailure.Reason.TrackerAlreadyBound, failure.reason());
     }
 
     @Test
@@ -196,14 +176,11 @@ class BindingAcceptanceTest {
 
         assertFailure(rest.postForEntity(sharedPath(grandchild, shared), null, Map.class),
                 HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
-        assertFailure(rest.postForEntity(path(grandchild) + "/derive", deriveBody(unshared), Map.class),
-                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
+        assertDirectSourceFailure(() -> derive(grandchild, unshared, sourceItem));
 
         bindSpace(other);
-        var sibling = rest.postForEntity(path(other) + "/derive", deriveBody(unshared), DeriveView.class);
-        assertEquals(HttpStatus.CREATED, sibling.getStatusCode());
-        assertFailure(rest.postForEntity(path(grandchild) + "/derive", deriveBody(sibling.getBody().trackerId()), Map.class),
-                HttpStatus.NOT_FOUND, "SourceTrackerNotFound");
+        DeriveResult sibling = derive(other, unshared, sourceItem);
+        assertDirectSourceFailure(() -> derive(grandchild, sibling.tracker().trackerId().value(), sourceItem));
 
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
@@ -240,14 +217,14 @@ class BindingAcceptanceTest {
     @Test
     void nonsharedUnbindRejectsItemsAndEmptyTrackerCanBeRemoved() {
         bindSpace(ws);
-        var target = rest.postForEntity(path(ws) + "/derive", deriveBody(unshared), DeriveView.class).getBody();
-        String tracker = target.trackerId();
+        DeriveResult target = derive(ws, unshared, sourceItem);
+        String tracker = target.tracker().trackerId().value();
         assertFailure(delete(unbindPath(ws, tracker)), HttpStatus.CONFLICT, "TrackerHasItems");
         assertEquals(1, count("SELECT count(*) FROM light_tracker_items WHERE tracker_id = ?", tracker));
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
 
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId());
+        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId().value());
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasDerivedChildren");
@@ -301,19 +278,21 @@ class BindingAcceptanceTest {
         assertFailure(delete(path("1")), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
-        var target = rest.postForEntity(path(ws) + "/derive", deriveBody(unshared), DeriveView.class).getBody();
+        DeriveResult target = derive(ws, unshared, sourceItem);
         businessItem("ITEM-" + suffix, shared);
 
         var blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "MemberCannotBeUnbound");
-        assertEquals(Map.of(target.trackerId(), "TrackerHasItems"), blocked.getBody().get("members"));
+        assertEquals(Map.of(target.tracker().trackerId().value(), "TrackerHasItems"),
+                blocked.getBody().get("members"));
         assertEquals(2, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
 
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId());
+        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId().value());
         assertEquals(HttpStatus.NO_CONTENT, delete(path(ws)).getStatusCode());
         assertEquals(0, count("SELECT count(*) FROM working_sets WHERE working_set_id = ?", ws));
-        assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", target.trackerId()));
+        assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?",
+                target.tracker().trackerId().value()));
         assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
     }
@@ -437,9 +416,14 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.CREATED, rest.postForEntity(spacePath(id), null, Void.class).getStatusCode());
     }
 
-    private Map<String, Object> deriveBody(String tracker) {
-        return Map.of("sourceTrackerId", tracker, "sourceLocalId", sourceItem,
-                "sourceRevision", 3, "commonId", "C-" + sourceItem);
+    private DeriveResult derive(String target, String sourceTracker, String sourceLocalId) {
+        return workingSets.derive(new DeriveCommand(WorkingSetId.of(target), TrackerId.of(sourceTracker),
+                LocalId.of(sourceLocalId), Revision.of(3), CommonId.of("C-" + sourceLocalId)));
+    }
+
+    private static void assertDirectSourceFailure(org.junit.jupiter.api.function.Executable action) {
+        var failure = org.junit.jupiter.api.Assertions.assertThrows(BindingFailure.class, action);
+        assertEquals(BindingFailure.Reason.SourceTrackerNotFound, failure.reason());
     }
 
     private String spacePath(String id) {

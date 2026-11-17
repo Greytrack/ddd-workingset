@@ -13,14 +13,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import sk.workingset.application.Caller;
-import sk.workingset.application.DeriveCommand;
-import sk.workingset.application.DeriveResult;
 import sk.workingset.application.ReadResult;
 import sk.workingset.application.WorkingSetApplicationService;
-import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Tracker;
 import sk.workingset.domain.WorkingSetId;
@@ -29,7 +25,7 @@ import sk.workingset.domain.WorkingSet;
 import java.util.List;
 
 /**
- * Working Set 的最小 REST 入口：非共享派生、解析与读取。
+ * Working Set 的查询、绑定、解析与读取入口。批量派生走 T7 扩展任务，不再提供单 Item 派生入口。
  */
 @RestController
 @RequestMapping("/api/worksets")
@@ -41,13 +37,6 @@ public class WorkingSetController {
 
     public WorkingSetController(WorkingSetApplicationService applicationService) {
         this.applicationService = applicationService;
-    }
-
-    @PostMapping("/{workingSetId}/derive")
-    @ResponseStatus(HttpStatus.CREATED)
-    public DeriveView derive(@PathVariable("workingSetId") String workingSetId,
-                             @RequestBody DeriveRequest request) {
-        return deriveView(applicationService.derive(command(workingSetId, request)));
     }
 
     @GetMapping("/{workingSetId}")
@@ -88,9 +77,14 @@ public class WorkingSetController {
 
     @GetMapping("/{workingSetId}/bindings")
     public BindingsView listBindings(@PathVariable String workingSetId) {
-        var workingSet = applicationService.findWorkingSet(WorkingSetId.of(workingSetId));
+        var id = WorkingSetId.of(workingSetId);
+        var workingSet = applicationService.findWorkingSet(id);
+        var visible = applicationService.findTrackers(id).stream().map(Tracker::trackerId)
+                .collect(java.util.stream.Collectors.toSet());
         return new BindingsView(workingSet.spaces().stream().map(SpaceBindingView::from).toList(),
-                workingSet.trackers().stream().map(TrackerBindingView::from).toList());
+                workingSet.trackers().stream()
+                        .filter(binding -> visible.contains(binding.trackerId()))
+                        .map(TrackerBindingView::from).toList());
     }
 
     /**
@@ -116,28 +110,6 @@ public class WorkingSetController {
     public TrackerBindingView bindTrackerShared(@PathVariable String workingSetId, @PathVariable String trackerId) {
         return TrackerBindingView.from(applicationService.bindTrackerShared(
                 WorkingSetId.of(workingSetId), TrackerId.of(trackerId)));
-    }
-
-    @PostMapping("/{workingSetId}/spaces/{spaceId}/classifications/{classificationId}/derive")
-    @ResponseStatus(HttpStatus.CREATED)
-    public DeriveView bindTrackerDerived(@PathVariable String workingSetId, @PathVariable String spaceId,
-                                        @PathVariable String classificationId, @RequestBody DeriveRequest request) {
-        return deriveView(applicationService.bindTrackerDerived(
-                spaceId, classificationId, command(workingSetId, request)));
-    }
-
-    private static DeriveCommand command(String workingSetId, DeriveRequest request) {
-        return new DeriveCommand(WorkingSetId.of(workingSetId),
-                TrackerId.of(requireText(request.sourceTrackerId(), "sourceTrackerId")),
-                LocalId.of(requireText(request.sourceLocalId(), "sourceLocalId")),
-                Revision.of(request.sourceRevision()), CommonId.of(requireText(request.commonId(), "commonId")));
-    }
-
-    private static DeriveView deriveView(DeriveResult result) {
-        return new DeriveView(
-                result.tracker().trackerId().value(),
-                result.tracker().sourceId().value(),
-                LightTrackerItemView.from(result.item()));
     }
 
     @GetMapping("/{workingSetId}/items/{localId}")

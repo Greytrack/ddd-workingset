@@ -8,7 +8,6 @@
 
 | 优先级 | 编号 | 问题 | 可选答案 | 影响与阻塞 | 建议验证 |
 | --- | --- | --- | --- | --- | --- |
-| P0 | `QUESTION-002.l` | **扩展已有工作集与创建新工作集共享哪些操作边界？** | T6-F 已裁定批量派生整批原子，T7-A 已裁定创建允许部分成功。待确认：扩展已有工作集时，整批边界是否覆盖空间绑定、Tracker 复制与绑定、LTI 索引 | 决定 T7-G 扩展失败后哪些范围可以对外可见；T7-A 创建规则继续适用 | 以扩展已有工作集时后续 Tracker 失败验证整批可见边界 |
 | P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
 | P0 | `QUESTION-010` | **Reference/Association 剩余可见性与删除守卫** | 已裁定 C：Reference = 逻辑 Family + 可选钉版/物理定位；Association = 具体 Variant 端点。剩余：目标缺失、无权、软删、永久删除、后续纳入、钉版不可读六类的可见性与守卫 | 决定 T7-E 的关系表、悬空表示、修复事件与删除顺序 | 按六类场景做关系构建/修复验收；关系不参与 Compare/Merge（D6） |
 | P1 | `QUESTION-004` | **CommonId 跨实例并发与去重协议** | 已确认：默认 WS 同一雪花、非默认两个不等雪花、派生继承 CommonId、软删占键、冲突 409。剩余：多实例并发生成/校验、重试与唯一约束的兜底边界 | 决定唯一索引、ID 生成器与冲突重试；不重开身份语义 | 并发创建/派生/回并 + 唯一约束冲突注入 |
@@ -40,6 +39,7 @@
 | `QUESTION-002.h` | Item 归属关闭：业务 BC 拥有业务对象聚合，SK 只负责公共身份与工作集机制 | D-007 |
 | `QUESTION-002.i` | 批量派生整批原子（LRO 范式） | T6-F（2026-11-16） |
 | `QUESTION-002.j` | Compare/Merge 候选对按 Tracker 的直接 `sourceId` 派生关系确定：只允许直属派生父子，不允许跨级，不允许派生兄弟节点互配，不做同槽全组合 | 2026-11-17 用户裁定 |
+| `QUESTION-002.l` | 创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO，独立批量派生入口另行定义 | 2026-11-17 用户裁定 |
 | `QUESTION-003` | 现阶段不接入权限；`Caller`/`authorize` 保持占位，待权限模型完成后接入 | D11（2026-11-12） |
 | `QUESTION-005` | 原生新建 Item 由服务端分配身份；回并经直属父子 Merge CREATE 承载 | D10、T6-C、T6-D |
 | `QUESTION-007` | Compare/Merge 只允许直属父子双向，兄弟/跨代拒绝 | POL-004、FACT-007 |
@@ -51,12 +51,12 @@
 | `QUESTION-016` | 所有 BC 的所有 Object 都具备 `delete`/`undelete`/`delete2` 能力声明；具体规则/guard 由各 BC 实现 | D14（2026-11-12） |
 | `QUESTION-015` | Diff/Merge 行为契约关闭；Q1～Q4 已裁定，重做须新建轮次 | T1、ADR-0005 |
 | T6-E | Compare 不持久化；一页 1～50 条决策；`requestId` 幂等；异步 LRO | [2026-11-15 裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)、[T6-E 验收](../implementation/t6-e-merge-round-verification.md) |
-| T6-F | Shared 允许悬挂；同源多派生 + `is_default`；`sourceId` 不可变；批量派生整批原子；完成即可见 | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
+| T6-F | Shared 允许悬挂；同槽多 Tracker（独立分类投影）+ `is_default`；`sourceId` 不可变；派生链 1:1；完成即可见 | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
 | Checkpoint | 身份 = 两侧 Tracker 分支 + 家族；方向只是属性；WorkingSet 不参与；同一 Tracker 对禁止并发合并 | [Checkpoint 修正](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md) |
 
 ## 当前推进顺序
 
-1. 先敲定 `QUESTION-002.l`、`QUESTION-006`、`QUESTION-010`，它们分别阻塞 T7-G 扩展边界、COW/历史保留和 T7-E 关系构建。
+1. 先敲定 `QUESTION-006`、`QUESTION-010`，它们分别阻塞 COW/历史保留和 T7-E 关系构建。
 2. 再敲定 `QUESTION-008.b`、`QUESTION-008.c`，收口 Merge 的字段级 `DEFER` 与 Checkpoint 版次口径。
 3. `QUESTION-011`（Baseline）与 `QUESTION-014`（SK 版本治理）作为 T6-G 主题，需要业务/四 BC 参与。
 4. `QUESTION-012`、`QUESTION-017`、`QUESTION-018` 作为规模与运维专题，不阻塞当前实现。

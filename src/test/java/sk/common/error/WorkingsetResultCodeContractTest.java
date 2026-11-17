@@ -46,6 +46,7 @@ class WorkingsetResultCodeContractTest {
         assertRange(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT, 1000, 1099);
         assertRange(WorkingsetResultCode.WORKING_SET_NOT_EXISTS, 1200, 1299);
         assertRange(WorkingsetResultCode.TRACKER_HAS_ITEMS, 1200, 1299);
+        assertRange(WorkingsetResultCode.NO_DERIVABLE_TRACKER, 1200, 1299);
         assertRange(WorkingsetResultCode.MERGE_PAIR_MERGE_IN_PROGRESS, 1300, 1399);
         assertRange(WorkingsetResultCode.MERGE_STALE_EVIDENCE, 1300, 1399);
         assertRange(WorkingsetResultCode.MATERIALIZATION_REJECTED, 1400, 1499);
