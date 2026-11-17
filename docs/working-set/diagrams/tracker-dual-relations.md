@@ -33,7 +33,7 @@ flowchart LR
 
 T0/T1/T2 沿三层工作集逐级派生；T2.sourceId 不能跳到 T0。B1 同时有结构父 A1 和直接来源 B0，二者位于不同工作集，不能合并为一个关系。B0 是说明直接来源位置的示例，不宣称 A1 由谁派生，也不推断 WS0 的树被复制到 WS1。
 
-上图未绘出的 parentId/sourceId 不表示空值；D-004 裁剪根的 parentId=null 见下图。parentId 创建后不可变已由 D-006 确认，父也选择时的默认继承与创建前显式重组已由 D-005 确认；同源多派生、sourceId 可变性、Item 归属和关系存储方式仍未裁定。
+上图未绘出的 parentId/sourceId 不表示空值；D-004 裁剪根的 parentId=null 见下图。parentId 创建后不可变已由 D-006 确认，父也选择时的默认继承与创建前显式重组已由 D-005 确认。同源多派生、sourceId 不可变与 Shared 悬挂见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 Shared 未放入本例：被多个工作集引用的同一权威 Tracker 不能因此复制成不同对象。T6-F 已裁定 Shared 的 `parentId` 由默认工作集维护，子工作集允许悬挂（能构树则构树）；每个工作集的结构有效性仍按有效组织范围核对，不能只检查数据库归属。图不将 Shared 的父级转移到 Binding，也不批准任何全树聚合。
 
@@ -51,7 +51,6 @@ flowchart LR
     end
     subgraph DST["WS1 有效组织范围 - 直接派生自 WS0"]
         B1["AR Tracker B1 - 新身份 - 根<br/>parentId = null"]
-        Result["结果说明：不自动创建 A1 - 不是领域对象"]
     end
     B1 -.->|"sourceId = B - 直接来源不变"| B
 ```
@@ -59,3 +58,20 @@ flowchart LR
 源组织树为 A 下的 B，目标组织树只有根 B1。B1.parentId=null 与 B1.sourceId=B 同时成立，Tracker Hierarchy 不等于 Tracker Derivation。没有到 A 的跨工作集 parentId 边，也没有容纳整树的聚合。
 
 适用范围：非共享、原父未选择、允许的根节点结果。父也选中时默认继承与创建前显式重组已由 D-005 确认，派生后 parentId 不可修改已由 D-006 确认；T6-F 已定 `sourceId` 不可变、同源多派生允许并引入 `is_default`、批量派生整批原子。Shared 混合树有效父按 T6-F 允许悬挂。见 [POL-009/010/011](../domain/facts.md)、[SCN-015](../scenarios/core-scenarios.md#scn-015-非共享-tracker-派生组织裁剪)、[D-004](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)、[T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
+
+<a id="tracker-creation"></a>
+## 创建时确定组织位置
+
+选择范围时确定组织父级：父未纳入则成为根，父也纳入则默认继承，可在创建前显式重组。创建完成后 `parentId` 固定；组织位置不改变 `sourceId`。见 [D-005](../reviews/2026-11-09-stage-3-architecture-review.md#d-005)、[D-006](../reviews/2026-11-09-stage-3-architecture-review.md#d-006) 和 [非法组织位置反例](../scenarios/core-scenarios.md#scn-018-创建时父缺失与组织环反例)。
+
+```mermaid
+flowchart TD
+    Start(["新建 / 非共享派生"]) --> Decide{"创建前：确定组织位置"}
+    Decide -->|"未带入源父（D-004）"| Root["parentId = null 成为根"]
+    Decide -->|"父也选择（D-005）"| Inherit["默认继承已选父结构"]
+    Decide -->|"显式重组（D-005）"| Reorg["指定新合法结构（含改为根）"]
+    Root --> Done["创建完成（业务边界）"]
+    Inherit --> Done
+    Reorg --> Done
+    Done --> Frozen["parentId 冻结：不可移动 / 换父 / 改根（D-006）"]
+```

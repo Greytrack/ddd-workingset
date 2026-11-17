@@ -73,12 +73,7 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 - 返回（契约级）：成功 + 提交后的业务 `Revision`（普通编辑不升级版次）；或业务拒绝 / 冲突 / 未知结果等（见 §5）。并发控制不得改变 T1 已确认的决策优先与执行语义。
 - 结构可具有 **SPI 扩展特征**（按能力声明发现可用实现），但**不强制** Java `ServiceLoader` 或动态插件机制。
 
-```
-SK 应用层 ──依赖──▶ TrackerItemReadPort（只读）
-SK 应用层 ──依赖──▶ <BC>WritePort（写入协作，Outbound Port）
-业务 BC ──实现──▶ 上述两个 Port 的 Adapter
-业务 BC 内部：聚合构建、整体校验、持久化、领域事件
-```
+参见 [跨 BC 依赖图](../diagrams/cross-bc-contract.md)。
 
 - **D3-B（2026-11-12 用户裁定）**：COW 物化的业务保存由业务 BC **独立提交**；SK 的物化凭据与 LightTrackerItem 切换在独立事务中进行，**不要求跨 BC 同事务**。未完成的凭据/切换通过 Modulith 未完成事件重投收敛（D13）；业务保存按目标身份与快照证据幂等。
 - **D15-B（2026-11-13 用户裁定）**：Merge 的条目应用同样独立提交；目标变体切换/创建由 `RequirementMergeApplied` 事件在 SK 独立事务完成，与 COW 采用同一模式（异步、幂等、可重投）。
@@ -137,10 +132,10 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 | 分类 | 含义 | 禁止的偷换 |
 | --- | --- | --- |
-| `NotFound` | 对象从未存在，或不在当前身份空间内 | 不得把「无权」「已删除」「未纳入」报成不存在。**例外（D7，2026-11-12 用户裁定）：业务对象被永久删除后不保留墓碑与内容，`NotFound` 是其正确语义**；软删仍须返回 `Deleted` |
+| `NotFound` | 对象在当前身份空间中不存在，含 D7 下已永久删除的对象 | 缺权限、未纳入和软删分别有独立结果 |
 | `NotIncluded` | 对象存在但未纳入当前工作集范围 | **不得降级为 `NotFound`** |
 | `Denied` | 对象存在但调用方无权 | **不得降级为 `NotFound`**，不得泄露内容 |
-| `Deleted` | 已删除（不可恢复） | 不得当作「历史不可用」或「当前值缺失」 |
+| `Deleted` | 业务对象已软删，原变体保留 | 生命周期见 [BusinessObject](business-object-lifecycle-design.md) |
 | `HistoryUnavailable` | 所需历史/切点不可读 | **不得用当前值冒充历史值** |
 | `Preparing` | 范围/成员处于准备中的显式中间态 | 不得当作已完成 |
 | `CapabilityNotSupported` | 对象/BC 不支持该能力 | **不得解释为空差异或无记录** |

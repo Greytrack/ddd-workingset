@@ -2,7 +2,7 @@
 
 - **状态**：Accepted
 - **日期**：2026-11-10
-- **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem 的协作顺序、ComparisonToken 的证据要求（不含编码）、Checkpoint 确认的发起方
+- **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem 的协作顺序、双侧比较证据要求（早期载体为 ComparisonToken，现行载体见文末补充裁定）、Checkpoint 确认的发起方
 - **确认人／决策权威**：用户已确认 Q1～Q3 三项裁定，并于 2026-11-10 明确批准本 ADR 为 Accepted
 - **替代**：无
 - **被替代于**：无

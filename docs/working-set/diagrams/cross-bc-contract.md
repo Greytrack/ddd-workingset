@@ -35,9 +35,9 @@ flowchart LR
 
     SK -->|"依赖（读）"| RP
     SK -->|"依赖（写请求）"| WP
-    RP -.->|"由 Adapter 实现"| ADP
-    WP -.->|"由 Adapter 实现"| ADP
-    ADP --> AGG
+    ADP -.->|"实现读 Port"| RP
+    ADP -.->|"实现写 Port"| WP
+    ADP -->|"调用业务能力"| AGG
 ```
 
 要点：`TrackerItemReadPort` **不含**整体校验、提交、删除等写入方法；写入只能经 `<BC>WritePort` 进入 BC 的聚合与应用服务。

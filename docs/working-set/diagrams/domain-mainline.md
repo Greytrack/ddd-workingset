@@ -4,18 +4,17 @@
 
 目的：表达 Working Set 领域从创建到合并的业务主线。范围：主干流程，不表达数据库、部署或具体 API。依据：[首版基线候选](../domain/model-baseline-candidate-v1.md)、D-001～D-019。领域关系见 [契约与聚合图](trackeritem-contract.md)，生命周期/COW 时序见 [LightTrackerItem 生命周期](lighttrackeritem-lifecycle.md)。
 
-## 领域主线
-
 ```mermaid
 flowchart TD
-    A["Working Set 创建<br/>选择 Tracker 形成工作范围"] --> B["扩展<br/>纳入新 Tracker/Item；移除遵循 T2 契约"]
-    B --> C["Tracker 派生<br/>非共享派生新身份<br/>parentId 组织树 / sourceId 派生链"]
-    C --> D["LightTrackerItem 派生<br/>选择 Snapshot/Head 时间基准<br/>固定 Revision，SourceLocalId 直接定位"]
-    D --> E["Query<br/>Resolve 定位 + BC 工厂重建<br/>未物化读来源 Revision 当前内容"]
-    E --> F["COW<br/>来源修改→不可变快照→事件<br/>Handler 消费时确定目标→物化→切换自身"]
-    F --> G["Revision 升级<br/>显式升级触发 COW"]
-    G --> H["Diff<br/>直接父子双向比较"]
-    H --> I["Merge<br/>ACCEPT/KEEP_TARGET/DEFER<br/>目标 BC 校验提交"]
+    A["选择产品空间与 Tracker，形成工作范围"] --> B{"Tracker 共享方式"}
+    B -->|"共享"| C["绑定原 Tracker，使用同一权威内容"]
+    B -->|"非共享"| D["派生独立 Tracker 与 Item 身份"]
+    D --> E["Source-backed：读取有效来源"]
+    E -->|"首次需要本地内容"| F["目标 BC 保存后，由 SK 完成物化切换"]
+    E -->|"直属父子，直接派生 Tracker 对"| H["Compare：阅读本次双侧差异"]
+    F --> H
+    H --> I["Merge：用户决定，目标 BC 校验提交"]
+    I --> J["记录条目结果，按决定确认 Checkpoint"]
 ```
 
-说明：主线表达业务动作顺序，不表示单事务或强一致。COW 为异步最终一致；未物化期间允许暂时读到来源修改后内容。业务 BC 拥有完整业务内容与提交权。三类核心聚合（Working Set/Tracker/LightTrackerItem）按 ID reference 关联，不组合、不跨 BC 事务。
+绑定与扩展见 [T2](../domain/binding-deletion-contract-v1.md)，物化见 [T3](../domain/lighttrackeritem-materialization-contract-v1.md)，比较与合并见 [T1](../domain/merge-execution-contract-v1.md)。图表达工作路径及协作顺序。

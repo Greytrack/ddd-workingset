@@ -14,18 +14,16 @@
 - `LightTrackerItem` 与业务 BC 聚合是**双事实**，按 ID 引用，不组合；**不要求同库事务**。
 - `materialized` 是物化状态的**权威字段**；`sourceLocalId`/`sourceRevision` 是一致性约束。
 - 「Materializing」是技术运行态，**不纳入领域枚举**。
-- 虚线返回＝结果或回执；`alt` 分支列出契约级失败语义。
+- 虚线返回表示结果或回执，带开口箭头的虚线表示异步投递。
 
 ## 1. 双态与状态判定
 
 ```mermaid
 stateDiagram-v2
     [*] --> SourceBacked: 派生创建（materialized=false，预分配 localId）
-    SourceBacked --> Materializing: 消费来源变更事件（技术运行态）
-    Materializing --> LocalBacked: 业务保存成功 且 聚合事务内同步切换三字段
-    Materializing --> SourceBacked: 业务拒绝 或 切换失败（materialized 保持 false）
+    SourceBacked --> LocalBacked: 业务保存已提交，且 LTI 切换已提交
+    SourceBacked --> SourceBacked: 业务保存被拒绝或 LTI 切换未提交
     LocalBacked --> LocalBacked: 已物化，后续来源事件跳过（幂等）
-    LocalBacked --> [*]
     note right of SourceBacked
       materialized = false
       sourceLocalId 指向外部实际有效来源
@@ -39,7 +37,7 @@ stateDiagram-v2
     end note
 ```
 
-判定规则（K1′，用户确认）：以 `materialized` 为权威；Local-backed 时必须同时满足 `sourceLocalId == localId` 且 `sourceRevision == revision`。`sourceLocalId != localId` **不再**单独作为物化状态定义，只作为身份/来源一致性约束。若三字段不一致，按元数据一致性缺陷修复，不引入第三种业务状态。
+状态判定与三字段一致性见 [T3 双态契约](../domain/lighttrackeritem-materialization-contract-v1.md#4-双态契约与状态判定)。
 
 ## 2. 首次物化时序（双事实）
 
@@ -55,9 +53,9 @@ sequenceDiagram
 
     U->>SRC: 修改来源业务对象
     SRC->>SRC: 捕获修改前完整不可变快照
-    SRC->>SRC: 保存修改成功
-    SRC->>EV: 发布来源变更事件（携带快照与来源 Revision）
-    EV->>H: 来源事务提交后消费
+    SRC->>SRC: 保存业务修改与事件发布记录，提交来源事务
+    SRC--)EV: 来源变更事件（提交后投递）
+    EV--)H: 异步消费快照与来源 Revision
 
     H->>LTI: 查询 materialized=false 且 sourceLocalId/sourceRevision 匹配的变体
     LTI-->>H: 目标变体集合（扇出，不追溯派生完成时间）

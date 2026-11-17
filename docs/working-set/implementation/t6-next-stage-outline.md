@@ -14,11 +14,9 @@
 | T6-G 关系、Baseline 与治理 | 未开始；待 QUESTION-011／014 裁定 |
 | 规模/保留 | 转[规模压测与保留专题](performance-testing.md)，不阻塞 |
 
-## 2. Merge 轮次边界（保留的最小约定）
+## 2. Merge 契约与验收
 
-- compare 只读瞬时，一页 20–50 条；`POST /worksets/{target}/merge-rounds` 是唯一提交入口，`decisions` 1–50 条、`requestId` 必填幂等；空决策/超限 400。
-- `GET /merge-rounds/{id}` 完整返回，不分页；`apply` 是幂等触发器。
-- 同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；Checkpoint 身份 = 两侧 Tracker 分支 + 家族 + 双侧版次，WorkingSet 不参与。
+现行语义见 [T1](../domain/merge-execution-contract-v1.md)，接口与验证见 [T6-E 验收](t6-e-merge-round-verification.md)。
 
 ## 3. 转出项
 

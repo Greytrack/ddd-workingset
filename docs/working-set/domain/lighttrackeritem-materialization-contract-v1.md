@@ -112,7 +112,7 @@ LightTrackerItem 与业务聚合是**双事实**：前者持身份/来源/物化
 
 ## 9. 规则性质
 
-既有规则沿用 D-008～D-019 的确认范围；本轮 K1′、K2′、K3′ 分别关联 INV-069、INV-070、INV-071。具体定义见 §3～§8，确认索引见 §10，技术实现排除范围见文首。
+K1′～K3′ 的接受范围对应 INV-069～071，见 [不变量登记](invariants.md)。
 
 ## 10. K1′～K3′ 最终裁定（用户确认，2026-11-11）
 
@@ -135,4 +135,4 @@ LightTrackerItem 与业务聚合是**双事实**：前者持身份/来源/物化
 - 追溯：D-007～D-019、FACT-014～023/027、INV-024～052/061～063/069～071、SCN-019～049、SCN-066～068、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)。
 - 图：[LightTrackerItem 生命周期](../diagrams/lighttrackeritem-lifecycle.md)、[物化状态与首次物化时序](../diagrams/lighttrackeritem-materialization.md)。
 - 评审：[T3 评审记录](../reviews/2026-11-11-t3-materialization-review.md)。
-- 当前进度与下一步统一见[阶段 5 计划](../reviews/2026-11-10-stage-5-contract-plan.md)。
+- 实施与恢复：[S3 首次物化](../implementation/t5-s3-verification-result.md)、[S4 恢复](../implementation/t5-s4-verification-result.md)。

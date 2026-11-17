@@ -10,7 +10,7 @@
 
 ## 图例
 
-- 实线调用＝同步请求；虚线返回＝结果/回执。
+- 实线表示同步请求，虚线箭头表示回执，带开口箭头的虚线表示异步事件。
 - `MergeRound`、`MergeCheckpoint`、`LightTrackerItem`、业务 BC 聚合之间均按身份引用，图不表示同事务或聚合包含。
 - `MergeEntry` 是 MergeRound 内的 Entity，图中置于 MergeRound 协作内部。
 
@@ -24,6 +24,7 @@ sequenceDiagram
     participant R as MergeRound
     participant E as MergeEntry
     participant BC as 业务 BC 聚合
+    participant H as SK 物化事件处理
     participant L as LightTrackerItem
     participant C as MergeCheckpoint
 
@@ -45,23 +46,27 @@ sequenceDiagram
         else 执行准入通过
             opt 决定要求写入
                 R->>BC: ACCEPT 取源最新值，或提交显式存在性决定
-                BC-->>R: 整体校验及业务提交结果
+                BC-->>R: 整体校验及独立事务提交结果
             end
             alt 业务拒绝
                 R->>E: Rejected 保留原因
             else 成功或 KEEP_TARGET
-                opt 未物化目标发生写入
-                    R->>L: 切换为 Local-backed（独立事务/事件）
+                par 轮次记录执行结果
+                    opt markAsMerged 且 Applied
+                        R->>C: 确认处理事实
+                        C-->>R: Checkpoint 结果
+                    end
+                    R->>E: 记录单项结果
+                and LTI 独立收敛（仅适用的业务写入）
+                    BC--)H: RequirementMergeApplied（业务提交后异步投递）
+                    H->>L: 在 SK 独立事务中维护 LTI
                 end
-                opt markAsMerged 且 Applied
-                    R->>C: 确认处理事实
-                    C-->>R: Checkpoint 结果
-                end
-                R->>E: 记录单项结果
             end
         end
     end
-    R-->>U: 唯一终态 ApplyResult（GET 轮询）
+    Note over R,H: 记录条目结果无需等待 LTI 事件处理完成
+    U->>R: GET 轮次状态与结果
+    R-->>U: 终态时返回唯一 ApplyResult
 
     opt 重做未完成项
         U->>D: 重新 compare

@@ -10,4 +10,4 @@ ADR 状态为 `Proposed`、`Accepted`、`Rejected` 或 `Superseded`。AI 可以�
 - [ADR-0002：LightTrackerItem 作为 Working Set 权威聚合](0002-lighttrackeritem-authoritative-aggregate.md)：记录 D-007/D-008/D-012；ADR 文档 Accepted（2026-11-10）。
 - [ADR-0003：COW 采用事件驱动最终一致与首次快照优先](0003-cow-event-driven-final-consistency.md)：记录 D-009～D-018；ADR 文档 Accepted（2026-11-10）。
 - [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](0004-productspace-independent-aggregate.md)：记录阶段 4 ProductSpace/Classification/SpaceBinding/TrackerBinding 裁定（FACT-024～026、POL-012～014、INV-053～059）；ADR 文档 Accepted（2026-11-10）。
-- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](0005-merge-execution-model.md)：记录 MergeEntry 归属与生命周期、三对象协作顺序、ComparisonToken 证据要求、Checkpoint 确认发起方；ADR 文档 Accepted（2026-11-10）。
+- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](0005-merge-execution-model.md)：记录 MergeEntry 归属与生命周期、三对象协作顺序、双侧证据要求（含后续 Compare 不持久化裁定）、Checkpoint 确认发起方；ADR 文档 Accepted（2026-11-10）。

@@ -226,7 +226,7 @@ parentId 表达同工作集的直属结构父子关系；sourceId 表达直接�
 
 关闭项：QUESTION-002.d1（创建后 parentId 可修改 → 不可修改）。仍未决：Shared 混合树有效父及跨工作集一致性、同源多派生、sourceId 创建后可变性、派生整批原子性、Item 聚合归属。父 Tracker 后续删除或停用时子节点如何处理属于 QUESTION-009.a 的独立生命周期问题，本轮不选择：不自动清空或重挂 parentId、不级联删除，也不因此重新开放移动权限。（2026-11-11 更新：删除部分已由 [T2 K2 裁定](2026-11-11-t2-binding-deletion-review.md)关闭——存在组织子级/派生子级/Item 时禁止删除。2026-11-12 更新：用户裁定 WorkingSet/Tracker 不存在“停用”概念，`QUESTION-009.a` 已关闭，本段“停用”相关待决不再成立。）
 
-追溯：[POL-011](../domain/facts.md)、[INV-022/023](../domain/invariants.md)、[生命周期图](../diagrams/tracker-creation-lifecycle.md)、[SCN-017](../scenarios/core-scenarios.md#scn-017-创建后组织位置不可变)、[SCN-018](../scenarios/core-scenarios.md#scn-018-创建时父缺失与组织环反例)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
+追溯：[POL-011](../domain/facts.md)、[INV-022/023](../domain/invariants.md)、[生命周期图](../diagrams/tracker-dual-relations.md#tracker-creation)、[SCN-017](../scenarios/core-scenarios.md#scn-017-创建后组织位置不可变)、[SCN-018](../scenarios/core-scenarios.md#scn-018-创建时父缺失与组织环反例)。未创建或接受 ADR，未发布基线，未修改代码、提交或打 Tag。
 
 <a id="d-007"></a>
 ## D-007：TrackerItem 公共契约与业务 BC 聚合边界（2026-11-10）

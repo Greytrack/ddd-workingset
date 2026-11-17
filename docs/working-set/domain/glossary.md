@@ -16,13 +16,13 @@
 | `CONCEPT-009` | **Business Revision／业务版次** | 由显式“升级版次”操作推进的业务版本标识；普通编辑不推进。 | 不等于乐观锁 `lock_version`，也不等于发布大版本 `version`。 |
 | `CONCEPT-010` | **Source Cut／来源切点** | 物化（COW）时固定普通字段内容的“修改前不可变快照”及其证据。 | 不等于来源当前值、捕获时间字符串、直接父变体或 `SourceRevision`。 |
 | `CONCEPT-011` | **Copy-on-Write／写时复制** | 既有未物化变体首次需要本地内容时，建立本地权威内容但保持逻辑身份不变的转换。 | 不是首次创建 Item 身份；不等同整 Tracker 预复制。 |
-| `CONCEPT-012` | **Baseline／基线（业务）** | 用于固定比较、派生或发布依据的一组不可变、可回读证据。 | 与仓库 Design Baseline、业务 Snapshot、Merge Base 必须分开命名；业务含义仍见 `QUESTION-011`。 |
-| `CONCEPT-013` | **Difference／差异** | 在固定有向比较上下文和双侧证据上得到的记录存在性或字段内容差异。 | `LocalId` 不同、物化状态不同不自动构成业务差异。 |
+| `CONCEPT-012` | **Baseline／基线（业务，待定义）** | 业务用语，适用含义见 [QUESTION-011](open-questions.md)。 | 仓库 Design Baseline、Snapshot、Merge Base 分别使用各自名称。 |
+| `CONCEPT-013` | **Difference／差异** | 有向 Compare 在本次双侧证据上得到的存在性或字段内容差异。 | 分页不会固定后续请求的结果；`LocalId` 或物化状态不同不自动构成业务差异。 |
 | `CONCEPT-014` | **Merge／合并** | 把明确决定通过目标业务能力应用，并记录结果与处理事实的有向过程。 | 不是整行覆盖；不自动承诺整轮原子；不直接写业务字段。 |
 | `CONCEPT-015` | **Merge Decision／合并决定** | 对存在性或字段差异作出的 `ACCEPT / KEEP_TARGET / DEFER` 选择，以及 `markAsMerged`。 | 数据决定、实际 Apply Result 与“已处理”确认是不同事实。 |
-| `CONCEPT-016` | **Merge Base／合并基准** | 比较两条演进线时双方共同认可的历史依据。 | 不能伪造为直接父子关系；V4 首期尚未正式建模。 |
-| `CONCEPT-017` | **Reference／引用** | 由引用方持有、指向逻辑目标且可选择钉住目标版次的关系。 | 不等同 Association；物理端点为空不表示无逻辑目标。 |
-| `CONCEPT-018` | **Association／关联** | 表达两个业务对象之间业务联系的独立关系。 | 不把引用属性与一般关联强行统一；缺端点时落库语义与 Reference 不同。 |
+| `CONCEPT-016` | **Merge Base／合并基准（候选术语）** | 比较两条演进线时双方共同认可的历史依据。 | 当前合并准入见 [T1](merge-execution-contract-v1.md#32-瞬时比较证据)。 |
+| `CONCEPT-017` | **Reference／引用** | 由引用方持有、指向 Item Family 的逻辑关系，可附带钉版或物理定位。 | 物理定位缺失时仍可有逻辑目标；可见性待裁定。 |
+| `CONCEPT-018` | **Association／关联** | 以具体 Item 变体为端点的业务关系。 | 端点身份与引用的逻辑目标不同；见 [QUESTION-010 裁定](../reviews/2026-11-15-question-010-relation-identity-decision.md)。 |
 | `CONCEPT-019` | **Shared Kernel／共享内核** | 企业架构中由四个业务 BC 共同依赖的共享能力集合，包含 Working Set、Privilege、Workflow、Class Hierarchy。 | 不自动等同 DDD 经典 Shared Kernel 的共同代码治理，也不等同单一聚合、模块或微服务。 |
 | `CONCEPT-020` | **Business Bounded Context／业务限界上下文** | 拥有自身业务对象语言、状态机和不变量的 GateFlow、ALM、DQA 或 PLM 上下文。 | 不因共同调用 Working Set API 而把四个 BC 的专有规则合并进 Shared Kernel。 |
 | `CONCEPT-021` | **TrackerItem** | Working Set Shared Kernel 声明的公共 Item 能力契约；各业务 BC 的领域对象实现它。 | 不等同业务对象的完整领域模型；不把 `Item` 作为独立通用聚合。 |
@@ -57,27 +57,17 @@
 | **Lock Version（`lock_version`）** | 普通修改提交时递增的乐观锁版本；不等于 Business Revision。 |
 | **Release Version（`version`）** | 发布大版本，字符串、可空；只在发布时出现。 |
 
-已确认规则：
-
-1. 派生只固定业务 Revision（Snapshot/Head 只用于选 Revision），不复制、不冻结普通字段内容；附件与关系固定为派生时状态，且不参与 Compare/Merge（R19、D6）。
-2. 来源普通修改触发事件；目标集合在 Handler **消费时**按当前 `SourceLocalId`/`SourceRevision` 匹配且未物化的 LTI 确定，命中多少物化多少（扇出）。
-3. 首次相关修改的修改前快照优先；事件重放/乱序不产生第二个有效物化结果；Local-backed 后不被来源事件覆盖。
-4. `SourceLocalId` 直接指向实际拥有完整内容的变体，不逐级递归未物化中间变体；派生完成后已有下游不因中间上游物化而重定向。
-5. 历史派生链（R0→R1）不是业务必需，不要求 LTI 保存；不引入 Manifest、ItemVariant、OriginLocalId 或谱系聚合。
-6. 事件顺序由事件框架顺序记录、顺序消费兜底；`Source Change Order` 不是领域模型关注点。LTI 自身 Revision 与业务 BC 的 Revision 通过事件同步（细节留实现）。
-7. 物化完成 = 业务 BC 保存成功 **且** LTI 切换成功；保存成功而切换失败不回滚业务内容，幂等重试只补未完成步骤。
-
-以上规则的历史裁定见 [阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md#d-008) 至 [D-018](../reviews/2026-11-09-stage-3-architecture-review.md#d-018)；完整属性与失败语义见 [T3 物化契约](lighttrackeritem-materialization-contract-v1.md)。
+派生时固定哪些内容、何时物化及失败后如何恢复，统一见 [T3 物化契约](lighttrackeritem-materialization-contract-v1.md)。
 
 ## 重点歧义
 
-1. **Baseline** 至少有三义：仓库 Design Baseline、业务 Snapshot/历史切点、Merge Base。后续必须使用限定词。
+1. **Design Baseline** 是仓库设计基线。**Snapshot** 是对象的时点证据。**Merge Base** 是候选合并概念。业务 Baseline 的含义由 QUESTION-011 裁定。
 2. **共享** 表达权威内容复用，不表达访问权限；“无权”不得偷换为“不存在”。
-3. **已处理** 与内容相等分别表达：`KEEP_TARGET + markAsMerged=true` 可以保留真实差异；普通编辑只增 `lock_version`，不使已处理差异重新出现；任一侧显式升级业务 Revision 后，旧 Checkpoint 对该版本组合过时。
+3. **已处理** 是 Checkpoint 记录的用户确认。**内容相等** 是 Compare 的判断。适用性见 [T1 Checkpoint](merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)。
 4. **Tracker 组织树**（`parentId`）与**Tracker 派生链**（`sourceId`）是两个维度；前者表达同工作集结构父，后者表达直接父级工作集来源。二者不互相替代。
 5. **Working Set 谱系**（`parentWorkingSetId`）与 Tracker 派生链也是不同维度；Compare/Merge 只允许直属父子工作集。
 6. **VIRTUAL** 是 V4 历史术语，现行模型用 Source-backed 表达“未物化但存在”；不得把“无本地内容行”当作不存在。
-7. **TRACKER 共享特性**创建后不可变；分类的共享特性是出厂设定，不可修改。非共享分类允许创建共享或非共享 Tracker。
+7. **分类共享特性**是分类出厂设定，**Tracker 共享特性**是创建时确定的协作方式。允许的组合见 [POL-003](facts.md)。
 
 ## 历史术语（仅追溯，不作为当前模型）
 

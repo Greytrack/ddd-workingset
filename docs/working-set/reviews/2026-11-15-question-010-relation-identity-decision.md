@@ -35,7 +35,7 @@
 ## 相关材料
 
 - [T7 设计 §4.6](../domain/working-set-creation-lro-design.md#46-关系引用构建)
-- [T7-E 后续计划](../implementation/t7-implementation-prompt.md#t7-e-关系与引用构建)
+- [T7-E 后续计划](../implementation/t7-implementation-prompt.md#p1t7-e-关系构建)
 - [pre-design 关系设计](../../../pre-design/workingsetReference/README.md)（候选输入，不是基线）
 - [FACT-009 / HYP-007](../domain/facts.md)
 - [QUESTION-010 原问题](../domain/open-questions.md)
