@@ -598,7 +598,8 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 - Given 目标 WorkingSet WS1 尚未关联 ProductSpace P。
 - When 尝试为 P 下的 Tracker 建立 TrackerBinding。
-- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效 SpaceBinding；同一 WS1/ProductSpace/Classification 可绑定多个 Tracker，但恰好一个默认 Tracker。
+- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效 SpaceBinding；同一 WS1/ProductSpace/Classification 可绑定多个 Tracker。
+- Shared 默认：WS1 只绑定同槽非默认 Shared Tracker 时，列表可见该 Tracker，槽内无默认。绑定根工作集的默认 Shared Tracker 后，列表显示原默认标记；解绑或合法删除默认项后，其余 Tracker 不补位。见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)。
 - 反例：不得在没有 SpaceBinding 时建立 TrackerBinding；不得在同一 WorkingSet 重复纳入同一 Tracker；不得在同一组合出现两个默认 Tracker。
 
 <a id="scn-051"></a>

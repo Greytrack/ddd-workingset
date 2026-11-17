@@ -9,7 +9,6 @@
 | 优先级 | 编号 | 问题 | 可选答案 | 影响与阻塞 | 建议验证 |
 | --- | --- | --- | --- | --- | --- |
 | P0 | `QUESTION-002.j` | **同一（空间，分类）有多个 Tracker 时，Compare/Merge 如何配对？** | A 左侧全部 Tracker × 右侧全部 Tracker；B 只按直接 `sourceId` 关系配对；C 先按 `source_id`／`is_default`／名称过滤再配对 | 决定候选对生成、条目身份与 UI 展示；T6-F 已允许同源多派生，但未定配对规则 | 以“同源两个派生子 Tracker”和“同空间不同来源”两个场景验证，确保不产生伪配对 |
-| P0 | `QUESTION-002.k` | **`is_default` 的最终承载与 Shared 默认语义**：实现已选 `Tracker.is_default`（唯一索引按工作集/空间/分类），但 Shared Tracker 跨工作集复用同一聚合，子工作集没有自己的 tracker 行 | A 维持 `Tracker.is_default`，规定 Shared 在所有绑定工作集均为默认（当前实现的近似语义）；B 改为 `TrackerBinding.is_default` 按工作集标记；C 由绑定关系推导，不落标记 | 决定 Shared 绑定是否占用子工作集默认槽、默认 Tracker 删除后的补位；当前实现无法表达“子工作集绑定 Shared 且该 Shared 为默认” | 以“子工作集仅绑定 Shared”“Shared + 同槽位非共享派生”两种场景验证每组合恰有一个默认 |
 | P0 | `QUESTION-002.l` | **T6-F“批量派生整批原子”与 T7 创建工作集“允许部分成功”是否是同一范围？** | A 两个不同操作：T6-F 批量派生全成或全不成，T7 创建按步骤允许部分成功（推荐）；B 统一为部分成功；C 统一为整批原子 | 决定 T7 的复制/绑定/索引失败语义，以及 T6-F 批量派生任务的可见性；当前 T7 已实现部分成功，T6-F 未实现 | 以“部分 Tracker 复制失败”验证 T7；以“批量派生一项失败”验证 T6-F |
 | P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
 | P0 | `QUESTION-010` | **Reference/Association 剩余可见性与删除守卫** | 已裁定 C：Reference = 逻辑 Family + 可选钉版/物理定位；Association = 具体 Variant 端点。剩余：目标缺失、无权、软删、永久删除、后续纳入、钉版不可读六类的可见性与守卫 | 决定 T7-E 的关系表、悬空表示、修复事件与删除顺序 | 按六类场景做关系构建/修复验收；关系不参与 Compare/Merge（D6） |
@@ -22,7 +21,7 @@
 | P2 | `QUESTION-017` | **T7 创建任务的取消、补齐与结果保留** | A 不提供取消/补齐，失败后人工按 T2 删除叶子 WS；B 提供取消；C 提供基于已有子 WS 的补齐任务；结果保留期另定 | 决定任务表生命周期、失败明细保留与恢复入口；当前只支持终态轮询 | 以长任务中断、部分成功、终态后清理验证 |
 | P2 | `QUESTION-018` | **T7-E 关系构建失败后的重试与修复边界** | A 只记录失败明细，人工修复；B 自动重投；C 定时对账修复 | 决定 Reference/Association 的最终一致责任与幂等键 | 与 `QUESTION-010` 六类场景合并验证 |
 
-`QUESTION-002.k` 还包含默认 Tracker 删除后的处理：A 禁止删除默认（推荐，除非删除整个产品空间）；B 自动提升同槽位另一个 Tracker；C 允许暂时没有默认。该子项与 `is_default` 的承载对象一并决定。
+`QUESTION-002.k` 已关闭，见 [Shared 默认与删除补位裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)。
 
 ## 已关闭问题索引
 
@@ -57,7 +56,7 @@
 
 ## 当前推进顺序
 
-1. 先敲定 `QUESTION-002.j`、`QUESTION-002.k`（含默认删除子项）、`QUESTION-002.l`、`QUESTION-006`、`QUESTION-010`，它们分别阻塞 T6-F 比较配对/Shared 默认语义、T7-E 关系构建、T7 部分成功语义和 COW/历史边界。
+1. 先敲定 `QUESTION-002.j`、`QUESTION-002.l`、`QUESTION-006`、`QUESTION-010`，它们分别阻塞 T6-F 比较配对、T7-E 关系构建、T7 部分成功语义和 COW/历史边界。
 2. 再敲定 `QUESTION-008.b`、`QUESTION-008.c`，收口 Merge 的字段级 `DEFER` 与 Checkpoint 版次口径。
 3. `QUESTION-011`（Baseline）与 `QUESTION-014`（SK 版本治理）作为 T6-G 主题，需要业务/四 BC 参与。
 4. `QUESTION-012`、`QUESTION-017`、`QUESTION-018` 作为规模与运维专题，不阻塞当前实现。

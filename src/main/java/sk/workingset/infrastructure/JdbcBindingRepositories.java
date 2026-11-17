@@ -193,9 +193,14 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
 
     @Override
     public List<Tracker> findTrackers(WorkingSetId workingSetId) {
-        return jdbc.query("SELECT " + TRACKER_COLUMNS
-                + " FROM trackers WHERE working_set_id = ? ORDER BY tracker_id",
-                TRACKER_MAPPER, workingSetId.value());
+        return jdbc.query("SELECT " + TRACKER_COLUMNS + """
+                 FROM trackers t
+                 WHERE t.working_set_id = ? OR EXISTS (
+                     SELECT 1 FROM tracker_bindings b
+                     WHERE b.working_set_id = ? AND b.tracker_id = t.tracker_id
+                 )
+                 ORDER BY t.tracker_id
+                """, TRACKER_MAPPER, workingSetId.value(), workingSetId.value());
     }
 
     @Override

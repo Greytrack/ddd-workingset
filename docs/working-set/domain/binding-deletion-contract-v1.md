@@ -26,7 +26,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | ProductSpace 是 Shared Kernel 独立聚合，可被多个 WorkingSet 关联，不随 WorkingSet 派生复制/迁移；Tracker 属于一个 ProductSpace；在默认 WorkingSet 中维护生命周期 | FACT-024 |
 | Classification 为三层共享元模型、启动前初始化常驻内存；Tracker 是其在 ProductSpace/WorkingSet 中的投影；创建 ProductSpace 时按分类集合投影生成 Tracker | FACT-025 |
 | 默认 WorkingSet 固定 Id=1、不可删除/隐藏；Tracker 只能在默认 WorkingSet 创建原始聚合；子 WS 只能纳入直接上游 | FACT-026 |
-| SpaceBinding 是 TrackerBinding 前置；同一 WS 同 ProductSpace 最多一个有效 SpaceBinding；同一 WS/ProductSpace/Classification 可绑定多个 Tracker，但恰好一个默认（T6-F 修订原“槽位唯一”）；Tracker.productSpaceId 必须等于绑定空间；同一 Tracker 不在同一 WS 重复纳入 | POL-012、T6-F |
+| SpaceBinding 是 TrackerBinding 前置；同一 WS 同 ProductSpace 最多一个有效 SpaceBinding；同一 WS/ProductSpace/Classification 可绑定多个 Tracker；默认资格见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)；Tracker.productSpaceId 必须等于绑定空间；同一 Tracker 不在同一 WS 重复纳入 | POL-012、T6-F |
 | Shared 纳入复用原 TrackerId 仅建绑定；非共享纳入创建新聚合 + 直接 sourceId；移除后可重新纳入/派生；最后 Tracker 移除不删 SpaceBinding；ProductSpace 移出是独立显式操作 | POL-013 |
 | 删除/移除八条：Shared 移除仅解绑；非共享无 Item 且无派生子才删除；有派生子不允许删除；任意 Tracker 有 TrackerItem 不允许移除；有组织子节点但无派生子不允许删除；最后 Tracker 移除不删空间绑定；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 下 Shared 空且无子可删 | POL-014（修订 POL-006） |
 | SpaceBinding、TrackerBinding 是归属 WorkingSet 聚合的两个 Entity；ProductSpace、Tracker 只维护自身归属身份，不持有绑定 | POL-015 |

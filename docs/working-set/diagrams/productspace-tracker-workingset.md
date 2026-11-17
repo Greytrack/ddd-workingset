@@ -24,7 +24,7 @@ flowchart LR
 
 说明：
 
-- SpaceBinding 是 TrackerBinding 的业务前置；同一 WorkingSet/ProductSpace 空间绑定唯一；同一 WorkingSet/ProductSpace/Classification 可绑定多个 Tracker，但恰好一个默认（T6-F）。
+- SpaceBinding 是 TrackerBinding 的业务前置；同一 WorkingSet/ProductSpace 空间绑定唯一；同槽多 Tracker 与默认资格见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 - Shared Tracker 纳入子 WorkingSet 复用原 TrackerId（仅建新绑定）；非共享 Tracker 纳入创建新 Tracker 聚合（sourceId 指向来源）。
 - 移除：Shared Tracker 解除 TrackerBinding（不删除聚合，**即使有 Item 也允许**）；非共享 Tracker 解绑即聚合删除，须同时满足无 Item、无组织子级、无派生子级（K2）。
 - ProductSpace 不随 WorkingSet 派生复制/迁移；移除空间内最后一个 Tracker 不移除 SpaceBinding；ProductSpace 移出 WorkingSet 是独立显式操作。

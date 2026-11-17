@@ -194,12 +194,13 @@ public class WorkingSetController {
     public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {}
 
     public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
-                              String classificationId, String sharingMode) {
+                              String classificationId, String sharingMode, boolean isDefault) {
         static TrackerView from(Tracker tracker) {
             return new TrackerView(tracker.trackerId().value(), tracker.name(),
                     tracker.parentId() == null ? null : tracker.parentId().value(),
                     tracker.sourceId() == null ? null : tracker.sourceId().value(),
-                    tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name());
+                    tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name(),
+                    tracker.isDefault());
         }
     }
 

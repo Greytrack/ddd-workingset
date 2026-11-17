@@ -174,6 +174,7 @@ function renderTrackerTree(trackers, boundIds) {
            style="padding-left:${8 + Math.min(depth, 8) * 14}px" title="${escapeHtml(tracker.trackerId)}">
         <span class="tracker-label">${escapeHtml(trackerName)}</span>
         <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${escapeHtml(tracker.sharingMode)}</span>
+        ${tracker.isDefault ? '<span class="badge">默认</span>' : ''}
         ${tracker.sourceId ? `<span class="badge source">源 ${escapeHtml(shortId(tracker.sourceId))}</span>` : ''}
         ${bound ? '' : '<span class="badge unbound">未绑定</span>'}
       </div>` + kids.map((child) => walk(child, depth + 1)).join('');

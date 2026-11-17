@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import bootstrap.web.DeriveView;
 import bootstrap.web.WorkingSetController.BindingsView;
 import bootstrap.web.WorkingSetController.TrackerBindingView;
+import bootstrap.web.WorkingSetController.TrackerView;
 import bootstrap.web.WorkingSetController.WorkingSetView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,6 +98,58 @@ class BindingAcceptanceTest {
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
         assertTrue(bindings.trackers().stream().anyMatch(binding -> binding.trackerId().equals(shared)));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?", Integer.class, ws));
+    }
+
+    @Test
+    void trackerListIncludesOwnedAndBoundSharedTrackersExactlyOnce() {
+        bindSpace(ws);
+        var derived = rest.postForEntity(path(ws) + "/derive", deriveBody(unshared), DeriveView.class);
+        assertEquals(HttpStatus.CREATED, derived.getStatusCode());
+        String owned = derived.getBody().trackerId();
+        String listPath = path(ws) + "/trackers";
+        assertEquals(List.of(owned), trackerIds(listPath));
+
+        assertEquals(HttpStatus.CREATED,
+                rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
+        assertEquals(List.of(owned, shared).stream().sorted().toList(), trackerIds(listPath));
+        assertEquals(List.of(), trackerIds(path(other) + "/trackers"));
+
+        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
+        assertEquals(List.of(owned), trackerIds(listPath));
+    }
+
+    private List<String> trackerIds(String path) {
+        return List.of(rest.getForObject(path, TrackerView[].class)).stream().map(TrackerView::trackerId).toList();
+    }
+
+    @Test
+    void sharedDefaultComesFromRootAndIsNotReplacedAfterUnbindOrDelete() {
+        String alternate = "ALT-" + suffix;
+        original(alternate, sharedClass, "SHARED", null);
+        jdbc.update("UPDATE trackers SET is_default = true WHERE tracker_id = ?", shared);
+        for (String child : List.of(ws, other)) {
+            bindSpace(child);
+            assertEquals(HttpStatus.CREATED,
+                    rest.postForEntity(sharedPath(child, alternate), null, Void.class).getStatusCode());
+        }
+        assertEquals(Map.of(alternate, false), trackerDefaults(ws));
+        for (String child : List.of(ws, other)) {
+            assertEquals(HttpStatus.CREATED,
+                    rest.postForEntity(sharedPath(child, shared), null, Void.class).getStatusCode());
+        }
+        assertEquals(Map.of(shared, true, alternate, false), trackerDefaults(ws));
+
+        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
+        assertEquals(Map.of(alternate, false), trackerDefaults(ws));
+        assertEquals(Map.of(shared, true, alternate, false), trackerDefaults(other));
+
+        assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
+        assertEquals(Map.of(alternate, false), trackerDefaults(other));
+    }
+
+    private Map<String, Boolean> trackerDefaults(String id) {
+        return List.of(rest.getForObject(path(id) + "/trackers", TrackerView[].class)).stream()
+                .collect(java.util.stream.Collectors.toMap(TrackerView::trackerId, TrackerView::isDefault));
     }
 
     @Test

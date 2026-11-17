@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS trackers (
 
 ALTER TABLE trackers ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE;
 
--- 每个（工作集，空间，分类）恰好一个默认 Tracker
+-- 每个（所有者工作集，空间，分类）至多一个默认 Tracker
 CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_default_slot
     ON trackers (working_set_id, product_space_id, classification_id) WHERE is_default;
 

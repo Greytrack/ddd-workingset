@@ -2,7 +2,7 @@
 
 **状态：Reviewed（2026-11-12；FACT-028 用户确认，S6 已实施并验证；未发布基线）**
 
-> **2026-11-16 T6-F 裁定补充**：Shared Tracker 的 `parentId` 由默认工作集维护，子工作集允许悬挂（能构树则构树，构不了不阻塞）；同一工作集、同一（空间，分类）允许多个 Tracker，新增 `is_default`（每个组合恰好一个默认，产品空间创建时同步建默认 Tracker，名称不得重复）；`sourceId` 不可变；批量派生整批原子；创建完成即可见。详见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
+> 同槽多 Tracker、Shared 默认资格、组织父级与派生约束见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 - 依据：[FACT-026 / FACT-028](facts.md)、[POL-004](facts.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[WorkingSet/Tracker 聚合](aggregate-model.md)
 - 范围：多级 WorkingSet 谱系、子工作集创建、Tracker 来源约束、相邻父子 Merge 准入、删除边界
@@ -132,7 +132,7 @@ T6-F（2026-11-16）已关闭：Shared 父级一致性（允许悬挂）、同�
 3. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验；T6-F 已定 `sourceId` 不可变，联合校验仍待设计。
 4. 真实平台元数据中既有 WorkingSet 的父级回填来源与校验方式。
 5. 父 WS 解绑/删除 Tracker 后，子 WS 已存在的绑定是否保留、如何清理。
-6. `is_default` 已落 `Tracker`；剩余 Shared 默认语义与默认删除补位（`QUESTION-002.k`），以及多 Tracker 配对规则（`QUESTION-002.j`）。
+6. 多 Tracker 的 Compare 配对规则仍待 `QUESTION-002.j` 裁定。
 
 ## 9. 状态与下一步
 

@@ -83,7 +83,7 @@
 | `INV-053` | SpaceBinding 是 TrackerBinding 的业务前置。 | Confirmed；`POL-012` | SCN-050 |
 | `INV-054` | Tracker 的 `productSpaceId` 必须等于其 TrackerBinding 的空间 ID。 | Confirmed；`POL-012` | SCN-050 |
 | `INV-055` | 同一 WorkingSet 内 ProductSpace 绑定唯一。 | Confirmed；`POL-012` | SCN-050 |
-| `INV-056` | 同一（工作集，空间，分类）允许多个 Tracker；每个组合恰好一个默认 Tracker（`is_default`）。 | Confirmed；2026-11-16 T6-F 重述，原“槽位唯一”废止；`POL-012` | SCN-051 |
+| `INV-056` | 同一（工作集，空间，分类）可纳入多个 Tracker，有效范围内至多一个默认 Tracker。 | Confirmed；`POL-012`、[T6-F 默认资格裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认) | SCN-050/051 |
 | `INV-057` | Shared Tracker 在多个 WS 共享同一聚合身份；非共享在子 WS 拥有独立派生身份。 | Confirmed；`POL-013` | SCN-052 |
 | `INV-058` | 删除/移除八条语义（见 `POL-014`）。 | Confirmed；`POL-014`；边界由 `INV-064` 澄清 | SCN-052/053 |
 | `INV-059` | 默认 WS 不可删除/隐藏；Tracker `parentId` 创建后不可变。 | Confirmed；FACT-026、`INV-022` | SCN-054 |
