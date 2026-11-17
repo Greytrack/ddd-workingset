@@ -1,5 +1,7 @@
 package alm.requirement.domain;
 
+import sk.common.error.DomainException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -82,7 +84,7 @@ class RequirementTest {
         assertEquals(null, Version.none().value());
         assertTrue(Version.of("1.0").isPresent());
         assertEquals("1.0", Version.of("1.0").value());
-        assertThrows(IllegalArgumentException.class, () -> Version.of(" "));
+        assertThrows(DomainException.class, () -> Version.of(" "));
     }
 
     @Test

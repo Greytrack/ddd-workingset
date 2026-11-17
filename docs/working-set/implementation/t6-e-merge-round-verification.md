@@ -29,7 +29,7 @@
 
 ## 验证
 
-`mvn -B -Dspring.profiles.active=default test`：113 项通过（22 个测试类；T6-F、错误码契约、TrackerPair 四元组与 sourceId 配对测试后全量为 133 项；T7-G 后全量 143 项），其中 `MergeAcceptanceTest` 27 项覆盖：
+`mvn -B -Dspring.profiles.active=default test`：113 项通过（22 个测试类；T6-F、错误码契约、TrackerPair 四元组与 sourceId 配对测试后全量为 133 项；T7-G 后全量 144 项），其中 `MergeAcceptanceTest` 27 项覆盖：
 
 - `submittedDecisionsRunAsAsyncRoundAndPollToTerminal`、`duplicateSubmittedDecisionsReturnTheSameRound`：异步轮询与串行同键重放。
 - `concurrentSubmissionsWithSameRequestIdReturnOneRound`：两线程同键并发提交返回同一轮次，库中只有一行。

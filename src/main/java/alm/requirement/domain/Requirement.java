@@ -1,5 +1,7 @@
 package alm.requirement.domain;
 
+import sk.common.error.DomainException;
+
 import java.util.Objects;
 
 import sk.workingset.domain.CommonId;
@@ -110,7 +112,7 @@ public final class Requirement implements TrackerItem {
     public Requirement restoreContent(String title, String description, LockVersion expectedLockVersion) {
         verifyLockVersion(expectedLockVersion);
         if (!deleteFlag) {
-            throw new IllegalArgumentException("Requirement is already active");
+            throw new DomainException(RequirementResultCode.ALREADY_ACTIVE);
         }
         validateTitle(title);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
@@ -121,10 +123,13 @@ public final class Requirement implements TrackerItem {
     public LifecycleResult delete(LifecycleCommand command) {
         try {
             return LifecycleResult.applied(delete(requireExpectedLockVersion(command)));
-        } catch (IllegalStateException alreadyDeleted) {
-            return LifecycleResult.rejected(alreadyDeleted.getMessage());
         } catch (LockVersionConflictException conflict) {
             return LifecycleResult.conflict(conflict.getMessage());
+        } catch (DomainException alreadyDeleted) {
+            if (alreadyDeleted.getResCode() != RequirementResultCode.DELETED) {
+                throw alreadyDeleted;
+            }
+            return LifecycleResult.rejected(alreadyDeleted.getMessage());
         }
     }
 
@@ -132,10 +137,13 @@ public final class Requirement implements TrackerItem {
     public LifecycleResult undelete(LifecycleCommand command) {
         try {
             return LifecycleResult.applied(undelete(requireExpectedLockVersion(command)));
-        } catch (IllegalArgumentException invalid) {
-            return LifecycleResult.rejected(invalid.getMessage());
         } catch (LockVersionConflictException conflict) {
             return LifecycleResult.conflict(conflict.getMessage());
+        } catch (DomainException invalid) {
+            if (invalid.getResCode() != RequirementResultCode.ALREADY_ACTIVE && invalid.getResCode() != RequirementResultCode.LOCK_VERSION_REQUIRED && invalid.getResCode() != RequirementResultCode.TITLE_REQUIRED) {
+                throw invalid;
+            }
+            return LifecycleResult.rejected(invalid.getMessage());
         }
     }
 
@@ -147,20 +155,20 @@ public final class Requirement implements TrackerItem {
 
     private static LockVersion requireExpectedLockVersion(LifecycleCommand command) {
         if (command == null || command.expectedLockVersion() == null) {
-            throw new IllegalArgumentException("expectedLockVersion is required for delete/undelete");
+            throw new DomainException(RequirementResultCode.LOCK_VERSION_REQUIRED);
         }
         return command.expectedLockVersion();
     }
 
     private void requireActive() {
         if (deleteFlag) {
-            throw new IllegalStateException("Requirement is deleted");
+            throw new DomainException(RequirementResultCode.DELETED);
         }
     }
 
     private static void validateTitle(String title) {
         if (Objects.requireNonNull(title, "title").isBlank()) {
-            throw new IllegalArgumentException("title must not be blank");
+            throw new DomainException(RequirementResultCode.TITLE_REQUIRED);
         }
     }
 

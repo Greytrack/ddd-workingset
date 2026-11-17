@@ -1,5 +1,7 @@
 package alm.requirement.application;
 
+import sk.common.error.DomainException;
+
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +34,7 @@ public final class RequirementMergeWriter {
             return applyChecked(command);
         } catch (LockVersionConflictException failure) {
             throw new MergeFailure(Reason.Conflict, failure.getMessage());
-        } catch (IllegalArgumentException | IllegalStateException failure) {
+        } catch (DomainException | IllegalArgumentException | IllegalStateException failure) {
             throw new MergeFailure(Reason.Rejected, failure.getMessage());
         }
     }

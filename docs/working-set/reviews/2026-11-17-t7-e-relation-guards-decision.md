@@ -174,7 +174,7 @@ Merge 完成
 - `RelationEventPublisher`：按 fact 生成 `eventId`，保留业务 `originalRelationId`，发布三类 `...Requested` 事件。
 - `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
 - T7 创建/扩展已接入 `PUBLISH_RELATION_EVENTS`：索引后逐 Tracker 发布新引用/关联/悬空修复事件；失败记录为任务明细并进入 `PartiallySucceeded`，不自动重试。
-- **尚未接入**：Merge 的 `PUBLISH_RELATION_REPAIR_EVENTS` step。
+- Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布 `DanglingReferenceRepairRequested`；失败不改变 Merge 终态、不自动重试。
 
 ## 7. 待确认
 

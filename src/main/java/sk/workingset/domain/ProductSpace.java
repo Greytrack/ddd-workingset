@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 /**
  * ProductSpace 是 Shared Kernel 独立聚合：只维护稳定归属身份。
  *
@@ -13,7 +16,7 @@ public record ProductSpace(String id, String name) {
 
     public ProductSpace {
         if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException("productSpaceId must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "productSpaceId must not be blank");
         }
     }
 }

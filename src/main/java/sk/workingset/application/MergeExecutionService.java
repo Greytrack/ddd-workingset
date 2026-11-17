@@ -63,10 +63,11 @@ public class MergeExecutionService {
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
+    private final MergeRelationRepairStep relationRepair;
 
     public MergeExecutionService(MergeStore store, MergeComparisonService comparisons, RequirementWritePort writer,
                                  TrackerRepository trackers, IdentifierGenerator ids, TransactionTemplate transaction,
-                                 ApplicationEventPublisher events) {
+                                 ApplicationEventPublisher events, MergeRelationRepairStep relationRepair) {
         this.store = store;
         this.comparisons = comparisons;
         this.writer = writer;
@@ -74,6 +75,7 @@ public class MergeExecutionService {
         this.ids = ids;
         this.transaction = transaction;
         this.events = events;
+        this.relationRepair = relationRepair;
     }
 
     /** 一页决策只提交 evidence + decision；条目身份由服务端在登记时生成。 */
@@ -210,15 +212,28 @@ public class MergeExecutionService {
                 transaction.executeWithoutResult(status -> recordResult(id, entry, receipt));
             }
         }
-        return transaction.execute(status -> {
+        var completed = transaction.execute(status -> {
             var current = round(id, true);
             if (current.result() != null) {
-                return current.result();
+                return null;
             }
-            var completed = current.complete(Instant.now());
-            store.updateRound(completed);
-            return completed.result();
+            var finished = current.complete(Instant.now());
+            store.updateRound(finished);
+            return finished;
         });
+        if (completed != null) {
+            try {
+                var repair = relationRepair.repair(completed);
+                if (repair.failed() > 0) {
+                    log.warn("Merge {} relation repair had {} failed targets", completed.id(), repair.failed());
+                }
+            } catch (RuntimeException failure) {
+                // Relation repair is independent of Merge success; do not change the merge result.
+                log.warn("Merge {} relation repair step failed", completed.id(), failure);
+            }
+            return completed.result();
+        }
+        return Objects.requireNonNull(round(id, false).result());
     }
 
     private MergeRound startExecution(String id) {

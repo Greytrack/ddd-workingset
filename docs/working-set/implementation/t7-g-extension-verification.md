@@ -44,7 +44,7 @@
 - `rejectsAnotherExtensionWhileOneIsUnfinished`
   - 存在未终态扩展任务时，新请求返回 409 `Preparing`。
 
-`mvn -B -q test`：**143 项通过，0 失败、0 错误、0 跳过**。
+`mvn -B -q test`：**144 项通过，0 失败、0 错误、0 跳过**。
 `WorkingSetCreationAcceptanceTest`：17 项通过。
 
 ## 4. 边界

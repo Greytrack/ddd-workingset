@@ -98,7 +98,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
   - `DanglingReferenceRepairRequested`（既有悬空引用修复）；
   - `AssociationCreationRequested`（新关联）。
 - 事件携带 `eventId`、`originalRelationId`、`originId/originType`，消费方按 `originalRelationId` 回查原始关系的传播怀疑、类型、方向等信息。
-- Merge 成功后另设 `PUBLISH_RELATION_REPAIR_EVENTS` step，发布修复事件；关系修复不参与 Merge 成功判定。
+- Merge 成功后由 `MergeRelationRepairStep` 发布修复事件；只处理本轮实际成功且改变目标变体的条目，关系修复不参与 Merge 成功判定。
 - 关系/引用处理失败不自动重试、不阻塞主流程；当前允许任务 `PartiallySucceeded`。详见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 
 ## 5. 事务、事件与一致性

@@ -28,6 +28,7 @@ import sk.workingset.application.CowMaterializationStore;
 import sk.workingset.application.CowRecoveryService;
 import sk.workingset.application.MergeComparisonService;
 import sk.workingset.application.MergeExecutionService;
+import sk.workingset.application.MergeRelationRepairStep;
 import sk.workingset.application.RelationEventPublisher;
 import sk.workingset.application.RelationEventStep;
 import sk.workingset.application.TrackerItemLifecycleService;
@@ -302,10 +303,18 @@ public class ApplicationConfiguration {
     }
 
     @Bean
+    public MergeRelationRepairStep mergeRelationRepairStep(RelationSourcePort source,
+                                                           RelationEventPublisher publisher) {
+        return new MergeRelationRepairStep(source, publisher);
+    }
+
+    @Bean
     public MergeExecutionService mergeExecutionService(MergeStore store, MergeComparisonService comparisons,
             RequirementWritePort writer, JdbcBindingRepositories trackers, IdentifierGenerator ids,
-            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events) {
-        return new MergeExecutionService(store, comparisons, writer, trackers, ids, newTransactionTemplate, events);
+            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events,
+            MergeRelationRepairStep relationRepair) {
+        return new MergeExecutionService(store, comparisons, writer, trackers, ids, newTransactionTemplate, events,
+                relationRepair);
     }
 
     @Bean
