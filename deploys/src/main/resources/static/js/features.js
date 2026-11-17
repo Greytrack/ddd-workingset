@@ -17,7 +17,7 @@ function openModal(html, wide = false) {
   $('#modalPanel').classList.toggle('wide', wide);
   overlay.classList.remove('hidden');
   if (opening || restoreCloseFocus) {
-    (overlay.querySelector('input:not([type="checkbox"]), select') || overlay.querySelector('[data-close-modal]')).focus();
+    (overlay.querySelector('input:not([type="checkbox"]):not([readonly]), select:enabled') || overlay.querySelector('[data-close-modal]')).focus();
   }
 }
 
@@ -265,7 +265,7 @@ async function loadCreateScope(parentId) {
       return;
     }
     target.innerHTML = `
-      <div class="scope-hint">三级范围：工作集 → 产品空间 → Tracker。每个空间可以只选部分 Tracker，也可以一个都不选；不选任何空间即可创建空工作集。</div>
+      <div class="scope-hint">三级范围：工作集 → 产品空间 → 跟踪分类。每个空间可以只选部分 跟踪分类，也可以一个都不选；不选任何空间即可创建空工作集。</div>
       <div class="scope-tree">${spaces.map((space) => renderScopeSpace(space)).join('')}</div>`;
     target.querySelectorAll('.scope-space').forEach((space) => updateScopeMeta(space));
   } catch (error) {
@@ -291,15 +291,15 @@ function renderScopeSpace(space) {
         <span class="scope-space-name">${escapeHtml(space.name || space.productSpaceId)}<span class="check-id">${escapeHtml(space.productSpaceId)}</span></span>
       </label>
       <span class="scope-space-meta" data-scope-meta></span>
-      <button type="button" class="scope-toggle" data-scope-toggle="${escapeHtml(space.productSpaceId)}" aria-label="展开 Tracker" aria-expanded="false">›</button>
+      <button type="button" class="scope-toggle" data-scope-toggle="${escapeHtml(space.productSpaceId)}" aria-label="展开 跟踪分类" aria-expanded="false">›</button>
     </div>
     <div class="scope-trackers">
       <div class="scope-tracker-group">
-        <div class="scope-group-title">共享 Tracker · ${shared.length}</div>
+        <div class="scope-group-title">共享 跟踪分类 · ${shared.length}</div>
         ${trackerRows(shared, 'sharedTrackerIds', 'shared')}
       </div>
       <div class="scope-tracker-group">
-        <div class="scope-group-title">非共享 Tracker · ${unshared.length}</div>
+        <div class="scope-group-title">非共享 跟踪分类 · ${unshared.length}</div>
         ${trackerRows(unshared, 'unsharedParentTrackerIds', 'unshared')}
       </div>
     </div>
@@ -311,7 +311,7 @@ function updateScopeMeta(spaceElement) {
   if (!meta) return;
   const trackers = [...spaceElement.querySelectorAll('.scope-tracker input')];
   const selected = trackers.filter((input) => input.checked).length;
-  meta.textContent = `${selected}/${trackers.length} 个 Tracker`;
+  meta.textContent = `${selected}/${trackers.length} 个 跟踪分类`;
   spaceElement.classList.toggle('no-space', !spaceElement.querySelector('input[name="productSpaceIds"]')?.checked);
 }
 
@@ -354,14 +354,113 @@ async function submitCreateWorkset(form) {
 }
 
 /* ---------- single requirement CRUD ---------- */
+async function openTrackerCreate() {
+  const space = currentSpaces().get(state.selectedSpace);
+  if (state.selectedWs !== '1' || !space?.bound) return;
+  const workingSetId = state.selectedWs;
+  openModal(`${modalHeader('新建跟踪分类')}
+    <form id="trackerForm">
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="field"><label for="trackerWorkset">所属工作集</label><input id="trackerWorkset" value="${escapeHtml(worksetLabel(workingSetId))}" readonly></div>
+          <div class="field"><label for="trackerSpace">所属产品空间</label><input id="trackerSpace" value="${escapeHtml(space.name || space.productSpaceId)}" readonly></div>
+        </div>
+        <div class="field"><label for="trackerName">名称</label><input id="trackerName" name="trackerName" maxlength="255" required></div>
+        <div class="grid-2">
+          <div class="field"><label for="trackerClassification">所属分类</label>
+            <select id="trackerClassification" name="classification" required disabled><option value="">正在加载分类…</option></select></div>
+          <div class="field"><label for="trackerSharing">共享方式</label>
+            <select id="trackerSharing" name="sharing" required disabled><option value="">请先选择所属分类</option></select></div>
+        </div>
+        <div class="form-error" role="alert"></div>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn" data-close-modal>取消</button>
+        <button type="submit" class="btn primary" disabled>创建</button></div>
+    </form>`);
+  const form = $('#trackerForm');
+  form.dataset.workingSetId = workingSetId;
+  form.dataset.productSpaceId = space.productSpaceId;
+  form.trackerName.focus();
+  form.classification.addEventListener('change', () => {
+    const mode = form.classification.selectedOptions[0]?.dataset.mode;
+    form.sharing.replaceChildren();
+    if (mode) {
+      if (mode === 'UNSHARED') form.sharing.add(new Option('非共享', 'UNSHARED'));
+      form.sharing.add(new Option('共享', 'SHARED'));
+    } else {
+      form.sharing.add(new Option('请先选择所属分类', ''));
+    }
+    form.sharing.disabled = !mode;
+    form.querySelector('[type="submit"]').disabled = !mode;
+  });
+  try {
+    const classifications = await api('/api/worksets/metadata/classifications');
+    if (!form.isConnected) return;
+    form.classification.replaceChildren(new Option(classifications.length ? '选择所属分类' : '暂无可用分类', ''));
+    for (const classification of classifications) {
+      const option = new Option(classification.classificationId, classification.classificationId);
+      option.dataset.mode = classification.sharingMode;
+      form.classification.add(option);
+    }
+    form.classification.disabled = !classifications.length;
+  } catch (error) {
+    form.classification.replaceChildren(new Option('分类加载失败', ''));
+    form.querySelector('.form-error').textContent = reasonText(error.body) || error.message;
+  }
+}
+
+async function submitTracker(form) {
+  const submit = form.querySelector('[type="submit"]');
+  if (submit.disabled) return;
+  const errorBox = form.querySelector('.form-error');
+  const name = form.trackerName.value.trim();
+  if (!name) {
+    errorBox.textContent = '请输入名称';
+    form.trackerName.focus();
+    return;
+  }
+  const { workingSetId, productSpaceId } = form.dataset;
+  errorBox.textContent = '';
+  submit.disabled = true;
+  submit.textContent = '创建中…';
+  form.classification.disabled = true;
+  form.sharing.disabled = true;
+  try {
+    const created = await api('/api/worksets/' + encodeURIComponent(workingSetId) + '/trackers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productSpaceId, name, classificationId: form.classification.value, sharingMode: form.sharing.value })
+    });
+    if (form.isConnected) closeModal();
+    if (state.selectedWs === workingSetId) {
+      if (!state.trackers.some((tracker) => tracker.trackerId === created.trackerId)) state.trackers.push(created);
+      if (!state.bindings.trackers.some((binding) => binding.trackerId === created.trackerId)) {
+        state.bindings.trackers.push({ trackerId: created.trackerId });
+      }
+      if (state.selectedSpace === productSpaceId) await selectTracker(created.trackerId);
+      else renderSpaces();
+    }
+    setStatus('跟踪分类已创建', 'ok');
+  } catch (error) {
+    errorBox.textContent = error.body?.reason === 'DATA_INTEGRITY_CONFLICT'
+      ? '创建发生冲突，请检查该产品空间和分类下是否已有同名跟踪分类。'
+      : reasonText(error.body) || error.message;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = '创建';
+    form.classification.disabled = false;
+    form.sharing.disabled = false;
+  }
+}
+
 function openRequirementCreate() {
   if (!state.selectedTracker) {
-    setStatus('请先选择一个 Tracker', 'error');
+    setStatus('请先选择一个 跟踪分类', 'error');
     return;
   }
   requirementContext = { mode: 'create' };
   const tracker = state.selectedTracker;
-  openModal(`${modalHeader('新建需求', `工作集 ${shortId(state.selectedWs)} · Tracker ${tracker.name || shortId(tracker.trackerId)}`)}
+  openModal(`${modalHeader('新建需求', `工作集 ${shortId(state.selectedWs)} · 跟踪分类 ${tracker.name || shortId(tracker.trackerId)}`)}
     <form id="requirementForm">
       <div class="modal-body">
         <div class="field"><label for="reqTitle">标题</label><input id="reqTitle" name="title" required></div>
@@ -541,6 +640,7 @@ function bindEvents() {
   });
 
   $('#createWorksetBtn').addEventListener('click', openCreateWorkset);
+  $('#createTrackerBtn').addEventListener('click', openTrackerCreate);
   $('#taskCenterBtn').addEventListener('click', openTaskCenter);
   $('#refresh').addEventListener('click', refresh);
 
@@ -560,7 +660,7 @@ function bindEvents() {
       const expanded = space.classList.toggle('expanded');
       toggle.textContent = expanded ? '⌄' : '›';
       toggle.setAttribute('aria-expanded', String(expanded));
-      toggle.setAttribute('aria-label', expanded ? '收起 Tracker' : '展开 Tracker');
+      toggle.setAttribute('aria-label', expanded ? '收起 跟踪分类' : '展开 跟踪分类');
     }
   });
 
@@ -588,6 +688,10 @@ function bindEvents() {
   });
 
   $('#modalContent').addEventListener('submit', (event) => {
+    if (event.target.id === 'trackerForm') {
+      event.preventDefault();
+      submitTracker(event.target);
+    }
     if (event.target.id === 'createWorksetForm') {
       event.preventDefault();
       submitCreateWorkset(event.target);

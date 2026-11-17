@@ -89,15 +89,15 @@ function renderMergeShell() {
     <div class="modal-body">
       <div class="merge-picker">
         <label>比较对象 <select id="mergeTrackerSelect" onchange="mergeResetComparison()">
-          <option value="" selected disabled>选择 Tracker</option>${options}
+          <option value="" selected disabled>选择 跟踪分类</option>${options}
         </select></label>
         <label>方向 <select id="mergeDirection" onchange="mergeResetComparison()">
-          <option value="source">当前 Tracker → 比较对象</option>
-          <option value="target">比较对象 → 当前 Tracker</option>
+          <option value="source">当前 跟踪分类 → 比较对象</option>
+          <option value="target">比较对象 → 当前 跟踪分类</option>
         </select></label>
         <button type="button" class="btn" id="mergeCompare" onclick="mergeStartComparison()" disabled>开始比较</button>
       </div>
-      <div id="mergeBody"><div class="empty">${peers.length ? '请选择比较对象和方向' : '没有可比较的直属派生 Tracker'}</div></div>
+      <div id="mergeBody"><div class="empty">${peers.length ? '请选择比较对象和方向' : '没有可比较的直属派生 跟踪分类'}</div></div>
     </div>
     <div class="modal-foot">
       <span id="mergeHint" class="muted"></span>
@@ -105,7 +105,7 @@ function renderMergeShell() {
       <button type="button" class="btn" onclick="closeMerge()">关闭</button>
       <button type="button" class="btn primary" id="mergeSubmit" onclick="submitMerge()" disabled>提交本页决策</button>
     </div>`;
-  $('#mergeSubtitle').textContent = '当前 Tracker ' + (mergeView.anchor.name || mergeView.anchor.trackerId);
+  $('#mergeSubtitle').textContent = '当前 跟踪分类 ' + (mergeView.anchor.name || mergeView.anchor.trackerId);
 }
 
 function mergeResetComparison() {
@@ -114,7 +114,7 @@ function mergeResetComparison() {
   $('#mergeSubmit').disabled = true;
   $('#mergeCompare').disabled = !$('#mergeTrackerSelect').value;
   $('#mergeHint').textContent = '';
-  $('#mergeSubtitle').textContent = '当前 Tracker ' + (mergeView.anchor.name || mergeView.anchor.trackerId);
+  $('#mergeSubtitle').textContent = '当前 跟踪分类 ' + (mergeView.anchor.name || mergeView.anchor.trackerId);
   $('#mergeBody').innerHTML = '<div class="empty">请选择比较对象和方向</div>';
 }
 
@@ -176,7 +176,7 @@ function renderMergeRows() {
   const body = $('#mergeBody');
   const submit = $('#mergeSubmit');
   if (!rows.length) {
-    body.innerHTML = '<div class="empty">这两个 Tracker 没有可处理的差异</div>';
+    body.innerHTML = '<div class="empty">这两个 跟踪分类 没有可处理的差异</div>';
     submit.disabled = true;
     $('#mergeHint').textContent = '';
     return;
@@ -349,7 +349,7 @@ function newRequestId() {
 document.addEventListener('DOMContentLoaded', () => {
   $('#selectedTracker').addEventListener('click', (event) => {
     if (event.target.closest('[data-action="compare-tracker"]')) {
-      openMerge().catch((error) => setStatus('无法加载可比较的 Tracker：' + error.message, 'error'));
+      openMerge().catch((error) => setStatus('无法加载可比较的 跟踪分类：' + error.message, 'error'));
     }
   });
 });

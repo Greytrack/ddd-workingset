@@ -32,9 +32,9 @@ const STAGES = [
 const STAGE_LABELS = {
   CREATE_WORKING_SET: '创建工作集本体',
   BIND_PRODUCT_SPACES: '关联产品空间',
-  COPY_UNSHARED_TRACKERS: '创建 Tracker',
-  BIND_UNSHARED_TRACKERS: '关联非共享 Tracker',
-  BIND_SHARED_TRACKERS: '关联共享 Tracker',
+  COPY_UNSHARED_TRACKERS: '创建 跟踪分类',
+  BIND_UNSHARED_TRACKERS: '关联非共享 跟踪分类',
+  BIND_SHARED_TRACKERS: '关联共享 跟踪分类',
   INDEX_UNSHARED_TRACKERS: '创建 LTI'
 };
 const STATUS_LABELS = {
@@ -50,12 +50,12 @@ let requirementContext = null;
 
 const REASON_TEXT = {
   PREPARING: '工作集正在准备中，暂时不可用',
-  NOT_INCLUDED: '该 Tracker 未绑定到当前工作集',
+  NOT_INCLUDED: '该 跟踪分类 未绑定到当前工作集',
   NOT_FOUND: '对象不存在',
   DELETED: '对象已删除',
   HISTORY_UNAVAILABLE: '所需历史版本不可读',
   DEPENDENCY_UNAVAILABLE: '依赖服务暂不可用',
-  PairMergeInProgress: '同一对 Tracker 正在合并，请等待本轮结束',
+  PairMergeInProgress: '同一对 跟踪分类 正在合并，请等待本轮结束',
   UNKNOWN: '发生未知错误'
 };
 

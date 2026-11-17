@@ -149,7 +149,7 @@ public final class WorkingSet {
     public TrackerBinding bindTracker(Tracker tracker, Classification classification, SharingMode requestedMode) {
         requireSpaceBinding(tracker.productSpaceId());
         if (!tracker.classificationId().equals(classification.id())
-                || tracker.sharingMode() != requestedMode || classification.sharingMode() != requestedMode) {
+                || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
             throw new BindingFailure(Reason.SharingModeMismatch, classification.id());
         }
         if (trackers.containsKey(tracker.trackerId())) {

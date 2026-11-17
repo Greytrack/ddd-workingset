@@ -116,6 +116,30 @@ public class WorkingSetApplicationService {
         return trackers.findTrackers(workingSetId);
     }
 
+    @Transactional(readOnly = true)
+    public List<Classification> findClassifications() {
+        return spaces.findClassifications();
+    }
+
+    @Transactional
+    public Tracker createTracker(WorkingSetId id, String spaceId, String name, String classificationId,
+                                 SharingMode sharingMode) {
+        if (!WorkingSet.DEFAULT_ID.equals(id)) {
+            throw new BindingFailure(Reason.WorkingSetNotWritable, "只允许在默认工作集新建跟踪分类");
+        }
+        var workingSet = writable(id);
+        var space = lockSpace(spaceId);
+        workingSet.requireSpaceBinding(spaceId);
+        var classification = spaces.findClassification(classificationId)
+                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
+        var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId())),
+                name, space, classification, sharingMode);
+        var binding = workingSet.bindTracker(tracker, classification, sharingMode);
+        trackers.insertTracker(tracker);
+        workingSets.insertTrackerBinding(binding);
+        return tracker;
+    }
+
     /** 只读列表：当前工作集绑定该 Tracker 时，返回该 Tracker 下的 LightTrackerItem。 */
     @Transactional(readOnly = true)
     public List<IndexedItem> findItems(WorkingSetId workingSetId, TrackerId trackerId) {

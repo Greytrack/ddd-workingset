@@ -14,5 +14,9 @@ public record Classification(String id, SharingMode sharingMode) {
         Objects.requireNonNull(sharingMode, "sharingMode");
     }
 
+    public boolean allows(SharingMode mode) {
+        return mode == SharingMode.SHARED || mode == sharingMode;
+    }
+
     public enum SharingMode { SHARED, UNSHARED }
 }

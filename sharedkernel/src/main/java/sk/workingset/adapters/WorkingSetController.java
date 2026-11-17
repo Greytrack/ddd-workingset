@@ -16,6 +16,7 @@ import sk.workingset.application.Caller;
 import sk.workingset.application.ReadResult;
 import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Tracker;
@@ -66,6 +67,22 @@ public class WorkingSetController {
     @GetMapping("/{workingSetId}/trackers")
     public List<TrackerView> findTrackers(@PathVariable String workingSetId) {
         return applicationService.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
+    }
+
+    @GetMapping("/metadata/classifications")
+    public List<ClassificationView> findClassifications() {
+        return applicationService.findClassifications().stream()
+                .map(classification -> new ClassificationView(classification.id(), classification.sharingMode()))
+                .toList();
+    }
+
+    @PostMapping("/{workingSetId}/trackers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TrackerView createTracker(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
+        var mode = SharingMode.valueOf(requireText(request.sharingMode(), "sharingMode"));
+        return TrackerView.from(applicationService.createTracker(WorkingSetId.of(workingSetId),
+                requireText(request.productSpaceId(), "productSpaceId"), requireText(request.name(), "name"),
+                requireText(request.classificationId(), "classificationId"), mode));
     }
 
     /** 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。 */
@@ -137,6 +154,11 @@ public class WorkingSetController {
     }
 
     public record CreateChildRequest(String workingSetId) {}
+
+    public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
+                                       String sharingMode) {}
+
+    public record ClassificationView(String classificationId, SharingMode sharingMode) {}
 
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
                                  String parentWorkingSetId) {

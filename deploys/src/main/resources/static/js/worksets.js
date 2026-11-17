@@ -90,7 +90,7 @@ async function selectWorkset(id) {
     renderSpaces();
     renderSpaceTrackers();
     const bound = (state.bindings.trackers || []).length;
-    setStatus('已加载 ' + (state.bindings.spaces || []).length + ' 个空间 · ' + state.trackers.length + ' 个 Tracker（绑定 ' + bound + '）', 'ok');
+    setStatus('已加载 ' + (state.bindings.spaces || []).length + ' 个空间 · ' + state.trackers.length + ' 个 跟踪分类（绑定 ' + bound + '）', 'ok');
   } catch (error) {
     if (request !== worksetRequest) return;
     renderSpaces();
@@ -131,7 +131,7 @@ function renderSpaces() {
   }
   const spaces = currentSpaces();
   if (!spaces.size) {
-    list.innerHTML = '<div class="empty">该工作集还没有绑定产品空间或 Tracker</div>';
+    list.innerHTML = '<div class="empty">该工作集还没有绑定产品空间或 跟踪分类</div>';
     $('#spaceCount').textContent = '';
     return;
   }
@@ -151,7 +151,7 @@ function renderSpaces() {
           <span class="space-main">
             <span class="space-id">${escapeHtml(spaceName)}</span>
             ${meta ? `<span class="space-meta">${escapeHtml(meta)}</span>` : ''}
-            <span class="space-meta">${trackers.length} 个 Tracker${boundCount !== trackers.length ? ' · 已绑定 ' + boundCount : ''}</span>
+            <span class="space-meta">${trackers.length} 个 跟踪分类${boundCount !== trackers.length ? ' · 已绑定 ' + boundCount : ''}</span>
           </span>
           <span class="chevron" aria-hidden="true">›</span>
         </button>
@@ -163,11 +163,15 @@ function renderSpaces() {
 
 function renderSpaceTrackers() {
   const space = currentSpaces().get(state.selectedSpace);
+  const create = $('#createTrackerBtn');
+  create.classList.toggle('hidden', state.selectedWs !== '1');
+  create.disabled = !space?.bound;
+  create.title = space?.bound ? '新建跟踪分类' : '请先选择已绑定的产品空间';
   const heading = $('#selectedSpace');
   const list = $('#trackerList');
   heading.classList.toggle('hidden', !space);
   if (!space) {
-    list.innerHTML = '<div class="empty item-empty"><strong>尚未选择产品空间</strong><span>选择产品空间后查看当前工作集下的 Tracker。</span></div>';
+    list.innerHTML = '<div class="empty item-empty"><strong>尚未选择产品空间</strong><span>选择产品空间后查看当前工作集下的 跟踪分类。</span></div>';
     $('#trackerCount').textContent = '';
     return;
   }
@@ -205,7 +209,7 @@ function selectSpace(spaceId) {
 }
 
 function renderTrackerTree(trackers, boundIds) {
-  if (!trackers.length) return '<div class="empty small">该空间下没有 Tracker</div>';
+  if (!trackers.length) return '<div class="empty small">该空间下没有 跟踪分类</div>';
 
   const byId = new Map(trackers.map((tracker) => [tracker.trackerId, tracker]));
   const childrenOf = new Map();
@@ -245,7 +249,7 @@ function renderTrackerTree(trackers, boundIds) {
   if (!html) {
     html = sort(trackers).map((tracker) => walk(tracker, 0)).join('');
   }
-  return html || '<div class="empty small">该空间下没有可显示的 Tracker</div>';
+  return html || '<div class="empty small">该空间下没有可显示的 跟踪分类</div>';
 }
 
 async function selectTracker(trackerId, { keepFilter = false } = {}) {
@@ -272,7 +276,7 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
 
   if (!bound) {
     state.itemsLoading = false;
-    state.itemsError = '该 Tracker 未绑定到当前工作集，无法读取 Item';
+    state.itemsError = '该 跟踪分类 未绑定到当前工作集，无法读取 Item';
     renderItems();
     setStatus(state.itemsError, 'error');
     return;
@@ -280,7 +284,7 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
 
   state.itemsLoading = true;
   renderItems();
-  setStatus('加载 Tracker Item…');
+  setStatus('加载 跟踪分类 Item…');
   try {
     const items = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
       '/trackers/' + encodeURIComponent(trackerId) + '/items') || [];
@@ -302,7 +306,7 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
 function renderTracker() {
   const area = $('#selectedTracker');
   if (!state.selectedTracker) {
-    area.innerHTML = '<div class="empty">从中间选择一个 Tracker</div>';
+    area.innerHTML = '<div class="empty">从中间选择一个 跟踪分类</div>';
     return;
   }
   const tracker = state.selectedTracker;
@@ -316,7 +320,7 @@ function renderTracker() {
     <div class="tracker-actions">
       ${bound
         ? '<button type="button" class="btn small primary" data-action="new-requirement">＋ 新建需求</button>'
-        : '<span class="muted">该 Tracker 未绑定，不能新建需求</span>'}
+        : '<span class="muted">该 跟踪分类 未绑定，不能新建需求</span>'}
       ${tracker.sharingMode === 'UNSHARED' && (bound || state.selectedWs === '1')
         ? '<button type="button" class="btn small" data-action="compare-tracker">比较 / 合并</button>'
         : ''}
@@ -329,7 +333,7 @@ function renderItems() {
   area.setAttribute('aria-busy', String(state.itemsLoading));
   renderItemDetail();
   if (!state.selectedTracker) {
-    area.innerHTML = '<div class="empty item-empty"><strong>尚未选择 Tracker</strong><span>选择一个 Tracker，查看它的 Item。</span></div>';
+    area.innerHTML = '<div class="empty item-empty"><strong>尚未选择 跟踪分类</strong><span>选择一个 跟踪分类，查看它的 Item。</span></div>';
     $('#itemCount').textContent = '';
     return;
   }

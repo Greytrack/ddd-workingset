@@ -56,8 +56,9 @@ CREATE TABLE IF NOT EXISTS trackers (
     visible           BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE (tracker_id, working_set_id),
     UNIQUE (tracker_id, product_space_id, classification_id, sharing_mode),
-    FOREIGN KEY (classification_id, sharing_mode)
-        REFERENCES classifications (classification_id, sharing_mode),
+    CONSTRAINT trackers_classification_id_fkey
+        FOREIGN KEY (classification_id) REFERENCES classifications (classification_id),
+    CONSTRAINT trackers_sharing_mode_check CHECK (sharing_mode IN ('SHARED', 'UNSHARED')),
     FOREIGN KEY (parent_id, working_set_id)
         REFERENCES trackers (tracker_id, working_set_id),
     CHECK ((source_id IS NULL AND working_set_id = '1')
@@ -66,6 +67,21 @@ CREATE TABLE IF NOT EXISTS trackers (
 
 ALTER TABLE trackers ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE trackers ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- POL-003: an unshared classification can also have a shared Tracker.
+DO 'BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint
+        WHERE conrelid = ''trackers''::regclass AND conname = ''trackers_classification_id_fkey'') THEN
+        ALTER TABLE trackers ADD CONSTRAINT trackers_classification_id_fkey
+            FOREIGN KEY (classification_id) REFERENCES classifications (classification_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint
+        WHERE conrelid = ''trackers''::regclass AND conname = ''trackers_sharing_mode_check'') THEN
+        ALTER TABLE trackers ADD CONSTRAINT trackers_sharing_mode_check
+            CHECK (sharing_mode IN (''SHARED'', ''UNSHARED''));
+    END IF;
+    ALTER TABLE trackers DROP CONSTRAINT IF EXISTS trackers_classification_id_sharing_mode_fkey;
+END';
 
 -- 每个（所有者工作集，空间，分类）至多一个默认 Tracker
 CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_default_slot

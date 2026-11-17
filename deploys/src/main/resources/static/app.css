@@ -230,6 +230,7 @@
     flex: 0 0 auto;
   }
   .panel-head h2 { margin: 0; font-size: 13px; font-weight: 700; }
+  .panel-actions { display: flex; align-items: center; gap: 8px; }
   .panel-head .muted { white-space: nowrap; font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); font-size: 11px; }
   .mono { font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace; font-size: 11px; }

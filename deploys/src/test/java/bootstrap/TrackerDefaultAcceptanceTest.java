@@ -3,6 +3,7 @@ package bootstrap;
 import sk.common.error.DomainException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 import sk.workingset.adapters.LightTrackerItemView;
 import alm.requirement.adapters.RequirementView;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
+import sk.workingset.adapters.WorkingSetController.ClassificationView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ class TrackerDefaultAcceptanceTest {
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = "WS-CHILD-" + suffix;
+    private final String sharedClassification = "CL-SHARED-" + suffix;
 
     @AfterEach
     void cleanup() {
@@ -50,6 +53,7 @@ class TrackerDefaultAcceptanceTest {
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
+        jdbc.update("DELETE FROM classifications WHERE classification_id = ?", sharedClassification);
     }
 
     @Test
@@ -88,6 +92,52 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
         var items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
         assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
+    }
+
+    @Test
+    void createsAndBindsNamedTrackersUsingClassificationSharingRules() {
+        jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED')", sharedClassification);
+        String spaceId = "PS-" + suffix;
+        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/product-spaces",
+                Map.of("productSpaceId", spaceId, "name", "新空间"), Map.class).getStatusCode());
+        var classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
+        assertTrue(Arrays.stream(classifications).anyMatch(classification ->
+                sharedClassification.equals(classification.classificationId())
+                        && classification.sharingMode() == Classification.SharingMode.SHARED));
+
+        String url = "/api/worksets/1/trackers";
+        for (var mode : Classification.SharingMode.values()) {
+            var request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
+                    "CL-REQUIREMENT", "sharingMode", mode.name());
+            var response = rest.postForEntity(url, request, TrackerView.class);
+            assertEquals(HttpStatus.CREATED, response.getStatusCode());
+            var tracker = response.getBody();
+            assertEquals(mode.name(), tracker.sharingMode());
+            assertEquals("项目-" + mode, tracker.name());
+            assertFalse(tracker.isDefault());
+            assertEquals(HttpStatus.OK, rest.getForEntity(url + "/" + tracker.trackerId() + "/items",
+                    String.class).getStatusCode());
+            assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
+
+            if (mode == Classification.SharingMode.SHARED) {
+                assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
+                        Map.of("workingSetId", child), Map.class).getStatusCode());
+                assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/spaces/" + spaceId,
+                        null, Map.class).getStatusCode());
+                assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/trackers/shared/"
+                        + tracker.trackerId(), null, Map.class).getStatusCode());
+                assertEquals(HttpStatus.CONFLICT, rest.postForEntity("/api/worksets/" + child + "/trackers",
+                        request, Map.class).getStatusCode());
+            }
+        }
+        var allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
+                sharedClassification, "sharingMode", "SHARED");
+        assertEquals(HttpStatus.CREATED, rest.postForEntity(url, allowed, TrackerView.class).getStatusCode());
+        var rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
+                sharedClassification, "sharingMode", "UNSHARED");
+        var refusal = rest.postForEntity(url, rejected, Map.class);
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, refusal.getStatusCode());
+        assertEquals("SharingModeMismatch", refusal.getBody().get("reason"));
     }
 
     @Test

@@ -55,6 +55,19 @@ public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, Work
                 classification.sharingMode(), parentId, isDefault);
     }
 
+    public static Tracker original(TrackerId id, String name, ProductSpace space, Classification classification,
+                                   SharingMode sharingMode) {
+        String normalizedName = name == null ? "" : name.strip();
+        if (normalizedName.isEmpty() || normalizedName.codePointCount(0, normalizedName.length()) > 255) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
+        }
+        if (!classification.allows(sharingMode)) {
+            throw new BindingFailure(BindingFailure.Reason.SharingModeMismatch, classification.id());
+        }
+        return new Tracker(id, normalizedName, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
+                sharingMode, null, false);
+    }
+
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target) {
         return derived(id, source, target, false);
     }
