@@ -29,7 +29,7 @@ public record MergeRound(String id, String token, String requestId, WorkingSetId
         }
     }
 
-    public record ItemResult(String entryId, String entryKey, Outcome outcome, String operation,
+    public record ItemResult(String entryId, Outcome outcome, String operation,
                              String businessRef, String checkpoint, String failure) {
         public boolean succeeded() {
             return outcome == Outcome.Applied || outcome == Outcome.Confirmed;

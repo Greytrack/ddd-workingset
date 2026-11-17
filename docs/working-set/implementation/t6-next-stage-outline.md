@@ -10,7 +10,7 @@
 | T6-C 身份分配 | 完成（[验收](t6-c-identity-verification.md)） |
 | T6-D 子工作集回并 | 完成（[验收](t6-d-merge-back-verification.md)） |
 | T6-E 瞬时 compare + 一页决策 | 完成（[验收](t6-e-merge-round-verification.md)） |
-| T6-F 谱系约束 | 裁定并实施 `is_default`/多 Tracker/名称唯一/产品空间默认 Tracker（[裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)）；**剩余**：`QUESTION-002.j` 配对、`Difference.key` 复合身份、Shared 默认语义；i（批量派生整批原子）实现转 T7-G |
+| T6-F 谱系约束 | 裁定并实施 `is_default`/多 Tracker/名称唯一/产品空间默认 Tracker（[裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)）；`Difference.key` 已废弃，条目身份由 `Entry.id` + evidence 承担；**剩余**：`QUESTION-002.j` 配对、Shared 默认边界；i（批量派生整批原子）实现转 T7-G |
 | T6-G 关系、Baseline 与治理 | 未开始；待 QUESTION-011／014 裁定 |
 | 规模/保留 | 转[规模压测与保留专题](performance-testing.md)，不阻塞 |
 

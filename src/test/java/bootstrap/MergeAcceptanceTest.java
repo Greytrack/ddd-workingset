@@ -681,7 +681,7 @@ class MergeAcceptanceTest {
         String family = id("mixed");
         seed(rootTracker, family, "source");
         var difference = diff(compare("1", child), family);
-        var other = new Difference(difference.key(), difference.kind(), difference.family(),
+        var other = new Difference(difference.kind(), difference.family(),
                 new sk.workingset.domain.merge.Comparison.TrackerPair(TrackerId.of("tracker-x"),
                         TrackerId.of("tracker-y")),
                 difference.source(), difference.target(), difference.fields());
@@ -853,12 +853,12 @@ class MergeAcceptanceTest {
     }
 
     private static Map<String, Object> existence(Difference diff, String action) {
-        return Map.of("entryKey", diff.key(), "evidence", diff,
+        return Map.of("evidence", diff,
                 "decision", Map.of("existence", action, "markAsMerged", false));
     }
 
     private static Map<String, Object> field(Difference diff, String action, boolean mark) {
-        return Map.of("entryKey", diff.key(), "evidence", diff,
+        return Map.of("evidence", diff,
                 "decision", Map.of("fields", Map.of("title", action), "markAsMerged", mark));
     }
 

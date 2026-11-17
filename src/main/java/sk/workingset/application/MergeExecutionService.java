@@ -76,7 +76,8 @@ public class MergeExecutionService {
         this.events = events;
     }
 
-    public record EntryRequest(String entryKey, Difference evidence, MergeDecision decision) {}
+    /** 一页决策只提交 evidence + decision；条目身份由服务端在登记时生成。 */
+    public record EntryRequest(Difference evidence, MergeDecision decision) {}
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, Caller caller) {
@@ -135,16 +136,13 @@ public class MergeExecutionService {
             if (frozen == null) {
                 throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
             }
-            if (!frozen.key().equals(request.entryKey())) {
-                throw new MergeFailure(Reason.InvalidDecision, request.entryKey());
-            }
             if (!candidates.contains(frozen.trackers())) {
-                throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
+                throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
             lockEvidence(frozen);
             var current = comparisons.current(frozen, caller);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
-                throw new MergeFailure(Reason.StaleEvidence, request.entryKey());
+                throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
             if (request.decision() == null) {
                 throw new MergeFailure(Reason.InvalidDecision, "decision is required");
@@ -393,7 +391,7 @@ public class MergeExecutionService {
 
     private static ItemResult result(Entry entry, Outcome outcome, String operation, String businessRef,
                                      String checkpoint, String failure) {
-        return new ItemResult(entry.id(), entry.evidence().key(), outcome, operation, businessRef, checkpoint, failure);
+        return new ItemResult(entry.id(), outcome, operation, businessRef, checkpoint, failure);
     }
 
     private MergeRound round(String id, boolean lock) {

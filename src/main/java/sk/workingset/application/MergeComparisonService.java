@@ -92,10 +92,15 @@ public class MergeComparisonService {
                 if (kind == ChangeKind.MODIFIED && !unreadable && fields.isEmpty()) {
                     continue;
                 }
-                differences.add(new Difference(Integer.toString(differences.size() + 1), kind, family, pair,
-                        left, right, fields));
+                differences.add(new Difference(kind, family, pair, left, right, fields));
             }
         }
+        // Deterministic order makes offset/limit pages stable for an unchanged data set.
+        // The key itself is deliberately not persisted or accepted from clients.
+        differences.sort(java.util.Comparator
+                .comparing((Difference difference) -> difference.trackers().source().value())
+                .thenComparing(difference -> difference.trackers().target().value())
+                .thenComparing(difference -> difference.family().value()));
         return new Comparison(source, target, Instant.now(), candidates, differences);
     }
 
@@ -139,7 +144,7 @@ public class MergeComparisonService {
         var family = original.family();
         Side source = read(familyIds(pair.source()).get(family), caller);
         Side target = read(familyIds(pair.target()).get(family), caller);
-        return new Difference(original.key(), family, pair, source, target, differingFields(source, target));
+        return new Difference(family, pair, source, target, differingFields(source, target));
     }
 
     private Map<CommonId, LocalId> familyIds(TrackerId tracker) {

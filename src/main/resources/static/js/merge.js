@@ -219,13 +219,13 @@ function mergeDecisions() {
     if (difference.kind === 'MODIFIED') {
       const fields = {};
       (difference.fields || []).forEach((field) => { fields[field] = row.action; });
-      return { entryKey: difference.key, evidence: difference,
+      return { evidence: difference,
         decision: { fields, markAsMerged } };
     }
     const existence = row.action === 'ACCEPT'
       ? (difference.kind === 'ADDED' ? 'CREATE' : 'DELETE')
       : row.action;
-    return { entryKey: difference.key, evidence: difference,
+    return { evidence: difference,
       decision: { existence, markAsMerged } };
   });
 }

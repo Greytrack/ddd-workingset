@@ -49,22 +49,22 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 2. `tracker_bindings` 去掉 `UNIQUE (working_set_id, product_space_id, classification_id)`，主键保持 `(working_set_id, tracker_id)`。**已实施**。
 3. 新增产品空间创建命令并同步创建默认 Tracker。**已实施**（`POST /api/worksets/{id}/product-spaces`）。产品空间只能归属默认工作集：路径中的 `{id}` 仅为入口占位，不参与目标选择，所有调用一律固定到默认工作集；入口层不做额外限制，这是有意设计，不是待收紧项。
 4. Tracker 名称唯一约束：**已实施**为 `(working_set_id, product_space_id, classification_id, name)`，仅业务原生 Tracker 参与；因业务原生 Tracker 只存在于默认工作集，实际等价于（空间，分类）内唯一。作用域说明见 §4 注。
-5. compare/merge 候选配对：**未实现完整裁定**。当前 `candidates` 实际按直接 `sourceId` 配对；`Difference.key` 仍是页内序号，尚未按复合身份生成（`QUESTION-002.j`）。
+5. compare/merge 候选配对：**未实现完整裁定**。当前 `candidates` 实际按直接 `sourceId` 配对（`QUESTION-002.j`）。`Difference.key` 已于 2026-11-17 废弃，条目身份由 `MergeRound.Entry.id` + 完整 evidence 承担，见 §4.1。
 
 ## 4. 2026-11-16 补充裁定（细化）
 
 | 项 | 裁定 |
 | --- | --- |
 | 名称唯一作用域 | 同一（产品空间，分类）内唯一。业务原生 Tracker 只在默认工作集创建，2026-11-17 实施为（工作集，空间，分类）索引；因创建只发生在默认工作集，两者当前等价。子工作集不允许原生创建，故不产生跨工作集同名原生 Tracker；未来若开放子 WS 原生创建，需重新裁定 |
-| 多派生后的 compare/merge 配对 | 条目身份 = 左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次 |
+| 多派生后的 compare/merge 配对 | 条目证据由左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次组成；轮次内条目身份由 `MergeRound.Entry.id` 承担 |
 | 产品空间创建入口 | 新增 `POST /api/worksets/{id}/product-spaces`，同时创建默认 Tracker。产品空间只能在默认工作集创建：`{id}` 仅为入口占位、不参与目标选择，任何调用都固定到默认工作集；入口层不限制调用来源，这是有意设计 |
 
 ### 4.1 实现含义
 
 - 名称唯一按（工作集，空间，分类）实现，仅业务原生 Tracker 参与。业务原生 Tracker 只能在默认工作集创建，因此当前等价于原裁定的（产品空间，分类）内唯一；子工作集不能原生创建 Tracker，故不会出现跨工作集同名原生 Tracker。派生 Tracker 继承来源名称，不参与唯一约束。若未来允许子工作集原生创建，需要重新确认作用域。
-- 条目身份包含双侧 Tracker 与工作集：`Comparison.TrackerPair` 需要携带 workingSetId；`Difference.key` 改为由该复合键派生的稳定串，不再使用序号。**截至 2026-11-17 未实现**，当前仍是页内序号，见 §3.5。
+- **2026-11-17 裁定：`Difference.key` 废弃。** 客户端不再提交 `entryKey`；轮次内条目身份为 `MergeRound.Entry.id`，跨轮次审计使用完整 evidence（Tracker 对、家族、双侧 LocalId/Revision/Presence）加 `Comparison`/`MergeRound` 的 source/target WorkingSet 上下文。`TrackerPair` 不新增 workingSetId；WorkingSet 由比较/轮次上下文提供。
 - 同一家族的 Item 在同一工作集只属于一个 Tracker（POL-005 与 Item 归属），所以“左侧 Tracker 集合 × 右侧 Tracker 集合”不会让同一家族重复出现。
-- Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。条目证据中的双侧定位（含工作集、LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
+- Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。轮次上下文与条目证据中的双侧定位（含 LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
 
 ### 4.2 仍需确认
 
@@ -78,7 +78,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 ## 5. 实施状态（2026-11-16）
 
-- 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；
+- 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；`Difference.key`/`entryKey` 已废弃，条目身份改为 `Entry.id` + evidence。
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
 - 全量测试 130 项通过（含新增错误码契约测试与默认 Tracker 边界测试）。
 

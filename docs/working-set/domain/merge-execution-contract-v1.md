@@ -71,7 +71,7 @@ Diff 产生有向瞬时差异
 
 ### 3.2 瞬时比较证据
 
-compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较 token。用户提交决定时必须携带所选差异证据（双侧身份、presence、revision、字段与失败状态）；MergeRound 保存该证据和决定。登记时以当前状态校验证据；apply 只执行轮次内的决策范围，并继续校验证据未过期。
+compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较 token，也不生成客户端可见的差异 key。`Difference` 只描述 Tracker 对、家族、双侧证据和字段；轮次内条目身份由服务端在登记时生成的 `MergeRound.Entry.id` 承担。用户提交决定时必须携带所选差异证据（双侧身份、presence、revision、字段与失败状态）；MergeRound 保存该证据和决定。登记时以当前状态校验证据；apply 只执行轮次内的决策范围，并继续校验证据未过期。
 
 ### 3.3 证据时点区分（已确认语义）
 
@@ -183,7 +183,7 @@ compare 返回瞬时差异与双侧证据，不生成可回读的持久化比较
 
 `ApplyResult` 是**本轮执行结果的不可变终态快照**：
 
-- 条目结果列表：`entryKey`、终态、目标操作摘要、BC 结果引用、Checkpoint 结果、失败分类；
+- 条目结果列表：`entryId`（轮次内唯一）、终态、目标操作摘要、BC 结果引用、Checkpoint 结果、失败分类；
 - 计数汇总：`applied` / `confirmed` / `rejected` / `deferred` / `staleEvidence`；
 - 轮次状态与完成时间；
 - **只汇总本轮**；新轮次不修改旧轮次结果；已提交项不回滚（B08 已确认）。

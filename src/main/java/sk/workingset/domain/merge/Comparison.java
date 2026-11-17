@@ -41,15 +41,19 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
                              String version, Presence presence, String failure) {}
     }
 
-    public record Difference(String key, ChangeKind kind, CommonId family, TrackerPair trackers,
+    /**
+     * 瞬时差异。没有客户端可见的 key：条目身份由 MergeRound.Entry.id 与完整 evidence 承担；
+     * 本对象只描述“哪一对 Tracker、哪个家族、双侧证据和差异字段”。
+     */
+    public record Difference(ChangeKind kind, CommonId family, TrackerPair trackers,
                              Side source, Side target, List<String> fields) {
         public Difference {
             fields = List.copyOf(fields);
         }
 
-        public Difference(String key, CommonId family, TrackerPair trackers, Side source, Side target,
+        public Difference(CommonId family, TrackerPair trackers, Side source, Side target,
                           List<String> fields) {
-            this(key, classify(source, target), family, trackers, source, target, fields);
+            this(classify(source, target), family, trackers, source, target, fields);
         }
 
         public static ChangeKind classify(Side source, Side target) {

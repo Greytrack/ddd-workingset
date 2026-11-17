@@ -45,7 +45,7 @@
 | 项 | 现状 | 影响 | 关联 |
 | --- | --- | --- | --- |
 | WorkingSet/Binding 规模与并发上限 | 未采样；当前单聚合装载全部绑定 | 可能否定当前聚合装载假设，触发 Manifest/分片方案 | `QUESTION-012` |
-| 同空间/分类多 Tracker 的 Compare/Merge 配对 | 当前 `candidates` 实际按直接 `sourceId` 配对；`Difference.key` 仍用页内序号，未按 T6-F 复合身份生成 | 条目身份不稳定、分页/重放可能变化；多派生场景 UI 需要明确 | `QUESTION-002.j`、T6-F §4.1 |
+| 同空间/分类多 Tracker 的 Compare/Merge 配对 | 当前 `candidates` 实际按直接 `sourceId` 配对；`Difference.key` 已废弃，条目身份由 `MergeRound.Entry.id` + evidence 承担 | 配对规则仍待确认；分页/重放不再依赖页内序号 | `QUESTION-002.j`、T6-F §4.1 |
 | MergeCheckpoint 的领域行为 | 契约有 confirm/revoke/lookup；代码以 Store/SQL 实现因果条件 | 聚合贫血、规则分散；是否需要富聚合待评估 | T1 §6 |
 | Reference/Association 的聚合归属 | QUESTION-010 C 已定端点身份；关系归属/删除守卫未定 | T7-E 表与端口 | `QUESTION-010` |
 | MergeRound 条目持久化 | 当前整轮 JSONB；一页 20～50 条 | 超过一页时是否改独立条目表 | T6-E、`QUESTION-012` |

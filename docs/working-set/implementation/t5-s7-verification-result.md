@@ -32,7 +32,7 @@ ComparisonToken 引用 `merge_comparisons` 中的冻结清单，含双侧 LocalI
 | `POST /api/worksets/{target}/compare/{source}` | 生成比较，支持可选 `trackerId` 和 `limit` |
 | `GET /api/comparisons/{token}?offset=0&limit=100` | 读取冻结差异页 |
 | `POST /api/worksets/{target}/merge-rounds` | 以 `comparisonToken` 创建轮次 |
-| `POST /api/merge-rounds/{id}/entries` | 登记 `entries`，元素含 `entryKey` 与 `decision` |
+| `POST /api/merge-rounds/{id}/entries` | 历史接口；当时元素含 `entryKey` 与 `decision`。`entryKey` 已于 2026-11-17 废弃，当前只提交 `evidence` + `decision` |
 | `POST /api/merge-rounds/{id}/apply`、`GET /api/merge-rounds/{id}` | 执行和读取进度或终态 |
 | `POST /api/worksets/{target}/merge-checkpoints/{source}/{family}/revoke` | 按 `expectedDecisionVersion` 撤销确认 |
 | `POST /api/requirements/{id}/{delete\|undelete\|delete2}` | Requirement 生命周期 |
