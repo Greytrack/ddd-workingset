@@ -9,7 +9,7 @@
 | 优先级 | 编号 | 问题 | 可选答案 | 影响与阻塞 | 建议验证 |
 | --- | --- | --- | --- | --- | --- |
 | P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
-| P0 | `QUESTION-010` | **Reference/Association 剩余可见性与删除守卫** | 已裁定 C：Reference = 逻辑 Family + 可选钉版/物理定位；Association = 具体 Variant 端点。2026-11-17 补充：WorkingSet 不操作关系聚合，只发布关系事件；常规业务 BC 修改/删除由 BC 维护；工作集跳过权限。剩余：目标缺失、软删、永久删除、后续纳入、钉版不可读五类由关系服务消费事件后的行为 | 决定 T7-E 事件契约、Step 边界与关系服务消费契约 | 按五类场景做关系事件/修复验收；关系不参与 Compare/Merge（D6） |
+| P0 | `QUESTION-010` | **关系服务的可见性、删除守卫与接入** | 身份裁定 C 见 [原裁定](../reviews/2026-11-15-question-010-relation-identity-decision.md)。WorkingSet 侧事件已实现；[消费守卫矩阵](../reviews/2026-11-17-t7-e-relation-guards-decision.md#5-关系服务侧的守卫矩阵)待确认和接入 | 影响真实关系数据的创建、悬空引用修复及消费契约 | 对缺失、软删、永久删除、后续纳入、钉版不可读做端到端验收 |
 | P1 | `QUESTION-004` | **CommonId 跨实例并发与去重协议** | 已确认：默认 WS 同一雪花、非默认两个不等雪花、派生继承 CommonId、软删占键、冲突 409。剩余：多实例并发生成/校验、重试与唯一约束的兜底边界 | 决定唯一索引、ID 生成器与冲突重试；不重开身份语义 | 并发创建/派生/回并 + 唯一约束冲突注入 |
 | P1 | `QUESTION-008.b` | **同一 MergeEntry 内字段级 `DEFER` 与 `ACCEPT` 能否混用？** | A 任一 `DEFER` 使整条条目 `Deferred`，不写任何字段（当前实现）；B 应用 `ACCEPT` 字段，`DEFER` 字段留待新轮次；C 禁止同一条目混用 | 决定 `MergeDecision` 校验、`EntryResult` 表达与 Checkpoint 确认条件；当前实现选择 A 但契约未明确 | 以“一字段接受、一字段延迟”验证结果与后续轮次 |
 | P1 | `QUESTION-008.c` | **Checkpoint 命中使用的“版次”口径** | A 统一用变体业务 Revision（Source-backed 侧为 LTI Revision；当前实现）；B 用实际读取的内容版次（Source-backed 侧为 `SourceRevision`）；C 双侧分别按状态取版次并同时保存两者 | 决定 Compare 隐藏已处理差异与 Confirm 写入的 revisionA/B 是否总能对齐；D-018 允许 LTI Revision 与业务 Revision 不同步 | 以 Source-backed 目标 + 普通编辑 + 显式升级三类组合验证命中/过时 |
@@ -54,12 +54,10 @@
 | T6-F | Shared 允许悬挂；同槽多 Tracker（独立分类投影）+ `is_default`；`sourceId` 不可变；派生链 1:1；完成即可见 | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
 | Checkpoint | 身份 = 两侧 Tracker 分支 + 家族；方向只是属性；WorkingSet 不参与；同一 Tracker 对禁止并发合并 | [Checkpoint 修正](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md) |
 
-## 当前推进顺序
+## 实现偏差
 
-1. 先敲定 `QUESTION-006`、`QUESTION-010`，它们分别阻塞 COW/历史保留和 T7-E 关系构建。
-2. 再敲定 `QUESTION-008.b`、`QUESTION-008.c`，收口 Merge 的字段级 `DEFER` 与 Checkpoint 版次口径。
-3. `QUESTION-011`（Baseline）与 `QUESTION-014`（SK 版本治理）作为 T6-G 主题，需要业务/四 BC 参与。
-4. `QUESTION-012`、`QUESTION-017`、`QUESTION-018` 作为规模与运维专题，不阻塞当前实现。
+- **扩展期间已有范围**：[T7 §12A](working-set-creation-lro-design.md) 约定保持可见可操作，当前 [JDBC 查询门禁](../../../sharedkernel/src/main/java/sk/workingset/infrastructure/JdbcBindingRepositories.java#L101) 仍拦截以同一工作集为目标的所有运行中任务。后续应区分创建与扩展，并验收扩展期间已有范围可读写、新派生 Tracker 到终态才可见。
+- **索引完成事件的发生时间**：[任务执行器](../../../sharedkernel/src/main/java/sk/workingset/application/WorkingSetCreationService.java#L200) 在退出索引阶段发布事件，但使用任务的 `completedAt`。进入关系发布步骤时任务仍可为 `Running`，事件因此可能没有时间戳。后续应以索引完成时点填充并验收。
 
 ## 历史入口
 

@@ -70,17 +70,12 @@ public class WorkingSetApplicationService {
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
         workingSets.requireReady(newId);
-        return createChildForTask(parentId, newId);
+        return createChildForTask(parentId, newId, null);
     }
 
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name) {
         return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId()), name);
-    }
-
-    // Called by the creation runner inside its locked task transaction.
-    WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId) {
-        return createChildForTask(parentId, newId, null);
     }
 
     // Called by the creation runner with the user-supplied display name.
@@ -227,10 +222,6 @@ public class WorkingSetApplicationService {
         return true;
     }
 
-    boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
-        return copyUnsharedTrackerForTask(id, parentTrackerId, true);
-    }
-
     boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId, boolean visible) {
         var target = lockTaskTarget(id);
         var source = directParentTracker(target, parentTrackerId);
@@ -308,16 +299,6 @@ public class WorkingSetApplicationService {
     public DeriveResult derive(DeriveCommand command) {
         var workingSet = writable(command.workingSetId());
         return bindTrackerDerived(workingSet, directParentTracker(workingSet, command.sourceTrackerId()), command);
-    }
-
-    @Transactional
-    public DeriveResult bindTrackerDerived(String spaceId, String classificationId, DeriveCommand command) {
-        var workingSet = writable(command.workingSetId());
-        var source = directParentTracker(workingSet, command.sourceTrackerId());
-        if (!source.productSpaceId().equals(spaceId) || !source.classificationId().equals(classificationId)) {
-            throw new BindingFailure(Reason.TrackerOutsideSlot, source.trackerId().value());
-        }
-        return bindTrackerDerived(workingSet, source, command);
     }
 
     private DeriveResult bindTrackerDerived(WorkingSet workingSet, Tracker source, DeriveCommand command) {

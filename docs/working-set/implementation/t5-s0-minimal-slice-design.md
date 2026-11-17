@@ -235,7 +235,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `WorkingsetApplication`（`bootstrap`） | `@SpringBootApplication` 主类（非 web） |
 | `ApplicationConfiguration`（`bootstrap.configuration`） | 组合根：装配 JDBC/Redis 仓储、应用服务、读 Adapter 工厂、物化 Adapter、Handler、协调器、`REQUIRES_NEW` 事务模板与失败记录 |
 
-来源提交、异步消费和恢复的实施路径见 [T5 架构图](../diagrams/t5-s0-architecture.md)。同源有界等待、重提与验证限制见 [S4 验证结果](t5-s4-verification-result.md)。
+来源提交、异步消费和恢复见 [T3 物化图](../diagrams/lighttrackeritem-materialization.md)及 [S4 验证结果](t5-s4-verification-result.md)。
 
 **明确不构建**：通用 CRUD Repository、动态 SPI 注册器、通用 Saga/事务框架、跨 BC 事件总线平台、四 BC 通用适配层。
 
@@ -261,7 +261,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | LightTrackerItem 存储 | PostgreSQL/Spring JDBC，Redis 查询缓存在提交后更新 |
 | Requirement 存储 | PostgreSQL/Spring JDBC（`lock_version` 条件更新） |
 | 快照存储 | PostgreSQL `requirement_snapshots`（按 `snapshotRef` 取） |
-| 事件派发 | Spring Modulith 提交后异步消费。事务与恢复流程见 [T5 架构图](../diagrams/t5-s0-architecture.md) |
+| 事件派发 | Spring Modulith 提交后异步消费。实施证据见 [S4 验证](t5-s4-verification-result.md) |
 | 装配 | Spring Boot 组合根（`bootstrap.configuration`） |
 | 外部依赖 | PostgreSQL、Redis |
 
@@ -282,7 +282,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 - 契约：T2、T3（含 §2.1）、T4（含 §3.1/§3.2）、D-008～D-019、INV-070/071
 - 场景与检查：SCN-021～049、SCN-066～068、SCN-072、SCN-073、AT-01～AT-05、AC-01/AC-02
 - 裁定记录：[2026-11-11 一致性修正](../reviews/2026-11-11-consistency-reconciliation.md)
-- 图：[T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)
+- 图：[T3 首次物化](../diagrams/lighttrackeritem-materialization.md)
 - 映射：[场景-期望-测试映射](t5-s0-scenario-test-mapping.md)
 - 实施证据见[实施索引](README.md)。
 - 审核：[T5-S0 设计审核记录](../reviews/2026-11-11-t5-s0-design-review.md)

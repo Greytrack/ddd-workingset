@@ -3,7 +3,7 @@
 **状态：Verified（S2 完成，2026-11-11）**
 
 - 范围：来源 Requirement 普通修改 → 修改前不可变快照 → 来源事件发布（AT-03 前半），以及 Spring Boot、Spring Event、雪花 ID 三项工程前置
-- 依据：[原任务清单](t5-s0-codex-task-plan.md)、[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)、[S1 验证结果](t5-s1-verification-result.md)
+- 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)、[S1 验证结果](t5-s1-verification-result.md)
 
 ## 1. 验证命令与结果
 
@@ -48,7 +48,7 @@ BUILD SUCCESS
 | --- | --- |
 | Spring Boot | `spring-boot-dependencies` 3.3.5 BOM + `spring-boot-starter`（非 web）；`WorkingsetApplication` 启动类；领域层仍为纯 Java |
 | 雪花 ID | `START_STAMP=1577836800000L`；`DATACENTER_BIT=3`、`MACHINE_BIT=3`、`SEQUENCE_BIT=5`；`IdGeneratorConfig` 使用 `DATACENTER_ID=1`、workerId 为本机地址哈希取模；`LocalId.newId()` 的 UUID 路径已删除 |
-| Spring Event | ALM 应用服务注入 `ApplicationEventPublisher`，保存成功后发布 `RequirementChanged`；默认同线程同步派发。**2026-11-12 澄清**：已验证范围仅限同线程同步调用、事件在保存之后发布且监听器可观察到保存后状态、同一线程内按发布顺序到达；**不承诺**事务提交语义、异步/跨线程顺序或多监听器异常隔离。当前运行时采用 Modulith 提交后异步消费，见 [S3 实施记录](t5-s3-codex-task-brief.md) §3.6。 |
+| Spring Event | 此次历史验证覆盖同线程同步派发及保存后可观察性。当前运行时采用 Modulith 提交后异步消费，见 [S3 验收](t5-s3-verification-result.md)。 |
 
 ## 5. 与设计的偏离（已记录，不改变契约）
 

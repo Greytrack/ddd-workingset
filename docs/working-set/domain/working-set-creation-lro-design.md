@@ -9,11 +9,7 @@
 
 ## 1. 背景与定位
 
-现有实现把“创建工作集”拆成多个原子操作：`createChildWorkingSet`（创建空本体）、`bindSpace`、`bindTrackerShared`、`derive`/`bindTrackerDerived`（逐项派生）。S6 设计明确“允许空范围子工作集”“创建子 WS 不自动复制父 WS 绑定”，子 WS 范围由后续逐项纳入决定。
-
-T7 新增**另一个用例**：**按用户选定的范围一次性创建完整工作集**，作为异步长流程（LRO）执行。它不替换原子操作，也不改变 S6 的“空范围子 WS 合法”；两者是不同入口：原子操作用于后续增量调整，T7 用于“新建并初始化范围”。
-
-T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作为占位适配与验收样例。
+创建 LRO 按所选范围初始化子工作集，扩展 LRO 给已有子工作集纳入范围。创建空本体、绑定空间和复用共享 Tracker 仍有独立入口。ALM Requirement 是业务 BC 参考实现。
 
 ## 2. 用户决策（2026-11-13）
 
@@ -38,8 +34,8 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ### 4.1 LRO 聚合 `WorkingSetCreation`
 
-- 身份：`creationId`（雪花或请求幂等键派生）。
-- 参数：`parentWorkingSetId`、`newWorkingSetId`、`requestId`、`name`（用户可读的工作集名称，持久化到 `working_sets.name`）、选定的 `productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`、发起人（`Caller`，D11 暂不校验）。
+- 身份：任务 `creationId` 和新工作集 ID 均由服务端分配，遵循 [T4 身份约定](cross-bc-contract-v1.md#4-六个用例的契约边界)。
+- 参数：父/目标工作集 ID、创建或扩展模式、`requestId`、名称、所选范围与发起人。公开请求与持久化参数的对应见 §7.3。
 - 状态：`Pending → Running → Succeeded / PartiallySucceeded / Failed`。
 - 进度：当前步骤、已完成/总数（Tracker 数、Item 数）。
 - 结果：步骤明细与失败明细（JSONB）；`completedAt`。
@@ -91,15 +87,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ### 4.6 关系事件发布
 
-- 索引结束时随终态事务登记 `TrackerItemsIndexed`，提交后交付。事件包含扫描完成的子 Tracker，包括存在单项失败或带明细跳过的 Tracker。
-- QUESTION-010 的最新边界：**WorkingSet 场景不操作 Reference/Association 聚合**，只发布关系事件；Reference 两个端点均带 workingSet/local/common/tracker/revision，Association 两个端点不带版次。
-- `PUBLISH_RELATION_EVENTS` 独立 step 发布：
-  - `ReferenceCreationRequested`（新引用）；
-  - `DanglingReferenceRepairRequested`（既有悬空引用修复）；
-  - `AssociationCreationRequested`（新关联）。
-- 事件携带 `eventId`、`originalRelationId`、`originId/originType`，消费方按 `originalRelationId` 回查原始关系的传播怀疑、类型、方向等信息。
-- Merge 成功后由 `MergeRelationRepairStep` 发布修复事件；只处理本轮实际成功且改变目标变体的条目，关系修复不参与 Merge 成功判定。
-- 关系/引用处理失败不自动重试、不阻塞主流程；当前允许任务 `PartiallySucceeded`。详见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
+索引阶段结束时登记 `TrackerItemsIndexed`，提交后交付。扫描完成的 Tracker 可以含单项失败或带明细的跳过。关系请求由后续独立步骤 `PUBLISH_RELATION_EVENTS` 发布。事件字段、Merge 修复时点与失败边界统一见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 
 ## 5. 事务、事件与一致性
 
@@ -111,9 +99,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ## 6. 幂等与并发
 
-- 请求以 `(parentWorkingSetId, newWorkingSetId, requestId)` 为幂等键。相同键、相同规范化范围返回已有任务；相同键但范围不同返回 HTTP 409。
-- 同一 `newWorkingSetId` 只允许一个创建任务，其他任务请求返回 HTTP 409。
-- 受理前强校验目标 `newWorkingSetId` 是否已存在于 `working_sets`：已存在 → 直接 409 `WorkingSetAlreadyExists`，不插入任务、不把已有 WS 标记为 `Preparing`。
+- 新建请求以 `requestId` 判重。相同请求复用已有任务与目标 ID；同键改父工作集、名称或选择范围返回 HTTP 409。持久化约束见 [schema.sql](../../../deploys/src/main/resources/schema.sql)；扩展并发见 §12A。
 - 步骤内已存在的 Tracker/LTI（重入/重复执行）视为已完成并记录“skipped”，不重复创建；唯一索引兜底。
 - 不开放任务重试接口；失败后由人工查看明细并决定后续（删除子 WS 或手工补齐）。
 
@@ -131,8 +117,8 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ### 7.3 REST
 
-- `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`newWorkingSetId`、`requestId`、`name`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`。`name` 为用户可读名称，创建任务在 `CREATE_WORKING_SET` 阶段写入 `working_sets.name`；范围按集合比较，空集合合法。首次返回 HTTP 202、`creationId`、`status` 和轮询 `Location`。相同请求复用任务并返回当前状态。
-- `GET /api/working-set-creations/{id}` 返回专用任务视图，字段包括 `creationId`、`status`、`stage`、`progress`、`failures` 和任务时间。进度按步骤记录成功、失败和跳过数，扫描结束前允许总数未知。不存在的任务返回 HTTP 404。
+- `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`requestId`、`name`、`productSpaceIds`、`sharedTrackerIds`、`unsharedParentTrackerIds`。范围按集合比较，空范围合法；服务端分配目标 ID，返回 HTTP 202、任务视图和轮询 `Location`。
+- `GET /api/working-set-creations/{id}` 返回 `creationId`、`targetWorkingSetId`、`mode`、状态、步骤、进度、明细和时间；不存在返回 HTTP 404。
 - `GET /api/working-set-creations/{id}/working-set` 任务专用只读：按任务 id 读取创建中的目标工作集；普通 `/api/worksets/{id}` 仍返回 `Preparing`。任务不存在或目标尚未创建 → 404。
 - `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason` 使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。
 - 轮询由前端按状态终止（`Succeeded/PartiallySucceeded/Failed`）。
@@ -145,7 +131,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 ## 10. 与现有能力的关系
 
-- **不替换**原子操作：`createChildWorkingSet`、`bindSpace`、`bindTrackerShared`、`derive` 保留，用于后续增量。
+- 单 Item 派生的 HTTP 入口已退役。对已有工作集批量派生见 §12A。
 - **不重开** S6 的“空范围子 WS 合法”“创建不自动复制绑定”：T7 是显式范围创建入口。
 - 与 T6-D（回并）无关：回并是已有子 WS 的 Merge CREATE；T7 是新建工作集的初始化。
 - 复用 MergeRound 的 LRO 模式：状态机、结果、Modulith 事件、独立事务；不复用 MergeRound 的 Checkpoint/决定语义。
@@ -168,7 +154,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 ## 12A. T7-G 扩展已有工作集（Implemented，2026-11-17）
 
 - 入口：`POST /api/worksets/{target}/extensions`，请求 `{requestId, trackerIds}`；返回 202，任务复用 `GET /api/working-set-creations/{id}` 轮询。
-- 目标：对已有子工作集扩展范围；目标工作集保持可见、可操作。
+- 目标：对已有子工作集扩展范围。约定保留已有范围的可见性；当前查询门禁偏差见 [开放问题](open-questions.md)。
 - 选择：按直接父工作集的 Tracker 选择一批 Tracker；只允许直属父级来源。
 - 重复过滤：共享 Tracker 按目标的绑定 ID 判断；非共享 Tracker 按已绑定副本的 `sourceId` 匹配父 TrackerId。同一分类下其他 Tracker 有不同身份，可继续纳入。界面保留这些已纳入项并禁用勾选。提交过滤后为空返回 `NoDerivableTracker`，不创建任务。
 - 扩展范围：共享 Tracker 复用原 ID 并建立绑定。非共享 Tracker 创建副本、绑定并索引父 Item；副本创建时 `visible=false`，任务终态后揭示已成功绑定的副本。

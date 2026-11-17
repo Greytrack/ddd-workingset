@@ -5,9 +5,9 @@
 审核对象：
 
 - [T5-S0 最小纵向切片设计](../implementation/t5-s0-minimal-slice-design.md)（Draft）
-- [T5-S0 架构与首次 COW 时序](../diagrams/t5-s0-architecture.md)（Draft / Candidate）
+- T5-S0 架构与首次 COW 时序（当时 Draft / Candidate），历史图见 `9c89c96:docs/working-set/diagrams/t5-s0-architecture.md`。当前见 [T3 物化图](../diagrams/lighttrackeritem-materialization.md)。
 - [AT-01～AT-05、AC-01～AC-02 场景-期望-测试映射](../implementation/t5-s0-scenario-test-mapping.md)（Draft）
-- [S1～S4 Codex 实施任务清单](../implementation/t5-s0-codex-task-plan.md)（Draft）
+- S1～S4 实施任务清单（当时 Draft），原任务拆分见 `404a356:docs/working-set/implementation/t5-s0-codex-task-plan.md`；实际结果见 [验收索引](../implementation/README.md)。
 
 审核方式：对照 T1～T4 已冻结契约、INV-069～071、SCN-066～068/072/073 与仓库实际条件（JDK 21.0.7、Maven 3.9.11、`src/` 为空）逐项核对；**未做**实现验证与 Mermaid 实际渲染。
 

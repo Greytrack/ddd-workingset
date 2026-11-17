@@ -74,24 +74,6 @@ CREATE TABLE IF NOT EXISTS trackers (
         OR (source_id IS NOT NULL AND working_set_id <> '1' AND sharing_mode = 'UNSHARED'))
 );
 
-ALTER TABLE trackers ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE trackers ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT TRUE;
-
--- POL-003: an unshared classification can also have a shared Tracker.
-DO 'BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint
-        WHERE conrelid = ''trackers''::regclass AND conname = ''trackers_classification_id_fkey'') THEN
-        ALTER TABLE trackers ADD CONSTRAINT trackers_classification_id_fkey
-            FOREIGN KEY (classification_id) REFERENCES classifications (classification_id);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint
-        WHERE conrelid = ''trackers''::regclass AND conname = ''trackers_sharing_mode_check'') THEN
-        ALTER TABLE trackers ADD CONSTRAINT trackers_sharing_mode_check
-            CHECK (sharing_mode IN (''SHARED'', ''UNSHARED''));
-    END IF;
-    ALTER TABLE trackers DROP CONSTRAINT IF EXISTS trackers_classification_id_sharing_mode_fkey;
-END';
-
 -- 每个（所有者工作集，空间，分类）至多一个默认 Tracker
 CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_default_slot
     ON trackers (working_set_id, product_space_id, classification_id) WHERE is_default;
@@ -261,19 +243,16 @@ CREATE INDEX IF NOT EXISTS idx_cow_materializations_status ON cow_materializatio
 -- ---------------------------------------------------------------------------
 
 -- 一轮 MergeRound 承载一页用户决策。requestId 是幂等键，必填且全局唯一。
--- 旧版 state JSON 中的 Difference.key / ItemResult.entryKey 不兼容：开发基线清理
--- merge_commit_receipts、merge_checkpoints、merge_rounds 后重建，不做 JSON 迁移。
 CREATE TABLE IF NOT EXISTS merge_rounds (
     id BIGINT PRIMARY KEY,
     token VARCHAR(64) NOT NULL UNIQUE,
     request_id VARCHAR(128) NOT NULL UNIQUE,
-    state JSONB NOT NULL
+    state JSONB NOT NULL,
+    tracker_a_id BIGINT,
+    tracker_b_id BIGINT
 );
 
 -- 一页决策同属一个 Tracker 对；Preparing/Running 期间占用该对，作为并发合并闸门。
-ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_a_id BIGINT;
-ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_b_id BIGINT;
-
 CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
     ON merge_rounds (tracker_a_id, tracker_b_id)
     WHERE (state->>'state') IN ('Preparing', 'Running');
@@ -333,10 +312,6 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
     completed_at TIMESTAMPTZ,
     UNIQUE (parent_working_set_id, new_working_set_id, request_id)
 );
-
--- Older baselines declared new_working_set_id UNIQUE. A target may now have multiple
--- extension tasks over time, so uniqueness is scoped by mode/status below.
-ALTER TABLE working_set_creations DROP CONSTRAINT IF EXISTS working_set_creations_new_working_set_id_key;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_target
     ON working_set_creations (new_working_set_id)

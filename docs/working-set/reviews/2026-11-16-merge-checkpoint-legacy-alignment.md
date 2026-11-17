@@ -88,7 +88,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
 
 唯一键 `(tracker_a_id, tracker_b_id, common_id)`；命中条件为唯一键 + `revision_a`/`revision_b` 且 `revoked = false`；`local_id` 只作证据，不参与命中。
 
-完整 DDL、索引与迁移步骤见[Checkpoint 重构实施方案](../implementation/merge-checkpoint-rework-plan.md) §1，避免在本裁定中复制第二份表结构。
+现行 DDL 与索引见 [schema.sql](../../../deploys/src/main/resources/schema.sql)，当时的实施与旧数据处置见 [重构记录](../implementation/merge-checkpoint-rework-plan.md)。
 
 ## 7. 关联
 

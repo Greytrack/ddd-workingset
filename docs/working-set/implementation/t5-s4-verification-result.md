@@ -2,7 +2,7 @@
 
 **状态：Reviewed。2026-11-12，本机 PostgreSQL、Redis 与内嵌 Tomcat。**
 
-依据为 [S4 任务](t5-s0-codex-task-plan.md)、[S3 验证](t5-s3-verification-result.md)、[场景映射](t5-s0-scenario-test-mapping.md)与 [T3 §6～§7](../domain/lighttrackeritem-materialization-contract-v1.md)。对应 AT-05、SCN-030/049/067、INV-037/038/039/044/050/051/052/069～071。
+依据为 [S3 验证](t5-s3-verification-result.md)、[场景映射](t5-s0-scenario-test-mapping.md)与 [T3 §6～§7](../domain/lighttrackeritem-materialization-contract-v1.md)。对应 AT-05、SCN-030/049/067、INV-037/038/039/044/050/051/052/069～071。
 
 ## 阶段 0 · S3 收尾
 
