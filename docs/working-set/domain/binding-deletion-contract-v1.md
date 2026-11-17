@@ -52,7 +52,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | 项 | 契约 |
 | --- | --- |
 | 身份键 | `(workingSetId, trackerId)`，同一 WorkingSet 内不重复纳入（POL-012） |
-| 槽位键 | `(workingSetId, productSpaceId, classificationId)` 可绑定多个 Tracker，但恰好一个 `is_default`（INV-056，T6-F 重述） |
+| 槽位键 | `(workingSetId, productSpaceId, classificationId)` 可绑定多个 Tracker，有效范围内至多一个 `is_default`（INV-056，T6-F 重述；Shared 默认来自根工作集） |
 | 必需属性 | workingSetId、trackerId、productSpaceId、classificationId、sharingMode、建立方式（Shared 复用 / 非共享派生） |
 | TB-1 | 建立前必须存在同 WS 的 SpaceBinding（INV-053） |
 | TB-2 | 绑定的 `productSpaceId` 与 Tracker 的 `productSpaceId` 一致（INV-054） |

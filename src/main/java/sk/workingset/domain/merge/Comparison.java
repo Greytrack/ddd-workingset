@@ -18,7 +18,19 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
         differences = List.copyOf(differences);
     }
 
-    public record TrackerPair(TrackerId source, TrackerId target) {}
+    /**
+     * 有向比较对：source/target WorkingSet 是本次角色上下文，不是父子谱系方向。
+     * TrackerId 与 WorkingSetId 一起构成可审计的候选对/差异身份；Checkpoint 仍只使用 TrackerId。
+     */
+    public record TrackerPair(WorkingSetId sourceWorkingSetId, TrackerId source,
+                              WorkingSetId targetWorkingSetId, TrackerId target) {
+        public TrackerPair {
+            java.util.Objects.requireNonNull(sourceWorkingSetId, "sourceWorkingSetId");
+            java.util.Objects.requireNonNull(source, "source");
+            java.util.Objects.requireNonNull(targetWorkingSetId, "targetWorkingSetId");
+            java.util.Objects.requireNonNull(target, "target");
+        }
+    }
 
     public enum Presence { PRESENT, ABSENT, DELETED, UNREADABLE }
 

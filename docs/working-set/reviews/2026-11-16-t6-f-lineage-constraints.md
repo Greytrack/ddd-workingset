@@ -62,7 +62,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 ### 4.1 实现含义
 
 - 名称唯一按（工作集，空间，分类）实现，仅业务原生 Tracker 参与。业务原生 Tracker 只能在默认工作集创建，因此当前等价于原裁定的（产品空间，分类）内唯一；子工作集不能原生创建 Tracker，故不会出现跨工作集同名原生 Tracker。派生 Tracker 继承来源名称，不参与唯一约束。若未来允许子工作集原生创建，需要重新确认作用域。
-- **2026-11-17 裁定：`Difference.key` 废弃。** 客户端不再提交 `entryKey`；轮次内条目身份为 `MergeRound.Entry.id`，跨轮次审计使用完整 evidence（Tracker 对、家族、双侧 LocalId/Revision/Presence）加 `Comparison`/`MergeRound` 的 source/target WorkingSet 上下文。`TrackerPair` 不新增 workingSetId；WorkingSet 由比较/轮次上下文提供。
+- **2026-11-17 裁定：`Difference.key` 废弃。** 客户端不再提交 `entryKey`；轮次内条目身份为 `MergeRound.Entry.id`。`TrackerPair` 为有向四元组 `(sourceWorkingSetId, sourceTrackerId, targetWorkingSetId, targetTrackerId)`，WorkingSet 是本次比较角色上下文；跨轮次审计使用完整 evidence（四元组 + 家族 + 双侧 LocalId/Revision/Presence）。Checkpoint 仍只使用两侧 TrackerId + 家族，不吸收 WorkingSet。
 - 同一家族的 Item 在同一工作集只属于一个 Tracker（POL-005 与 Item 归属），所以“左侧 Tracker 集合 × 右侧 Tracker 集合”不会让同一家族重复出现。
 - Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。轮次上下文与条目证据中的双侧定位（含 LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
 
@@ -80,7 +80,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 - 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；`Difference.key`/`entryKey` 已废弃，条目身份改为 `Entry.id` + evidence。
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
-- 全量测试 130 项通过（含新增错误码契约测试与默认 Tracker 边界测试）。
+- 全量测试 131 项通过（含错误码契约、默认 Tracker 边界与 TrackerPair 四元组测试）。
 
 ## 6. 关联材料
 

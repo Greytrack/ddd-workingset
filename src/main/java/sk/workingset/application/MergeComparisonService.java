@@ -98,7 +98,9 @@ public class MergeComparisonService {
         // Deterministic order makes offset/limit pages stable for an unchanged data set.
         // The key itself is deliberately not persisted or accepted from clients.
         differences.sort(java.util.Comparator
-                .comparing((Difference difference) -> difference.trackers().source().value())
+                .comparing((Difference difference) -> difference.trackers().sourceWorkingSetId().value())
+                .thenComparing(difference -> difference.trackers().source().value())
+                .thenComparing(difference -> difference.trackers().targetWorkingSetId().value())
                 .thenComparing(difference -> difference.trackers().target().value())
                 .thenComparing(difference -> difference.family().value()));
         return new Comparison(source, target, Instant.now(), candidates, differences);
@@ -123,8 +125,8 @@ public class MergeComparisonService {
                 trackers.findTracker(binding.trackerId()).stream().filter(tracker -> tracker.sourceId() != null)
                 .filter(tracker -> parentIncludes(left, right, tracker.sourceId()))
                 .map(tracker -> tracker.workingSetId().equals(source)
-                        ? new TrackerPair(tracker.trackerId(), tracker.sourceId())
-                        : new TrackerPair(tracker.sourceId(), tracker.trackerId()))).toList();
+                        ? new TrackerPair(source, tracker.trackerId(), target, tracker.sourceId())
+                        : new TrackerPair(source, tracker.sourceId(), target, tracker.trackerId()))).toList();
     }
 
     boolean isMergeBack(WorkingSetId source, WorkingSetId target) {

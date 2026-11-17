@@ -112,13 +112,18 @@ public class MergeExecutionService {
         }
         var pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
                 evidence.family());
+        var sourceWorkingSet = evidence.trackers().sourceWorkingSetId();
+        var targetWorkingSet = evidence.trackers().targetWorkingSetId();
         var mixed = decisions.stream().anyMatch(request -> {
             if (request.evidence() == null) {
                 return true;
             }
-            var other = new MergeCheckpoint.Key(request.evidence().trackers().source(),
-                    request.evidence().trackers().target(), request.evidence().family());
-            return !other.a().equals(pair.a()) || !other.b().equals(pair.b());
+            var candidate = request.evidence();
+            var other = new MergeCheckpoint.Key(candidate.trackers().source(),
+                    candidate.trackers().target(), candidate.family());
+            return !other.a().equals(pair.a()) || !other.b().equals(pair.b())
+                    || !candidate.trackers().sourceWorkingSetId().equals(sourceWorkingSet)
+                    || !candidate.trackers().targetWorkingSetId().equals(targetWorkingSet);
         });
         if (mixed) {
             throw new IllegalArgumentException("decisions must belong to one tracker pair");
@@ -136,7 +141,12 @@ public class MergeExecutionService {
             if (frozen == null) {
                 throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
             }
-            if (!candidates.contains(frozen.trackers())) {
+            var pair = frozen.trackers();
+            if (!pair.sourceWorkingSetId().equals(round.source())
+                    || !pair.targetWorkingSetId().equals(round.target())) {
+                throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
+            }
+            if (!candidates.contains(pair)) {
                 throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
             lockEvidence(frozen);

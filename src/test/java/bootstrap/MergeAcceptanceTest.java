@@ -151,6 +151,8 @@ class MergeAcceptanceTest {
         assertEquals(ChangeKind.ADDED, diff(compared, add).kind());
         assertEquals(ChangeKind.DELETED, diff(compared, remove).kind());
         assertEquals(ChangeKind.MODIFIED, diff(compared, edit).kind());
+        assertEquals(WorkingSetId.of(source), diff(compared, add).trackers().sourceWorkingSetId());
+        assertEquals(WorkingSetId.of(target), diff(compared, add).trackers().targetWorkingSetId());
         assertTrue(diff(compared, add).fields().isEmpty());
         assertTrue(diff(compared, remove).fields().isEmpty());
         assertTrue(diff(compared, edit).fields().contains("title"));
@@ -682,11 +684,25 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "source");
         var difference = diff(compare("1", child), family);
         var other = new Difference(difference.kind(), difference.family(),
-                new sk.workingset.domain.merge.Comparison.TrackerPair(TrackerId.of("tracker-x"),
-                        TrackerId.of("tracker-y")),
+                new sk.workingset.domain.merge.Comparison.TrackerPair(WorkingSetId.of("1"),
+                        TrackerId.of("tracker-x"), WorkingSetId.of(child), TrackerId.of("tracker-y")),
                 difference.source(), difference.target(), difference.fields());
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-request"),
+                "decisions", List.of(existence(difference, "CREATE"), existence(other, "CREATE"))), Map.class));
+    }
+
+    @Test
+    void mixedWorkingSetContextsAreRejectedEvenWithTheSameTrackerPair() {
+        String family = id("mixed-ws");
+        seed(rootTracker, family, "source");
+        var difference = diff(compare("1", child), family);
+        var other = new Difference(difference.kind(), difference.family(),
+                new sk.workingset.domain.merge.Comparison.TrackerPair(WorkingSetId.of(child),
+                        difference.trackers().source(), WorkingSetId.of("1"), difference.trackers().target()),
+                difference.source(), difference.target(), difference.fields());
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+                "sourceWorkingSetId", "1", "requestId", id("mixed-ws-request"),
                 "decisions", List.of(existence(difference, "CREATE"), existence(other, "CREATE"))), Map.class));
     }
 
