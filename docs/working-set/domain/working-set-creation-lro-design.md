@@ -55,7 +55,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
 | `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
 | `INDEX_UNSHARED_TRACKERS`（T7-D 已实现） | 对每个绑定成功的非共享子 Tracker，按父 Tracker 的有效 Item 创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
-| `LINK_RELATIONS` | 索引完成后发布事件，异步构建引用/关联（依赖 QUESTION-010） | 索引 | 记录失败项；不阻断任务整体 |
+| `PUBLISH_RELATION_EVENTS` | 索引完成后发布 `ReferenceCreationRequested`、`DanglingReferenceRepairRequested`、`AssociationCreationRequested`；不操作关系聚合 | 索引 | 记录事件发布失败；不阻断主流程，不自动重试 |
 
 - 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
 - 复制与绑定分别提交。复制失败时跳过该 Tracker 的绑定，复制成功而绑定失败时保留副本并记录绑定阶段的失败。轮询的 `progress` 是任务汇总，`stageProgress` 分阶段记录成功、失败、跳过和总数。
@@ -89,10 +89,17 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 - SK 按 LocalId 合并业务身份页与 LTI 页。重合同族优先有效业务身份，子工作集已有同族 LTI 计为跳过。
 - 索引由系统任务执行，当前不校验用户级授权；权限接入后另行裁定。
 
-### 4.6 关系/引用构建
+### 4.6 关系事件发布
 
-- 索引结束时随终态事务登记 `TrackerItemsIndexed`，提交后交付。事件包含扫描完成的子 Tracker，包括存在单项失败或带明细跳过的 Tracker。当前占位监听器保留 Modulith 事件发布记录。
-- QUESTION-010 已于 2026-11-15 裁定 C（按关系类型拆分，见[裁定记录](../reviews/2026-11-15-question-010-relation-identity-decision.md)）：Reference 使用逻辑 Family + 可选钉版/物理定位，Association 使用具体 Variant 端点。T7-E 只消费事件构建/修复，不参与 Compare/Merge；构建失败应可追溯，已提交的索引和工作集本体保留。FACT-009 可见性、删除守卫与 QUESTION-006 保留期限仍需随 T7-E 验收确认。
+- 索引结束时随终态事务登记 `TrackerItemsIndexed`，提交后交付。事件包含扫描完成的子 Tracker，包括存在单项失败或带明细跳过的 Tracker。
+- QUESTION-010 的最新边界：**WorkingSet 场景不操作 Reference/Association 聚合**，只发布关系事件；Reference 两个端点均带 workingSet/local/common/tracker/revision，Association 两个端点不带版次。
+- `PUBLISH_RELATION_EVENTS` 独立 step 发布：
+  - `ReferenceCreationRequested`（新引用）；
+  - `DanglingReferenceRepairRequested`（既有悬空引用修复）；
+  - `AssociationCreationRequested`（新关联）。
+- 事件携带 `eventId`、`originalRelationId`、`originId/originType`，消费方按 `originalRelationId` 回查原始关系的传播怀疑、类型、方向等信息。
+- Merge 成功后另设 `PUBLISH_RELATION_REPAIR_EVENTS` step，发布修复事件；关系修复不参与 Merge 成功判定。
+- 关系/引用处理失败不自动重试、不阻塞主流程；当前允许任务 `PartiallySucceeded`。详见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 
 ## 5. 事务、事件与一致性
 
@@ -120,7 +127,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 
 - `TrackerItemCatalog`（SK 定义、BC 实现）：按 Tracker 和 LocalId 游标提供未软删的业务身份页及有效同族查询。`RequirementCatalog` 继续服务 Merge。
 - `LightTrackerItemRepository` 提供父 LTI 分页查询与按工作集/家族条件插入。内容可读性沿用 T3 读取边界。
-- 关系/引用 Port：按 QUESTION-010 C 裁定，由 T7-E 定义 Reference/Association 端口；字段、失败明细和关系进度待 T7-E 验收。
+- 关系事件：WorkingSet 不定义 Reference/Association 仓储或写入 Port；只定义关系事件契约与发布器。字段、事件类、失败明细见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 
 ### 7.3 REST
 
@@ -155,7 +162,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | T7-B | LRO 骨架：任务表、创建/轮询 REST、状态推进、幂等 | T7-A | HTTP 创建返回任务；轮询状态；重复提交返回原任务 |
 | T7-C | 范围复制与绑定：子 WS 本体、非共享 Tracker copy、共享/空间绑定 | T7-B、S6 | 副本/绑定正确；非法范围记录失败明细 |
 | T7-D | 批量 LTI 索引：分页端口、软删剔除、分批创建、部分成功明细 | T7-C、T3 | 批量索引成功/部分成功；软删剔除；重复执行幂等 |
-| T7-E | 关系/引用构建：索引完成事件、异步构建、失败明细 | T7-D、QUESTION-010（已裁定 C） | 事件触发；关系构建/修复成功或失败可查；不参与 Compare/Merge |
+| T7-E | 关系事件发布：索引完成后发 `ReferenceCreationRequested`/`DanglingReferenceRepairRequested`/`AssociationCreationRequested`；Merge 后发修复事件 | T7-D、QUESTION-010（已裁定 C） | 事件触发；WorkingSet 不操作关系聚合；失败不阻塞、不自动重试；不参与 Compare/Merge |
 | T7-F | 规模与恢复：批大小、分页、结果保留、压测 | T7-E | 规模数据、失败明细可读、连接池可承受 |
 
 ## 12A. T7-G 扩展已有工作集（Implemented，2026-11-17）

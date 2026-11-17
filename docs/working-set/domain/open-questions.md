@@ -9,7 +9,7 @@
 | 优先级 | 编号 | 问题 | 可选答案 | 影响与阻塞 | 建议验证 |
 | --- | --- | --- | --- | --- | --- |
 | P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
-| P0 | `QUESTION-010` | **Reference/Association 剩余可见性与删除守卫** | 已裁定 C：Reference = 逻辑 Family + 可选钉版/物理定位；Association = 具体 Variant 端点。剩余：目标缺失、无权、软删、永久删除、后续纳入、钉版不可读六类的可见性与守卫 | 决定 T7-E 的关系表、悬空表示、修复事件与删除顺序 | 按六类场景做关系构建/修复验收；关系不参与 Compare/Merge（D6） |
+| P0 | `QUESTION-010` | **Reference/Association 剩余可见性与删除守卫** | 已裁定 C：Reference = 逻辑 Family + 可选钉版/物理定位；Association = 具体 Variant 端点。2026-11-17 补充：WorkingSet 不操作关系聚合，只发布关系事件；常规业务 BC 修改/删除由 BC 维护；工作集跳过权限。剩余：目标缺失、软删、永久删除、后续纳入、钉版不可读五类由关系服务消费事件后的行为 | 决定 T7-E 事件契约、Step 边界与关系服务消费契约 | 按五类场景做关系事件/修复验收；关系不参与 Compare/Merge（D6） |
 | P1 | `QUESTION-004` | **CommonId 跨实例并发与去重协议** | 已确认：默认 WS 同一雪花、非默认两个不等雪花、派生继承 CommonId、软删占键、冲突 409。剩余：多实例并发生成/校验、重试与唯一约束的兜底边界 | 决定唯一索引、ID 生成器与冲突重试；不重开身份语义 | 并发创建/派生/回并 + 唯一约束冲突注入 |
 | P1 | `QUESTION-008.b` | **同一 MergeEntry 内字段级 `DEFER` 与 `ACCEPT` 能否混用？** | A 任一 `DEFER` 使整条条目 `Deferred`，不写任何字段（当前实现）；B 应用 `ACCEPT` 字段，`DEFER` 字段留待新轮次；C 禁止同一条目混用 | 决定 `MergeDecision` 校验、`EntryResult` 表达与 Checkpoint 确认条件；当前实现选择 A 但契约未明确 | 以“一字段接受、一字段延迟”验证结果与后续轮次 |
 | P1 | `QUESTION-008.c` | **Checkpoint 命中使用的“版次”口径** | A 统一用变体业务 Revision（Source-backed 侧为 LTI Revision；当前实现）；B 用实际读取的内容版次（Source-backed 侧为 `SourceRevision`）；C 双侧分别按状态取版次并同时保存两者 | 决定 Compare 隐藏已处理差异与 Confirm 写入的 revisionA/B 是否总能对齐；D-018 允许 LTI Revision 与业务 Revision 不同步 | 以 Source-backed 目标 + 普通编辑 + 显式升级三类组合验证命中/过时 |
@@ -37,7 +37,7 @@
 | `QUESTION-002.f` | Shared `parentId` 由默认工作集维护；子工作集允许悬挂，能构树则构树 | T6-F（2026-11-16） |
 | `QUESTION-002.g` | 父也选中时默认继承，创建前可显式重组 | D-005/D-006 |
 | `QUESTION-002.h` | Item 归属关闭：业务 BC 拥有业务对象聚合，SK 只负责公共身份与工作集机制 | D-007 |
-| `QUESTION-002.i` | 批量派生整批原子（LRO 范式） | T6-F（2026-11-16） |
+| `QUESTION-002.i` | 原“批量派生整批原子”；已由 `QUESTION-002.l` 取代为 T7 创建/扩展部分成功 | T6-F（2026-11-16）、T7-G（2026-11-17） |
 | `QUESTION-002.j` | Compare/Merge 候选对按 Tracker 的直接 `sourceId` 派生关系确定：只允许直属派生父子，不允许跨级，不允许派生兄弟节点互配，不做同槽全组合 | 2026-11-17 用户裁定 |
 | `QUESTION-002.l` | 创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO，独立批量派生入口另行定义 | 2026-11-17 用户裁定 |
 | `QUESTION-003` | 现阶段不接入权限；`Caller`/`authorize` 保持占位，待权限模型完成后接入 | D11（2026-11-12） |

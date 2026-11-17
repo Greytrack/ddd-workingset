@@ -33,14 +33,17 @@
 
 ## 4. 优先级
 
-### P1：T7-E 关系构建
+### P1：T7-E 关系事件
 
-- 先补关系契约：Reference 逻辑 Family + 可选钉版/物理定位；Association 具体 Variant 端点；缺端点不落库。
-- 先确认 QUESTION-010 的剩余可见性与删除守卫：
-  - 目标缺失、无权、软删、永久删除、后续纳入、钉版不可读；
-  - 关系不参与 Compare/Merge（D6）。
-- 再建关系表/Port/构建器，替换 `TrackerItemsIndexedListener` 占位。
-- 关系进度是否进入任务视图需要单独裁定。
+- 先按 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md) 确认事件类与 Step 边界。
+- WorkingSet 不操作 Reference/Association 聚合，只发布：
+  - `ReferenceCreationRequested`
+  - `DanglingReferenceRepairRequested`
+  - `AssociationCreationRequested`
+- Reference 带双端点与版次；Association 带双端点、不带版次；事件带 `eventId`、`originalRelationId`、`originId/originType`。
+- 创建/扩展的 `PUBLISH_RELATION_EVENTS` 在索引后独立执行；Merge 的 `PUBLISH_RELATION_REPAIR_EVENTS` 在 Merge 成功后独立执行。
+- 关系失败不自动重试、不阻塞主流程；后续重试/回滚按 QUESTION-018 单独裁定。
+- 不新增关系表/Port；关系消费方按 `originalRelationId` 回查传播怀疑、类型和方向。
 
 ### P2：T7-F 规模、保留与恢复
 

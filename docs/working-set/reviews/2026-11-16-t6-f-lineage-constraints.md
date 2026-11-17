@@ -88,7 +88,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 - 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；`Difference.key`/`entryKey` 已废弃，条目身份改为 `Entry.id` + evidence。
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
-- 全量测试 136 项通过（含错误码契约、默认 Tracker 边界、TrackerPair 四元组、直接 `sourceId` 配对与 T7-G 扩展测试）。
+- 全量测试 140 项通过（含错误码契约、默认 Tracker 边界、TrackerPair 四元组、直接 `sourceId` 配对、T7-G 扩展与关系事件契约测试）。
 
 ## 6. 关联材料
 
