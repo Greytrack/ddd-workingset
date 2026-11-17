@@ -375,6 +375,8 @@ AI 可以起草 ADR，但**不得未经用户明确确认就标记为 Accepted**
 
 ## 12. 外部 Skills 与资料
 
+**本仓库的架构评审和实施以本文件、当前 Working Set 设计基线与已确认的契约为准。** 忽略 AirEdge 的 `DataObject`／SDK 布局，包括 `biz/sdk/sdkimpl`、`IInner*` 和 Tab 规则。即使它们出现在本地 `.lattice` 配置或 Skill 引用的资料中，也不作为本仓库的目录、类型或依赖要求。沿用本仓库的 Maven 模块与领域、应用、适配器、基础设施分层，事务和事件语义按已接受的 ADR 与相应契约核对。
+
 ### 12.1 Lattice Skills
 
 外部 Skills 根目录：

@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.infrastructure.RequirementAdapter;
+import alm.requirement.adapters.workingset.RequirementAdapter;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.Caller;
 import sk.workingset.application.DeriveCommand;

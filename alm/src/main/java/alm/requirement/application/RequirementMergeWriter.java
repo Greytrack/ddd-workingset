@@ -7,7 +7,7 @@ import java.util.Map;
 
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
-import alm.requirement.infrastructure.JdbcRequirementRepository;
+import alm.requirement.application.port.RequirementMutationStore;
 import sk.workingset.application.port.RequirementMergeCommand;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -17,10 +17,10 @@ import sk.workingset.domain.merge.MergeFailure.Reason;
 
 /** ALM 写入边界。按既有 Requirement 行为校验和提交整个条目。 */
 public final class RequirementMergeWriter {
-    private final JdbcRequirementRepository repository;
+    private final RequirementMutationStore repository;
     private final RequirementApplicationService requirements;
 
-    public RequirementMergeWriter(JdbcRequirementRepository repository, RequirementApplicationService requirements) {
+    public RequirementMergeWriter(RequirementMutationStore repository, RequirementApplicationService requirements) {
         this.repository = repository;
         this.requirements = requirements;
     }

@@ -1,4 +1,4 @@
-package alm.requirement.infrastructure;
+package alm.requirement.adapters.workingset;
 
 import java.util.Map;
 import java.util.Objects;

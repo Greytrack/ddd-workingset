@@ -9,7 +9,7 @@ import sk.workingset.application.port.TrackerItemCatalog;
 
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
-import alm.requirement.domain.RequirementRepository;
+import alm.requirement.application.port.RequirementMutationStore;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.RequirementCatalog.Identity;
@@ -26,7 +26,7 @@ import sk.workingset.domain.Version;
  * <p>写入使用 {@code lock_version} 条件更新：只有当前数据库版本等于待写入版本减一才更新；
  * 0 行受影响视为并发冲突，显式抛出 {@link LockVersionConflictException}，不静默覆盖。
  */
-public class JdbcRequirementRepository implements RequirementRepository {
+public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private static final String INSERT = """
             INSERT INTO requirements
@@ -111,11 +111,13 @@ public class JdbcRequirementRepository implements RequirementRepository {
                 """, Boolean.class, trackerId.value(), commonId.value()));
     }
 
+    @Override
     public Optional<Requirement> lockById(LocalId id) {
         return jdbc.query("SELECT * FROM requirements WHERE local_id = ? FOR UPDATE",
                 MAPPER, id.value()).stream().findFirst();
     }
 
+    @Override
     public Optional<Requirement> lockFamilyInWorkingSet(TrackerId trackerId, CommonId commonId) {
         return jdbc.query("""
                 SELECT r.* FROM requirements r
@@ -125,6 +127,7 @@ public class JdbcRequirementRepository implements RequirementRepository {
                 """, MAPPER, trackerId.value(), commonId.value()).stream().findFirst();
     }
 
+    @Override
     public void purge(Requirement requirement) {
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", requirement.localId().value());
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", requirement.localId().value());

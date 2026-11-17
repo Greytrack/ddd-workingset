@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.infrastructure.SnapshotStore;
+import alm.requirement.application.port.SnapshotStore;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.IdentifierGenerator;

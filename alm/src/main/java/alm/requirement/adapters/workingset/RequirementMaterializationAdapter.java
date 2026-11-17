@@ -1,8 +1,10 @@
-package alm.requirement.infrastructure;
+package alm.requirement.adapters.workingset;
 
 import java.util.List;
 import java.util.Objects;
 
+import alm.requirement.application.port.RequirementSnapshot;
+import alm.requirement.application.port.SnapshotStore;
 import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;

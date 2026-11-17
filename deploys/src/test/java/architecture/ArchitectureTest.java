@@ -17,6 +17,13 @@ import sk.common.error.AppException;
 class ArchitectureTest {
 
     @ArchTest
+    static final ArchRule alm_inner_layers_must_not_depend_on_infrastructure =
+            noClasses()
+                    .that().resideInAnyPackage("alm.requirement.domain..", "alm.requirement.application..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "alm.requirement.infrastructure..", "alm.requirement.adapters..");
+
+    @ArchTest
     static final ArchRule domain_must_not_depend_on_app_exception =
             noClasses()
                     .that().resideInAnyPackage("sk.workingset.domain..", "alm.requirement.domain..")

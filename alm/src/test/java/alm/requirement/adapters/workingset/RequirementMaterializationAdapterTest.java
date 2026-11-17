@@ -1,10 +1,12 @@
-package alm.requirement.infrastructure;
+package alm.requirement.adapters.workingset;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Optional;
 
+import alm.requirement.application.port.RequirementSnapshot;
+import alm.requirement.application.port.SnapshotStore;
 import alm.requirement.application.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;

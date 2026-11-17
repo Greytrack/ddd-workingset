@@ -5,7 +5,7 @@ import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
-import alm.requirement.infrastructure.JdbcRequirementRepository;
+import alm.requirement.application.port.RequirementMutationStore;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.event.RequirementPurged;
@@ -20,11 +20,11 @@ import sk.workingset.domain.LocalId;
  * 本服务只删除业务对象，并在提交后通过 {@link RequirementPurged} 事件通知 SK 清理 LTI。
  */
 public class RequirementLifecycleService {
-    private final JdbcRequirementRepository requirements;
+    private final RequirementMutationStore requirements;
     private final TrackerItemLifecyclePort lifecycle;
     private final ApplicationEventPublisher eventPublisher;
 
-    public RequirementLifecycleService(JdbcRequirementRepository requirements,
+    public RequirementLifecycleService(RequirementMutationStore requirements,
                                        TrackerItemLifecyclePort lifecycle,
                                        ApplicationEventPublisher eventPublisher) {
         this.requirements = requirements;

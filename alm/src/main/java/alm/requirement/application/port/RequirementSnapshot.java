@@ -1,4 +1,4 @@
-package alm.requirement.infrastructure;
+package alm.requirement.application.port;
 
 import java.util.Objects;
 
