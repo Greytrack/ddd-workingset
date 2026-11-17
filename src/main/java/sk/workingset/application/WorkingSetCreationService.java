@@ -26,6 +26,7 @@ import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.WorkingSetCreation.Status;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.application.event.RelationEventMetadata.OriginType;
 import sk.workingset.domain.TrackerId;
 
 public class WorkingSetCreationService {
@@ -36,11 +37,12 @@ public class WorkingSetCreationService {
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
     private final WorkingSetItemIndexer indexer;
+    private final RelationEventStep relationEvents;
 
     public WorkingSetCreationService(WorkingSetCreationStore store, WorkingSetRepository workingSets,
                                      TrackerRepository trackers, WorkingSetApplicationService workingSetService,
                                      TransactionTemplate transaction, ApplicationEventPublisher events,
-                                     WorkingSetItemIndexer indexer) {
+                                     WorkingSetItemIndexer indexer, RelationEventStep relationEvents) {
         this.store = store;
         this.workingSets = workingSets;
         this.trackers = trackers;
@@ -48,6 +50,7 @@ public class WorkingSetCreationService {
         this.transaction = transaction;
         this.events = events;
         this.indexer = indexer;
+        this.relationEvents = relationEvents;
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -165,7 +168,8 @@ public class WorkingSetCreationService {
                     workingSetService.revealExtensionTrackers(WorkingSetId.of(updated.request().newWorkingSetId()),
                             updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList());
                 }
-                if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS && updated.status() != Status.Running) {
+                if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
+                        && updated.stage() != Stage.INDEX_UNSHARED_TRACKERS) {
                     var scannedTrackers = updated.indexProgress().values().stream()
                             .map(IndexProgress::scannedChildTrackerId).filter(java.util.Objects::nonNull).sorted().toList();
                     events.publishEvent(new TrackerItemsIndexed(id, updated.request().newWorkingSetId(),
@@ -180,6 +184,15 @@ public class WorkingSetCreationService {
         String item = creation.currentItem();
         var target = WorkingSetId.of(creation.request().newWorkingSetId());
         var stage = creation.stage();
+        if (stage == Stage.PUBLISH_RELATION_EVENTS) {
+            var originType = creation.request().mode() == Mode.CREATE ? OriginType.CREATION : OriginType.EXTENSION;
+            var result = relationEvents.publish(target, TrackerId.of(item), originType, creation.id());
+            if (result.failed() > 0) {
+                return recordFailure(creation, item, "RELATION_EVENT_FAILED");
+            }
+            return creation.advance(result.skipped() ? ItemOutcome.Skipped : ItemOutcome.Succeeded, null,
+                    Instant.now());
+        }
         if (stage == Stage.BIND_UNSHARED_TRACKERS && creation.failures().stream()
                 .anyMatch(failure -> failure.stage() == Stage.COPY_UNSHARED_TRACKERS
                         && item.equals(failure.trackerId()))) {
@@ -199,6 +212,7 @@ public class WorkingSetCreationService {
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
                 case INDEX_UNSHARED_TRACKERS -> throw new IllegalStateException("Indexing requires batch execution");
+                case PUBLISH_RELATION_EVENTS -> throw new IllegalStateException("Relation events require batch execution");
             };
             return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
         } catch (BindingFailure failure) {
@@ -214,7 +228,8 @@ public class WorkingSetCreationService {
     private WorkingSetCreation recordFailure(WorkingSetCreation creation, String item, String reason) {
         var stage = creation.stage();
         String trackerId = switch (stage) {
-            case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS -> item;
+            case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
+                    PUBLISH_RELATION_EVENTS -> item;
             default -> null;
         };
         String spaceId = stage == Stage.BIND_PRODUCT_SPACES ? item

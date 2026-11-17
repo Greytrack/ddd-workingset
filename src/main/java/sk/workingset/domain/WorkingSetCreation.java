@@ -17,7 +17,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
     public enum Mode { CREATE, EXTEND }
     public enum Stage {
         CREATE_WORKING_SET, BIND_PRODUCT_SPACES, COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
-        INDEX_UNSHARED_TRACKERS
+        INDEX_UNSHARED_TRACKERS, PUBLISH_RELATION_EVENTS
     }
 
     public enum ItemOutcome { Succeeded, Failed, Skipped }
@@ -54,7 +54,8 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             return switch (stage) {
                 case CREATE_WORKING_SET -> mode == Mode.CREATE ? List.of(newWorkingSetId) : List.of();
                 case BIND_PRODUCT_SPACES -> productSpaceIds;
-                case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS -> unsharedParentTrackerIds;
+                case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS,
+                        PUBLISH_RELATION_EVENTS -> unsharedParentTrackerIds;
                 case BIND_SHARED_TRACKERS -> sharedTrackerIds;
             };
         }

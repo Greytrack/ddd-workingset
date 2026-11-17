@@ -158,7 +158,7 @@ class WorkingSetCreationAcceptanceTest {
         var request = new Request("1", child, "range", List.of(space), List.of(shared), List.of(unshared));
         String id = submit(request);
         var completed = awaitStatus(id, Status.Succeeded);
-        assertEquals(6, completed.progress().succeeded());
+        assertEquals(7, completed.progress().succeeded());
         var bindings = bindings();
         assertEquals(List.of(space), bindings.spaces().stream().map(binding -> binding.productSpaceId()).toList());
         assertEquals(2, bindings.trackers().size());

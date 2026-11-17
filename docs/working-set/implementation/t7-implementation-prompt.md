@@ -35,8 +35,8 @@
 
 ### P1：T7-E 关系事件
 
-- 事件契约与发布器骨架已定义：[RelationSourcePort](../../../src/main/java/sk/workingset/application/port/RelationSourcePort.java)、[RelationEventPublisher](../../../src/main/java/sk/workingset/application/RelationEventPublisher.java)。
-- 下一步是把事件发布接入 T7 的 `PUBLISH_RELATION_EVENTS` 与 Merge 的 `PUBLISH_RELATION_REPAIR_EVENTS` step。
+- 事件契约、发布器和 T7 `PUBLISH_RELATION_EVENTS` 已实现；见 [RelationSourcePort](../../../src/main/java/sk/workingset/application/port/RelationSourcePort.java)、[RelationEventPublisher](../../../src/main/java/sk/workingset/application/RelationEventPublisher.java)、[RelationEventStep](../../../src/main/java/sk/workingset/application/RelationEventStep.java)。
+- 下一步是把事件发布接入 Merge 的 `PUBLISH_RELATION_REPAIR_EVENTS` step。
 - WorkingSet 不操作 Reference/Association 聚合，只发布：
   - `ReferenceCreationRequested`
   - `DanglingReferenceRepairRequested`

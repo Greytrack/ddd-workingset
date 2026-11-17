@@ -29,6 +29,7 @@ import sk.workingset.application.CowRecoveryService;
 import sk.workingset.application.MergeComparisonService;
 import sk.workingset.application.MergeExecutionService;
 import sk.workingset.application.RelationEventPublisher;
+import sk.workingset.application.RelationEventStep;
 import sk.workingset.application.TrackerItemLifecycleService;
 import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.application.port.RequirementCatalog;
@@ -203,11 +204,20 @@ public class ApplicationConfiguration {
     }
 
     @Bean
+    public RelationEventStep relationEventStep(JdbcBindingRepositories bindings,
+                                                LightTrackerItemRepository items,
+                                                RelationSourcePort source,
+                                                RelationEventPublisher publisher) {
+        return new RelationEventStep(bindings, bindings, items, source, publisher);
+    }
+
+    @Bean
     public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
             JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
-            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer) {
+            TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer,
+            RelationEventStep relationEventStep) {
         return new WorkingSetCreationService(store, bindings, bindings, workingSets, newTransactionTemplate, events,
-                indexer);
+                indexer, relationEventStep);
     }
 
     @Bean

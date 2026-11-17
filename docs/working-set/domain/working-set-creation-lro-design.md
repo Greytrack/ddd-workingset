@@ -55,7 +55,7 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 | `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
 | `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
 | `INDEX_UNSHARED_TRACKERS`（T7-D 已实现） | 对每个绑定成功的非共享子 Tracker，按父 Tracker 的有效 Item 创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
-| `PUBLISH_RELATION_EVENTS` | 索引完成后发布 `ReferenceCreationRequested`、`DanglingReferenceRepairRequested`、`AssociationCreationRequested`；不操作关系聚合 | 索引 | 记录事件发布失败；不阻断主流程，不自动重试 |
+| `PUBLISH_RELATION_EVENTS`（T7-E 已实现） | 索引完成后发布 `ReferenceCreationRequested`、`DanglingReferenceRepairRequested`、`AssociationCreationRequested`；不操作关系聚合 | 索引 | 记录事件发布失败；不阻断主流程，不自动重试 |
 
 - 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
 - 复制与绑定分别提交。复制失败时跳过该 Tracker 的绑定，复制成功而绑定失败时保留副本并记录绑定阶段的失败。轮询的 `progress` 是任务汇总，`stageProgress` 分阶段记录成功、失败、跳过和总数。
