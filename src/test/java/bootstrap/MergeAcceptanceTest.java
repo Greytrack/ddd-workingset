@@ -53,6 +53,7 @@ import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
+import sk.workingset.domain.merge.Comparison.TrackerPair;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.ApplyResult;
@@ -690,6 +691,40 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-request"),
                 "decisions", List.of(existence(difference, "CREATE"), existence(other, "CREATE"))), Map.class));
+    }
+
+    @Test
+    void candidatePairsFollowDirectSourceIdOnly() {
+        String secondRoot = id("root2");
+        String secondChild = id("child2");
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
+                VALUES (?, '1', ?, ?, 'UNSHARED')
+                """, secondRoot, space, classification);
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id,
+                    sharing_mode)
+                VALUES (?, ?, ?, ?, ?, 'UNSHARED')
+                """, secondChild, secondRoot, child, space, classification);
+        jdbc.update("""
+                INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id, classification_id,
+                    sharing_mode, origin)
+                VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
+                """, child, secondChild, space, classification);
+
+        var page = compare("1", child);
+        var first = new TrackerPair(WorkingSetId.of("1"), TrackerId.of(rootTracker),
+                WorkingSetId.of(child), TrackerId.of(childTracker));
+        var second = new TrackerPair(WorkingSetId.of("1"), TrackerId.of(secondRoot),
+                WorkingSetId.of(child), TrackerId.of(secondChild));
+
+        assertEquals(2, page.candidates().size());
+        assertTrue(page.candidates().contains(first));
+        assertTrue(page.candidates().contains(second));
+        assertFalse(page.candidates().contains(new TrackerPair(WorkingSetId.of("1"), TrackerId.of(secondRoot),
+                WorkingSetId.of(child), TrackerId.of(childTracker))));
+        assertFalse(page.candidates().contains(new TrackerPair(WorkingSetId.of(child), TrackerId.of(childTracker),
+                WorkingSetId.of("1"), TrackerId.of(secondChild))));
     }
 
     @Test

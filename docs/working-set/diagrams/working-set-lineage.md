@@ -57,7 +57,8 @@ flowchart TD
 ```
 
 - 只允许直属父子双向；`source/target` 是角色，不改变谱系方向。
-- 兄弟、跨代一律拒绝；共享 Tracker 不参与 Merge。
+- Tracker 级候选只按直接 `sourceId` 配对；同一父的多个直接子各自成对，派生兄弟之间不配对，跨级不配对。
+- 兄弟 WS、跨代 WS 一律拒绝；共享 Tracker 不参与 Merge。
 
 ## 4. 删除边界
 

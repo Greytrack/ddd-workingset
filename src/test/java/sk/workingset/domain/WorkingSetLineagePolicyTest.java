@@ -1,6 +1,7 @@
 package sk.workingset.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,6 +35,20 @@ class WorkingSetLineagePolicyTest {
         assertEquals(List.of(unshared), WorkingSetLineagePolicy.comparableBindings(root, child));
         assertEquals(List.of(unshared), WorkingSetLineagePolicy.comparableBindings(child, root));
         assertTrue(WorkingSetLineagePolicy.comparableBindings(child, grandchild).isEmpty());
+    }
+
+    @Test
+    void directDerivationRequiresChildSourceIdToBeTheImmediateParent() {
+        var productSpace = new ProductSpace("space");
+        var classification = new Classification("class", SharingMode.UNSHARED);
+        var parent = Tracker.original(TrackerId.of("parent"), productSpace, classification, null);
+        var child = Tracker.derived(TrackerId.of("child"), parent, childId);
+        var sibling = Tracker.derived(TrackerId.of("sibling"), parent, childId);
+        var grandchild = Tracker.derived(TrackerId.of("grandchild"), child, grandchildId);
+
+        assertTrue(WorkingSetLineagePolicy.isDirectDerivation(child, parent));
+        assertFalse(WorkingSetLineagePolicy.isDirectDerivation(grandchild, parent));
+        assertFalse(WorkingSetLineagePolicy.isDirectDerivation(sibling, child));
     }
 
     @Test

@@ -36,5 +36,5 @@
 
 ## 验证
 
-- 当时 `mvn -B -q test`：113 项通过，0 失败、0 错误、0 跳过；Merge 异步监听器不再因测试清理产生 `RoundNotFound` 噪音。2026-11-17 T6-F 实施后全量为 122 项通过，错误码契约、默认 Tracker 边界与 TrackerPair 四元组测试补充后为 131 项。
+- 当时 `mvn -B -q test`：113 项通过，0 失败、0 错误、0 跳过；Merge 异步监听器不再因测试清理产生 `RoundNotFound` 噪音。2026-11-17 T6-F 实施后全量为 122 项通过；错误码契约、默认 Tracker 边界、TrackerPair 四元组与直接 `sourceId` 配对测试补充后为 133 项。
 - 文档本地链接检查：`docs/` 无断链；`pre-design/` 仍有已知旧相对链接（`TC-006`），不影响语义。

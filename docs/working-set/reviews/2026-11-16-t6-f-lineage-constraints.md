@@ -49,7 +49,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 2. `tracker_bindings` 去掉 `UNIQUE (working_set_id, product_space_id, classification_id)`，主键保持 `(working_set_id, tracker_id)`。**已实施**。
 3. 新增产品空间创建命令并同步创建默认 Tracker。**已实施**（`POST /api/worksets/{id}/product-spaces`）。产品空间只能归属默认工作集：路径中的 `{id}` 仅为入口占位，不参与目标选择，所有调用一律固定到默认工作集；入口层不做额外限制，这是有意设计，不是待收紧项。
 4. Tracker 名称唯一约束：**已实施**为 `(working_set_id, product_space_id, classification_id, name)`，仅业务原生 Tracker 参与；因业务原生 Tracker 只存在于默认工作集，实际等价于（空间，分类）内唯一。作用域说明见 §4 注。
-5. compare/merge 候选配对：**未实现完整裁定**。当前 `candidates` 实际按直接 `sourceId` 配对（`QUESTION-002.j`）。`Difference.key` 已于 2026-11-17 废弃，条目身份由 `MergeRound.Entry.id` + 完整 evidence 承担，见 §4.1。
+5. compare/merge 候选配对：**已按 §4.2 实施**。只按直接 `sourceId` 配对；跨级、派生兄弟互配、同槽全组合均被排除。`Difference.key` 已于 2026-11-17 废弃，条目身份由 `MergeRound.Entry.id` + 完整 evidence 承担，见 §4.1。
 
 ## 4. 2026-11-16 补充裁定（细化）
 
@@ -66,9 +66,13 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 - 同一家族的 Item 在同一工作集只属于一个 Tracker（POL-005 与 Item 归属），所以“左侧 Tracker 集合 × 右侧 Tracker 集合”不会让同一家族重复出现。
 - Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。轮次上下文与条目证据中的双侧定位（含 LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
 
-### 4.2 仍需确认
+### 4.2 候选配对（QUESTION-002.j，2026-11-17 用户确认）
 
-候选对的生成方式：同一（空间，分类）下取“左侧全部 Tracker × 右侧全部 Tracker”的全部组合，还是先按 `source_id`/`is_default`/名称过滤后再配对？当前 `candidates` 已按直接 `sourceId` 近似实现 B，但仍需用户确认后才能关闭 `QUESTION-002.j`。
+- **只按 Tracker 的直接 `sourceId` 派生关系配对**：子 Tracker 的 `sourceId` 必须等于父侧 Tracker 的 `trackerId`。
+- 只允许直属派生父子；跨级（祖父/更远）不配对，派生兄弟节点之间不配对。
+- 不做同槽“左侧全部 Tracker × 右侧全部 Tracker”的全组合。
+- 同一父 Tracker 的多个直接子 Tracker 各自独立成对；每个子 Tracker 只对应自己的直接来源。
+- 来源无法在直属父工作集有效范围内解析时不生成候选对，不回退到同槽其他 Tracker。
 
 ### 4.3 Shared 默认与删除补位（QUESTION-002.k，2026-11-17 用户确认）
 
@@ -80,7 +84,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 - 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；`Difference.key`/`entryKey` 已废弃，条目身份改为 `Entry.id` + evidence。
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
-- 全量测试 131 项通过（含错误码契约、默认 Tracker 边界与 TrackerPair 四元组测试）。
+- 全量测试 133 项通过（含错误码契约、默认 Tracker 边界、TrackerPair 四元组与直接 `sourceId` 配对测试）。
 
 ## 6. 关联材料
 

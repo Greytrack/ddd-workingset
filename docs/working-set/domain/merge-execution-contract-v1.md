@@ -60,6 +60,8 @@ Diff 产生有向瞬时差异
 | --- | --- | --- | --- |
 | `compare` | source 范围（WorkingSetId）、target 范围、方向、条目范围（可选）、offset/limit | `TrackerItemDiff` 页 | 有向；只读、瞬时；分页通过重复 compare，不承诺跨请求冻结。不提供按持久化 token 回读的入口。 |
 
+**Tracker 级准入（2026-11-17 用户确认）**：候选 Tracker 对只按直接 `sourceId` 派生关系生成——子 Tracker 的 `sourceId` 必须等于父侧 Tracker 的 `trackerId`；只允许直属派生父子，跨级（祖父/更远）不配对，派生兄弟节点之间不配对，也不做同槽全组合。来源无法在直属父工作集有效范围内解析时不生成候选对，不回退到同槽其他 Tracker。
+
 `TrackerItemDiff` 至少包含（契约级抽象，不是表结构）：
 
 - 记录级存在性差异（两侧各有/各无）；

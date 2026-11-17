@@ -65,6 +65,7 @@
 | `POL-014` | 删除/移除八条：Shared 移除仅解绑；非共享无 Item/无派生子才删除；有派生子不允许删除；任意 Tracker 有 Item 不允许聚合删除；有组织子节点但无派生子不允许删除；最后 Tracker 移除不删空间绑定；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 下 Shared 空且无子可删。 | 用户确认（2026-11-10，修订 `POL-006`） | 边界澄清见 `INV-064` |
 | `POL-015` | WorkingSet 聚合维护当前工作集的 SpaceBinding/TrackerBinding 结构；ProductSpace/Tracker 只维护自身归属身份。 | 用户确认（2026-11-10） | 绑定 Entity 内部结构待定 |
 | `POL-016` | 仅支持不可恢复的领域删除；软删/归档/恢复不纳入 T2 本版；彻底删除不强制数据库物理 DELETE；区分绑定移除、聚合删除、业务 TrackerItem 删除。 | 用户确认（2026-11-11，T2 K1） | 业务 Item 软删见 D16 |
+| `POL-017` | Compare/Merge 候选 Tracker 对只按直接 `sourceId` 派生关系确定：只允许直属派生父子，不允许跨级，不允许派生兄弟节点互配，不做同槽全组合。 | 用户确认（2026-11-17） | T6-F §4.2、T1 §3.1 |
 
 ## 合并决策优先（已确认业务政策）
 

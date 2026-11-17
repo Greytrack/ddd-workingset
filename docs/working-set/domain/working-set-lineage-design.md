@@ -61,6 +61,7 @@
 
 - 只允许相邻父子双向：`target.parent == source` 或 `source.parent == target`。
 - 兄弟、跨代（祖先/后代非直接）一律拒绝。
+- **Tracker 级配对只按直接 `sourceId`**：子 Tracker 的 `sourceId` 必须等于父侧 Tracker 的 `trackerId`；同一父的多个直接子 Tracker 各自成对，派生兄弟节点之间不配对，不做同槽全组合。
 - 共享 Tracker 不参与 Merge（T1）。
 - Merge 的 source/target 是角色，不改变谱系方向。
 
@@ -132,7 +133,7 @@ T6-F（2026-11-16）已关闭：Shared 父级一致性（允许悬挂）、同�
 3. 多级下 `Tracker.parentId`（同 WS 组织父级）与 `sourceId`（派生来源）如何与 WS 谱系联合校验；T6-F 已定 `sourceId` 不可变，联合校验仍待设计。
 4. 真实平台元数据中既有 WorkingSet 的父级回填来源与校验方式。
 5. 父 WS 解绑/删除 Tracker 后，子 WS 已存在的绑定是否保留、如何清理。
-6. 多 Tracker 的 Compare 配对规则仍待 `QUESTION-002.j` 裁定。
+6. 多 Tracker 的 Compare 配对已按直接 `sourceId` 裁定（2026-11-17），见 §3.4 与 T6-F §4.2；不再作为开放问题。
 
 ## 9. 状态与下一步
 

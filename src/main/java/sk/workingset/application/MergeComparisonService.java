@@ -19,6 +19,7 @@ import sk.workingset.application.port.TrackerRepository;
 import sk.workingset.application.port.WorkingSetRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
@@ -121,9 +122,14 @@ public class MergeComparisonService {
     List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {
         var left = workingSet(source);
         var right = workingSet(target);
+        var child = WorkingSetLineagePolicy.childOf(left, right);
         return WorkingSetLineagePolicy.comparableBindings(left, right).stream().flatMap(binding ->
-                trackers.findTracker(binding.trackerId()).stream().filter(tracker -> tracker.sourceId() != null)
-                .filter(tracker -> parentIncludes(left, right, tracker.sourceId()))
+                trackers.findTracker(binding.trackerId()).stream()
+                // The binding must belong to the direct child Working Set; this rejects cross-level
+                // and Shared bindings that happen to carry a sourceId.
+                .filter(tracker -> tracker.workingSetId().equals(child.id()))
+                .filter(tracker -> tracker.sourceId() != null)
+                .filter(tracker -> parentIncludes(left, right, tracker))
                 .map(tracker -> tracker.workingSetId().equals(source)
                         ? new TrackerPair(source, tracker.trackerId(), target, tracker.sourceId())
                         : new TrackerPair(source, tracker.sourceId(), target, tracker.trackerId()))).toList();
@@ -133,11 +139,21 @@ public class MergeComparisonService {
         return target.equals(workingSet(source).parentWorkingSetId());
     }
 
-    private boolean parentIncludes(WorkingSet source, WorkingSet target, TrackerId trackerId) {
+    /**
+     * The source tracker must be the child's direct sourceId, must belong to the direct parent
+     * Working Set, and must be inside that parent's effective range. No ancestor fallback and no
+     * sibling pairing: a child's siblings are never candidates for each other.
+     */
+    private boolean parentIncludes(WorkingSet source, WorkingSet target, Tracker child) {
+        if (child.sourceId() == null) {
+            return false;
+        }
         WorkingSet parent = source.id().equals(target.parentWorkingSetId()) ? source : target;
-        return trackers.findTracker(trackerId)
-                .filter(tracker -> parent.id().equals(tracker.workingSetId()))
-                .filter(tracker -> WorkingSet.DEFAULT_ID.equals(parent.id()) || parent.hasTrackerBinding(trackerId))
+        return trackers.findTracker(child.sourceId())
+                .filter(sourceTracker -> parent.id().equals(sourceTracker.workingSetId()))
+                .filter(sourceTracker -> WorkingSetLineagePolicy.isDirectDerivation(child, sourceTracker))
+                .filter(sourceTracker -> WorkingSet.DEFAULT_ID.equals(parent.id())
+                        || parent.hasTrackerBinding(sourceTracker.trackerId()))
                 .isPresent();
     }
 
