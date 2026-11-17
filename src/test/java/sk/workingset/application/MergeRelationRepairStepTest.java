@@ -35,6 +35,31 @@ import sk.workingset.domain.merge.MergeRound.Outcome;
 
 class MergeRelationRepairStepTest {
     @Test
+    void ignoresKeepTargetRejectedAndDeferredEntries() {
+        var targetWorkingSet = WorkingSetId.of("child");
+        var round = MergeRound.prepare("round-2", "request-2", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
+                .register(entry("kept", "C1", "L1", "L2", new MergeDecision(Map.of("title", FieldAction.KEEP_TARGET),
+                        null, false)))
+                .register(entry("rejected", "C2", "L3", "L4", new MergeDecision(Map.of("title", FieldAction.ACCEPT),
+                        null, false)))
+                .register(entry("deferred", "C3", "L5", "L6", new MergeDecision(Map.of(), null, true)))
+                .start();
+        for (var entry : round.entries()) {
+            round = round.finishEntry(entry, new ItemResult(entry.id(),
+                    switch (entry.id()) {
+                        case "kept" -> Outcome.Applied;
+                        case "rejected" -> Outcome.Rejected;
+                        default -> Outcome.Deferred;
+                    }, entry.decision().markAsMerged() ? "DEFER" : "KEEP_TARGET", null, null, null));
+        }
+        round = round.complete(Instant.now());
+
+        var step = new MergeRelationRepairStep(mock(RelationSourcePort.class),
+                new RelationEventPublisher(event -> { }, new AtomicLong(1)::incrementAndGet));
+        assertEquals(0, step.changedTargets(round).size());
+    }
+
+    @Test
     void repairsOnlyTargetsChangedBySuccessfulMergeEntries() {
         var targetWorkingSet = WorkingSetId.of("child");
         var pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("T1"),
@@ -65,6 +90,15 @@ class MergeRelationRepairStepTest {
         assertEquals(0, result.failed());
         assertEquals(1, published.size());
         assertEquals(1, step.changedTargets(round).size());
+    }
+
+    private static Entry entry(String id, String family, String sourceLocalId, String targetLocalId,
+                               MergeDecision decision) {
+        var pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("T1"),
+                WorkingSetId.of("child"), TrackerId.of("T2"));
+        var difference = new Difference(CommonId.of(family), pair,
+                side(sourceLocalId, Revision.of(3)), side(targetLocalId, Revision.of(4)), List.of("title"));
+        return new Entry(id, 1, difference, decision, null);
     }
 
     private static Side side(String localId, Revision revision) {

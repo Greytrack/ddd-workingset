@@ -1,6 +1,7 @@
 package sk.workingset.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -85,5 +86,35 @@ class RelationEventStepTest {
         assertTrue(published.get(0) instanceof ReferenceCreationRequested);
         assertTrue(published.get(1) instanceof AssociationCreationRequested);
         assertTrue(published.get(2) instanceof DanglingReferenceRepairRequested);
+    }
+
+    @Test
+    void recordsFailureWithoutThrowingWhenRelationSourceFails() {
+        var parent = Tracker.original(parentId, new ProductSpace("space"),
+                new Classification("class", SharingMode.UNSHARED), null);
+        var child = Tracker.derived(childId, parent, target, true);
+        var workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
+                List.of(new TrackerBinding(target, childId, "space", "class", SharingMode.UNSHARED,
+                        TrackerOrigin.UNSHARED_DERIVATION)));
+        var item = LightTrackerItem.derive(LocalId.of("L1"), CommonId.of("C1"), childId, target, Revision.of(3),
+                LocalId.of("L0"), Revision.of(3));
+
+        TrackerRepository trackers = mock(TrackerRepository.class);
+        WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
+        LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
+        RelationSourcePort source = mock(RelationSourcePort.class);
+        when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
+        when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
+        when(items.findInTracker(childId)).thenReturn(List.of(item));
+        when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
+
+        var step = new RelationEventStep(trackers, workingSets, items, source,
+                new RelationEventPublisher(event -> { }, new AtomicLong(1)::incrementAndGet));
+
+        var result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
+
+        assertEquals(0, result.published());
+        assertEquals(1, result.failed());
+        assertFalse(result.succeeded());
     }
 }

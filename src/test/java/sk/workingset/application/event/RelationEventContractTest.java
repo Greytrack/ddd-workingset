@@ -59,6 +59,12 @@ class RelationEventContractTest {
     }
 
     @Test
+    void referenceEndpointRequiresWorkingSetEvenWhenTargetLocalIsMissing() {
+        assertThrows(NullPointerException.class,
+                () -> new ReferenceEndpoint(null, null, CommonId.of("C1"), TrackerId.of("T1"), null));
+    }
+
+    @Test
     void metadataRejectsBlankIdentity() {
         assertThrows(IllegalArgumentException.class, () -> new RelationEventMetadata("", "reference-1",
                 "creation-1", RelationEventMetadata.OriginType.CREATION, Instant.now()));
