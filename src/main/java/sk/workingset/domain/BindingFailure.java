@@ -1,19 +1,50 @@
 package sk.workingset.domain;
 
+import sk.common.error.AppException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Map;
 
 /** 绑定/删除失败：携带原因与可观察详情（子级、成员、空间等），由 Web 层映射为 HTTP 状态。 */
-public final class BindingFailure extends RuntimeException {
+public final class BindingFailure extends AppException {
     public enum Reason {
-        WorkingSetNotFound, WorkingSetNotWritable, WorkingSetCycle, WorkingSetAlreadyExists,
-        WorkingSetParentImmutable, WorkingSetsNotAdjacent, WorkingSetHasChildren,
-        ProductSpaceNotFound, AlreadyBound,
-        MissingSpaceBinding, TrackerAlreadyBound, SlotOccupied, SourceTrackerNotFound,
-        SharingModeMismatch, TrackerOutsideSlot, SourceItemNotFound, SourceItemMismatch,
-        TrackerNotFound, TrackerBindingNotFound,
-        SpaceBindingNotFound, SpaceStillHasTrackers, SpaceStillBoundInWorkingSet,
-        TrackerHasItems, TrackerHasOrgChildren, TrackerHasDerivedChildren,
-        DefaultWorkingSetUndeletable, MemberCannotBeUnbound
+        WorkingSetNotFound(WorkingsetResultCode.WORKING_SET_NOT_EXISTS),
+        WorkingSetNotWritable(WorkingsetResultCode.WORKING_SET_NOT_WRITABLE),
+        WorkingSetCycle(WorkingsetResultCode.WORKING_SET_CYCLE),
+        WorkingSetAlreadyExists(WorkingsetResultCode.WORKING_SET_ALREADY_EXISTS),
+        WorkingSetParentImmutable(WorkingsetResultCode.WORKING_SET_PARENT_IMMUTABLE),
+        WorkingSetsNotAdjacent(WorkingsetResultCode.WORKING_SETS_NOT_ADJACENT),
+        WorkingSetHasChildren(WorkingsetResultCode.WORKING_SET_HAS_CHILDREN),
+        ProductSpaceNotFound(WorkingsetResultCode.PRODUCT_SPACE_NOT_FOUND),
+        AlreadyBound(WorkingsetResultCode.ALREADY_BOUND),
+        MissingSpaceBinding(WorkingsetResultCode.MISSING_SPACE_BINDING),
+        TrackerAlreadyBound(WorkingsetResultCode.TRACKER_ALREADY_BOUND),
+        SlotOccupied(WorkingsetResultCode.SLOT_OCCUPIED),
+        SourceTrackerNotFound(WorkingsetResultCode.SOURCE_TRACKER_NOT_FOUND),
+        SharingModeMismatch(WorkingsetResultCode.SHARING_MODE_MISMATCH),
+        TrackerOutsideSlot(WorkingsetResultCode.TRACKER_OUTSIDE_SLOT),
+        SourceItemNotFound(WorkingsetResultCode.SOURCE_ITEM_NOT_FOUND),
+        SourceItemMismatch(WorkingsetResultCode.SOURCE_ITEM_MISMATCH),
+        TrackerNotFound(WorkingsetResultCode.TRACKER_NOT_FOUND),
+        TrackerBindingNotFound(WorkingsetResultCode.TRACKER_BINDING_NOT_FOUND),
+        SpaceBindingNotFound(WorkingsetResultCode.SPACE_BINDING_NOT_FOUND),
+        SpaceStillHasTrackers(WorkingsetResultCode.SPACE_STILL_HAS_TRACKERS),
+        SpaceStillBoundInWorkingSet(WorkingsetResultCode.SPACE_STILL_BOUND_IN_WORKING_SET),
+        TrackerHasItems(WorkingsetResultCode.TRACKER_HAS_ITEMS),
+        TrackerHasOrgChildren(WorkingsetResultCode.TRACKER_HAS_ORG_CHILDREN),
+        TrackerHasDerivedChildren(WorkingsetResultCode.TRACKER_HAS_DERIVED_CHILDREN),
+        DefaultWorkingSetUndeletable(WorkingsetResultCode.DEFAULT_WORKING_SET_UNDELETABLE),
+        MemberCannotBeUnbound(WorkingsetResultCode.MEMBER_CANNOT_BE_UNBOUND);
+
+        private final WorkingsetResultCode resultCode;
+
+        Reason(WorkingsetResultCode resultCode) {
+            this.resultCode = resultCode;
+        }
+
+        public WorkingsetResultCode resultCode() {
+            return resultCode;
+        }
     }
 
     private final Reason reason;
@@ -24,7 +55,7 @@ public final class BindingFailure extends RuntimeException {
     }
 
     public BindingFailure(Reason reason, String detail, Map<String, Object> context) {
-        super(detail);
+        super(reason.resultCode(), detail, null);
         this.reason = reason;
         this.context = Map.copyOf(context);
     }

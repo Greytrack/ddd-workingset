@@ -1,5 +1,8 @@
 package bootstrap.web;
 
+import sk.common.error.AppException;
+import sk.common.error.WorkingsetResultCode;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -198,7 +201,7 @@ public class WorkingSetController {
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(name + " must not be blank");
+            throw new AppException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
         }
         return value;
     }

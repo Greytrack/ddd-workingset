@@ -1,5 +1,9 @@
 package bootstrap.web;
 
+import sk.common.error.APIException;
+import sk.common.error.AppException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -31,7 +35,7 @@ public class ApiExceptionHandler {
             case DEPENDENCY_UNAVAILABLE, UNKNOWN -> 503;
         };
         return ResponseEntity.status(status).body(Map.of(
-                "reason", failure.reason().name(),
+                "code", failure.getCode(), "reason", failure.reason().name(),
                 "message", failure.getMessage()));
     }
 
@@ -42,7 +46,7 @@ public class ApiExceptionHandler {
             case InvalidDecision, Rejected -> 422;
             default -> 409;
         };
-        return ResponseEntity.status(status).body(Map.of("reason", failure.reason().name(),
+        return ResponseEntity.status(status).body(Map.of("code", failure.getCode(), "reason", failure.reason().name(),
                 "message", failure.getMessage() == null ? failure.reason().name() : failure.getMessage()));
     }
 
@@ -55,6 +59,7 @@ public class ApiExceptionHandler {
             default -> 409;
         };
         Map<String, Object> body = new LinkedHashMap<>(failure.context());
+        body.put("code", failure.getCode());
         body.put("reason", failure.reason().name());
         body.put("message", failure.getMessage());
         return ResponseEntity.status(status).body(body);
@@ -62,22 +67,40 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation() {
-        return ResponseEntity.status(409).body(Map.of("reason", "DATA_INTEGRITY_CONFLICT",
-                "message", "The write conflicts with current persisted data"));
+        return ResponseEntity.status(409).body(Map.of("code", WorkingsetResultCode.DATA_INTEGRITY_CONFLICT.getCode(),
+                "reason", "DATA_INTEGRITY_CONFLICT", "message", WorkingsetResultCode.DATA_INTEGRITY_CONFLICT.getDesc()));
     }
 
     @ExceptionHandler(LockVersionConflictException.class)
     public ResponseEntity<Map<String, Object>> handleLockVersionConflict(LockVersionConflictException conflict) {
         return ResponseEntity.status(409).body(Map.of(
+                "code", conflict.getCode(),
                 "reason", "LOCK_VERSION_CONFLICT",
                 "message", conflict.getMessage(),
                 "expectedLockVersion", conflict.expected().value(),
                 "actualLockVersion", conflict.actual().value()));
     }
 
+    @ExceptionHandler(APIException.class)
+    public ResponseEntity<Map<String, Object>> handleCodedFailure(APIException failure) {
+        var resultCode = failure instanceof AppException app ? app.getResCode() : null;
+        int status = switch (resultCode) {
+            case WorkingsetResultCode.BAD_REQUEST -> 400;
+            case WorkingsetResultCode.WORKING_SET_NOT_EXISTS -> 404;
+            case WorkingsetResultCode.MATERIALIZATION_REJECTED -> 409;
+            case null, default -> 500;
+        };
+        String reason = resultCode instanceof Enum<?> value ? value.name() : "API_ERROR";
+        String message = status == 500 || failure.getMessage() == null
+                ? "Unexpected error" : failure.getMessage();
+        return ResponseEntity.status(status).body(Map.of(
+                "code", failure.getCode(), "reason", reason, "message", message));
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, NullPointerException.class})
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException failure) {
         return ResponseEntity.badRequest().body(Map.of(
+                "code", WorkingsetResultCode.BAD_REQUEST.getCode(),
                 "reason", "BAD_REQUEST",
                 "message", failure.getMessage() == null ? "invalid request" : failure.getMessage()));
     }

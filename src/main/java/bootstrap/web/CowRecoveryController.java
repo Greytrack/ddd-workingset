@@ -6,9 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import sk.workingset.application.CowRecoveryService;
-import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.domain.LocalId;
 
 /**
@@ -35,10 +33,6 @@ public class CowRecoveryController {
     @PostMapping("/switch/{eventId}/{targetLocalId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void recoverSwitch(@PathVariable long eventId, @PathVariable String targetLocalId) {
-        try {
-            recovery.recoverSwitchOnly(eventId, LocalId.of(targetLocalId));
-        } catch (MaterializationRejectedException rejected) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, rejected.getMessage(), rejected);
-        }
+        recovery.recoverSwitchOnly(eventId, LocalId.of(targetLocalId));
     }
 }

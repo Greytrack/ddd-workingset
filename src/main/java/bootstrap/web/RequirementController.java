@@ -1,5 +1,8 @@
 package bootstrap.web;
 
+import sk.common.error.AppException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
@@ -123,7 +126,7 @@ public class RequirementController {
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(name + " must not be blank");
+            throw new AppException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
         }
         return value;
     }

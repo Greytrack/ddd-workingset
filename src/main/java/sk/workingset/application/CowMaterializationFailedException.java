@@ -1,13 +1,16 @@
 package sk.workingset.application;
 
+import sk.common.error.AppException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.List;
 
-public class CowMaterializationFailedException extends RuntimeException {
+public class CowMaterializationFailedException extends AppException {
     private final long eventId;
     private final List<CowFailureLog.Failure> failures;
 
     public CowMaterializationFailedException(long eventId, List<CowFailureLog.Failure> failures) {
-        super("COW event " + eventId + " failed for " + failures.size() + " target(s)");
+        super(WorkingsetResultCode.COW_MATERIALIZATION_FAILED, "COW event " + eventId + " failed for " + failures.size() + " target(s)", null);
         this.eventId = eventId;
         this.failures = List.copyOf(failures);
     }
