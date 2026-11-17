@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- |
 | **WorkingSet** | 核心聚合根 | `WorkingSetId`；默认根 `1`；`parentWorkingSetId` 单父 | 默认根不可删；单父谱系无环；SpaceBinding 前置；绑定唯一性；绑定移除/删除顺序 | ID 引用 Tracker、ProductSpace、LTI |
 | **SpaceBinding** | WorkingSet 内 Entity | `(workingSetId, productSpaceId)` | 同一 WS/空间唯一；有 TrackerBinding 时不可移除 | 引用 ProductSpace |
-| **TrackerBinding** | WorkingSet 内 Entity | `(workingSetId, trackerId)`；槽位键 `(WS, space, classification)` | 同一 Tracker 不重复纳入；空间一致；共享特性相容 | 引用 Tracker |
+| **TrackerBinding** | WorkingSet 内 Entity | `(workingSetId, trackerId)`；槽位 `(WS, space, classification)` 可多 Tracker、恰一默认 | 同一 Tracker 不重复纳入；空间一致；共享特性相容；默认标记由 Tracker 行承担（T6-F） | 引用 Tracker |
 | **Tracker** | 独立聚合根 | `TrackerId` | 共享特性创建后不可变；`parentId` 创建后不可变；`sourceId` 不可变（T6-F）；删除受 Item/组织子级/派生子级约束 | ID 引用 ProductSpace、Classification、父 Tracker、来源 Tracker |
 | **LightTrackerItem** | 独立聚合根 | `LocalId`（变体）+ `CommonId`（家族） | `materialized` 三字段一致；COW 不改身份；Local-backed 后不被来源覆盖；单 WS 家族唯一 | ID 引用 Tracker、WorkingSet、业务对象 |
 | **ProductSpace** | 独立聚合根 | `ProductSpaceId` | 稳定归属身份；不随 WorkingSet 派生复制；删除前所有绑定为空 | 被 SpaceBinding 引用 |
@@ -45,13 +45,12 @@
 | 项 | 现状 | 影响 | 关联 |
 | --- | --- | --- | --- |
 | WorkingSet/Binding 规模与并发上限 | 未采样；当前单聚合装载全部绑定 | 可能否定当前聚合装载假设，触发 Manifest/分片方案 | `QUESTION-012` |
-| `is_default` 的归属与作用域 | T6-F 已要求每个（WS，空间，分类）一个默认；未定落在 Tracker 还是 Binding | 影响唯一索引、Shared 多工作集、产品空间投影 | `QUESTION-002.k` |
-| 同空间/分类多 Tracker 的 Compare/Merge 配对 | T6-F 已允许多派生；配对规则未定 | 候选对生成、条目身份、UI | `QUESTION-002.j` |
+| `is_default` 的承载与 Shared 默认 | 已实现 `Tracker.is_default` + 按（工作集，空间，分类）部分唯一索引；但 Shared Tracker 在子工作集没有自己的 tracker 行，无法表达“绑定 Shared 即默认” | 子工作集仅绑定 Shared、或同时有非共享派生时，默认槽语义不完整 | `QUESTION-002.k` |
+| 同空间/分类多 Tracker 的 Compare/Merge 配对 | 当前 `candidates` 实际按直接 `sourceId` 配对；`Difference.key` 仍用页内序号，未按 T6-F 复合身份生成 | 条目身份不稳定、分页/重放可能变化；多派生场景 UI 需要明确 | `QUESTION-002.j`、T6-F §4.1 |
 | MergeCheckpoint 的领域行为 | 契约有 confirm/revoke/lookup；代码以 Store/SQL 实现因果条件 | 聚合贫血、规则分散；是否需要富聚合待评估 | T1 §6 |
 | Reference/Association 的聚合归属 | QUESTION-010 C 已定端点身份；关系归属/删除守卫未定 | T7-E 表与端口 | `QUESTION-010` |
 | MergeRound 条目持久化 | 当前整轮 JSONB；一页 20～50 条 | 超过一页时是否改独立条目表 | T6-E、`QUESTION-012` |
 | WorkingSetCreation 是否独立聚合 | T7 作为 LRO 载体聚合；只记录编排事实 | 任务恢复/保留/取消 | T7、`QUESTION-017` |
-| ProductSpace 初始投影 | `INITIAL_PROJECTION` 枚举存在；产品空间创建入口未实现 | T6-F 默认 Tracker 投影 | T6-F §3 |
 
 ## 历史方案（不再作为当前候选）
 

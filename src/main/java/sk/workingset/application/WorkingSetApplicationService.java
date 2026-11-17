@@ -133,14 +133,19 @@ public class WorkingSetApplicationService {
     /** UI read model: LTI plus the readable name of its effective content source. */
     public record IndexedItem(LightTrackerItem item, String name) {}
 
-    /** 创建产品空间，并为每个分类同步创建该空间的默认 Tracker。 */
+    /** 创建产品空间，并将空间和各分类的默认 Tracker 同步纳入默认工作集。 */
     @Transactional
     public ProductSpace createProductSpace(String spaceId, String name) {
         var space = new ProductSpace(spaceId, name);
+        var defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
         spaces.insertProductSpace(space);
+        workingSets.insertSpaceBinding(defaultWorkingSet.bindSpace(space, WorkingSet.SpaceOrigin.INITIAL_PROJECTION));
         for (var classification : spaces.findClassifications()) {
-            trackers.insertTracker(Tracker.original(
-                    TrackerId.of(String.valueOf(identifierGenerator.nextId())), space, classification, null, true));
+            var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId())),
+                    space, classification, null, true);
+            var binding = defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
+            trackers.insertTracker(tracker);
+            workingSets.insertTrackerBinding(binding);
         }
         return space;
     }

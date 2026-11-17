@@ -26,13 +26,13 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | ProductSpace 是 Shared Kernel 独立聚合，可被多个 WorkingSet 关联，不随 WorkingSet 派生复制/迁移；Tracker 属于一个 ProductSpace；在默认 WorkingSet 中维护生命周期 | FACT-024 |
 | Classification 为三层共享元模型、启动前初始化常驻内存；Tracker 是其在 ProductSpace/WorkingSet 中的投影；创建 ProductSpace 时按分类集合投影生成 Tracker | FACT-025 |
 | 默认 WorkingSet 固定 Id=1、不可删除/隐藏；Tracker 只能在默认 WorkingSet 创建原始聚合；子 WS 只能纳入直接上游 | FACT-026 |
-| SpaceBinding 是 TrackerBinding 前置；同一 WS 同 ProductSpace 最多一个有效 SpaceBinding；同一 WS/ProductSpace/Classification 最多一个有效 TrackerBinding；Tracker.productSpaceId 必须等于绑定空间；同一 Tracker 不在同一 WS 重复纳入 | POL-012 |
+| SpaceBinding 是 TrackerBinding 前置；同一 WS 同 ProductSpace 最多一个有效 SpaceBinding；同一 WS/ProductSpace/Classification 可绑定多个 Tracker，但恰好一个默认（T6-F 修订原“槽位唯一”）；Tracker.productSpaceId 必须等于绑定空间；同一 Tracker 不在同一 WS 重复纳入 | POL-012、T6-F |
 | Shared 纳入复用原 TrackerId 仅建绑定；非共享纳入创建新聚合 + 直接 sourceId；移除后可重新纳入/派生；最后 Tracker 移除不删 SpaceBinding；ProductSpace 移出是独立显式操作 | POL-013 |
 | 删除/移除八条：Shared 移除仅解绑；非共享无 Item 且无派生子才删除；有派生子不允许删除；任意 Tracker 有 TrackerItem 不允许移除；有组织子节点但无派生子不允许删除；最后 Tracker 移除不删空间绑定；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 下 Shared 空且无子可删 | POL-014（修订 POL-006） |
 | SpaceBinding、TrackerBinding 是归属 WorkingSet 聚合的两个 Entity；ProductSpace、Tracker 只维护自身归属身份，不持有绑定 | POL-015 |
 | 领域删除不可恢复；软删、归档、恢复不纳入本版契约；领域彻底删除不强制映射为数据库物理 DELETE | POL-016（2026-11-11） |
 
-对应不变量：INV-053（空间绑定前置）、INV-054（空间 ID 一致）、INV-055（空间绑定唯一）、INV-056（槽位唯一）、INV-057（Shared/非共享身份）、INV-058（删除/移除语义）、INV-059（默认 WS 与 parentId 不可变）、INV-060（两 Entity 归属）、INV-064（解绑边界）、INV-065（非共享三项检查）、INV-066（ProductSpace 删除审查）、INV-067（WorkingSet 删除约束）、INV-068（删除不可恢复）。
+对应不变量：INV-053（空间绑定前置）、INV-054（空间 ID 一致）、INV-055（空间绑定唯一）、INV-056（同槽多 Tracker + 唯一默认，T6-F 重述）、INV-057（Shared/非共享身份）、INV-058（删除/移除语义）、INV-059（默认 WS 与 parentId 不可变）、INV-060（两 Entity 归属）、INV-064（解绑边界）、INV-065（非共享三项检查）、INV-066（ProductSpace 删除审查）、INV-067（WorkingSet 删除约束）、INV-068（删除不可恢复）。
 
 ## 3. 绑定模型契约
 
@@ -52,7 +52,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | 项 | 契约 |
 | --- | --- |
 | 身份键 | `(workingSetId, trackerId)`，同一 WorkingSet 内不重复纳入（POL-012） |
-| 槽位键 | `(workingSetId, productSpaceId, classificationId)` 最多一个有效（INV-056） |
+| 槽位键 | `(workingSetId, productSpaceId, classificationId)` 可绑定多个 Tracker，但恰好一个 `is_default`（INV-056，T6-F 重述） |
 | 必需属性 | workingSetId、trackerId、productSpaceId、classificationId、sharingMode、建立方式（Shared 复用 / 非共享派生） |
 | TB-1 | 建立前必须存在同 WS 的 SpaceBinding（INV-053） |
 | TB-2 | 绑定的 `productSpaceId` 与 Tracker 的 `productSpaceId` 一致（INV-054） |

@@ -2,10 +2,16 @@ package bootstrap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
+import bootstrap.web.LightTrackerItemView;
+import bootstrap.web.RequirementView;
+import bootstrap.web.WorkingSetController.BindingsView;
+import bootstrap.web.WorkingSetController.TrackerView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +31,12 @@ class TrackerDefaultAcceptanceTest {
 
     @AfterEach
     void cleanup() {
-        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id LIKE ?", "WS-MULTI-" + suffix);
+        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)",
+                "PS-" + suffix);
+        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)",
+                "PS-" + suffix);
+        jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", "PS-" + suffix);
+        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", "WS-MULTI-" + suffix);
         jdbc.update("DELETE FROM trackers WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
         jdbc.update("DELETE FROM space_bindings WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
         jdbc.update("DELETE FROM working_sets WHERE working_set_id LIKE ?", "WS-MULTI-" + suffix);
@@ -33,7 +44,7 @@ class TrackerDefaultAcceptanceTest {
     }
 
     @Test
-    void creatingProductSpaceAlsoCreatesOneDefaultTrackerPerClassification() {
+    void creatingProductSpacePublishesDefaultTrackerBindingsAndItemReadAccess() {
         String spaceId = "PS-" + suffix;
         var response = rest.postForEntity("/api/worksets/1/product-spaces",
                 Map.of("productSpaceId", spaceId, "name", "新空间-" + suffix), Map.class);
@@ -44,6 +55,30 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
                 Integer.class, spaceId));
+        var trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
+                .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
+        assertEquals(classifications, trackers.size());
+        for (var tracker : trackers) {
+            var items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/items",
+                    String.class);
+            assertEquals(HttpStatus.OK, items.getStatusCode(), items::getBody);
+            assertEquals("[]", items.getBody());
+        }
+
+        var bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+        var projectedSpace = bindings.spaces().stream()
+                .filter(binding -> spaceId.equals(binding.productSpaceId())).findFirst().orElseThrow();
+        assertEquals("INITIAL_PROJECTION", projectedSpace.origin());
+        assertEquals(trackers.stream().map(TrackerView::trackerId).sorted().toList(),
+                bindings.trackers().stream().filter(binding -> spaceId.equals(binding.productSpaceId()))
+                        .map(binding -> binding.trackerId()).sorted().toList());
+
+        String trackerId = trackers.getFirst().trackerId();
+        var item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
+                "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
+        assertEquals(HttpStatus.CREATED, item.getStatusCode());
+        var items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
+        assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
     }
 
     @Test

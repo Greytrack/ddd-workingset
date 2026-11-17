@@ -6,11 +6,11 @@
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
 - **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）；`8231d33`（2026-11-16 Checkpoint 身份改为两侧 Tracker 对）
 - **Released Git Tag**: None
-- **Last Updated**: 2026-11-16
+- **Last Updated**: 2026-11-17
 
 ## 当前基线状态
 
-本页维护接受范围、版本与确认依据。实施证据与后续切片见[实施与验收索引](implementation/README.md)。事实与政策主题、首版领域模型候选及 ADR-0001～0005 已接受；T1～T4 契约保持 Reviewed，具体裁定范围见下文。T6-E 的 compare 不持久化、T6-F 的谱系约束与 Checkpoint 的 Tracker 对身份已由 2026-11-16 裁定登记；其未实现部分不属于已兑现基线。正式发布仍为 Unreleased。
+本页维护接受范围、版本与确认依据。实施证据与后续切片见[实施与验收索引](implementation/README.md)。事实与政策主题、首版领域模型候选及 ADR-0001～0005 已接受；T1～T4 契约保持 Reviewed，具体裁定范围见下文。T6-E 的 compare 不持久化、T6-F 的谱系约束与 Checkpoint 的 Tracker 对身份已由 2026-11-16 裁定登记；T6-F 的多 Tracker/默认 Tracker/名称唯一已实施，批量派生（i）与比较条目复合身份仍待 T7-G/后续实现。正式发布仍为 Unreleased。
 
 ## 候选基线（用户已接受，未正式发布）
 

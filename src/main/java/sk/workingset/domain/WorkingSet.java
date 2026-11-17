@@ -73,7 +73,11 @@ public final class WorkingSet {
     public List<TrackerBinding> trackers() { return List.copyOf(trackers.values()); }
 
     public SpaceBinding bindSpace(ProductSpace space) {
-        var binding = new SpaceBinding(id, space.id(), space.name(), SpaceOrigin.EXPLICIT, SpaceState.ACTIVE);
+        return bindSpace(space, SpaceOrigin.EXPLICIT);
+    }
+
+    public SpaceBinding bindSpace(ProductSpace space, SpaceOrigin origin) {
+        var binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
         if (spaces.putIfAbsent(space.id(), binding) != null) {
             throw new BindingFailure(Reason.AlreadyBound, space.id());
         }

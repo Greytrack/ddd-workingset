@@ -25,7 +25,7 @@
 
 - 未改变任何已接受业务规则、ADR 状态、契约裁定或测试期望。
 - 未删除历史评审、反例、被替代方案；未删除 `pre-design/`。
-- 未实现 T6-F/T7-E；相关代码与 schema 偏差仍在[开放问题](../domain/open-questions.md)与[实施索引](../implementation/README.md)中登记。
+- 当时未实现 T6-F/T7-E；T6-F 的多 Tracker/默认/名称唯一已于 2026-11-17 实现，配对、复合条目身份、Shared 默认语义与 T7-E 仍在[开放问题](../domain/open-questions.md)与[实施索引](../implementation/README.md)中登记。
 
 ## 代码清理
 
@@ -36,5 +36,5 @@
 
 ## 验证
 
-- `mvn -B -q test`：113 项通过，0 失败、0 错误、0 跳过；Merge 异步监听器不再因测试清理产生 `RoundNotFound` 噪音。
+- 当时 `mvn -B -q test`：113 项通过，0 失败、0 错误、0 跳过；Merge 异步监听器不再因测试清理产生 `RoundNotFound` 噪音。2026-11-17 T6-F 实施后全量为 122 项通过。
 - 文档本地链接检查：`docs/` 无断链；`pre-design/` 仍有已知旧相对链接（`TC-006`），不影响语义。

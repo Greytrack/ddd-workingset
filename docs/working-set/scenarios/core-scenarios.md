@@ -592,14 +592,14 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：LightTrackerItem 自身 Revision 与业务 BC 的 TrackerItem Revision 通过事件同步（细节不细化）。
 
 <a id="scn-050"></a>
-## SCN-050 空间绑定前置与槽位唯一
+## SCN-050 空间绑定前置与多 Tracker 默认
 
-**业务规则：用户确认（2026-11-10 补充）；验收表述 Draft。** 关联 POL-012、INV-053/054/055。
+**业务规则：用户确认（2026-11-10 补充）；T6-F 修订；验收表述 Draft。** 关联 POL-012、INV-053/054/055/056。
 
 - Given 目标 WorkingSet WS1 尚未关联 ProductSpace P。
 - When 尝试为 P 下的 Tracker 建立 TrackerBinding。
-- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效 SpaceBinding；同一 WS1/ProductSpace/Classification 最多一个有效 TrackerBinding。
-- 反例：不得在没有 SpaceBinding 时建立 TrackerBinding；不得在同一 WorkingSet 重复纳入同一 Tracker。
+- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效 SpaceBinding；同一 WS1/ProductSpace/Classification 可绑定多个 Tracker，但恰好一个默认 Tracker。
+- 反例：不得在没有 SpaceBinding 时建立 TrackerBinding；不得在同一 WorkingSet 重复纳入同一 Tracker；不得在同一组合出现两个默认 Tracker。
 
 <a id="scn-051"></a>
 ## SCN-051 Classification 投影生成 Tracker
@@ -608,8 +608,8 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 - Given 平台元数据已初始化 Classification 集合，常驻内存。
 - When 创建 ProductSpace P。
-- Then 系统读取适用 Classification 集合，按分类逐个创建 Tracker 聚合并持久化，归属于 P，并建立在默认 WorkingSet 的 TrackerBinding。
-- 边界：Tracker 不随元数据初始化自动全量创建；同一 Classification 在不同 ProductSpace 可对应不同 Tracker；同一 ProductSpace/WorkingSet/Classification 最多一个有效 Tracker。
+- Then 系统在同一事务中创建 P、默认 WorkingSet 的 SpaceBinding（INITIAL_PROJECTION）、每个适用分类的默认 Tracker 及对应 TrackerBinding。创建完成后，默认 WorkingSet 的绑定视图可见空间和 Tracker，Tracker 的 Item 列表可读。
+- 边界：Tracker 随产品空间创建。同一 Classification 在不同 ProductSpace 可对应不同 Tracker；同一（WorkingSet，ProductSpace，Classification）可存在多个 Tracker，但只有一个默认。
 
 <a id="scn-052"></a>
 ## SCN-052 子 WorkingSet 纳入与移除（Shared/非共享）

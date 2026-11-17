@@ -37,45 +37,45 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 | 项 | 现状 | 需要改动 |
 | --- | --- | --- |
 | f 允许悬挂 | `tracker_bindings` 不校验父可解析；UI 已把不可解析父作根 | **无代码改动**，补读模型与文档说明 |
-| e 多派生 | `tracker_bindings` 有 `UNIQUE (working_set_id, product_space_id, classification_id)`；无 `is_default`；无产品空间创建入口 | **结构性改动**（见 §3） |
+| e 多派生 | 原状：`tracker_bindings` 有 `UNIQUE (working_set_id, product_space_id, classification_id)`；无 `is_default`；无产品空间创建入口 | **已于 2026-11-17 完成**（见 §3/§5） |
 | d2 不可变 | 无更新 `source_id` 的路径 | 无代码改动 |
 | i 整批原子 | 只有单条 `/derive`，天然原子；批量派生未实现 | 新增批量派生 LRO（复用 T7 范式） |
 | 完成即可见 | `requireReady` + creation 状态已实现 | 无代码改动 |
 
-## 3. e 的实现清单（待细化项确认后执行）
+## 3. e 的实现清单（2026-11-17 已实施，保留原清单）
 
-1. `trackers` 增加 `is_default BOOLEAN NOT NULL DEFAULT FALSE`，部分唯一索引保证每个（工作集，空间，分类）只有一个默认。
-2. `tracker_bindings` 去掉 `UNIQUE (working_set_id, product_space_id, classification_id)`，主键保持 `(working_set_id, tracker_id)`。
-3. 新增产品空间创建命令并同步创建默认 Tracker（当前只有删除绑定入口）。
-4. Tracker 名称唯一约束：同一（产品空间，分类）内唯一（见 §4）；待实现。
-5. compare/merge 候选配对：同一（空间，分类）多 Tracker 时的配对规则（必须新增裁定）。
+1. `trackers` 增加 `is_default BOOLEAN NOT NULL DEFAULT FALSE`，部分唯一索引保证每个（工作集，空间，分类）只有一个默认。**已实施**。
+2. `tracker_bindings` 去掉 `UNIQUE (working_set_id, product_space_id, classification_id)`，主键保持 `(working_set_id, tracker_id)`。**已实施**。
+3. 新增产品空间创建命令并同步创建默认 Tracker。**已实施**（`POST /api/worksets/{id}/product-spaces`；路径中的工作集当前未参与，见遗留项）。
+4. Tracker 名称唯一约束：**已实施**为 `(working_set_id, product_space_id, classification_id, name)`，仅业务原生 Tracker 参与；因业务原生 Tracker 只存在于默认工作集，实际等价于（空间，分类）内唯一。作用域说明见 §4 注。
+5. compare/merge 候选配对：**未实现完整裁定**。当前 `candidates` 实际按直接 `sourceId` 配对；`Difference.key` 仍是页内序号，尚未按复合身份生成（`QUESTION-002.j`）。
 
 ## 4. 2026-11-16 补充裁定（细化）
 
 | 项 | 裁定 |
 | --- | --- |
 | 默认 Tracker 键范围 | 每个（工作集，空间，分类）恰好一个默认 |
-| 名称唯一作用域 | 同一（产品空间，分类）内唯一 |
+| 名称唯一作用域 | 同一（产品空间，分类）内唯一；2026-11-17 实施为（工作集，空间，分类），因业务原生 Tracker 只在默认工作集，两者当前等价 |
 | 多派生后的 compare/merge 配对 | 条目身份 = 左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次 |
 | Shared 与 `is_default` | Shared 分类也参与；每个（工作集，空间，分类）都有默认 Tracker |
-| 产品空间创建入口 | 新增 `POST /api/workspaces/1/product-spaces`，同时创建默认 Tracker |
+| 产品空间创建入口 | 新增 `POST /api/worksets/1/product-spaces`，同时创建默认 Tracker；当前实现接受任意 `{id}` 但实际仍在默认工作集创建，需收紧 |
 
 ### 4.1 实现含义
 
 - `is_default` 是（工作集，空间，分类）上的唯一默认标记，用部分唯一索引兑现；Shared 与 UNSHARED 都参与。
 - 名称唯一改为（产品空间，分类）内唯一，不再跨空间或跨工作集比较。
-- 条目身份包含双侧 Tracker 与工作集：`Comparison.TrackerPair` 需要携带 workingSetId；`Difference.key` 改为由该复合键派生的稳定串，不再使用序号。
+- 条目身份包含双侧 Tracker 与工作集：`Comparison.TrackerPair` 需要携带 workingSetId；`Difference.key` 改为由该复合键派生的稳定串，不再使用序号。**截至 2026-11-17 未实现**，当前仍是页内序号，见 §3.5。
 - 同一家族的 Item 在同一工作集只属于一个 Tracker（POL-005 与 Item 归属），所以“左侧 Tracker 集合 × 右侧 Tracker 集合”不会让同一家族重复出现。
 - Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。条目证据中的双侧定位（含工作集、LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
 
 ### 4.2 仍需确认
 
-候选对的生成方式：同一（空间，分类）下取“左侧全部 Tracker × 右侧全部 Tracker”的全部组合，还是先按 `source_id`/`is_default`/名称过滤后再配对？
+候选对的生成方式：同一（空间，分类）下取“左侧全部 Tracker × 右侧全部 Tracker”的全部组合，还是先按 `source_id`/`is_default`/名称过滤后再配对？当前 `candidates` 已按直接 `sourceId` 近似实现 B，但仍需用户确认后才能关闭 `QUESTION-002.j`。
 
 ## 5. 实施状态（2026-11-16）
 
 - 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/1/product-spaces` 同步默认 Tracker、派生默认标记；
-- `TrackerDefaultAcceptanceTest` 覆盖默认唯一、名称唯一、产品空间创建、绑定约束移除；
+- [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
 - 全量测试 122 项通过。
 
 ## 6. 关联材料
