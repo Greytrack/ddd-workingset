@@ -1,9 +1,10 @@
 package sk.workingset.application;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.UUID;
+import java.util.function.Function;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Isolation;
@@ -13,10 +14,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
 import sk.workingset.application.event.TrackerItemsIndexed;
 import sk.workingset.application.port.TrackerRepository;
+import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.WorkingSetCreationStore;
 import sk.workingset.application.port.WorkingSetRepository;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetCreation;
 import sk.workingset.domain.WorkingSetCreation.Failure;
@@ -31,6 +34,7 @@ import sk.workingset.domain.TrackerId;
 
 public class WorkingSetCreationService {
     private final WorkingSetCreationStore store;
+    private final IdentifierGenerator ids;
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final WorkingSetApplicationService workingSetService;
@@ -42,7 +46,8 @@ public class WorkingSetCreationService {
     public WorkingSetCreationService(WorkingSetCreationStore store, WorkingSetRepository workingSets,
                                      TrackerRepository trackers, WorkingSetApplicationService workingSetService,
                                      TransactionTemplate transaction, ApplicationEventPublisher events,
-                                     WorkingSetItemIndexer indexer, RelationEventStep relationEvents) {
+                                     WorkingSetItemIndexer indexer, RelationEventStep relationEvents, IdentifierGenerator ids) {
+        this.ids = ids;
         this.store = store;
         this.workingSets = workingSets;
         this.trackers = trackers;
@@ -51,6 +56,17 @@ public class WorkingSetCreationService {
         this.events = events;
         this.indexer = indexer;
         this.relationEvents = relationEvents;
+    }
+
+    @Transactional
+    public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request,
+                                        Caller caller) {
+        var existing = store.findByRequest(requestId);
+        if (existing.isPresent()) {
+            var task = existing.get();
+            return replay(task, request.apply(task.request().newWorkingSetId()));
+        }
+        return submit(request.apply(Long.toString(ids.nextId())), caller);
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -70,16 +86,21 @@ public class WorkingSetCreationService {
             throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
-        var creation = WorkingSetCreation.submit(UUID.randomUUID().toString(), request, caller.id(), Instant.now());
+        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
             return creation;
         }
-        return replay(store.findByTarget(target).orElseThrow(), request);
+        var winner = store.findByRequest(request.requestId())
+                .or(() -> store.findByTarget(target)).orElseThrow();
+        var normalized = new WorkingSetCreation.Request(request.parentWorkingSetId(), winner.request().newWorkingSetId(),
+                request.requestId(), request.productSpaceIds(), request.sharedTrackerIds(),
+                request.unsharedParentTrackerIds(), request.name(), request.mode());
+        return replay(winner, normalized);
     }
 
-    /** 扩展已有子工作集：只派生目标尚未拥有的 Tracker；重复项先过滤，空集返回终态任务。 */
+    /** 扩展已有子工作集：复用共享 Tracker 或派生非共享 Tracker，跳过已纳入的来源。 */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
                                               List<String> parentTrackerIds, Caller caller) {
@@ -95,23 +116,31 @@ public class WorkingSetCreationService {
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, target.value()));
         var parentId = targetSet.requireParentId();
         TreeSet<String> requested = new TreeSet<>(parentTrackerIds == null ? List.of() : parentTrackerIds);
-        List<String> filtered = requested.stream()
-                .filter(trackerId -> trackers.findDerivedTracker(target, TrackerId.of(trackerId))
+        var spaces = new TreeSet<String>();
+        var shared = new ArrayList<String>();
+        var unshared = new ArrayList<String>();
+        for (String trackerId : requested) {
+            var id = TrackerId.of(trackerId);
+            var source = trackers.findTracker(id).orElse(null);
+            if (source != null && source.sharingMode() == SharingMode.SHARED) {
+                if (targetSet.hasTrackerBinding(id)) continue;
+                shared.add(trackerId);
+            } else {
+                boolean alreadyDerived = trackers.findDerivedTracker(target, id)
                         .filter(copy -> targetSet.hasTrackerBinding(copy.trackerId())
-                                && trackers.isVisible(copy.trackerId()))
-                        .isEmpty())
-                .toList();
-        if (filtered.isEmpty()) {
+                                && trackers.isVisible(copy.trackerId())).isPresent();
+                if (alreadyDerived) continue;
+                // Unknown sources reach the task so its failure is reported alongside valid selections.
+                unshared.add(trackerId);
+            }
+            if (source != null) spaces.add(source.productSpaceId());
+        }
+        if (shared.isEmpty() && unshared.isEmpty()) {
             throw new BindingFailure(Reason.NoDerivableTracker, target.value());
         }
-        var spaces = new TreeSet<String>();
-        for (String trackerId : filtered) {
-            trackers.findTracker(TrackerId.of(trackerId))
-                    .ifPresent(tracker -> spaces.add(tracker.productSpaceId()));
-        }
         var request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
-                List.copyOf(spaces), List.of(), filtered, targetSet.name(), Mode.EXTEND);
-        var creation = WorkingSetCreation.submit(UUID.randomUUID().toString(), request, caller.id(), Instant.now());
+                List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
+        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));

@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -108,8 +110,7 @@ class MergeAcceptanceTest {
     void cleanup() {
         // Also remove rows created by tests that never produce a tracked MergeRound
         // (for example the direct checkpoint-insert test).
-        jdbc.update("DELETE FROM merge_checkpoints WHERE round_id LIKE ?", "%" + suffix + "%");
-        jdbc.update("DELETE FROM merge_checkpoints WHERE round_id LIKE 'cleanup-round-%'");
+        jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", id("cleanup-round"));
         jdbc.update("DELETE FROM merge_rounds WHERE request_id LIKE ?", "%" + suffix + "%");
         for (String round : rounds) {
             jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", round);
@@ -349,6 +350,7 @@ class MergeAcceptanceTest {
         var target = requirement(parentLocal);
         assertEquals(parentTracker, target.trackerId());
         assertEquals(source.commonId(), target.commonId());
+        assertEquals(source.number(), target.number());
         assertFalse(source.localId().equals(target.localId()));
         assertEquals("1".equals(parent), target.localId().equals(target.commonId()));
         assertEquals(source.title(), target.title());
@@ -703,7 +705,7 @@ class MergeAcceptanceTest {
         var difference = diff(compare("1", child), family);
         var other = new Difference(difference.kind(), difference.family(),
                 new sk.workingset.domain.merge.Comparison.TrackerPair(WorkingSetId.of("1"),
-                        TrackerId.of("tracker-x"), WorkingSetId.of(child), TrackerId.of("tracker-y")),
+                        TrackerId.of("265564874633152"), WorkingSetId.of(child), TrackerId.of("264912685293504")),
                 difference.source(), difference.target(), difference.fields());
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-request"),
@@ -831,23 +833,21 @@ class MergeAcceptanceTest {
     private record Derived(String trackerId, String sourceTrackerId, LightTrackerItemView item) {}
 
     private void createChild(String parent, String next) {
-        assertStatus(HttpStatus.CREATED,
-                rest.postForEntity(ws(parent) + "/children", Map.of("workingSetId", next), Void.class));
+        FixtureIds.insertWorkingSet(jdbc, parent, next);
         worksets.add(next);
     }
 
     private void insertCheckpoint(String trackerA, String trackerB, String family, int revisionA, int revisionB) {
         jdbc.update("""
-                INSERT INTO merge_checkpoints (round_id, tracker_a_id, tracker_b_id, common_id,
+                INSERT INTO merge_checkpoints (checkpoint_id, round_id, tracker_a_id, tracker_b_id, common_id,
                     local_id_a, local_id_b, revision_a, revision_b, change_kind, merge_direction, decision_version)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'MODIFIED', 'A_TO_B', ?)
-                """, id("cleanup-round"), trackerA, trackerB, family,
-                "la-" + family, "lb-" + family, revisionA, revisionB, store.nextDecisionVersion());
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'MODIFIED', 'A_TO_B', ?)
+                """, fixtureId("checkpoint-" + family), id("cleanup-round"), trackerA, trackerB, family,
+                fixtureId("la-" + family), fixtureId("lb-" + family), revisionA, revisionB, store.nextDecisionVersion());
     }
 
     private void insertItem(String tracker, String family, int revision, String workset) {
-        String local = "li-" + Integer.toHexString(family.hashCode()) + "-"
-                + Integer.toHexString(tracker.hashCode());
+        String local = fixtureId("li-" + family + "-" + tracker);
         jdbc.update("""
                 INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id,
                     revision, source_local_id, source_revision, materialized)
@@ -856,7 +856,7 @@ class MergeAcceptanceTest {
     }
 
     private String seed(String tracker, String common, String title) {
-        String local = "L-" + UUID.randomUUID();
+        String local = fixtureId("L-" + UUID.randomUUID());
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
                 VALUES (?, ?, ?, ?, 'description', 3, 0)
@@ -950,7 +950,7 @@ class MergeAcceptanceTest {
         return page.differences().stream().filter(item -> family.equals(item.family().value())).findFirst().orElseThrow();
     }
 
-    private String id(String prefix) { return prefix + "-" + suffix; }
+    private String id(String prefix) { return fixtureId(prefix + "-" + suffix); }
     private static String ws(String id) { return "/api/worksets/" + id; }
     private static String roundPath(String id) { return "/api/merge-rounds/" + id; }
 

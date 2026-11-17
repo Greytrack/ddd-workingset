@@ -74,6 +74,8 @@ async function selectWorkset(id) {
   state.bindings = { spaces: [], trackers: [] };
   state.trackers = [];
   $('#activeWorkset').textContent = worksetLabel(id);
+  $('#createWorksetBtn').classList.toggle('hidden', id !== '1');
+  $('#extendWorksetBtn').classList.toggle('hidden', !findNode(state.worksets, id)?.ws?.parentWorkingSetId);
   renderWorksetTree();
   renderSpaces();
   renderSpaceTrackers();
@@ -354,7 +356,7 @@ function renderItems() {
   }
 
   const query = $('#itemFilter').value.trim().toLocaleLowerCase();
-  const visibleItems = state.items.filter((item) => [item.name, item.localId, item.commonId]
+  const visibleItems = state.items.filter((item) => [item.name, item.number, item.localId, item.commonId]
     .some((value) => String(value ?? '').toLocaleLowerCase().includes(query)));
   $('#itemCount').textContent = query ? visibleItems.length + ' / ' + state.items.length + ' 个' : state.items.length + ' 个';
   if (!visibleItems.length) {
@@ -366,7 +368,7 @@ function renderItems() {
     return `
       <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
         <td><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || shortId(item.commonId))}</button>
-          <div class="item-identity mono" title="${escapeHtml(item.localId)}">${escapeHtml(shortId(item.localId))}</div></td>
+          <div class="item-identity mono" title="${escapeHtml(item.localId)}">${escapeHtml(item.number || shortId(item.localId))}</div></td>
         <td class="item-revision">${escapeHtml(item.revision)}</td>
         <td>${item.materialized ? '<span class="badge shared">本地物化</span>' : '<span class="badge source">来源继承</span>'}</td>
         <td><div class="row-actions">
@@ -380,7 +382,7 @@ function renderItems() {
   area.innerHTML = `
     <table class="item-table">
       <thead>
-        <tr><th>名称 / Local ID</th><th class="item-revision">版次</th><th>内容状态</th><th>操作</th></tr>
+        <tr><th>名称 / 编号</th><th class="item-revision">版次</th><th>内容状态</th><th>操作</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -410,6 +412,7 @@ function renderItemDetail() {
   const body = state.contentLoading ? '<div class="empty small" role="status">正在加载内容…</div>'
     : state.contentError ? `<div class="empty small error-text">${escapeHtml(state.contentError)}</div>`
     : `<div class="detail-meta">
+      ${item.number ? `<span>编号 <span class="mono">${escapeHtml(item.number)}</span></span>` : ''}
       <span>Local ID <span class="mono">${escapeHtml(item.localId)}</span></span>
       <span>Common ID <span class="mono">${escapeHtml(item.commonId)}</span></span>
       <span>版次 ${escapeHtml(item.revision ?? '—')}</span>

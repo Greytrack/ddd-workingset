@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
@@ -23,15 +25,15 @@ import sk.workingset.domain.WorkingSetCreation.Status;
 @SpringBootTest(classes = bootstrap.WorkingsetApplication.class)
 class WorkingSetItemIndexerTest {
     private final String suffix = UUID.randomUUID().toString();
-    private final String parent = "parent-" + suffix;
-    private final String child = "child-" + suffix;
-    private final String space = "space-" + suffix;
-    private final String classification = "classification-" + suffix;
-    private final String sourceTracker = "source-" + suffix;
-    private final String parentTracker = "parent-tracker-" + suffix;
-    private final String childTracker = "child-tracker-" + suffix;
-    private final String source = "source-item-" + suffix;
-    private final String family = "family-" + suffix;
+    private final String parent = fixtureId("parent-" + suffix);
+    private final String child = fixtureId("child-" + suffix);
+    private final String space = fixtureId("space-" + suffix);
+    private final String classification = fixtureId("classification-" + suffix);
+    private final String sourceTracker = fixtureId("source-" + suffix);
+    private final String parentTracker = fixtureId("parent-tracker-" + suffix);
+    private final String childTracker = fixtureId("child-tracker-" + suffix);
+    private final String source = fixtureId("source-item-" + suffix);
+    private final String family = fixtureId("family-" + suffix);
 
     @Autowired private WorkingSetItemIndexer indexer;
     @Autowired private JdbcTemplate jdbc;
@@ -88,16 +90,16 @@ class WorkingSetItemIndexerTest {
                 INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                     source_local_id, source_revision, materialized)
                 VALUES (?, ?, ?, ?, 3, ?, 3, FALSE)
-                """, "parent-lti-" + suffix, family, parentTracker, parent, source);
+                """, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, source);
         jdbc.update("""
                 INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                     source_local_id, source_revision, materialized)
                 VALUES (?, ?, ?, ?, 3, ?, 3, TRUE)
-                """, "existing-" + suffix, family, childTracker, child, "existing-" + suffix);
+                """, fixtureId("existing-" + suffix), family, childTracker, child, fixtureId("existing-" + suffix));
 
         var request = new WorkingSetCreation.Request(parent, child, "request",
                 List.of(space), List.of(), List.of(parentTracker));
-        var creation = new WorkingSetCreation("creation-" + suffix, request, "test", Status.Running,
+        var creation = new WorkingSetCreation(Long.valueOf(fixtureId("creation-" + suffix)), request, "test", Status.Running,
                 Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1), List.of(),
                 Instant.now(), Instant.now(), null,
                 Map.of(Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1)), Map.of());

@@ -36,19 +36,19 @@ import sk.workingset.domain.merge.MergeRound.Outcome;
 class MergeRelationRepairStepTest {
     @Test
     void ignoresKeepTargetRejectedAndDeferredEntries() {
-        var targetWorkingSet = WorkingSetId.of("child");
-        var round = MergeRound.prepare("round-2", "request-2", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
-                .register(entry("kept", "C1", "L1", "L2", new MergeDecision(Map.of("title", FieldAction.KEEP_TARGET),
+        var targetWorkingSet = WorkingSetId.of("259712159403968");
+        var round = MergeRound.prepare("261365428617152", "request-2", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
+                .register(entry("258520000000010", "265506033508288", "261158455371712", "265864557082560", new MergeDecision(Map.of("title", FieldAction.KEEP_TARGET),
                         null, false)))
-                .register(entry("rejected", "C2", "L3", "L4", new MergeDecision(Map.of("title", FieldAction.ACCEPT),
+                .register(entry("258520000000011", "258520000000013", "258520000000015", "258520000000016", new MergeDecision(Map.of("title", FieldAction.ACCEPT),
                         null, false)))
-                .register(entry("deferred", "C3", "L5", "L6", new MergeDecision(Map.of(), null, true)))
+                .register(entry("258520000000012", "258520000000014", "258520000000017", "258520000000018", new MergeDecision(Map.of(), null, true)))
                 .start();
         for (var entry : round.entries()) {
             round = round.finishEntry(entry, new ItemResult(entry.id(),
                     switch (entry.id()) {
-                        case "kept" -> Outcome.Applied;
-                        case "rejected" -> Outcome.Rejected;
+                        case "258520000000010" -> Outcome.Applied;
+                        case "258520000000011" -> Outcome.Rejected;
                         default -> Outcome.Deferred;
                     }, entry.decision().markAsMerged() ? "DEFER" : "KEEP_TARGET", null, null, null));
         }
@@ -61,24 +61,24 @@ class MergeRelationRepairStepTest {
 
     @Test
     void repairsOnlyTargetsChangedBySuccessfulMergeEntries() {
-        var targetWorkingSet = WorkingSetId.of("child");
-        var pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("T1"),
-                targetWorkingSet, TrackerId.of("T2"));
-        var difference = new Difference(CommonId.of("C1"), pair,
-                side("L1", Revision.of(3)), side("L2", Revision.of(4)), List.of("title"));
+        var targetWorkingSet = WorkingSetId.of("259712159403968");
+        var pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("265625955250112"),
+                targetWorkingSet, TrackerId.of("261538396602304"));
+        var difference = new Difference(CommonId.of("265506033508288"), pair,
+                side("261158455371712", Revision.of(3)), side("265864557082560", Revision.of(4)), List.of("title"));
         var decision = new MergeDecision(Map.of("title", FieldAction.ACCEPT), null, false);
-        var round = MergeRound.prepare("round-1", "request-1", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
-                .register(new Entry("entry-1", 1, difference, decision, null)).start();
+        var round = MergeRound.prepare("265523938635712", "request-1", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
+                .register(new Entry("263525235173312", 1, difference, decision, null)).start();
         var entry = round.entries().getFirst();
-        round = round.finishEntry(entry, new ItemResult("entry-1", Outcome.Applied, "ACCEPT", "L2", null, null))
+        round = round.finishEntry(entry, new ItemResult("263525235173312", Outcome.Applied, "ACCEPT", "265864557082560", null, null))
                 .complete(Instant.now());
 
         RelationSourcePort source = mock(RelationSourcePort.class);
-        var changedTarget = new ReferenceEndpoint(targetWorkingSet, LocalId.of("L2"), CommonId.of("C1"),
-                TrackerId.of("T2"), Revision.of(4));
+        var changedTarget = new ReferenceEndpoint(targetWorkingSet, LocalId.of("265864557082560"), CommonId.of("265506033508288"),
+                TrackerId.of("261538396602304"), Revision.of(4));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-1",
-                new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("L1"), CommonId.of("C1"),
-                        TrackerId.of("T1"), Revision.of(3)), changedTarget)));
+                new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+                        TrackerId.of("265625955250112"), Revision.of(3)), changedTarget)));
 
         var published = new ArrayList<Object>();
         var publisher = new RelationEventPublisher(published::add, new AtomicLong(10)::incrementAndGet);
@@ -94,8 +94,8 @@ class MergeRelationRepairStepTest {
 
     private static Entry entry(String id, String family, String sourceLocalId, String targetLocalId,
                                MergeDecision decision) {
-        var pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("T1"),
-                WorkingSetId.of("child"), TrackerId.of("T2"));
+        var pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("265625955250112"),
+                WorkingSetId.of("259712159403968"), TrackerId.of("261538396602304"));
         var difference = new Difference(CommonId.of(family), pair,
                 side(sourceLocalId, Revision.of(3)), side(targetLocalId, Revision.of(4)), List.of("title"));
         return new Entry(id, 1, difference, decision, null);

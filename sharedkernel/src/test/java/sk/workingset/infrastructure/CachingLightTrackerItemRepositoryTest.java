@@ -33,11 +33,11 @@ import sk.workingset.domain.WorkingSetId;
  */
 class CachingLightTrackerItemRepositoryTest {
 
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T1 = TrackerId.of("T1");
-    private static final WorkingSetId WS1 = WorkingSetId.of("WS1");
+    private static final CommonId C1 = CommonId.of("265506033508288");
+    private static final TrackerId T1 = TrackerId.of("265625955250112");
+    private static final WorkingSetId WS1 = WorkingSetId.of("261508476721088");
     private static final Revision R3 = Revision.of(3);
-    private static final LocalId L0 = LocalId.of("L0");
+    private static final LocalId L0 = LocalId.of("260574482192320");
 
     private LettuceConnectionFactory factory;
     private StringRedisTemplate redis;
@@ -100,7 +100,7 @@ class CachingLightTrackerItemRepositoryTest {
 
     @Test
     void rolled_back_write_never_publishes_local_backed_state_to_redis() {
-        LocalId id = LocalId.of("cache-" + UUID.randomUUID());
+        LocalId id = LocalId.of(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
         var item = LightTrackerItem.derive(id, C1, T1, WS1, R3, L0);
         repository.save(item);
         TransactionSynchronizationManager.initSynchronization();
@@ -119,7 +119,7 @@ class CachingLightTrackerItemRepositoryTest {
 
     @Test
     void cache_serves_saved_item_and_write_through_updates_materialized_state() {
-        LocalId localId = LocalId.of("cache-" + UUID.randomUUID());
+        LocalId localId = LocalId.of(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
         LightTrackerItem sourceBacked = LightTrackerItem.derive(localId, C1, T1, WS1, R3, L0);
         repository.save(sourceBacked);
 

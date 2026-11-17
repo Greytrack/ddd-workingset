@@ -14,9 +14,8 @@
 ```
 
 - 返回 HTTP 202；轮询复用 `GET /api/working-set-creations/{id}`。
-- 只处理目标尚未拥有的直接父 Tracker；目标已存在且已绑定的同一父 Tracker 派生被过滤（派生链 1:1）。
-- 过滤后为空时直接返回 409 `NoDerivableTracker`，提示无可派生的跟踪分类，不创建任务。
-- 新 Tracker 先以 `visible=false` 创建；任务终态后只揭示已成功绑定的 Tracker。
+- 直接父范围、重复过滤和派生副本可见性见 [T7 §12A](../domain/working-set-creation-lro-design.md)。
+- 过滤后为空时直接返回 409 `NoDerivableTracker`，不创建任务。
 - 同一目标 WS 同时只允许一个 `Pending/Running` 扩展任务；不同 `requestId` 返回 409 `Preparing`。
 - 扩展允许部分成功：有效 Tracker 完成派生/绑定/索引，失败项保留明细。
 - 目标已有 Tracker 的 Item 不直接覆盖，由普通 Merge 加入。
@@ -33,8 +32,8 @@
 
 [WorkingSetCreationAcceptanceTest](../../../deploys/src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)：
 
-- `extendsAnExistingChildWithBatchDerivationAndFiltersAlreadyDerivedTrackers`
-  - 两个父 Tracker 批量派生、索引、绑定；
+- `extendsAnExistingChildWithSharedAndDerivedTrackersAndFiltersAlreadyIncludedSources`
+  - 同一任务复用一个共享 Tracker 的原 ID，并派生、索引和绑定两个非共享 Tracker；
   - 新 Tracker 终态可见；
   - 重复扩展返回 409 `NoDerivableTracker` 且不新增 Tracker；
   - `/derive` 返回 404。
@@ -44,8 +43,10 @@
 - `rejectsAnotherExtensionWhileOneIsUnfinished`
   - 存在未终态扩展任务时，新请求返回 409 `Preparing`。
 
-`mvn -B -q test`：**150 项通过，0 失败、0 错误、0 跳过**。
+`mvn -B test`：**159 项通过，0 失败、0 错误、0 跳过**。
 `WorkingSetCreationAcceptanceTest`：17 项通过。
+
+Chrome（Playwright 模拟接口）验证默认与子工作集入口切换、已纳入项展示和禁用、按源 ID 提交多选结果，以及任务终态后的范围刷新。
 
 ## 4. 边界
 

@@ -19,7 +19,7 @@ const state = {
   taskPolling: false
 };
 
-const TASK_KEY = 'ws-creation-tasks-v1';
+const TASK_KEY = 'ws-creation-tasks-v2';
 const TERMINAL_STATUSES = new Set(['Succeeded', 'PartiallySucceeded', 'Failed']);
 const STAGES = [
   'CREATE_WORKING_SET',
@@ -89,6 +89,10 @@ function setStatus(text, kind = '') {
   const status = $('#status');
   status.textContent = text;
   status.className = 'status ' + kind;
+}
+
+function newRequestId() {
+  return window.crypto?.randomUUID?.() || 'ui-' + Date.now() + '-' + Math.random().toString(16).slice(2);
 }
 
 function escapeHtml(value) {

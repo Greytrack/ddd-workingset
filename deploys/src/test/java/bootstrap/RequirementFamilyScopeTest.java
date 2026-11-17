@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,39 +36,39 @@ class RequirementFamilyScopeTest {
     private JdbcRequirementRepository repository;
 
     private final String suffix = UUID.randomUUID().toString();
-    private final String ws2 = "WS2-" + suffix;
-    private final String t1 = "T1-" + suffix;
-    private final String t2 = "T2-" + suffix;
-    private final String t3 = "T3-" + suffix;
-    private final String t4 = "T4-" + suffix;
-    private final String family = "FAMILY-" + suffix;
+    private final String ws2 = fixtureId("WS2-" + suffix);
+    private final String t1 = fixtureId("T1-" + suffix);
+    private final String t2 = fixtureId("T2-" + suffix);
+    private final String t3 = fixtureId("T3-" + suffix);
+    private final String t4 = fixtureId("T4-" + suffix);
+    private final String family = fixtureId("FAMILY-" + suffix);
 
     @BeforeEach
     void provision() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", ws2);
         for (String tracker : new String[] {t1, t2, t3, t4}) {
-            jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", tracker + "-space");
+            jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", fixtureId(tracker + "-space"));
             jdbc.update("INSERT INTO classifications (classification_id, sharing_mode) VALUES (?, 'UNSHARED')",
-                    tracker + "-class");
+                    fixtureId(tracker + "-class"));
         }
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
-                """, t1, t1 + "-space", t1 + "-class");
+                """, t1, fixtureId(t1 + "-space"), fixtureId(t1 + "-class"));
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
-                """, t2, t2 + "-space", t2 + "-class");
+                """, t2, fixtureId(t2 + "-space"), fixtureId(t2 + "-class"));
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id,
                                       sharing_mode)
                 VALUES (?, ?, ?, ?, ?, 'UNSHARED')
-                """, t3, t1, ws2, t3 + "-space", t3 + "-class");
+                """, t3, t1, ws2, fixtureId(t3 + "-space"), fixtureId(t3 + "-class"));
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id,
                                       sharing_mode)
                 VALUES (?, ?, ?, ?, ?, 'UNSHARED')
-                """, t4, t2, ws2, t4 + "-space", t4 + "-class");
+                """, t4, t2, ws2, fixtureId(t4 + "-space"), fixtureId(t4 + "-class"));
     }
 
     @AfterEach
@@ -76,8 +78,8 @@ class RequirementFamilyScopeTest {
         // Child trackers reference parents through source_id; remove them first.
         for (String tracker : new String[] {t3, t4, t2, t1}) {
             jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
-            jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", tracker + "-space");
-            jdbc.update("DELETE FROM classifications WHERE classification_id = ?", tracker + "-class");
+            jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", fixtureId(tracker + "-space"));
+            jdbc.update("DELETE FROM classifications WHERE classification_id = ?", fixtureId(tracker + "-class"));
         }
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws2);
     }
@@ -113,7 +115,7 @@ class RequirementFamilyScopeTest {
     }
 
     private void insertVariant(String prefix, String tracker, String workingSet) {
-        String localId = prefix + suffix;
+        String localId = fixtureId(prefix + suffix);
         jdbc.update("""
                 INSERT INTO light_tracker_items
                     (local_id, common_id, tracker_id, working_set_id, revision,
@@ -123,7 +125,7 @@ class RequirementFamilyScopeTest {
     }
 
     private Requirement requirement(String prefix, String tracker) {
-        return Requirement.create(LocalId.of(prefix + suffix), CommonId.of(family), TrackerId.of(tracker),
+        return Requirement.create(LocalId.of(fixtureId(prefix + suffix)), CommonId.of(family), TrackerId.of(tracker),
                 "A", "description", Revision.of(3));
     }
 }

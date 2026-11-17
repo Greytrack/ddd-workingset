@@ -21,10 +21,10 @@ class RelationEventContractTest {
 
     @Test
     void referenceEventCarriesBothEndpointsAndAllowsDanglingTarget() {
-        var source = new ReferenceEndpoint(WorkingSetId.of("child"), LocalId.of("L1"), CommonId.of("C1"),
-                TrackerId.of("T1"), Revision.of(3));
-        var target = new ReferenceEndpoint(WorkingSetId.of("parent"), null, CommonId.of("C2"),
-                TrackerId.of("T2"), null);
+        var source = new ReferenceEndpoint(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+                TrackerId.of("265625955250112"), Revision.of(3));
+        var target = new ReferenceEndpoint(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
+                TrackerId.of("261538396602304"), null);
 
         var event = new ReferenceCreationRequested(metadata, source, target);
 
@@ -36,10 +36,10 @@ class RelationEventContractTest {
 
     @Test
     void referenceSourceMustBeFullyResolved() {
-        var source = new ReferenceEndpoint(WorkingSetId.of("child"), null, CommonId.of("C1"), TrackerId.of("T1"),
+        var source = new ReferenceEndpoint(WorkingSetId.of("259712159403968"), null, CommonId.of("265506033508288"), TrackerId.of("265625955250112"),
                 Revision.of(3));
-        var target = new ReferenceEndpoint(WorkingSetId.of("parent"), null, CommonId.of("C2"),
-                TrackerId.of("T2"), null);
+        var target = new ReferenceEndpoint(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
+                TrackerId.of("261538396602304"), null);
 
         assertThrows(IllegalArgumentException.class,
                 () -> new ReferenceCreationRequested(metadata, source, target));
@@ -47,21 +47,21 @@ class RelationEventContractTest {
 
     @Test
     void associationEventHasNoRevisionFields() {
-        var source = new AssociationEndpoint(WorkingSetId.of("child"), LocalId.of("L1"), CommonId.of("C1"),
-                TrackerId.of("T1"));
-        var target = new AssociationEndpoint(WorkingSetId.of("parent"), LocalId.of("L2"), CommonId.of("C2"),
-                TrackerId.of("T2"));
+        var source = new AssociationEndpoint(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+                TrackerId.of("265625955250112"));
+        var target = new AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
+                TrackerId.of("261538396602304"));
 
         var event = new AssociationCreationRequested(metadata, source, target);
 
-        assertEquals("T1", event.source().trackerId().value());
-        assertEquals("L2", event.target().localId().value());
+        assertEquals("265625955250112", event.source().trackerId().value());
+        assertEquals("265864557082560", event.target().localId().value());
     }
 
     @Test
     void referenceEndpointRequiresWorkingSetEvenWhenTargetLocalIsMissing() {
         assertThrows(NullPointerException.class,
-                () -> new ReferenceEndpoint(null, null, CommonId.of("C1"), TrackerId.of("T1"), null));
+                () -> new ReferenceEndpoint(null, null, CommonId.of("265506033508288"), TrackerId.of("265625955250112"), null));
     }
 
     @Test

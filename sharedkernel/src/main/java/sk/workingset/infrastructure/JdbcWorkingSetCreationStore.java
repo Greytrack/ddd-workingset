@@ -28,13 +28,13 @@ public final class JdbcWorkingSetCreationStore implements WorkingSetCreationStor
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
                 ON CONFLICT DO NOTHING
-                """, creation.id(), request.parentWorkingSetId(), request.newWorkingSetId(), request.requestId(),
+                """, creation.numericId(), request.numericParentWorkingSetId(), request.numericTargetWorkingSetId(), request.requestId(),
                 creation.status().name(), encode(creation), Timestamp.from(creation.createdAt())) == 1;
     }
 
     @Override
     public Optional<WorkingSetCreation> find(String id, boolean lock) {
-        return load("SELECT result FROM working_set_creations WHERE id = ?" + (lock ? " FOR UPDATE" : ""), id);
+        return load("SELECT result FROM working_set_creations WHERE id = ?" + (lock ? " FOR UPDATE" : ""), Long.valueOf(id));
     }
 
     @Override
@@ -44,7 +44,7 @@ public final class JdbcWorkingSetCreationStore implements WorkingSetCreationStor
                 WHERE new_working_set_id = ?
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
-                """, target.value());
+                """, target.numericValue());
     }
 
     @Override
@@ -65,7 +65,7 @@ public final class JdbcWorkingSetCreationStore implements WorkingSetCreationStor
                   AND status IN ('Pending', 'Running')
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
-                """, target.value());
+                """, target.numericValue());
     }
 
     @Override
@@ -76,10 +76,10 @@ public final class JdbcWorkingSetCreationStore implements WorkingSetCreationStor
                 WHERE id = ?
                 """, creation.status().name(), encode(creation),
                 Timestamp.from(creation.startedAt()),
-                creation.completedAt() == null ? null : Timestamp.from(creation.completedAt()), creation.id());
+                creation.completedAt() == null ? null : Timestamp.from(creation.completedAt()), creation.numericId());
     }
 
-    private Optional<WorkingSetCreation> load(String sql, String id) {
+    private Optional<WorkingSetCreation> load(String sql, Object id) {
         return jdbc.query(sql, (rs, row) -> decode(rs.getString(1)), id).stream().findFirst();
     }
 

@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,14 +46,14 @@ class BindingAcceptanceTest {
     @Autowired private WorkingSetApplicationService workingSets;
 
     private final String suffix = UUID.randomUUID().toString();
-    private final String ws = "WS-" + suffix;
-    private final String other = "OTHER-" + suffix;
-    private final String space = "SPACE-" + suffix;
-    private final String sharedClass = "SC-" + suffix;
-    private final String unsharedClass = "UC-" + suffix;
-    private final String shared = "SH-" + suffix;
-    private final String unshared = "UN-" + suffix;
-    private final String sourceItem = "SOURCE-" + suffix;
+    private final String ws = fixtureId("WS-" + suffix);
+    private final String other = fixtureId("OTHER-" + suffix);
+    private final String space = fixtureId("SPACE-" + suffix);
+    private final String sharedClass = fixtureId("SC-" + suffix);
+    private final String unsharedClass = fixtureId("UC-" + suffix);
+    private final String shared = fixtureId("SH-" + suffix);
+    private final String unshared = fixtureId("UN-" + suffix);
+    private final String sourceItem = fixtureId("SOURCE-" + suffix);
     private final List<String> worksets = new ArrayList<>();
 
     @BeforeEach
@@ -86,7 +88,7 @@ class BindingAcceptanceTest {
         assertTrue(rest.getForObject(path("1"), WorkingSetView.class).defaultWorkingSet());
         assertFailure(rest.postForEntity(sharedPath(ws, shared), null, Map.class),
                 HttpStatus.CONFLICT, "MissingSpaceBinding");
-        assertFailure(rest.postForEntity(spacePath(ws) + "-missing", null, Map.class),
+        assertFailure(rest.postForEntity(path(ws) + "/spaces/" + fixtureId(space + "-missing"), null, Map.class),
                 HttpStatus.NOT_FOUND, "ProductSpaceNotFound");
         bindSpace(ws);
         assertFailure(rest.postForEntity(spacePath(ws), null, Map.class), HttpStatus.CONFLICT, "AlreadyBound");
@@ -97,7 +99,7 @@ class BindingAcceptanceTest {
         assertFailure(rest.postForEntity(sharedPath(ws, shared), null, Map.class),
                 HttpStatus.CONFLICT, "TrackerAlreadyBound");
 
-        String anotherShared = "ALT-" + suffix;
+        String anotherShared = fixtureId("ALT-" + suffix);
         original(anotherShared, sharedClass, "SHARED", null);
         assertEquals(HttpStatus.CREATED,
                 rest.postForEntity(sharedPath(ws, anotherShared), null, TrackerBindingView.class).getStatusCode());
@@ -132,7 +134,7 @@ class BindingAcceptanceTest {
 
     @Test
     void sharedDefaultComesFromRootAndIsNotReplacedAfterUnbindOrDelete() {
-        String alternate = "ALT-" + suffix;
+        String alternate = fixtureId("ALT-" + suffix);
         original(alternate, sharedClass, "SHARED", null);
         jdbc.update("UPDATE trackers SET is_default = true WHERE tracker_id = ?", shared);
         for (String child : List.of(ws, other)) {
@@ -170,7 +172,7 @@ class BindingAcceptanceTest {
 
     @Test
     void grandchildRequiresItsDirectParentsRangeAndSharedReuseKeepsTheOriginalId() {
-        String grandchild = "GRAND-" + suffix;
+        String grandchild = fixtureId("GRAND-" + suffix);
         createChild(ws, grandchild);
         bindSpace(grandchild);
 
@@ -191,7 +193,7 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(shared, rest.getForObject(path(grandchild) + "/bindings", BindingsView.class)
                 .trackers().getFirst().trackerId());
-        String laterChild = "LATER-" + suffix;
+        String laterChild = fixtureId("LATER-" + suffix);
         createChild(ws, laterChild);
         bindSpace(laterChild);
         assertFailure(rest.postForEntity(sharedPath(laterChild, shared), null, Map.class),
@@ -202,7 +204,7 @@ class BindingAcceptanceTest {
     void sharedUnbindPreservesTrackerItemAndSpaceBinding() {
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
-        businessItem("ITEM-" + suffix, shared);
+        businessItem(fixtureId("ITEM-" + suffix), shared);
         assertFailure(delete(spacePath(ws)), HttpStatus.CONFLICT, "SpaceStillHasTrackers");
 
         assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
@@ -236,7 +238,7 @@ class BindingAcceptanceTest {
 
     @Test
     void trackerDeletionRejectsOrganizationChildrenAndRemovesOnlyItsBindings() {
-        String child = "CHILD-" + suffix;
+        String child = fixtureId("CHILD-" + suffix);
         original(child, unsharedClass, "UNSHARED", shared);
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasOrgChildren");
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE parent_id = ?", shared));
@@ -261,7 +263,8 @@ class BindingAcceptanceTest {
         String endpoint = path("1") + "/product-spaces/" + space;
         var blocked = delete(endpoint);
         assertFailure(blocked, HttpStatus.CONFLICT, "SpaceStillBoundInWorkingSet");
-        assertEquals(List.of(other, ws), blocked.getBody().get("workingSetIds"));
+        assertEquals(java.util.stream.Stream.of(other, ws).sorted(java.util.Comparator.comparingLong(Long::parseLong))
+                .toList(), blocked.getBody().get("workingSetIds"));
 
         assertEquals(HttpStatus.NO_CONTENT, delete(spacePath(ws)).getStatusCode());
         assertEquals(HttpStatus.NO_CONTENT, delete(spacePath(other)).getStatusCode());
@@ -279,7 +282,7 @@ class BindingAcceptanceTest {
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
         DeriveResult target = derive(ws, unshared, sourceItem);
-        businessItem("ITEM-" + suffix, shared);
+        businessItem(fixtureId("ITEM-" + suffix), shared);
 
         var blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "MemberCannotBeUnbound");
@@ -301,7 +304,7 @@ class BindingAcceptanceTest {
     void middleWorksetRejectsDeleteBeforeRemovingAnyBindings() {
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
-        String grandchild = "GRAND-" + suffix;
+        String grandchild = fixtureId("GRAND-" + suffix);
         createChild(ws, grandchild);
 
         var blocked = delete(path(ws));
@@ -323,12 +326,12 @@ class BindingAcceptanceTest {
 
     @Test
     void concurrentChildCreationAndParentDeletionCannotLeaveADanglingParent() throws Exception {
-        String child = "RACE-CHILD-" + suffix;
+        String child = fixtureId("RACE-CHILD-" + suffix);
         var start = new CyclicBarrier(2);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
-                return rest.postForEntity(path(ws) + "/children", Map.of("workingSetId", child), Map.class);
+                return rest.postForEntity(path(ws) + "/children", Map.of("name", "并发创建"), Map.class);
             });
             var remove = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
@@ -337,9 +340,10 @@ class BindingAcceptanceTest {
 
             var createResult = create.get(10, TimeUnit.SECONDS);
             if (createResult.getStatusCode() == HttpStatus.CREATED) {
-                worksets.add(child);
+                String createdChild = (String) createResult.getBody().get("workingSetId");
+                worksets.add(createdChild);
                 assertFailure(remove.get(10, TimeUnit.SECONDS), HttpStatus.CONFLICT, "WorkingSetHasChildren");
-                assertEquals(ws, rest.getForObject(path(child), WorkingSetView.class).parentWorkingSetId());
+                assertEquals(ws, rest.getForObject(path(createdChild), WorkingSetView.class).parentWorkingSetId());
             } else {
                 assertFailure(createResult, HttpStatus.NOT_FOUND, "WorkingSetNotFound");
                 assertEquals(HttpStatus.NO_CONTENT, remove.get(10, TimeUnit.SECONDS).getStatusCode());
@@ -380,7 +384,7 @@ class BindingAcceptanceTest {
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
                 VALUES (?, ?, ?, 'A', 'test', 3, 0)
-                """, id, "C-" + id, tracker);
+                """, id, fixtureId("family-" + id), tracker);
     }
 
     private int count(String sql, String parameter) {
@@ -407,8 +411,7 @@ class BindingAcceptanceTest {
     }
 
     private void createChild(String parent, String child) {
-        assertEquals(HttpStatus.CREATED,
-                rest.postForEntity(path(parent) + "/children", Map.of("workingSetId", child), Void.class).getStatusCode());
+        FixtureIds.insertWorkingSet(jdbc, parent, child);
         worksets.add(child);
     }
 
@@ -418,7 +421,7 @@ class BindingAcceptanceTest {
 
     private DeriveResult derive(String target, String sourceTracker, String sourceLocalId) {
         return workingSets.derive(new DeriveCommand(WorkingSetId.of(target), TrackerId.of(sourceTracker),
-                LocalId.of(sourceLocalId), Revision.of(3), CommonId.of("C-" + sourceLocalId)));
+                LocalId.of(sourceLocalId), Revision.of(3), CommonId.of(fixtureId("family-" + sourceLocalId))));
     }
 
     private static void assertDirectSourceFailure(org.junit.jupiter.api.function.Executable action) {

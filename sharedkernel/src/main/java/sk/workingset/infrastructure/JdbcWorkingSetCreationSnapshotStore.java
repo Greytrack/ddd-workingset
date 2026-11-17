@@ -21,7 +21,7 @@ public final class JdbcWorkingSetCreationSnapshotStore implements WorkingSetCrea
         jdbc.update("""
                 INSERT INTO working_set_creation_snapshots (creation_id, completed_at)
                 VALUES (?, ?) ON CONFLICT (creation_id) DO NOTHING
-                """, creationId, Timestamp.from(Instant.now()));
+                """, Long.valueOf(creationId), Timestamp.from(Instant.now()));
         if (!items.isEmpty()) {
             jdbc.batchUpdate("""
                     INSERT INTO working_set_creation_items
@@ -29,12 +29,12 @@ public final class JdbcWorkingSetCreationSnapshotStore implements WorkingSetCrea
                          source_local_id, source_revision)
                     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
                     """, items, items.size(), (statement, item) -> {
-                        statement.setString(1, creationId);
-                        statement.setString(2, item.parentTrackerId());
-                        statement.setString(3, item.localId().value());
-                        statement.setString(4, item.commonId().value());
+                        statement.setLong(1, Long.parseLong(creationId));
+                        statement.setLong(2, Long.parseLong(item.parentTrackerId()));
+                        statement.setLong(3, item.localId().numericValue());
+                        statement.setLong(4, item.commonId().numericValue());
                         statement.setInt(5, item.revision().value());
-                        statement.setString(6, item.sourceLocalId().value());
+                        statement.setLong(6, item.sourceLocalId().numericValue());
                         statement.setInt(7, item.sourceRevision().value());
                     });
         }
@@ -45,21 +45,21 @@ public final class JdbcWorkingSetCreationSnapshotStore implements WorkingSetCrea
         return jdbc.query("""
                 SELECT parent_tracker_id, local_id, common_id, revision, source_local_id, source_revision
                 FROM working_set_creation_items
-                WHERE creation_id = ? AND parent_tracker_id = ? AND local_id COLLATE "C" > ?
-                ORDER BY local_id COLLATE "C" LIMIT ?
+                WHERE creation_id = ? AND parent_tracker_id = ? AND local_id > ?
+                ORDER BY local_id LIMIT ?
                 """, (rs, row) -> new Item(rs.getString("parent_tracker_id"),
-                sk.workingset.domain.LocalId.of(rs.getString("local_id")),
-                sk.workingset.domain.CommonId.of(rs.getString("common_id")),
+                sk.workingset.domain.LocalId.of(rs.getLong("local_id")),
+                sk.workingset.domain.CommonId.of(rs.getLong("common_id")),
                 sk.workingset.domain.Revision.of(rs.getInt("revision")),
-                sk.workingset.domain.LocalId.of(rs.getString("source_local_id")),
+                sk.workingset.domain.LocalId.of(rs.getLong("source_local_id")),
                 sk.workingset.domain.Revision.of(rs.getInt("source_revision"))),
-                creationId, parentTrackerId, afterLocalId, limit);
+                Long.valueOf(creationId), Long.valueOf(parentTrackerId), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 
     @Override
     public boolean contains(String creationId) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM working_set_creation_snapshots WHERE creation_id = ?)
-                """, Boolean.class, creationId));
+                """, Boolean.class, Long.valueOf(creationId)));
     }
 }

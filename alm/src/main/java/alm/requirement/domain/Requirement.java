@@ -3,6 +3,7 @@ package alm.requirement.domain;
 import sk.common.error.DomainException;
 
 import java.util.Objects;
+import java.util.Locale;
 
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LifecycleCommand;
@@ -20,6 +21,7 @@ public final class Requirement implements TrackerItem {
     private final LocalId localId;
     private final CommonId commonId;
     private final TrackerId trackerId;
+    private final String number;
     private final String title;
     private final String description;
     private final Revision revision;
@@ -32,6 +34,7 @@ public final class Requirement implements TrackerItem {
         this.localId = Objects.requireNonNull(localId, "localId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
+        this.number = "REQ-" + Long.toHexString(commonId.numericValue()).toUpperCase(Locale.ROOT);
         this.title = Objects.requireNonNull(title, "title");
         this.description = Objects.requireNonNull(description, "description");
         this.revision = Objects.requireNonNull(revision, "revision");
@@ -73,6 +76,7 @@ public final class Requirement implements TrackerItem {
     public Revision revision() { return revision; }
 
     public TrackerId trackerId() { return trackerId; }
+    public String number() { return number; }
     public String title() { return title; }
     public String description() { return description; }
     public Version version() { return version; }

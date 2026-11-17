@@ -341,11 +341,6 @@ function renderMergeRound(round) {
     </table>`;
 }
 
-function newRequestId() {
-  if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
-  return 'merge-' + Date.now() + '-' + Math.random().toString(16).slice(2);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   $('#selectedTracker').addEventListener('click', (event) => {
     if (event.target.closest('[data-action="compare-tracker"]')) {

@@ -31,7 +31,7 @@ import sk.workingset.domain.WorkingSetId;
 /** T6-C：创建时的身份分配与工作集归属。 */
 class RequirementCreateScopeTest {
 
-    private static final TrackerId TRACKER = TrackerId.of("T1");
+    private static final TrackerId TRACKER = TrackerId.of("265625955250112");
     private static final Revision REVISION = Revision.of(3);
 
     private final RequirementRepository repository = mock(RequirementRepository.class);
@@ -59,9 +59,9 @@ class RequirementCreateScopeTest {
     @Test
     void non_default_working_set_uses_two_distinct_ids() {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
-                new TrackerScope(WorkingSetId.of("child"), SharingMode.UNSHARED)));
+                new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
 
-        var created = service.create(TRACKER, WorkingSetId.of("child"), "A", "d", REVISION);
+        var created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
         assertNotEquals(created.localId().value(), created.commonId().value());
     }
@@ -69,7 +69,7 @@ class RequirementCreateScopeTest {
     @Test
     void unshared_tracker_must_be_created_from_its_own_working_set() {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
-                new TrackerScope(WorkingSetId.of("child"), SharingMode.UNSHARED)));
+                new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
 
         var failure = assertThrows(ApplicationFailure.class,
                 () -> service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION));
@@ -82,7 +82,7 @@ class RequirementCreateScopeTest {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
                 new TrackerScope(WorkingSetId.of("1"), SharingMode.SHARED)));
 
-        var created = service.create(TRACKER, WorkingSetId.of("child"), "A", "d", REVISION);
+        var created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
         assertEquals(created.localId().value(), created.commonId().value());
         verify(repository).save(any());

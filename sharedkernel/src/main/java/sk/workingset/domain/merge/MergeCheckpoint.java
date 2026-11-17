@@ -17,10 +17,10 @@ public record MergeCheckpoint(Key key, long decisionVersion, Revision revisionA,
                               Direction direction, boolean revoked, String operator) {
     public enum Direction { A_TO_B, B_TO_A }
 
-    /** 方向无关键：A/B 按 TrackerId 字符串排序，保证同一对 Tracker 只有一种表示。 */
+    /** 方向无关键：A/B 按 TrackerId 数值排序，保证同一对 Tracker 只有一种表示。 */
     public record Key(TrackerId a, TrackerId b, CommonId family) {
         public Key {
-            if (a.value().compareTo(b.value()) > 0) {
+            if (a.numericValue() > b.numericValue()) {
                 var low = a;
                 a = b;
                 b = low;

@@ -29,9 +29,9 @@ class RequirementMaterializationAdapterTest {
             repository, snapshots, mock(RequirementMergeWriter.class));
 
     private final MaterializeRequest request = new MaterializeRequest(
-            LocalId.of("target"), TrackerId.of("target-tracker"), CommonId.of("family"), LocalId.of("source"),
+            LocalId.of("260939964213184"), TrackerId.of("263244057497536"), CommonId.of("264220103598016"), LocalId.of("261802623213504"),
             Revision.of(3), Revision.of(4), LockVersion.of(1), LockVersion.of(2), Revision.of(1),
-            10, new SnapshotRef("snapshot"));
+            10, SnapshotRef.of("258519900000001"));
 
     private final TargetIdentity target = new TargetIdentity(request.targetLocalId(), request.targetTrackerId(),
             request.commonId(), request.targetRevision(), false);
@@ -43,10 +43,10 @@ class RequirementMaterializationAdapterTest {
                 () -> adapter.materialize(request, target));
 
         var invalid = java.util.List.of(
-                snapshot("other", "family", 3, 1),
-                snapshot("source", "family", 4, 1),
-                snapshot("source", "family", 3, 2),
-                snapshot("source", "other", 3, 1));
+                snapshot("265987761440704", "264220103598016", 3, 1),
+                snapshot("261802623213504", "264220103598016", 4, 1),
+                snapshot("261802623213504", "264220103598016", 3, 2),
+                snapshot("261802623213504", "265987761440704", 3, 1));
         for (var evidence : invalid) {
             when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(evidence));
             assertThrows(MaterializationRejectedException.class,
@@ -57,8 +57,8 @@ class RequirementMaterializationAdapterTest {
 
     @Test
     void target_identity_must_match_the_request_evidence() {
-        when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("source", "family", 3, 1)));
-        var mismatched = new TargetIdentity(LocalId.of("other"), request.targetTrackerId(),
+        when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("261802623213504", "264220103598016", 3, 1)));
+        var mismatched = new TargetIdentity(LocalId.of("265987761440704"), request.targetTrackerId(),
                 request.commonId(), request.targetRevision(), false);
         assertThrows(MaterializationRejectedException.class,
                 () -> adapter.materialize(request, mismatched));
@@ -67,7 +67,7 @@ class RequirementMaterializationAdapterTest {
 
     @Test
     void existing_target_must_match_evidence_including_release_version() {
-        when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("source", "family", 3, 1)));
+        when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("261802623213504", "264220103598016", 3, 1)));
         when(repository.findById(request.targetLocalId())).thenReturn(Optional.of(existing("different", "v1")),
                 Optional.of(existing("A", "v2")), Optional.of(existing("A", "v1")));
 
@@ -86,7 +86,7 @@ class RequirementMaterializationAdapterTest {
 
     private RequirementSnapshot snapshot(String source, String family, int revision, long lockVersion) {
         return RequirementSnapshot.of(Requirement.restore(LocalId.of(source), CommonId.of(family),
-                TrackerId.of("source-tracker"), "A", "description", Revision.of(revision),
+                TrackerId.of("258924796270528"), "A", "description", Revision.of(revision),
                 Version.of("v1"), LockVersion.of(lockVersion)));
     }
 }

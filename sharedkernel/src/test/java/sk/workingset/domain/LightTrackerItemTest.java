@@ -11,11 +11,11 @@ import org.junit.jupiter.api.Test;
 
 class LightTrackerItemTest {
 
-    private static final LocalId L0 = LocalId.of("L0");
-    private static final LocalId L1 = LocalId.of("L1");
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T1 = TrackerId.of("T1");
-    private static final WorkingSetId WS1 = WorkingSetId.of("WS1");
+    private static final LocalId L0 = LocalId.of("260574482192320");
+    private static final LocalId L1 = LocalId.of("261158455371712");
+    private static final CommonId C1 = CommonId.of("265506033508288");
+    private static final TrackerId T1 = TrackerId.of("265625955250112");
+    private static final WorkingSetId WS1 = WorkingSetId.of("261508476721088");
     private static final Revision R3 = Revision.of(3);
 
     @Test

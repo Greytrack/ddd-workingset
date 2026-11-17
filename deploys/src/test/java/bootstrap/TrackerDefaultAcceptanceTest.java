@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import sk.common.error.DomainException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,31 +39,27 @@ class TrackerDefaultAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
-    private final String child = "WS-CHILD-" + suffix;
-    private final String sharedClassification = "CL-SHARED-" + suffix;
+    private final String child = fixtureId("WS-CHILD-" + suffix);
+    private final String sharedClassification = fixtureId("CL-SHARED-" + suffix);
+    private final java.util.Set<String> testSpaces = new java.util.HashSet<>();
 
     @AfterEach
     void cleanup() {
-        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id LIKE ?)",
-                "PS-" + suffix + "%");
-        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id LIKE ?)",
-                "PS-" + suffix + "%");
-        jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
-        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
-        jdbc.update("DELETE FROM trackers WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
-        jdbc.update("DELETE FROM space_bindings WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
-        jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
-        jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", "WS-MULTI-" + suffix, child);
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id LIKE ?", "PS-" + suffix + "%");
+        for (String space : testSpaces) {
+            jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)", space);
+            jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)", space);
+            jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
+            jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
+            jdbc.update("DELETE FROM space_bindings WHERE product_space_id = ?", space);
+            jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
+        }
+        jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM classifications WHERE classification_id = ?", sharedClassification);
     }
 
     @Test
     void creatingProductSpacePublishesDefaultTrackerBindingsAndItemReadAccess() {
-        String spaceId = "PS-" + suffix;
-        var response = rest.postForEntity("/api/worksets/1/product-spaces",
-                Map.of("productSpaceId", spaceId, "name", "新空间-" + suffix), Map.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode(), () -> String.valueOf(response.getBody()));
+        String spaceId = createSpace("1");
         int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND is_default", Integer.class, spaceId));
@@ -97,9 +95,7 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void createsAndBindsNamedTrackersUsingClassificationSharingRules() {
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED')", sharedClassification);
-        String spaceId = "PS-" + suffix;
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/product-spaces",
-                Map.of("productSpaceId", spaceId, "name", "新空间"), Map.class).getStatusCode());
+        String spaceId = createSpace("1");
         var classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
         assertTrue(Arrays.stream(classifications).anyMatch(classification ->
                 sharedClassification.equals(classification.classificationId())
@@ -108,7 +104,7 @@ class TrackerDefaultAcceptanceTest {
         String url = "/api/worksets/1/trackers";
         for (var mode : Classification.SharingMode.values()) {
             var request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
-                    "CL-REQUIREMENT", "sharingMode", mode.name());
+                    "258519859202016", "sharingMode", mode.name());
             var response = rest.postForEntity(url, request, TrackerView.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
             var tracker = response.getBody();
@@ -120,8 +116,7 @@ class TrackerDefaultAcceptanceTest {
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
 
             if (mode == Classification.SharingMode.SHARED) {
-                assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
-                        Map.of("workingSetId", child), Map.class).getStatusCode());
+                FixtureIds.insertWorkingSet(jdbc, "1", child);
                 assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/spaces/" + spaceId,
                         null, Map.class).getStatusCode());
                 assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/trackers/shared/"
@@ -142,35 +137,37 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void defaultTrackerIsUniquePerWorkingSetSpaceAndClassification() {
-        String spaceId = "PS-DEF-" + suffix;
+        String spaceId = fixtureId("PS-DEF-" + suffix);
+        testSpaces.add(spaceId);
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", spaceId, "空间-" + suffix);
         String classification = jdbc.queryForObject("SELECT classification_id FROM classifications LIMIT 1", String.class);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id,
                     sharing_mode, is_default)
                 VALUES (?, ?, '1', ?, ?, 'UNSHARED', TRUE)
-                """, "T-DEF1-" + suffix, "默认1-" + suffix, spaceId, classification);
+                """, fixtureId("T-DEF1-" + suffix), "默认1-" + suffix, spaceId, classification);
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id,
                     sharing_mode, is_default)
                 VALUES (?, ?, '1', ?, ?, 'UNSHARED', TRUE)
-                """, "T-DEF2-" + suffix, "默认2-" + suffix, spaceId, classification));
+                """, fixtureId("T-DEF2-" + suffix), "默认2-" + suffix, spaceId, classification));
     }
 
     @Test
     void trackerNameIsUniqueWithinSpaceAndClassification() {
-        String spaceId = "PS-NAME-" + suffix;
+        String spaceId = fixtureId("PS-NAME-" + suffix);
+        testSpaces.add(spaceId);
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", spaceId, "空间-" + suffix);
         String classification = jdbc.queryForObject("SELECT classification_id FROM classifications LIMIT 1", String.class);
         String name = "同名-" + suffix;
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, ?, '1', ?, ?, 'UNSHARED')
-                """, "T-N1-" + suffix, name, spaceId, classification);
+                """, fixtureId("T-N1-" + suffix), name, spaceId, classification);
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, ?, '1', ?, ?, 'UNSHARED')
-                """, "T-N2-" + suffix, name, spaceId, classification));
+                """, fixtureId("T-N2-" + suffix), name, spaceId, classification));
     }
 
     @Test
@@ -184,12 +181,8 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void productSpaceCreationFromNonDefaultEntryStillTargetsDefaultWorkingSet() {
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
-                Map.of("workingSetId", child), Map.class).getStatusCode());
-        String spaceId = "PS-CHILD-" + suffix;
-        var response = rest.postForEntity("/api/worksets/" + child + "/product-spaces",
-                Map.of("productSpaceId", spaceId, "name", "子工作集入口-" + suffix), Map.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode(), () -> String.valueOf(response.getBody()));
+        FixtureIds.insertWorkingSet(jdbc, "1", child);
+        String spaceId = createSpace(child);
 
         int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
         assertEquals(classifications, jdbc.queryForObject("""
@@ -209,30 +202,41 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
-        var space = new ProductSpace("PS-DOM-" + suffix, "domain");
-        var classification = new Classification("CL-REQ", Classification.SharingMode.UNSHARED);
+        var space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
+        var classification = new Classification("258831141156800", Classification.SharingMode.UNSHARED);
         assertThrows(DomainException.class, () -> new Tracker(
-                TrackerId.of("T-CHILD-" + suffix), "子工作集原生 Tracker", null,
+                TrackerId.of(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
                 WorkingSetId.of(child), space.id(), classification.id(), classification.sharingMode(), null, false));
     }
 
     @Test
     void trackerNameUniquenessDoesNotCrossProductSpaces() {
-        String firstSpace = "PS-NAME1-" + suffix;
-        String secondSpace = "PS-NAME2-" + suffix;
+        String firstSpace = fixtureId("PS-NAME1-" + suffix);
+        String secondSpace = fixtureId("PS-NAME2-" + suffix);
         String classification = jdbc.queryForObject(
                 "SELECT classification_id FROM classifications LIMIT 1", String.class);
         String name = "同名跨空间-" + suffix;
         for (String spaceId : Arrays.asList(firstSpace, secondSpace)) {
+            testSpaces.add(spaceId);
             jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
                     spaceId, "空间-" + suffix);
             jdbc.update("""
                     INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)
                     VALUES (?, ?, '1', ?, ?, 'UNSHARED')
-                    """, "T-NAME-" + spaceId, name, spaceId, classification);
+                    """, fixtureId("T-NAME-" + spaceId), name, spaceId, classification);
         }
         assertEquals(2, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE name = ? AND working_set_id = '1'",
                 Integer.class, name));
+    }
+
+    private String createSpace(String workingSet) {
+        var response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
+                Map.of("name", "新空间-" + suffix),
+                sk.workingset.adapters.WorkingSetController.ProductSpaceView.class);
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        var id = response.getBody().productSpaceId();
+        testSpaces.add(id);
+        return id;
     }
 }

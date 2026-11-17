@@ -125,6 +125,8 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 **身份分配（T6-C，2026-11-13 用户确认）**：创建请求不携带 CommonId，由服务端按工作集分配——默认工作集生成一个雪花 ID 同时作为 LocalId 与 CommonId；非默认工作集生成两个不相等的雪花 ID。派生沿用来源 CommonId，LocalId 由服务端生成且与 CommonId 不等。同族唯一冲突（含软删占键）统一返回 409 `DATA_INTEGRITY_CONFLICT`，不新增失败分类。
 
+**存储与展示（2026-11-17）**：应用拥有的实体标识以 Snowflake 生成，PostgreSQL 使用 `BIGINT`，REST 使用十进制字符串传输 64 位 ID。默认工作集保留值 `1`，客户端 `requestId` 仍是文本幂等键。Requirement 的 `number`（`VARCHAR(200)`）是由 `CommonId` 导出的只读家族编号，派生、首次物化和回并沿用该编号。
+
 **回并创建**沿用上述目标工作集身份规则。目标 BC 在同一条目事务中解析家族席位、执行写入并返回实际变体身份与版次，恢复原变体时返回原 LocalId。见 [T1 §8](merge-execution-contract-v1.md#8-轮次终态与结果表达)。
 
 ## 5. 九分类公共失败语义（K2″，用户确认）

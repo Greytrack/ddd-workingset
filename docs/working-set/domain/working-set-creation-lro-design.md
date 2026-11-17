@@ -170,8 +170,8 @@ T7 的产物仍是 `sk.workingset` 的契约与机制；`alm.requirement` 只作
 - 入口：`POST /api/worksets/{target}/extensions`，请求 `{requestId, trackerIds}`；返回 202，任务复用 `GET /api/working-set-creations/{id}` 轮询。
 - 目标：对已有子工作集扩展范围；目标工作集保持可见、可操作。
 - 选择：按直接父工作集的 Tracker 选择一批 Tracker；只允许直属父级来源。
-- 重复过滤：同一子 WS 对同一父 Tracker 至多一个派生 Tracker（`sourceId` 1:1）；目标已存在且已绑定该派生时不再重复派生；过滤后为空时直接拒绝，返回 `NoDerivableTracker`（无可派生的跟踪分类），不创建任务。同一分类的其他 Tracker 有不同父 TrackerId，不属于重复。
-- 新 Tracker：目标没有对应派生 Tracker 时创建、绑定并索引父 Item；创建时 `visible=false`，任务终态后只揭示已成功绑定的新 Tracker。
+- 重复过滤：共享 Tracker 按目标的绑定 ID 判断；非共享 Tracker 按已绑定副本的 `sourceId` 匹配父 TrackerId。同一分类下其他 Tracker 有不同身份，可继续纳入。界面保留这些已纳入项并禁用勾选。提交过滤后为空返回 `NoDerivableTracker`，不创建任务。
+- 扩展范围：共享 Tracker 复用原 ID 并建立绑定。非共享 Tracker 创建副本、绑定并索引父 Item；副本创建时 `visible=false`，任务终态后揭示已成功绑定的副本。
 - 已有 Tracker 的 Item：不在扩展任务内直接覆盖；由普通 Merge 合并加入（扩展只负责新 Tracker）。
 - 原子性：创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO。
 - 并发：同一目标工作集同时只允许一个未终态扩展任务（`uq_active_extension_target`）；不同请求返回 `Preparing`。

@@ -94,7 +94,7 @@ async function pollTasks() {
     return;
   }
   state.taskPolling = true;
-  let completed = false;
+  const completed = [];
   try {
     await Promise.all(active.map(async (task) => {
       try {
@@ -109,7 +109,7 @@ async function pollTasks() {
         task.completedAt = view.completedAt;
         task.lastError = null;
         task.lastUpdated = Date.now();
-        if (!wasTerminal && isTerminal(view.status)) completed = true;
+        if (!wasTerminal && isTerminal(view.status)) completed.push(task);
       } catch (error) {
         task.lastError = reasonText(error.body) || error.message;
         if (error.status === 404) task.status = 'Failed';
@@ -118,9 +118,13 @@ async function pollTasks() {
     saveTasks();
     updateTaskBadge();
     if (taskCenterOpen) renderTaskCenter();
-    if (completed) {
-      await loadWorksetTree();
-      setStatus('创建任务已结束，可刷新左侧工作集查看结果', 'ok');
+    if (completed.some((task) => task.mode !== 'EXTEND')) await loadWorksetTree();
+    if (completed.some((task) => task.mode === 'EXTEND' && task.targetId === state.selectedWs)) {
+      await refreshSelectedRange();
+    }
+    if (completed.length) {
+      const warning = completed.some((task) => task.status !== 'Succeeded');
+      setStatus(warning ? '任务已结束，请在任务中心查看结果' : '工作集任务已完成', warning ? 'warn' : 'ok');
     }
   } finally {
     state.taskPolling = false;
@@ -136,7 +140,7 @@ function openTaskCenter() {
 function renderTaskCenter() {
   const body = state.tasks.length
     ? `<div class="task-list">${state.tasks.map(renderTaskCard).join('')}</div>`
-    : '<div class="empty">暂无任务。点击“创建工作集”发起一个。</div>';
+    : '<div class="empty">暂无工作集任务。</div>';
   openModal(`${modalHeader('任务中心')}
     <div class="modal-body">${body}</div>
     <div class="modal-foot"><button type="button" class="btn" data-close-modal>关闭</button></div>`, true);
@@ -153,7 +157,7 @@ function renderTaskCard(task) {
   const processed = (progress.succeeded || 0) + (progress.failed || 0) + (progress.skipped || 0);
   const percent = total ? Math.min(100, Math.round(processed * 100 / total)) : (isTerminal(status) ? 100 : 6);
 
-  const stages = STAGES.map((stage) => {
+  const stages = STAGES.filter((stage) => task.mode !== 'EXTEND' || stage !== 'CREATE_WORKING_SET').map((stage) => {
     const p = task.stageProgress?.[stage];
     const stageProcessed = p ? (p.succeeded || 0) + (p.failed || 0) + (p.skipped || 0) : 0;
     const stageTotal = p && p.total != null ? p.total : null;
@@ -175,7 +179,7 @@ function renderTaskCard(task) {
   return `<div class="task-card ${statusClass}">
     <div class="task-top">
       <div>
-        <div class="task-title">${escapeHtml(task.targetName || task.targetId || '工作集任务')}</div>
+        <div class="task-title">${task.mode === 'EXTEND' ? '扩展' : '新建'} · ${escapeHtml(task.targetName || task.targetId || '工作集')}</div>
         <div class="task-sub">父级 ${escapeHtml(task.parentName || task.parentId || '—')} · 任务 ${escapeHtml(shortId(task.id))}</div>
       </div>
       <span class="task-status ${statusClass}">${escapeHtml(STATUS_LABELS[status] || status)}</span>
@@ -205,7 +209,6 @@ async function openCreateWorkset() {
     const label = node.ws?.name || (node.id === '1' ? '默认工作集' : shortId(node.id));
     return `<option value="${escapeHtml(node.id)}"${node.id === selected ? ' selected' : ''}>${'　'.repeat(Math.min(depth, 6))}${escapeHtml(label)} (${escapeHtml(shortId(node.id))})</option>`;
   }).join('');
-  const defaultTarget = 'WS-' + Date.now().toString(36).toUpperCase();
   openModal(`${modalHeader('创建工作集', '选择父工作集范围，提交后进入 LRO 任务中心')}
     <form id="createWorksetForm">
       <div class="modal-body">
@@ -217,10 +220,7 @@ async function openCreateWorkset() {
           <label for="createName">工作集名称</label>
           <input id="createName" name="name" placeholder="例如：动力系统 V2 需求工作集" maxlength="255" required>
         </div>
-        <div class="grid-2">
-          <div class="field"><label for="createTarget">新工作集 ID</label><input id="createTarget" name="newWorkingSetId" value="${escapeHtml(defaultTarget)}" required></div>
-          <div class="field"><label for="createRequest">请求 ID</label><input id="createRequest" name="requestId" value="${escapeHtml('ui-' + Date.now())}" required></div>
-        </div>
+        <input type="hidden" name="requestId" value="${escapeHtml(newRequestId())}">
         <div id="createScope"><div class="empty small">加载父工作集范围…</div></div>
         <div id="createFormError" class="form-error"></div>
       </div>
@@ -319,7 +319,6 @@ async function submitCreateWorkset(form) {
   const errorBox = $('#createFormError');
   if (errorBox) errorBox.textContent = '';
   const parentId = form.parentWorkingSetId.value.trim();
-  const targetId = form.newWorkingSetId.value.trim();
   const requestId = form.requestId.value.trim();
   const nameInput = form.querySelector('input[name="name"]');
   const workspaceName = nameInput ? nameInput.value.trim() : '';
@@ -335,7 +334,6 @@ async function submitCreateWorkset(form) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         parentWorkingSetId: parentId,
-        newWorkingSetId: targetId,
         requestId,
         name: workspaceName,
         productSpaceIds,
@@ -344,6 +342,7 @@ async function submitCreateWorkset(form) {
       })
     });
     const parentName = findNode(state.worksets, parentId)?.ws?.name || shortId(parentId);
+    const targetId = creation.targetWorkingSetId;
     addTask(creation, { targetId, targetName: workspaceName || targetId, parentId, parentName });
     closeModal();
     openTaskCenter();
@@ -353,7 +352,119 @@ async function submitCreateWorkset(form) {
   }
 }
 
-/* ---------- single requirement CRUD ---------- */
+/* ---------- extend working set ---------- */
+async function openExtendWorkset() {
+  const targetId = state.selectedWs;
+  const parentId = findNode(state.worksets, targetId)?.ws?.parentWorkingSetId;
+  if (!parentId) return;
+  const targetName = worksetLabel(targetId);
+  const parentName = worksetLabel(parentId);
+  openModal(`${modalHeader('扩展工作集', targetName + ' · 父工作集 ' + parentName)}
+    <form id="extendWorksetForm">
+      <div class="modal-body">
+        <div id="extendScope" role="group" aria-label="父工作集的跟踪分类"><div class="empty small" role="status">正在读取范围…</div></div>
+        <div class="form-error" role="alert"></div>
+      </div>
+      <div class="modal-foot">
+        <span id="extensionCount" class="muted" aria-live="polite"></span>
+        <button type="button" class="btn" data-close-modal>取消</button>
+        <button type="submit" class="btn primary" disabled>提交扩展</button>
+      </div>
+    </form>`, true);
+  const form = $('#extendWorksetForm');
+  const scope = $('#extendScope');
+  let submittedSelection = '';
+  let requestId;
+  form.addEventListener('change', () => updateExtensionSelection(form));
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submit = form.querySelector('[type="submit"]');
+    if (submit.disabled) return;
+    const trackerIds = extensionSelection(form);
+    const key = JSON.stringify(trackerIds);
+    if (key !== submittedSelection) {
+      requestId = newRequestId();
+      submittedSelection = key;
+    }
+    const errorBox = form.querySelector('.form-error');
+    errorBox.textContent = '';
+    submit.disabled = true;
+    submit.textContent = '提交中…';
+    const selected = [...form.querySelectorAll('input[name="trackerIds"]:enabled')];
+    selected.forEach((input) => { input.disabled = true; });
+    try {
+      const task = await api('/api/worksets/' + encodeURIComponent(targetId) + '/extensions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, trackerIds })
+      });
+      addTask(task, { mode: 'EXTEND', targetId, targetName, parentId, parentName });
+      if (form.isConnected) {
+        closeModal();
+        openTaskCenter();
+      }
+      if (isTerminal(task.status) && state.selectedWs === targetId) await refreshSelectedRange();
+      setStatus('扩展任务已提交：' + shortId(task.creationId), 'ok');
+    } catch (error) {
+      errorBox.textContent = error.body?.reason === 'PREPARING' ? '当前已有扩展任务，请在完成后重试。'
+        : error.body?.reason === 'NoDerivableTracker' ? '所选跟踪分类已纳入，请重新打开列表。'
+        : reasonText(error.body) || error.message;
+    } finally {
+      selected.forEach((input) => { input.disabled = false; });
+      submit.textContent = '提交扩展';
+      updateExtensionSelection(form);
+    }
+  });
+  try {
+    const parent = '/api/worksets/' + encodeURIComponent(parentId);
+    const target = '/api/worksets/' + encodeURIComponent(targetId);
+    const [parentBindings, parentTrackers, targetBindings, targetTrackers] = await Promise.all([
+      api(parent + '/bindings'), api(parent + '/trackers'), api(target + '/bindings'), api(target + '/trackers')
+    ]);
+    if (!form.isConnected) return;
+    const parentBound = new Set(parentBindings.trackers.map((binding) => binding.trackerId));
+    const targetBound = new Set(targetBindings.trackers.map((binding) => binding.trackerId));
+    const derivedSources = new Set(targetTrackers
+      .filter((tracker) => tracker.sourceId && targetBound.has(tracker.trackerId))
+      .map((tracker) => tracker.sourceId));
+    const groups = new Map();
+    const spaceNames = new Map(parentBindings.spaces.map((space) => [space.productSpaceId, space.name]));
+    for (const tracker of parentTrackers) {
+      if (parentId !== '1' && !parentBound.has(tracker.trackerId)) continue;
+      const space = tracker.productSpaceId;
+      if (!groups.has(space)) groups.set(space, []);
+      groups.get(space).push(tracker);
+    }
+    scope.innerHTML = groups.size ? `<div class="scope-tree">${[...groups].map(([spaceId, trackers]) =>
+      `<fieldset class="extension-group"><legend>${escapeHtml(spaceNames.get(spaceId) || spaceId)}</legend>
+        ${trackers.map((tracker) => {
+          const shared = tracker.sharingMode === 'SHARED';
+          const included = (shared ? targetBound : derivedSources).has(tracker.trackerId);
+          return `<label class="scope-tracker${included ? ' already-included' : ''}">
+            <input type="checkbox" name="trackerIds" value="${escapeHtml(tracker.trackerId)}"${included ? ' disabled' : ''}>
+            <span class="scope-tracker-name">${escapeHtml(tracker.name || shortId(tracker.trackerId))}<span class="check-id">${escapeHtml(tracker.trackerId)}</span></span>
+            <span class="badge ${shared ? 'shared' : 'unshared'}">${shared ? '共享' : '非共享'}</span>
+            ${included ? '<span class="badge">已纳入</span>' : ''}
+          </label>`;
+        }).join('')}</fieldset>`).join('')}</div>` : '<div class="empty small">父工作集没有可展示的跟踪分类。</div>';
+    updateExtensionSelection(form);
+  } catch (error) {
+    scope.innerHTML = `<div class="empty small error-text">${escapeHtml(reasonText(error.body) || error.message)}</div>`;
+  }
+}
+
+function extensionSelection(form) {
+  return [...form.querySelectorAll('input[name="trackerIds"]:checked:enabled')].map((input) => input.value).sort();
+}
+
+function updateExtensionSelection(form) {
+  const count = extensionSelection(form).length;
+  const available = form.querySelectorAll('input[name="trackerIds"]:enabled').length;
+  form.querySelector('#extensionCount').textContent = available ? '已选 ' + count + ' 项' : '暂无可扩展项';
+  form.querySelector('[type="submit"]').disabled = count === 0;
+}
+
+/* ---------- Tracker and requirement CRUD ---------- */
 async function openTrackerCreate() {
   const space = currentSpaces().get(state.selectedSpace);
   if (state.selectedWs !== '1' || !space?.bound) return;
@@ -398,7 +509,7 @@ async function openTrackerCreate() {
     if (!form.isConnected) return;
     form.classification.replaceChildren(new Option(classifications.length ? '选择所属分类' : '暂无可用分类', ''));
     for (const classification of classifications) {
-      const option = new Option(classification.classificationId, classification.classificationId);
+      const option = new Option(classification.name || classification.classificationId, classification.classificationId);
       option.dataset.mode = classification.sharingMode;
       form.classification.add(option);
     }
@@ -477,7 +588,7 @@ async function openRequirementEdit(item) {
   try {
     const requirement = await api('/api/requirements/' + encodeURIComponent(localId));
     requirementContext = { mode: 'edit', localId, lockVersion: requirement.lockVersion };
-    openModal(`${modalHeader('编辑需求', `当前需求 ${shortId(localId)}`)}
+    openModal(`${modalHeader('编辑需求', requirement.number || shortId(localId))}
       <form id="requirementForm">
         <div class="modal-body">
           <div class="field"><label for="reqTitle">标题</label><input id="reqTitle" name="title" value="${escapeHtml(requirement.title)}" required></div>
@@ -550,25 +661,28 @@ async function refresh() {
   button.disabled = true;
   try {
     await loadWorksetTree();
-    const current = state.selectedWs;
-    const space = state.selectedSpace;
-    const tracker = state.selectedTracker?.trackerId;
-    const item = state.selectedItem?.localId;
-    const filter = $('#itemFilter').value;
-    const target = current && findNode(state.worksets, current) ? current : state.worksets[0]?.id;
-    if (!target) return;
-    await selectWorkset(target);
-    if (state.selectedWs !== target || target !== current) return;
-    if (currentSpaces().has(space)) selectSpace(space);
-    if (!tracker) return;
-    if (!state.trackers.some((candidate) => candidate.trackerId === tracker)) return;
-    $('#itemFilter').value = filter;
-    await selectTracker(tracker, { keepFilter: true });
-    const selected = state.items.find((candidate) => candidate.localId === item);
-    if (selected) await loadContent(selected.localId, selected.workingSetId);
+    await refreshSelectedRange();
   } finally {
     button.disabled = false;
   }
+}
+
+async function refreshSelectedRange() {
+  const current = state.selectedWs;
+  const space = state.selectedSpace;
+  const tracker = state.selectedTracker?.trackerId;
+  const item = state.selectedItem?.localId;
+  const filter = $('#itemFilter').value;
+  const target = current && findNode(state.worksets, current) ? current : state.worksets[0]?.id;
+  if (!target) return;
+  await selectWorkset(target);
+  if (state.selectedWs !== target || target !== current || state.selectedSpace) return;
+  if (currentSpaces().has(space)) selectSpace(space);
+  if (!tracker || !state.trackers.some((candidate) => candidate.trackerId === tracker)) return;
+  $('#itemFilter').value = filter;
+  await selectTracker(tracker, { keepFilter: true });
+  const selected = state.items.find((candidate) => candidate.localId === item);
+  if (selected && !state.selectedItem) await loadContent(selected.localId, selected.workingSetId);
 }
 
 function bindEvents() {
@@ -640,6 +754,7 @@ function bindEvents() {
   });
 
   $('#createWorksetBtn').addEventListener('click', openCreateWorkset);
+  $('#extendWorksetBtn').addEventListener('click', openExtendWorkset);
   $('#createTrackerBtn').addEventListener('click', openTrackerCreate);
   $('#taskCenterBtn').addEventListener('click', openTaskCenter);
   $('#refresh').addEventListener('click', refresh);

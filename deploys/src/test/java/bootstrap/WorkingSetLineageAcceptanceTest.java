@@ -66,12 +66,12 @@ class WorkingSetLineageAcceptanceTest {
         String grandchild = create(child, "grandchild");
         String sibling = create("1", "sibling");
 
-        assertFailure(post(child, child), HttpStatus.CONFLICT, "WorkingSetCycle");
-        assertFailure(post(grandchild, child), HttpStatus.CONFLICT, "WorkingSetCycle");
-        assertFailure(post(grandchild, "1"), HttpStatus.CONFLICT, "WorkingSetCycle");
-        assertFailure(post(child, grandchild), HttpStatus.CONFLICT, "WorkingSetAlreadyExists");
-        assertFailure(post(sibling, grandchild), HttpStatus.CONFLICT, "WorkingSetParentImmutable");
-        assertFailure(post("missing-" + suffix, "new-" + suffix), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+        assertCreateFailure(child, child, "WorkingSetCycle");
+        assertCreateFailure(grandchild, child, "WorkingSetCycle");
+        assertCreateFailure(grandchild, "1", "WorkingSetCycle");
+        assertCreateFailure(child, grandchild, "WorkingSetAlreadyExists");
+        assertCreateFailure(sibling, grandchild, "WorkingSetParentImmutable");
+        assertCreateFailure("258520000000090", "258520000000091", "WorkingSetNotFound");
         assertEquals(child, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
     }
 
@@ -101,9 +101,9 @@ class WorkingSetLineageAcceptanceTest {
                 var schemaScript = new ResourceDatabasePopulator(new ClassPathResource("schema.sql"));
                 schemaScript.populate(connection);
                 sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
-                        + " VALUES ('baseline-child', '1')");
+                        + " VALUES (258520000000080, 1)");
                 sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
-                        + " VALUES ('baseline-grandchild', 'baseline-child')");
+                        + " VALUES (258520000000081, 258520000000080)");
                 schemaScript.populate(connection);
 
                 try (var rows = sql.executeQuery("""
@@ -113,11 +113,11 @@ class WorkingSetLineageAcceptanceTest {
                     assertEquals("1", rows.getString(1));
                     assertNull(rows.getString(2));
                     assertTrue(rows.next());
-                    assertEquals("baseline-child", rows.getString(1));
+                    assertEquals("258520000000080", rows.getString(1));
                     assertEquals("1", rows.getString(2));
                     assertTrue(rows.next());
-                    assertEquals("baseline-grandchild", rows.getString(1));
-                    assertEquals("baseline-child", rows.getString(2));
+                    assertEquals("258520000000081", rows.getString(1));
+                    assertEquals("258520000000080", rows.getString(2));
                 }
             } finally {
                 connection.rollback();
@@ -126,22 +126,19 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     private String create(String parent, String label) {
-        String id = label + "-" + suffix;
-        var response = rest.postForEntity(path(parent) + "/children", Map.of("workingSetId", id),
+        var response = rest.postForEntity(path(parent) + "/children", Map.of("name", label),
                 WorkingSetView.class);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        String id = response.getBody().workingSetId();
         created.add(id);
         assertEquals(parent, response.getBody().parentWorkingSetId());
         return id;
     }
 
-    private ResponseEntity<Map> post(String parent, String child) {
-        return rest.postForEntity(path(parent) + "/children", Map.of("workingSetId", child), Map.class);
-    }
-
-    private static void assertFailure(ResponseEntity<Map> response, HttpStatus status, String reason) {
-        assertEquals(status, response.getStatusCode(), () -> String.valueOf(response.getBody()));
-        assertEquals(reason, response.getBody().get("reason"));
+    private void assertCreateFailure(String parent, String child, String reason) {
+        var failure = org.junit.jupiter.api.Assertions.assertThrows(sk.workingset.domain.BindingFailure.class,
+                () -> workingSets.createChildWorkingSet(WorkingSetId.of(parent), WorkingSetId.of(child)));
+        assertEquals(reason, failure.reason().name());
     }
 
     private static String path(String id) {

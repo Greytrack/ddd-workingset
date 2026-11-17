@@ -34,17 +34,17 @@ class CowEventHandlerTest {
     void an_upgrade_shaped_event_matches_the_before_revision_and_keeps_the_targets_own_revision() {
         var items = mock(LightTrackerItemRepository.class);
         var failures = mock(CowFailureLog.class);
-        var source = LocalId.of("source");
+        var source = LocalId.of("261802623213504");
         var before = Revision.of(3);
         var after = Revision.of(4);
         var own = Revision.of(1);
-        var eligible = target("eligible", source, own, before);
+        var eligible = target("258520000000001", source, own, before);
         var switched = LightTrackerItem.restore(eligible.localId(), eligible.commonId(), eligible.trackerId(),
                 eligible.workingSetId(), own, eligible.localId(), own, true);
         when(items.findBySource(source, before)).thenReturn(List.of(eligible)).thenReturn(List.of(switched));
         when(items.findById(eligible.localId())).thenReturn(Optional.of(eligible));
         var event = new RequirementChanged(42, source, source, before, after,
-                LockVersion.of(5), LockVersion.of(6), SnapshotRef.of("before-upgrade"), Instant.EPOCH);
+                LockVersion.of(5), LockVersion.of(6), SnapshotRef.of("258782756974528"), Instant.EPOCH);
         var store = mock(CowMaterializationStore.class);
         var pending = new CowMaterializationStore.Entry(42, eligible.localId(), source, before,
                 CowMaterializationStore.Status.PENDING, 1, false, null);
@@ -81,7 +81,7 @@ class CowEventHandlerTest {
     }
 
     private static LightTrackerItem target(String id, LocalId source, Revision own, Revision sourceRevision) {
-        return LightTrackerItem.restore(LocalId.of(id), CommonId.of("family"), TrackerId.of("tracker"),
-                WorkingSetId.of("ws"), own, source, sourceRevision, false);
+        return LightTrackerItem.restore(LocalId.of(id), CommonId.of("264220103598016"), TrackerId.of("264443044134848"),
+                WorkingSetId.of("266514385749952"), own, source, sourceRevision, false);
     }
 }

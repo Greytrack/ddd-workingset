@@ -50,7 +50,7 @@ public class WorkingSetController {
     @ResponseStatus(HttpStatus.CREATED)
     public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
         return WorkingSetView.from(applicationService.createChildWorkingSet(WorkingSetId.of(workingSetId),
-                WorkingSetId.of(requireText(request.workingSetId(), "workingSetId"))));
+                request.name()));
     }
 
     @GetMapping("/{workingSetId}/children")
@@ -72,7 +72,8 @@ public class WorkingSetController {
     @GetMapping("/metadata/classifications")
     public List<ClassificationView> findClassifications() {
         return applicationService.findClassifications().stream()
-                .map(classification -> new ClassificationView(classification.id(), classification.sharingMode()))
+                .map(classification -> new ClassificationView(classification.id(), classification.sharingMode(),
+                        classification.name()))
                 .toList();
     }
 
@@ -89,7 +90,7 @@ public class WorkingSetController {
     @GetMapping("/{workingSetId}/trackers/{trackerId}/items")
     public List<LightTrackerItemView> findItems(@PathVariable String workingSetId, @PathVariable String trackerId) {
         return applicationService.findItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
-                .map(indexed -> LightTrackerItemView.from(indexed.item(), indexed.name())).toList();
+                .map(indexed -> LightTrackerItemView.from(indexed.item(), indexed.presentation())).toList();
     }
 
     @GetMapping("/{workingSetId}/bindings")
@@ -112,8 +113,7 @@ public class WorkingSetController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProductSpaceView createProductSpace(@PathVariable String workingSetId,
                                                @RequestBody CreateProductSpaceRequest request) {
-        return ProductSpaceView.from(applicationService.createProductSpace(
-                request.productSpaceId(), request.name()));
+        return ProductSpaceView.from(applicationService.createProductSpace(requireText(request.name(), "name")));
     }
 
     @PostMapping("/{workingSetId}/spaces/{spaceId}")
@@ -145,7 +145,7 @@ public class WorkingSetController {
         return ReadView.from(result);
     }
 
-    public record CreateProductSpaceRequest(String productSpaceId, String name) {}
+    public record CreateProductSpaceRequest(String name) {}
 
     public record ProductSpaceView(String productSpaceId, String name) {
         static ProductSpaceView from(sk.workingset.domain.ProductSpace space) {
@@ -153,12 +153,12 @@ public class WorkingSetController {
         }
     }
 
-    public record CreateChildRequest(String workingSetId) {}
+    public record CreateChildRequest(String name) {}
 
     public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
                                        String sharingMode) {}
 
-    public record ClassificationView(String classificationId, SharingMode sharingMode) {}
+    public record ClassificationView(String classificationId, SharingMode sharingMode, String name) {}
 
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
                                  String parentWorkingSetId) {

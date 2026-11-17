@@ -41,12 +41,12 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
                     + "source_local_id, source_revision, materialized";
 
     private static final RowMapper<LightTrackerItem> MAPPER = (rs, rowNum) -> LightTrackerItem.restore(
-            LocalId.of(rs.getString("local_id")),
-            CommonId.of(rs.getString("common_id")),
-            TrackerId.of(rs.getString("tracker_id")),
-            WorkingSetId.of(rs.getString("working_set_id")),
+            LocalId.of(rs.getLong("local_id")),
+            CommonId.of(rs.getLong("common_id")),
+            TrackerId.of(rs.getLong("tracker_id")),
+            WorkingSetId.of(rs.getLong("working_set_id")),
             Revision.of(rs.getInt("revision")),
-            LocalId.of(rs.getString("source_local_id")),
+            LocalId.of(rs.getLong("source_local_id")),
             Revision.of(rs.getInt("source_revision")),
             rs.getBoolean("materialized"));
 
@@ -59,12 +59,12 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
     @Override
     public void save(LightTrackerItem item) {
         jdbc.update(UPSERT,
-                item.localId().value(),
-                item.commonId().value(),
-                item.trackerId().value(),
-                item.workingSetId().value(),
+                item.localId().numericValue(),
+                item.commonId().numericValue(),
+                item.trackerId().numericValue(),
+                item.workingSetId().numericValue(),
                 item.revision().value(),
-                item.sourceLocalId().value(),
+                item.sourceLocalId().numericValue(),
                 item.sourceRevision().value(),
                 item.materialized());
     }
@@ -74,20 +74,20 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
         return jdbc.query(
                 "SELECT " + COLUMNS + " FROM light_tracker_items WHERE local_id = ?",
                 MAPPER,
-                localId.value()).stream().findFirst();
+                localId.numericValue()).stream().findFirst();
     }
 
     @Override
     public List<LightTrackerItem> findInTracker(TrackerId trackerId) {
         return jdbc.query("SELECT " + COLUMNS + " FROM light_tracker_items WHERE tracker_id = ? ORDER BY local_id",
-                MAPPER, trackerId.value());
+                MAPPER, trackerId.numericValue());
     }
 
     @Override
     public List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
         return jdbc.query("SELECT " + COLUMNS + " FROM light_tracker_items WHERE tracker_id = ? "
-                        + "AND local_id COLLATE \"C\" > ? ORDER BY local_id COLLATE \"C\" LIMIT ?",
-                MAPPER, trackerId.value(), afterLocalId, limit);
+                        + "AND local_id > ? ORDER BY local_id LIMIT ?",
+                MAPPER, trackerId.numericValue(), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 
     @Override
@@ -97,8 +97,8 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
                     source_local_id, source_revision, materialized)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (working_set_id, common_id) DO NOTHING
-                """, item.localId().value(), item.commonId().value(), item.trackerId().value(),
-                item.workingSetId().value(), item.revision().value(), item.sourceLocalId().value(),
+                """, item.localId().numericValue(), item.commonId().numericValue(), item.trackerId().numericValue(),
+                item.workingSetId().numericValue(), item.revision().value(), item.sourceLocalId().numericValue(),
                 item.sourceRevision().value(), item.materialized()) == 1;
     }
 
@@ -106,25 +106,25 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
     public boolean hasFamily(WorkingSetId workingSetId, CommonId commonId) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?)
-                """, Boolean.class, workingSetId.value(), commonId.value()));
+                """, Boolean.class, workingSetId.numericValue(), commonId.numericValue()));
     }
 
     @Override
     public boolean hasSourceBackedDependents(LocalId id) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE source_local_id = ? AND NOT materialized)
-                """, Boolean.class, id.value()));
+                """, Boolean.class, id.numericValue()));
     }
 
     @Override
     public void remove(LocalId id) {
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", id.value());
+        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", id.numericValue());
     }
 
     @Override
     public boolean existsInTracker(TrackerId trackerId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE tracker_id = ?)", Boolean.class, trackerId.value()));
+                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE tracker_id = ?)", Boolean.class, trackerId.numericValue()));
     }
 
     @Override
@@ -133,7 +133,7 @@ public class JdbcLightTrackerItemRepository implements LightTrackerItemRepositor
                 "SELECT " + COLUMNS + " FROM light_tracker_items "
                         + "WHERE source_local_id = ? AND source_revision = ?",
                 MAPPER,
-                sourceLocalId.value(),
+                sourceLocalId.numericValue(),
                 sourceRevision.value());
     }
 }

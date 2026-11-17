@@ -10,9 +10,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Durable execution of a working-set materialization request: create a child or extend an existing child. */
-public record WorkingSetCreation(String id, Request request, String requestedBy, Status status,
+public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING)
+                                 Long numericId, Request request, String requestedBy, Status status,
                                  Stage stage, Progress progress, List<Failure> failures,
                                  Instant createdAt, Instant startedAt, Instant completedAt,
                                  Map<Stage, Progress> stageProgress, Map<String, IndexProgress> indexProgress) {
@@ -25,9 +28,19 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
 
     public enum ItemOutcome { Succeeded, Failed, Skipped }
 
-    public record Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
-                          List<String> productSpaceIds, List<String> sharedTrackerIds,
-                          List<String> unsharedParentTrackerIds, String name, Mode mode) {
+    public record Request(@JsonProperty("parentWorkingSetId") Long numericParentWorkingSetId,
+                          @JsonProperty("newWorkingSetId") Long numericTargetWorkingSetId, String requestId,
+                          @JsonProperty("productSpaceIds") List<Long> numericProductSpaceIds,
+                          @JsonProperty("sharedTrackerIds") List<Long> numericSharedTrackerIds,
+                          @JsonProperty("unsharedParentTrackerIds") List<Long> numericUnsharedTrackerIds,
+                          String name, Mode mode) {
+        public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
+                       List<String> productSpaceIds, List<String> sharedTrackerIds,
+                       List<String> unsharedParentTrackerIds, String name, Mode mode) {
+            this(WorkingSetId.of(parentWorkingSetId).numericValue(), WorkingSetId.of(newWorkingSetId).numericValue(),
+                    requestId, parseIds(productSpaceIds), parseIds(sharedTrackerIds),
+                    parseIds(unsharedParentTrackerIds), name, mode);
+        }
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds) {
@@ -43,35 +56,46 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
         }
 
         public Request {
-            validateId(parentWorkingSetId, "parentWorkingSetId");
-            validateId(newWorkingSetId, "newWorkingSetId");
+            WorkingSetId.of(numericParentWorkingSetId);
+            WorkingSetId.of(numericTargetWorkingSetId);
             validateId(requestId, "requestId");
-            productSpaceIds = normalize(productSpaceIds);
-            sharedTrackerIds = normalize(sharedTrackerIds);
-            unsharedParentTrackerIds = normalize(unsharedParentTrackerIds);
+            numericProductSpaceIds = normalize(numericProductSpaceIds);
+            numericSharedTrackerIds = normalize(numericSharedTrackerIds);
+            numericUnsharedTrackerIds = normalize(numericUnsharedTrackerIds);
             name = normalizeName(name);
             mode = mode == null ? Mode.CREATE : mode;
         }
 
+        public String parentWorkingSetId() { return numericParentWorkingSetId.toString(); }
+        public String newWorkingSetId() { return numericTargetWorkingSetId.toString(); }
+        public List<String> productSpaceIds() { return formatIds(numericProductSpaceIds); }
+        public List<String> sharedTrackerIds() { return formatIds(numericSharedTrackerIds); }
+        public List<String> unsharedParentTrackerIds() { return formatIds(numericUnsharedTrackerIds); }
+
         public List<String> items(Stage stage) {
             return switch (stage) {
-                case CREATE_WORKING_SET -> mode == Mode.CREATE ? List.of(newWorkingSetId) : List.of();
-                case BIND_PRODUCT_SPACES -> productSpaceIds;
+                case CREATE_WORKING_SET -> mode == Mode.CREATE ? List.of(newWorkingSetId()) : List.of();
+                case BIND_PRODUCT_SPACES -> productSpaceIds();
                 case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS,
-                        PUBLISH_RELATION_EVENTS -> unsharedParentTrackerIds;
-                case BIND_SHARED_TRACKERS -> sharedTrackerIds;
+                        PUBLISH_RELATION_EVENTS -> unsharedParentTrackerIds();
+                case BIND_SHARED_TRACKERS -> sharedTrackerIds();
             };
         }
 
-        private static List<String> normalize(List<String> ids) {
-            var normalized = new TreeSet<String>();
-            if (ids != null) {
-                for (String id : ids) {
-                    validateId(id, "selection ID");
-                    normalized.add(id);
-                }
+        private static List<Long> parseIds(List<String> ids) {
+            return ids == null ? List.of() : ids.stream().map(Long::valueOf).toList();
+        }
+
+        private static List<Long> normalize(List<Long> ids) {
+            if (ids == null) return List.of();
+            if (ids.stream().anyMatch(id -> id == null || id <= 0)) {
+                throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "selection IDs must be positive");
             }
-            return List.copyOf(normalized);
+            return List.copyOf(new TreeSet<>(ids));
+        }
+
+        private static List<String> formatIds(List<Long> ids) {
+            return ids.stream().map(String::valueOf).toList();
         }
 
         private static String normalizeName(String name) {
@@ -124,12 +148,14 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
         indexProgress = indexProgress == null ? Map.of() : Map.copyOf(indexProgress);
     }
 
+    public String id() { return numericId.toString(); }
+
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
         var initial = firstStage(request);
         if (initial == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "working set request has no work");
         }
-        return new WorkingSetCreation(id, request, caller, Status.Pending,
+        return new WorkingSetCreation(Long.valueOf(id), request, caller, Status.Pending,
                 initial, new Progress(0, 0, 0, total(request)), List.of(), now, null, null,
                 Map.of(initial, new Progress(0, 0, 0, request.items(initial).size())), Map.of());
     }
@@ -155,7 +181,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
         if (status != Status.Pending) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Only a pending creation can start");
         }
-        return new WorkingSetCreation(id, request, requestedBy, Status.Running,
+        return new WorkingSetCreation(numericId, request, requestedBy, Status.Running,
                 stage, progress, failures, createdAt, now, null, stageProgress, indexProgress);
     }
 
@@ -185,7 +211,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
         }
         var updatedFailures = new ArrayList<>(failures);
         updatedFailures.addAll(batchFailures);
-        return new WorkingSetCreation(id, request, requestedBy, status, stage, progress, updatedFailures,
+        return new WorkingSetCreation(numericId, request, requestedBy, status, stage, progress, updatedFailures,
                 createdAt, startedAt, completedAt, stageProgress, updatedIndex);
     }
 
@@ -220,7 +246,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
                 updatedProgress.put(next, new Progress(0, 0, 0, request.items(next).size()));
             }
         }
-        return new WorkingSetCreation(id, request, requestedBy, nextStatus, next, totals, updatedFailures,
+        return new WorkingSetCreation(numericId, request, requestedBy, nextStatus, next, totals, updatedFailures,
                 createdAt, startedAt, nextStatus == Status.Running ? null : now, updatedProgress, updatedIndex);
     }
 

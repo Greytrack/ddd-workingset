@@ -16,10 +16,12 @@ public interface BusinessTrackerItems {
     /** 事务内保护既有派生依赖的实际内容来源，直到新变体提交。 */
     boolean lockContentSource(LocalId localId);
 
-    /** UI read model: 可读名称；业务 BC 不提供时返回空，由调用方回退到 ID。 */
-    default Optional<String> name(LocalId localId) {
+    /** 业务 BC 提供的列表展示信息。 */
+    default Optional<Presentation> presentation(LocalId localId) {
         return Optional.empty();
     }
+
+    record Presentation(String name, String number) {}
 
     record SourceIdentity(TrackerId trackerId, CommonId commonId) {}
 }

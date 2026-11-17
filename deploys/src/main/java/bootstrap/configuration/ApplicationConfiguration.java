@@ -90,8 +90,9 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public CowFailureLog cowFailureLog(JdbcTemplate jdbc, TransactionTemplate newTransactionTemplate) {
-        return new JdbcCowFailureLog(jdbc, newTransactionTemplate);
+    public CowFailureLog cowFailureLog(JdbcTemplate jdbc, TransactionTemplate newTransactionTemplate,
+                                      IdentifierGenerator ids) {
+        return new JdbcCowFailureLog(jdbc, newTransactionTemplate, ids);
     }
 
     @Bean
@@ -132,9 +133,10 @@ public class ApplicationConfiguration {
     @Bean
     public LightTrackerItemRepository lightTrackerItemRepository(JdbcTemplate jdbc,
                                                                  StringRedisTemplate redis,
-                                                                 ObjectMapper objectMapper) {
-        return new CachingLightTrackerItemRepository(
-                new JdbcLightTrackerItemRepository(jdbc), redis, objectMapper);
+                                                                 ObjectMapper objectMapper,
+                                                                 @Value("${workingset.item-cache.enabled:true}") boolean cacheEnabled) {
+        var repository = new JdbcLightTrackerItemRepository(jdbc);
+        return cacheEnabled ? new CachingLightTrackerItemRepository(repository, redis, objectMapper) : repository;
     }
 
     @Bean
@@ -216,9 +218,9 @@ public class ApplicationConfiguration {
     public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
             JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
             TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer,
-            RelationEventStep relationEventStep) {
+            RelationEventStep relationEventStep, IdentifierGenerator ids) {
         return new WorkingSetCreationService(store, bindings, bindings, workingSets, newTransactionTemplate, events,
-                indexer, relationEventStep);
+                indexer, relationEventStep, ids);
     }
 
     @Bean
@@ -278,8 +280,8 @@ public class ApplicationConfiguration {
             }
 
             @Override
-            public Optional<String> name(LocalId localId) {
-                return requirements.findName(localId);
+            public Optional<Presentation> presentation(LocalId localId) {
+                return requirements.findPresentation(localId);
             }
 
             @Override
@@ -290,8 +292,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public MergeStore mergeStore(JdbcTemplate jdbc, ObjectMapper mapper) {
-        return new JdbcMergeStore(jdbc, mapper);
+    public MergeStore mergeStore(JdbcTemplate jdbc, ObjectMapper mapper, IdentifierGenerator ids) {
+        return new JdbcMergeStore(jdbc, mapper, ids);
     }
 
     @Bean

@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.MergeFailure.Reason;
@@ -15,17 +18,23 @@ import sk.workingset.domain.merge.MergeFailure.Reason;
  *
  * <p>状态为 Preparing → Running → Succeeded/PartiallySucceeded/Failed，没有独立 Completed 阶段（C5）。
  */
-public record MergeRound(String id, String token, String requestId, WorkingSetId source, WorkingSetId target,
+public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, String token, String requestId, WorkingSetId source, WorkingSetId target,
                          String caller, State state, List<Entry> entries, ApplyResult result) {
     public enum State { Preparing, Running, Succeeded, PartiallySucceeded, Failed }
     public enum Outcome { Applied, Confirmed, Rejected, Conflict, StaleEvidence, Deferred, Unknown }
 
-    public record Entry(String id, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
+    public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
+        public Entry(String id, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
+            this(Long.valueOf(id), decisionVersion, evidence, decision, result);
+        }
+
+        public String id() { return numericId.toString(); }
+
         Entry finish(ItemResult result) {
             if (this.result != null) {
-                throw new MergeFailure(Reason.RoundClosed, id);
+                throw new MergeFailure(Reason.RoundClosed, id());
             }
-            return new Entry(id, decisionVersion, evidence, decision, result);
+            return new Entry(numericId, decisionVersion, evidence, decision, result);
         }
     }
 
@@ -48,40 +57,42 @@ public record MergeRound(String id, String token, String requestId, WorkingSetId
         entries = List.copyOf(entries);
     }
 
+    public String id() { return numericId.toString(); }
+
     public static MergeRound prepare(String id, String requestId, WorkingSetId source, WorkingSetId target,
                                      String caller) {
-        return new MergeRound(id, UUID.randomUUID().toString(), requestId, source, target, caller,
+        return new MergeRound(Long.valueOf(id), UUID.randomUUID().toString(), requestId, source, target, caller,
                 State.Preparing, List.of(), null);
     }
 
     public MergeRound register(Entry entry) {
         if (state != State.Preparing) {
-            throw new MergeFailure(Reason.RoundClosed, id);
+            throw new MergeFailure(Reason.RoundClosed, id());
         }
         var updated = new ArrayList<>(entries);
         updated.add(entry);
-        return new MergeRound(id, token, requestId, source, target, caller, state, updated, null);
+        return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
     }
 
     public MergeRound start() {
         if (state != State.Preparing) {
             return this;
         }
-        return new MergeRound(id, token, requestId, source, target, caller, State.Running, entries, null);
+        return new MergeRound(numericId, token, requestId, source, target, caller, State.Running, entries, null);
     }
 
     public MergeRound finishEntry(Entry entry, ItemResult itemResult) {
         if (state != State.Running) {
-            throw new MergeFailure(Reason.RoundClosed, id);
+            throw new MergeFailure(Reason.RoundClosed, id());
         }
         var updated = entries.stream().map(candidate -> candidate.id().equals(entry.id())
                 ? candidate.finish(itemResult) : candidate).toList();
-        return new MergeRound(id, token, requestId, source, target, caller, state, updated, null);
+        return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
     }
 
     public MergeRound complete(Instant completedAt) {
         if (state != State.Running || entries.stream().anyMatch(entry -> entry.result() == null)) {
-            throw new MergeFailure(Reason.RoundClosed, id);
+            throw new MergeFailure(Reason.RoundClosed, id());
         }
         var results = entries.stream().map(Entry::result).toList();
         long successful = results.stream().filter(ItemResult::succeeded).count();
@@ -91,7 +102,7 @@ public record MergeRound(String id, String token, String requestId, WorkingSetId
                 count(results, Outcome.Rejected),
                 count(results, Outcome.Conflict), count(results, Outcome.Deferred), count(results, Outcome.StaleEvidence),
                 count(results, Outcome.Unknown));
-        return new MergeRound(id, token, requestId, source, target, caller, terminal, entries,
+        return new MergeRound(numericId, token, requestId, source, target, caller, terminal, entries,
                 new ApplyResult(terminal, summary, results, completedAt));
     }
 

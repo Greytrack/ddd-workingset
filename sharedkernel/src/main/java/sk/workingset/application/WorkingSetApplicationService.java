@@ -73,6 +73,11 @@ public class WorkingSetApplicationService {
         return createChildForTask(parentId, newId);
     }
 
+    @Transactional
+    public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name) {
+        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId()), name);
+    }
+
     // Called by the creation runner inside its locked task transaction.
     WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId) {
         return createChildForTask(parentId, newId, null);
@@ -150,12 +155,12 @@ public class WorkingSetApplicationService {
         return items.findInTracker(trackerId).stream()
                 .filter(item -> !businessItems.isDeleted(item.effectiveContentSource()))
                 .map(item -> new IndexedItem(item,
-                        businessItems.name(item.effectiveContentSource()).orElse(null)))
+                        businessItems.presentation(item.effectiveContentSource()).orElse(null)))
                 .toList();
     }
 
     /** UI read model: LTI plus the readable name of its effective content source. */
-    public record IndexedItem(LightTrackerItem item, String name) {}
+    public record IndexedItem(LightTrackerItem item, BusinessTrackerItems.Presentation presentation) {}
 
     /**
      * 创建产品空间，并将空间和各分类的默认 Tracker 同步纳入默认工作集。
@@ -164,8 +169,8 @@ public class WorkingSetApplicationService {
      * 本方法一律固定使用 {@link WorkingSet#DEFAULT_ID}。入口层不限制调用来源，这是有意设计。
      */
     @Transactional
-    public ProductSpace createProductSpace(String spaceId, String name) {
-        var space = new ProductSpace(spaceId, name);
+    public ProductSpace createProductSpace(String name) {
+        var space = new ProductSpace(identifierGenerator.nextId(), name);
         var defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
         spaces.insertProductSpace(space);
         workingSets.insertSpaceBinding(defaultWorkingSet.bindSpace(space, WorkingSet.SpaceOrigin.INITIAL_PROJECTION));

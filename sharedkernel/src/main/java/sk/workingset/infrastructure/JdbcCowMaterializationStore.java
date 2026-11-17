@@ -12,7 +12,7 @@ import sk.workingset.domain.Revision;
 public final class JdbcCowMaterializationStore implements CowMaterializationStore {
     private static final String FIND = "SELECT * FROM cow_materializations WHERE event_id = ? AND target_local_id = ?";
     private static final RowMapper<Entry> ENTRY = (row, number) -> new Entry(row.getLong("event_id"),
-            LocalId.of(row.getString("target_local_id")), LocalId.of(row.getString("source_local_id")),
+            LocalId.of(row.getLong("target_local_id")), LocalId.of(row.getLong("source_local_id")),
             Revision.of(row.getInt("source_revision")), Status.valueOf(row.getString("status")),
             row.getInt("attempts"), row.getBoolean("business_saved"), row.getString("last_error"));
 
@@ -35,7 +35,7 @@ public final class JdbcCowMaterializationStore implements CowMaterializationStor
                         updated_at = now()
                 WHERE m.source_local_id = EXCLUDED.source_local_id AND m.source_revision = EXCLUDED.source_revision
                 RETURNING *
-                """, ENTRY, eventId, target.value(), source.value(), revision.value());
+                """, ENTRY, eventId, target.numericValue(), source.numericValue(), revision.value());
     }
 
     @Override
@@ -60,17 +60,17 @@ public final class JdbcCowMaterializationStore implements CowMaterializationStor
         jdbc.update("""
                 UPDATE cow_materializations SET status = 'FAILED', last_error = ?, updated_at = now()
                 WHERE event_id = ? AND target_local_id = ? AND status <> 'SWITCHED'
-                """, error, eventId, target.value());
+                """, error, eventId, target.numericValue());
     }
 
     @Override
     public Optional<Entry> findByEventAndTarget(long eventId, LocalId target) {
-        return jdbc.query(FIND, ENTRY, eventId, target.value()).stream().findFirst();
+        return jdbc.query(FIND, ENTRY, eventId, target.numericValue()).stream().findFirst();
     }
 
     @Override
     public Optional<Entry> lockByEventAndTarget(long eventId, LocalId target) {
-        return jdbc.query(FIND + " FOR UPDATE", ENTRY, eventId, target.value()).stream().findFirst();
+        return jdbc.query(FIND + " FOR UPDATE", ENTRY, eventId, target.numericValue()).stream().findFirst();
     }
 
     @Override
@@ -82,12 +82,12 @@ public final class JdbcCowMaterializationStore implements CowMaterializationStor
     @Override
     public List<Entry> findBySource(LocalId source) {
         return jdbc.query("SELECT * FROM cow_materializations WHERE source_local_id = ? ORDER BY event_id, target_local_id",
-                ENTRY, source.value());
+                ENTRY, source.numericValue());
     }
 
     private void update(String sql, long eventId, LocalId target) {
-        if (jdbc.update(sql, eventId, target.value()) != 1) {
-            throw new IllegalStateException("Unexpected COW receipt state for " + eventId + "/" + target.value());
+        if (jdbc.update(sql, eventId, target.numericValue()) != 1) {
+            throw new IllegalStateException("Unexpected COW receipt state for " + eventId + "/" + target.numericValue());
         }
     }
 }

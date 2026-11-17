@@ -50,11 +50,11 @@ import sk.workingset.infrastructure.SnowflakeIdGenerator;
  */
 class WorkingSetSliceIntegrationTest {
 
-    private static final WorkingSetId WS0 = WorkingSetId.of("WS0");
-    private static final WorkingSetId WS1 = WorkingSetId.of("WS1");
-    private static final LocalId L0 = LocalId.of("L0");
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T0 = TrackerId.of("T0");
+    private static final WorkingSetId WS0 = WorkingSetId.of("259687804626880");
+    private static final WorkingSetId WS1 = WorkingSetId.of("261508476721088");
+    private static final LocalId L0 = LocalId.of("260574482192320");
+    private static final CommonId C1 = CommonId.of("265506033508288");
+    private static final TrackerId T0 = TrackerId.of("264905365135296");
     private static final Revision R3 = Revision.of(3);
     private static final Caller CALLER = Caller.of("tester");
 
@@ -70,8 +70,8 @@ class WorkingSetSliceIntegrationTest {
         var sets = mock(WorkingSetRepository.class);
         var trackers = mock(TrackerRepository.class);
         var spaces = mock(ProductSpaceRepository.class);
-        var space = new ProductSpace("space");
-        var classification = new Classification("class", Classification.SharingMode.UNSHARED);
+        var space = new ProductSpace("259944010602432");
+        var classification = new Classification("266673196957632", Classification.SharingMode.UNSHARED);
         when(sets.lockWorkingSet(WS1)).thenAnswer(invocation -> {
             var workset = WorkingSet.child(WS1, WorkingSet.DEFAULT_ID);
             workset.bindSpace(space);
@@ -123,7 +123,7 @@ class WorkingSetSliceIntegrationTest {
     @Test
     void resolve_missing_item_is_not_found() {
         ApplicationFailure failure = assertThrows(ApplicationFailure.class,
-                () -> workingSet.resolve(WS1, LocalId.of("missing")));
+                () -> workingSet.resolve(WS1, LocalId.of("266787736178624")));
 
         assertEquals(FailureReason.NOT_FOUND, failure.reason());
     }

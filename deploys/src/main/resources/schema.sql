@@ -6,9 +6,17 @@
 -- Working Sets and platform metadata
 -- ---------------------------------------------------------------------------
 
+DO 'BEGIN
+    IF EXISTS (SELECT 1 FROM pg_attribute
+       WHERE attrelid = to_regclass(''working_sets'') AND attname = ''working_set_id''
+       AND atttypid <> ''bigint''::regtype AND NOT attisdropped) THEN
+        RAISE EXCEPTION ''Legacy string IDs detected. Recreate the development database or use the dedicated demo database.'';
+    END IF;
+END';
+
 CREATE TABLE IF NOT EXISTS working_sets (
-    working_set_id        VARCHAR(128) PRIMARY KEY,
-    parent_working_set_id VARCHAR(128) REFERENCES working_sets (working_set_id),
+    working_set_id        BIGINT PRIMARY KEY,
+    parent_working_set_id BIGINT REFERENCES working_sets (working_set_id),
     name                  VARCHAR(255),
     CONSTRAINT ck_working_set_parent CHECK (
         (working_set_id = '1' AND parent_working_set_id IS NULL)
@@ -24,19 +32,20 @@ ON CONFLICT (working_set_id) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_working_sets_parent ON working_sets (parent_working_set_id);
 
 CREATE TABLE IF NOT EXISTS product_spaces (
-    product_space_id VARCHAR(64) PRIMARY KEY,
+    product_space_id BIGINT PRIMARY KEY,
     name             VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS classifications (
-    classification_id VARCHAR(64) PRIMARY KEY,
+    classification_id BIGINT PRIMARY KEY,
     sharing_mode      VARCHAR(8) NOT NULL CHECK (sharing_mode IN ('SHARED', 'UNSHARED')),
+    name              VARCHAR(200) NOT NULL DEFAULT '需求',
     UNIQUE (classification_id, sharing_mode)
 );
 
 -- Base requirement category. Demo-only categories are added by demo-data.sql.
-INSERT INTO classifications (classification_id, sharing_mode)
-VALUES ('CL-REQUIREMENT', 'UNSHARED')
+INSERT INTO classifications (classification_id, name, sharing_mode)
+VALUES (258519859202016, '需求', 'UNSHARED')
 ON CONFLICT (classification_id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
@@ -44,14 +53,14 @@ ON CONFLICT (classification_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS trackers (
-    tracker_id        VARCHAR(64) PRIMARY KEY,
+    tracker_id        BIGINT PRIMARY KEY,
     name              VARCHAR(255),
-    source_id         VARCHAR(64) REFERENCES trackers (tracker_id),
-    working_set_id    VARCHAR(128) NOT NULL REFERENCES working_sets (working_set_id),
-    product_space_id  VARCHAR(64) NOT NULL REFERENCES product_spaces (product_space_id),
-    classification_id VARCHAR(64) NOT NULL,
+    source_id         BIGINT REFERENCES trackers (tracker_id),
+    working_set_id    BIGINT NOT NULL REFERENCES working_sets (working_set_id),
+    product_space_id  BIGINT NOT NULL REFERENCES product_spaces (product_space_id),
+    classification_id BIGINT NOT NULL,
     sharing_mode      VARCHAR(8) NOT NULL,
-    parent_id         VARCHAR(64),
+    parent_id         BIGINT,
     is_default        BOOLEAN NOT NULL DEFAULT FALSE,
     visible           BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE (tracker_id, working_set_id),
@@ -101,8 +110,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_derived_source
 CREATE INDEX IF NOT EXISTS idx_trackers_product_space ON trackers (product_space_id);
 
 CREATE TABLE IF NOT EXISTS space_bindings (
-    working_set_id  VARCHAR(128) NOT NULL REFERENCES working_sets (working_set_id),
-    product_space_id VARCHAR(64) NOT NULL REFERENCES product_spaces (product_space_id),
+    working_set_id  BIGINT NOT NULL REFERENCES working_sets (working_set_id),
+    product_space_id BIGINT NOT NULL REFERENCES product_spaces (product_space_id),
     origin          VARCHAR(24) NOT NULL CHECK (origin IN ('INITIAL_PROJECTION', 'EXPLICIT')),
     state           VARCHAR(8) NOT NULL CHECK (state = 'ACTIVE'),
     PRIMARY KEY (working_set_id, product_space_id)
@@ -111,10 +120,10 @@ CREATE TABLE IF NOT EXISTS space_bindings (
 CREATE INDEX IF NOT EXISTS idx_space_bindings_space ON space_bindings (product_space_id);
 
 CREATE TABLE IF NOT EXISTS tracker_bindings (
-    working_set_id   VARCHAR(128) NOT NULL,
-    tracker_id       VARCHAR(64) NOT NULL,
-    product_space_id VARCHAR(64) NOT NULL,
-    classification_id VARCHAR(64) NOT NULL,
+    working_set_id   BIGINT NOT NULL,
+    tracker_id       BIGINT NOT NULL,
+    product_space_id BIGINT NOT NULL,
+    classification_id BIGINT NOT NULL,
     sharing_mode     VARCHAR(8) NOT NULL,
     origin           VARCHAR(24) NOT NULL,
     PRIMARY KEY (working_set_id, tracker_id),
@@ -135,16 +144,17 @@ CREATE INDEX IF NOT EXISTS idx_tracker_bindings_tracker ON tracker_bindings (tra
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS requirements (
-    local_id       VARCHAR(64) PRIMARY KEY,
-    common_id      VARCHAR(64) NOT NULL,
-    tracker_id     VARCHAR(64) NOT NULL REFERENCES trackers (tracker_id),
+    local_id       BIGINT PRIMARY KEY,
+    common_id      BIGINT NOT NULL,
+    number         VARCHAR(200) GENERATED ALWAYS AS ('REQ-' || upper(to_hex(common_id))) STORED NOT NULL,
+    tracker_id     BIGINT NOT NULL REFERENCES trackers (tracker_id),
     title          TEXT NOT NULL,
     description    TEXT NOT NULL,
     revision       INTEGER NOT NULL,
     version        VARCHAR(64),
     lock_version   BIGINT NOT NULL,
     delete_flag    BOOLEAN NOT NULL DEFAULT FALSE,
-    working_set_id VARCHAR(128) NOT NULL REFERENCES working_sets (working_set_id),
+    working_set_id BIGINT NOT NULL REFERENCES working_sets (working_set_id),
     name           VARCHAR(255)
 );
 
@@ -170,15 +180,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_requirements_working_set_family
     ON requirements (working_set_id, common_id);
 CREATE INDEX IF NOT EXISTS idx_requirements_tracker ON requirements (tracker_id);
 CREATE INDEX IF NOT EXISTS idx_requirement_active_tracker_local
-    ON requirements (tracker_id, local_id COLLATE "C") WHERE NOT delete_flag;
+    ON requirements (tracker_id, local_id) WHERE NOT delete_flag;
 
 CREATE TABLE IF NOT EXISTS light_tracker_items (
-    local_id        VARCHAR(64) PRIMARY KEY,
-    common_id       VARCHAR(64) NOT NULL,
-    tracker_id      VARCHAR(64) NOT NULL,
-    working_set_id  VARCHAR(128) NOT NULL,
+    local_id        BIGINT PRIMARY KEY,
+    common_id       BIGINT NOT NULL,
+    tracker_id      BIGINT NOT NULL,
+    working_set_id  BIGINT NOT NULL,
     revision        INTEGER NOT NULL,
-    source_local_id VARCHAR(64) NOT NULL,
+    source_local_id BIGINT NOT NULL,
     source_revision INTEGER NOT NULL,
     materialized    BOOLEAN NOT NULL,
     FOREIGN KEY (tracker_id, working_set_id)
@@ -192,13 +202,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_lti_working_set_family
 CREATE INDEX IF NOT EXISTS idx_lti_source ON light_tracker_items (source_local_id, source_revision);
 CREATE INDEX IF NOT EXISTS idx_lti_tracker ON light_tracker_items (tracker_id, working_set_id);
 CREATE INDEX IF NOT EXISTS idx_lti_tracker_local
-    ON light_tracker_items (tracker_id, local_id COLLATE "C");
+    ON light_tracker_items (tracker_id, local_id);
 
 CREATE TABLE IF NOT EXISTS requirement_snapshots (
-    snapshot_ref VARCHAR(64) PRIMARY KEY,
-    local_id     VARCHAR(64) NOT NULL,
-    common_id    VARCHAR(64) NOT NULL,
-    tracker_id   VARCHAR(64) NOT NULL,
+    snapshot_ref BIGINT PRIMARY KEY,
+    local_id     BIGINT NOT NULL,
+    common_id    BIGINT NOT NULL,
+    tracker_id   BIGINT NOT NULL,
     title        TEXT NOT NULL,
     description  TEXT NOT NULL,
     revision     INTEGER NOT NULL,
@@ -211,10 +221,10 @@ CREATE TABLE IF NOT EXISTS requirement_snapshots (
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS cow_failures (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     event_id BIGINT NOT NULL,
-    target_local_id VARCHAR(64) NOT NULL,
-    source_local_id VARCHAR(64) NOT NULL,
+    target_local_id BIGINT NOT NULL,
+    source_local_id BIGINT NOT NULL,
     before_revision INTEGER NOT NULL,
     after_revision INTEGER NOT NULL,
     before_lock_version BIGINT,
@@ -232,8 +242,8 @@ CREATE INDEX IF NOT EXISTS idx_cow_failures_target ON cow_failures (target_local
 
 CREATE TABLE IF NOT EXISTS cow_materializations (
     event_id BIGINT NOT NULL,
-    target_local_id VARCHAR(64) NOT NULL,
-    source_local_id VARCHAR(64) NOT NULL,
+    target_local_id BIGINT NOT NULL,
+    source_local_id BIGINT NOT NULL,
     source_revision INTEGER NOT NULL,
     status VARCHAR(32) NOT NULL,
     attempts INTEGER NOT NULL DEFAULT 0,
@@ -254,16 +264,15 @@ CREATE INDEX IF NOT EXISTS idx_cow_materializations_status ON cow_materializatio
 -- 旧版 state JSON 中的 Difference.key / ItemResult.entryKey 不兼容：开发基线清理
 -- merge_commit_receipts、merge_checkpoints、merge_rounds 后重建，不做 JSON 迁移。
 CREATE TABLE IF NOT EXISTS merge_rounds (
-    id VARCHAR(64) PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     token VARCHAR(64) NOT NULL UNIQUE,
     request_id VARCHAR(128) NOT NULL UNIQUE,
-    state JSONB NOT NULL,
-    execution_lock_id BIGSERIAL UNIQUE
+    state JSONB NOT NULL
 );
 
 -- 一页决策同属一个 Tracker 对；Preparing/Running 期间占用该对，作为并发合并闸门。
-ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_a_id VARCHAR(64);
-ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_b_id VARCHAR(64);
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_a_id BIGINT;
+ALTER TABLE merge_rounds ADD COLUMN IF NOT EXISTS tracker_b_id BIGINT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
     ON merge_rounds (tracker_a_id, tracker_b_id)
@@ -275,13 +284,13 @@ CREATE SEQUENCE IF NOT EXISTS merge_decision_version;
 -- WorkingSet 不参与 Checkpoint 身份；merge_direction 只是本次确认的方向属性；
 -- local_id_a/b 只是确认时的变体证据，revision_a/b 是命中锚点，decision_version 防止晚到确认覆盖新事实。
 CREATE TABLE IF NOT EXISTS merge_checkpoints (
-    checkpoint_id    BIGSERIAL PRIMARY KEY,
-    round_id         VARCHAR(64) NOT NULL,
-    tracker_a_id     VARCHAR(64) NOT NULL,
-    tracker_b_id     VARCHAR(64) NOT NULL,
-    common_id        VARCHAR(64) NOT NULL,
-    local_id_a       VARCHAR(64),
-    local_id_b       VARCHAR(64),
+    checkpoint_id    BIGINT PRIMARY KEY,
+    round_id         BIGINT NOT NULL,
+    tracker_a_id     BIGINT NOT NULL,
+    tracker_b_id     BIGINT NOT NULL,
+    common_id        BIGINT NOT NULL,
+    local_id_a       BIGINT,
+    local_id_b       BIGINT,
     revision_a       INTEGER,
     revision_b       INTEGER,
     change_kind      VARCHAR(16),
@@ -300,9 +309,9 @@ CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_round ON merge_checkpoints (rou
 CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_family ON merge_checkpoints (common_id);
 
 CREATE TABLE IF NOT EXISTS merge_commit_receipts (
-    round_id VARCHAR(64) NOT NULL REFERENCES merge_rounds (id) ON DELETE CASCADE,
-    entry_id VARCHAR(64) NOT NULL,
-    business_ref VARCHAR(64),
+    round_id BIGINT NOT NULL REFERENCES merge_rounds (id) ON DELETE CASCADE,
+    entry_id BIGINT NOT NULL,
+    business_ref BIGINT,
     source_revision INTEGER,
     target_revision INTEGER,
     PRIMARY KEY (round_id, entry_id)
@@ -313,9 +322,9 @@ CREATE TABLE IF NOT EXISTS merge_commit_receipts (
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS working_set_creations (
-    id VARCHAR(64) PRIMARY KEY,
-    parent_working_set_id VARCHAR(128) NOT NULL,
-    new_working_set_id VARCHAR(128) NOT NULL,
+    id BIGINT PRIMARY KEY,
+    parent_working_set_id BIGINT NOT NULL,
+    new_working_set_id BIGINT NOT NULL,
     request_id VARCHAR(128) NOT NULL,
     status VARCHAR(32) NOT NULL,
     result JSONB NOT NULL,
@@ -333,26 +342,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_target
     ON working_set_creations (new_working_set_id)
     WHERE (COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE');
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_request_id
+    ON working_set_creations (request_id)
+    WHERE (COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE');
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_extension_target
     ON working_set_creations (new_working_set_id)
     WHERE (result->'request'->>'mode' = 'EXTEND'
        AND status IN ('Pending', 'Running'));
 
 CREATE TABLE IF NOT EXISTS working_set_creation_snapshots (
-    creation_id VARCHAR(64) PRIMARY KEY REFERENCES working_set_creations (id) ON DELETE CASCADE,
+    creation_id BIGINT PRIMARY KEY REFERENCES working_set_creations (id) ON DELETE CASCADE,
     completed_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS working_set_creation_items (
-    creation_id VARCHAR(64) NOT NULL REFERENCES working_set_creation_snapshots (creation_id) ON DELETE CASCADE,
-    parent_tracker_id VARCHAR(64) NOT NULL,
-    local_id VARCHAR(64) NOT NULL,
-    common_id VARCHAR(64) NOT NULL,
+    creation_id BIGINT NOT NULL REFERENCES working_set_creation_snapshots (creation_id) ON DELETE CASCADE,
+    parent_tracker_id BIGINT NOT NULL,
+    local_id BIGINT NOT NULL,
+    common_id BIGINT NOT NULL,
     revision INTEGER NOT NULL,
-    source_local_id VARCHAR(64) NOT NULL,
+    source_local_id BIGINT NOT NULL,
     source_revision INTEGER NOT NULL,
     PRIMARY KEY (creation_id, parent_tracker_id, local_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_creation_items_page
-    ON working_set_creation_items (creation_id, parent_tracker_id, local_id COLLATE "C");
+    ON working_set_creation_items (creation_id, parent_tracker_id, local_id);

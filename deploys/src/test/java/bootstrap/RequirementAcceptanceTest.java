@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -48,7 +50,7 @@ class RequirementAcceptanceTest {
 
     @Test
     void create_then_modify_emits_event_persisted_in_event_publication() {
-        String trackerId = "T-" + UUID.randomUUID();
+        String trackerId = fixtureId("T-" + UUID.randomUUID());
         fixture = new RootTrackerFixture(jdbc, trackerId);
         fixture.provision();
         Map<String, Object> createBody = Map.of(

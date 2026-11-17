@@ -40,10 +40,10 @@ import sk.workingset.infrastructure.SnowflakeIdGenerator;
 /** 验证来源修改命令与仓储、快照和发布端口的协作。 */
 class RequirementChangeFlowTest {
 
-    private static final LocalId L0 = LocalId.of("L0");
+    private static final LocalId L0 = LocalId.of("260574482192320");
     private static final Revision R3 = Revision.of(3);
-    private static final SnapshotRef FIRST = SnapshotRef.of("before-first-edit");
-    private static final SnapshotRef SECOND = SnapshotRef.of("before-second-edit");
+    private static final SnapshotRef FIRST = SnapshotRef.of("264246849363904");
+    private static final SnapshotRef SECOND = SnapshotRef.of("258985471651776");
 
     private final RequirementRepository requirements = mock(RequirementRepository.class);
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
@@ -53,7 +53,7 @@ class RequirementChangeFlowTest {
             mock(sk.workingset.application.port.TrackerScopePort.class),
             mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
     private final Requirement before = Requirement.create(
-            L0, CommonId.of("C1"), TrackerId.of("T0"), "A", "source description", R3, Version.of("1.2"));
+            L0, CommonId.of("265506033508288"), TrackerId.of("264905365135296"), "A", "source description", R3, Version.of("1.2"));
 
     @BeforeEach
     void setUp() {

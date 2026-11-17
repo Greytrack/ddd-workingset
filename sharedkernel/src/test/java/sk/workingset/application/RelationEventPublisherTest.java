@@ -56,27 +56,27 @@ class RelationEventPublisherTest {
         assertEquals(1, published.size());
         assertTrue(published.getFirst() instanceof AssociationCreationRequested);
         assertEquals("association-7", created.getFirst().metadata().originalRelationId());
-        assertEquals("T1", created.getFirst().source().trackerId().value());
-        assertEquals("T2", created.getFirst().target().trackerId().value());
+        assertEquals("265625955250112", created.getFirst().source().trackerId().value());
+        assertEquals("261538396602304", created.getFirst().target().trackerId().value());
     }
 
     private static ReferenceEndpoint source() {
-        return new ReferenceEndpoint(WorkingSetId.of("child"), LocalId.of("L1"), CommonId.of("C1"),
-                TrackerId.of("T1"), Revision.of(3));
+        return new ReferenceEndpoint(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+                TrackerId.of("265625955250112"), Revision.of(3));
     }
 
     private static ReferenceEndpoint target() {
-        return new ReferenceEndpoint(WorkingSetId.of("parent"), LocalId.of("L2"), CommonId.of("C2"),
-                TrackerId.of("T2"), Revision.of(4));
+        return new ReferenceEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
+                TrackerId.of("261538396602304"), Revision.of(4));
     }
 
     private static AssociationEndpoint associationSource() {
-        return new AssociationEndpoint(WorkingSetId.of("child"), LocalId.of("L1"), CommonId.of("C1"),
-                TrackerId.of("T1"));
+        return new AssociationEndpoint(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+                TrackerId.of("265625955250112"));
     }
 
     private static AssociationEndpoint associationTarget() {
-        return new AssociationEndpoint(WorkingSetId.of("parent"), LocalId.of("L2"), CommonId.of("C2"),
-                TrackerId.of("T2"));
+        return new AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
+                TrackerId.of("261538396602304"));
     }
 }

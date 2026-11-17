@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,11 +44,11 @@ import sk.workingset.domain.WorkingSet;
 @Import(T7RelationEventAcceptanceTest.RelationConfiguration.class)
 class T7RelationEventAcceptanceTest {
     private final String suffix = java.util.UUID.randomUUID().toString();
-    private final String space = "space-" + suffix;
-    private final String classification = "class-" + suffix;
-    private final String parentTracker = "parent-" + suffix;
-    private final String child = "child-" + suffix;
-    private final String parentItem = "item-" + suffix;
+    private final String space = fixtureId("space-" + suffix);
+    private final String classification = fixtureId("class-" + suffix);
+    private final String parentTracker = fixtureId("parent-" + suffix);
+    private final String child = fixtureId("child-" + suffix);
+    private final String parentItem = fixtureId("item-" + suffix);
 
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
@@ -71,8 +73,7 @@ class T7RelationEventAcceptanceTest {
     @Test
     void extensionPublishesReferenceAssociationAndDanglingRepairEvents() {
         seedParentRange();
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
-                Map.of("workingSetId", child), Map.class).getStatusCode());
+        FixtureIds.insertWorkingSet(jdbc, "1", child);
         var accepted = rest.postForEntity("/api/worksets/" + child + "/extensions",
                 Map.of("requestId", "extension-" + suffix, "trackerIds", List.of(parentTracker)), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
@@ -136,18 +137,18 @@ class T7RelationEventAcceptanceTest {
                 }
 
                 private ReferenceEndpoint target() {
-                    return new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("target-local"),
-                            CommonId.of("target-common"), TrackerId.of("target-tracker"), Revision.of(4));
+                    return new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
+                            CommonId.of("263710506950592"), TrackerId.of("263244057497536"), Revision.of(4));
                 }
 
                 private AssociationEndpoint associationTarget() {
-                    return new AssociationEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("target-local"),
-                            CommonId.of("target-common"), TrackerId.of("target-tracker"));
+                    return new AssociationEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
+                            CommonId.of("263710506950592"), TrackerId.of("263244057497536"));
                 }
 
                 private ReferenceEndpoint referenceSource() {
-                    return new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("repair-source"),
-                            CommonId.of("repair-common"), TrackerId.of("repair-tracker"), Revision.of(1));
+                    return new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("267169595373504"),
+                            CommonId.of("260782703683520"), TrackerId.of("266102343897024"), Revision.of(1));
                 }
             };
         }

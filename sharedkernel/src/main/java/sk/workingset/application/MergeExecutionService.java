@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -88,7 +87,7 @@ public class MergeExecutionService {
             return matching(existing.get(), source, target);
         }
         var pair = trackerPair(decisions);
-        var prepared = MergeRound.prepare(UUID.randomUUID().toString(), requestId, source, target, caller.id());
+        var prepared = MergeRound.prepare(Long.toString(ids.nextId()), requestId, source, target, caller.id());
         MergeRound round;
         try {
             round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
@@ -160,7 +159,7 @@ public class MergeExecutionService {
                 throw new MergeFailure(Reason.InvalidDecision, "decision is required");
             }
             request.decision().validate(frozen);
-            updated = updated.register(new Entry(UUID.randomUUID().toString(), store.nextDecisionVersion(),
+            updated = updated.register(new Entry(Long.toString(ids.nextId()), store.nextDecisionVersion(),
                     frozen, request.decision(), null));
         }
         store.updateRound(updated);

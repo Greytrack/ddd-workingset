@@ -178,6 +178,13 @@
   }
   .scope-tracker:hover { background: #f8fafc; }
   .scope-tracker input { margin: 0; }
+  .extension-group { min-width: 0; margin: 0; padding: 6px 10px 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .extension-group legend { max-width: 100%; padding: 0 6px; font-weight: 650; overflow-wrap: anywhere; }
+  .extension-group .scope-tracker { min-height: 38px; padding: 6px 8px; cursor: pointer; }
+  .extension-group .scope-tracker-name { flex: 1; }
+  .extension-group .already-included { background: #f1f4f7; color: var(--muted); cursor: default; }
+  .extension-group .scope-tracker .badge { margin-left: 0; }
+  #extensionCount { margin-right: auto; align-self: center; }
   .scope-tracker-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .scope-tracker .badge { margin-left: auto; }
   .scope-empty { padding: 4px 6px; color: #9ca3af; font-size: 10.5px; }

@@ -30,9 +30,9 @@ public class JdbcSnapshotStore implements SnapshotStore {
             """;
 
     private static final RowMapper<RequirementSnapshot> MAPPER = (rs, rowNum) -> new RequirementSnapshot(
-            LocalId.of(rs.getString("local_id")),
-            CommonId.of(rs.getString("common_id")),
-            TrackerId.of(rs.getString("tracker_id")),
+            LocalId.of(rs.getLong("local_id")),
+            CommonId.of(rs.getLong("common_id")),
+            TrackerId.of(rs.getLong("tracker_id")),
             rs.getString("title"),
             rs.getString("description"),
             Revision.of(rs.getInt("revision")),
@@ -51,10 +51,10 @@ public class JdbcSnapshotStore implements SnapshotStore {
     public SnapshotRef save(RequirementSnapshot snapshot) {
         SnapshotRef ref = SnapshotRef.of(String.valueOf(identifierGenerator.nextId()));
         jdbc.update(INSERT,
-                ref.id(),
-                snapshot.localId().value(),
-                snapshot.commonId().value(),
-                snapshot.trackerId().value(),
+                ref.numericId(),
+                snapshot.localId().numericValue(),
+                snapshot.commonId().numericValue(),
+                snapshot.trackerId().numericValue(),
                 snapshot.title(),
                 snapshot.description(),
                 snapshot.revision().value(),
@@ -69,6 +69,6 @@ public class JdbcSnapshotStore implements SnapshotStore {
                 "SELECT snapshot_ref, local_id, common_id, tracker_id, title, description, "
                         + "revision, version, lock_version FROM requirement_snapshots WHERE snapshot_ref = ?",
                 MAPPER,
-                ref.id()).stream().findFirst();
+                ref.numericId()).stream().findFirst();
     }
 }

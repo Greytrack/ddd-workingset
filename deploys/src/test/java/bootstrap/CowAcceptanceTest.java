@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -57,9 +59,9 @@ class CowAcceptanceTest {
     private final List<String> worksets = new ArrayList<>();
     private String source;
     private String common;
-    private final String tracker = "T-" + UUID.randomUUID();
-    private final String space = "S-" + UUID.randomUUID();
-    private final String classification = "CL-" + UUID.randomUUID();
+    private final String tracker = fixtureId("T-" + UUID.randomUUID());
+    private final String space = fixtureId("S-" + UUID.randomUUID());
+    private final String classification = fixtureId("CL-" + UUID.randomUUID());
 
     @AfterEach
     void cleanUp() {
@@ -236,7 +238,7 @@ class CowAcceptanceTest {
         Target invalid = derive();
         // 模拟早期数据的家族身份损坏，直接验证 COW 对持久化证据的防护。
         jdbc.update("UPDATE light_tracker_items SET common_id = ? WHERE local_id = ?",
-                "INVALID-" + UUID.randomUUID(), invalid.id());
+                fixtureId("INVALID-" + UUID.randomUUID()), invalid.id());
         redis.delete("workingset:lti:" + invalid.id());
 
         change("B", 0);
@@ -384,10 +386,8 @@ class CowAcceptanceTest {
     }
 
     private Target derive(String parent, String sourceTracker, String sourceLocalId) {
-        String ws = "WS-" + UUID.randomUUID();
-        assertEquals(HttpStatus.CREATED,
-                rest.postForEntity("/api/worksets/" + parent + "/children",
-                        Map.of("workingSetId", ws), Void.class).getStatusCode());
+        String ws = fixtureId("WS-" + UUID.randomUUID());
+        FixtureIds.insertWorkingSet(jdbc, parent, ws);
         worksets.add(ws);
         assertEquals(HttpStatus.CREATED,
                 rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());

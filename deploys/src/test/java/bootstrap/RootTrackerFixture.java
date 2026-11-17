@@ -1,11 +1,13 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** 最小平台登记数据，供既有 Requirement 与 COW 验收使用。 */
 record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
-    private String spaceId() { return trackerId + "-s"; }
-    private String classificationId() { return trackerId + "-c"; }
+    private String spaceId() { return fixtureId(trackerId + "-s"); }
+    private String classificationId() { return fixtureId(trackerId + "-c"); }
 
     void provision() {
         jdbc.update("INSERT INTO product_spaces VALUES (?)", spaceId());

@@ -40,20 +40,20 @@ import sk.workingset.domain.WorkingSet.TrackerBinding;
 import sk.workingset.domain.WorkingSet.TrackerOrigin;
 
 class RelationEventStepTest {
-    private final WorkingSetId target = WorkingSetId.of("child");
-    private final TrackerId parentId = TrackerId.of("T1");
-    private final TrackerId childId = TrackerId.of("T2");
+    private final WorkingSetId target = WorkingSetId.of("259712159403968");
+    private final TrackerId parentId = TrackerId.of("265625955250112");
+    private final TrackerId childId = TrackerId.of("261538396602304");
 
     @Test
     void publishesCreationAssociationAndRepairForEveryIndexedItem() {
-        var parent = Tracker.original(parentId, new ProductSpace("space"),
-                new Classification("class", SharingMode.UNSHARED), null);
+        var parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
+                new Classification("266673196957632", SharingMode.UNSHARED), null);
         var child = Tracker.derived(childId, parent, target, true);
         var workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
-                List.of(new TrackerBinding(target, childId, "space", "class", SharingMode.UNSHARED,
+                List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
-        var item = LightTrackerItem.derive(LocalId.of("L1"), CommonId.of("C1"), childId, target, Revision.of(3),
-                LocalId.of("L0"), Revision.of(3));
+        var item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
+                LocalId.of("260574482192320"), Revision.of(3));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
@@ -62,15 +62,15 @@ class RelationEventStepTest {
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
         when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
         when(items.findInTracker(childId)).thenReturn(List.of(item));
-        var targetEndpoint = new ReferenceEndpoint(WorkingSetId.of("parent"), LocalId.of("L2"),
-                CommonId.of("C2"), TrackerId.of("T3"), Revision.of(4));
+        var targetEndpoint = new ReferenceEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+                CommonId.of("261349487529920"), TrackerId.of("259649290751936"), Revision.of(4));
         var sourceEndpoint = new ReferenceEndpoint(target, item.localId(), item.commonId(), childId, item.revision());
         when(source.upstreamReferences(any())).thenReturn(List.of(new ReferenceFact("reference-1", sourceEndpoint,
                 targetEndpoint)));
         when(source.upstreamAssociations(any())).thenReturn(List.of(new AssociationFact("association-1",
                 new sk.workingset.application.event.AssociationEndpoint(target, item.localId(), item.commonId(), childId),
-                new sk.workingset.application.event.AssociationEndpoint(WorkingSetId.of("parent"), LocalId.of("L2"),
-                        CommonId.of("C2"), TrackerId.of("T3")))));
+                new sk.workingset.application.event.AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+                        CommonId.of("261349487529920"), TrackerId.of("259649290751936")))));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-2", sourceEndpoint,
                 targetEndpoint)));
 
@@ -90,14 +90,14 @@ class RelationEventStepTest {
 
     @Test
     void recordsFailureWithoutThrowingWhenRelationSourceFails() {
-        var parent = Tracker.original(parentId, new ProductSpace("space"),
-                new Classification("class", SharingMode.UNSHARED), null);
+        var parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
+                new Classification("266673196957632", SharingMode.UNSHARED), null);
         var child = Tracker.derived(childId, parent, target, true);
         var workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
-                List.of(new TrackerBinding(target, childId, "space", "class", SharingMode.UNSHARED,
+                List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
-        var item = LightTrackerItem.derive(LocalId.of("L1"), CommonId.of("C1"), childId, target, Revision.of(3),
-                LocalId.of("L0"), Revision.of(3));
+        var item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
+                LocalId.of("260574482192320"), Revision.of(3));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);

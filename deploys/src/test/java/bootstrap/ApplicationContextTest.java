@@ -1,5 +1,7 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,7 +52,7 @@ class ApplicationContextTest {
                     (ApplicationListener<PayloadApplicationEvent<RequirementChanged>>)
                             event -> received.add(event.getPayload()));
             RequirementApplicationService service = context.getBean(RequirementApplicationService.class);
-            TrackerId trackerId = TrackerId.of("ctx-t-" + UUID.randomUUID());
+            TrackerId trackerId = TrackerId.of(fixtureId("tracker-" + UUID.randomUUID()));
 
             var fixture = new RootTrackerFixture(context.getBean(JdbcTemplate.class), trackerId.value());
             fixture.provision();

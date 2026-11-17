@@ -19,7 +19,7 @@ class SourceSerialCowCoordinatorTest {
     @Test
     void queued_tasks_run_by_sequence_while_another_source_can_progress() throws InterruptedException {
         var coordinator = new SourceSerialCowCoordinator();
-        LocalId source = LocalId.of("ordered");
+        LocalId source = LocalId.of("265222440669120");
         var order = new CopyOnWriteArrayList<Integer>();
         var firstStarted = new CountDownLatch(1);
         var releaseFirst = new CountDownLatch(1);
@@ -40,7 +40,7 @@ class SourceSerialCowCoordinatorTest {
             await().atMost(Duration.ofSeconds(3)).until(() -> third.getState() == Thread.State.WAITING);
             Thread second = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
             await().atMost(Duration.ofSeconds(3)).until(() -> second.getState() == Thread.State.WAITING);
-            coordinator.runSerial(LocalId.of("other"), 1, () -> order.add(0));
+            coordinator.runSerial(LocalId.of("265987761440704"), 1, () -> order.add(0));
             assertEquals(List.of(1, 0), order);
             releaseFirst.countDown();
             assertTrue(first.join(Duration.ofSeconds(3)));
@@ -55,11 +55,11 @@ class SourceSerialCowCoordinatorTest {
     @Test
     void sequence_two_waits_for_one_without_blocking_another_source() throws InterruptedException {
         var coordinator = new SourceSerialCowCoordinator(Duration.ofSeconds(3));
-        var source = LocalId.of("late-first");
+        var source = LocalId.of("262840182583232");
         var order = new CopyOnWriteArrayList<Integer>();
         Thread second = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
         await().atMost(Duration.ofSeconds(2)).until(() -> second.getState() == Thread.State.TIMED_WAITING);
-        coordinator.runSerial(LocalId.of("unrelated"), 1, () -> order.add(0));
+        coordinator.runSerial(LocalId.of("261969732607936"), 1, () -> order.add(0));
         assertEquals(List.of(0), order);
         coordinator.runSerial(source, 1, () -> order.add(1));
         assertTrue(second.join(Duration.ofSeconds(2)));
@@ -69,12 +69,12 @@ class SourceSerialCowCoordinatorTest {
     @Test
     void reports_gap_and_propagates_failure_without_stalling_source(CapturedOutput output) {
         var coordinator = new SourceSerialCowCoordinator(Duration.ofMillis(100));
-        LocalId source = LocalId.of("gap");
+        LocalId source = LocalId.of("263956507357120");
         var failure = new IllegalStateException("target failed");
         coordinator.runSerial(source, 1, () -> {});
         assertSame(failure, assertThrows(IllegalStateException.class,
                 () -> coordinator.runSerial(source, 3, () -> { throw failure; })));
-        assertTrue(output.getAll().contains("ORDER_GAP sourceLocalId=gap expected=2 actual=3"));
+        assertTrue(output.getAll().contains("ORDER_GAP sourceLocalId=" + source.value() + " expected=2 actual=3"));
         var visited = new java.util.ArrayList<Integer>();
         coordinator.runSerial(source, 4, () -> visited.add(4));
         assertEquals(List.of(4), visited);

@@ -1,7 +1,10 @@
 package bootstrap;
 
+import static bootstrap.FixtureIds.fixtureId;
+
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +38,8 @@ import sk.workingset.application.event.TrackerItemsIndexed;
 import sk.workingset.application.DeriveCommand;
 import sk.workingset.application.DeriveResult;
 import sk.workingset.application.WorkingSetApplicationService;
+import sk.workingset.application.WorkingSetCreationService;
+import sk.workingset.application.Caller;
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
@@ -52,12 +57,12 @@ import sk.workingset.domain.WorkingSetCreation.Status;
 @Import(WorkingSetCreationAcceptanceTest.IndexEventConfiguration.class)
 class WorkingSetCreationAcceptanceTest {
     private static final String CREATIONS = "/api/working-set-creations";
-    private final String child = UUID.randomUUID().toString();
-    private final String parent = "p-" + child;
-    private final String space = "space-" + child;
-    private final String otherSpace = "other-" + child;
-    private final String shared = "shared-" + child;
-    private final String unshared = "unshared-" + child;
+    private String child = fixtureId("child-" + UUID.randomUUID());
+    private final String parent = fixtureId("p-" + child);
+    private final String space = fixtureId("space-" + child);
+    private final String otherSpace = fixtureId("other-" + child);
+    private final String shared = fixtureId("shared-" + child);
+    private final String unshared = fixtureId("unshared-" + child);
 
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
@@ -66,6 +71,7 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private TransactionTemplate transaction;
     @Autowired private IndexEvents indexEvents;
     @Autowired private WorkingSetApplicationService workingSets;
+    @Autowired private WorkingSetCreationService creations;
     @Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
 
     @AfterEach
@@ -103,6 +109,7 @@ class WorkingSetCreationAcceptanceTest {
                 var accepted = rest.postForEntity(CREATIONS, request, CreationView.class);
                 assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
                 task = accepted.getBody().creationId();
+                child = accepted.getBody().targetWorkingSetId();
                 assertEquals(CREATIONS + "/" + task, accepted.getHeaders().getLocation().getPath());
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                         assertEquals(Status.Running, task(task).status()));
@@ -111,7 +118,7 @@ class WorkingSetCreationAcceptanceTest {
                 assertEquals(HttpStatus.CONFLICT, preparing.getStatusCode());
                 assertEquals("PREPARING", preparing.getBody().get("reason"));
                 var use = rest.postForEntity("/api/worksets/" + child + "/children",
-                        Map.of("workingSetId", "unused-" + child), Map.class);
+                        Map.of("workingSetId", fixtureId("unused-" + child)), Map.class);
                 assertEquals(HttpStatus.CONFLICT, use.getStatusCode());
                 assertEquals("PREPARING", use.getBody().get("reason"));
                 var bind = rest.postForEntity("/api/worksets/" + child + "/spaces/" + space, null, Map.class);
@@ -133,23 +140,25 @@ class WorkingSetCreationAcceptanceTest {
         assertNotNull(task(task).completedAt());
         assertEquals("1", rest.getForObject("/api/worksets/" + child, WorkingSetView.class).parentWorkingSetId());
         assertEquals(task, rest.postForEntity(CREATIONS, request, CreationView.class).getBody().creationId());
-        var differentRequest = rest.postForEntity(CREATIONS, request("1", "second"), Map.class);
+        var differentRequest = rest.postForEntity(CREATIONS,
+                new Request("1", child, request.requestId(), List.of(), List.of(), List.of(), "另一个名称"), Map.class);
         assertEquals(HttpStatus.CONFLICT, differentRequest.getStatusCode());
         assertEquals("WorkingSetAlreadyExists", differentRequest.getBody().get("reason"));
     }
 
     @Test
     void bodyFailureIsTerminalAndVisibleThroughPolling() {
-        var accepted = rest.postForEntity(CREATIONS, request("missing-" + child, "first"), CreationView.class);
+        var accepted = rest.postForEntity(CREATIONS, request(fixtureId("missing-" + child), "first"), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
         String id = accepted.getBody().creationId();
+        child = accepted.getBody().targetWorkingSetId();
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                 assertEquals(Status.Failed, task(id).status()));
         var failure = task(id).failures().getFirst();
         assertEquals("CREATE_WORKING_SET", failure.stage().name());
         assertEquals("WorkingSetNotFound", failure.reason());
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
-        assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(CREATIONS + "/missing", Map.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(CREATIONS + "/258519859202017", Map.class).getStatusCode());
     }
 
     @Test
@@ -183,7 +192,7 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void missingTrackerSpaceReportsFailureAndKeepsOtherBindings() {
         seedRange();
-        String outsideTracker = "outside-" + child;
+        String outsideTracker = fixtureId("outside-" + child);
         seedTracker(outsideTracker, otherSpace, unshared, "UNSHARED");
         String id = submit(new Request("1", child, "partial", List.of(space), List.of(shared),
                 List.of(outsideTracker, unshared)));
@@ -203,8 +212,7 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void rejectsSpaceAndSharedTrackerOutsideTheDirectParentsBindings() {
         seedRange();
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
-                Map.of("workingSetId", parent), Map.class).getStatusCode());
+        FixtureIds.insertWorkingSet(jdbc, "1", parent);
         assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
                 null, Map.class).getStatusCode());
         var completed = awaitStatus(submit(new Request(parent, child, "outside-parent",
@@ -218,7 +226,7 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void bindsCopiedTrackersThatShareSpaceAndClassification() {
         seedRange();
-        String sameSlot = "z-" + child;
+        String sameSlot = fixtureId("z-" + child);
         seedTracker(sameSlot, space, unshared, "UNSHARED");
         var completed = awaitStatus(submit(new Request("1", child, "slot", List.of(space), List.of(),
                 List.of(unshared, sameSlot))), Status.Succeeded);
@@ -242,16 +250,16 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void rejectsExistingTargetWithoutMarkingItPreparing() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", child);
-        var response = rest.postForEntity(CREATIONS, new Request("1", child, "existing-target",
-                List.of(), List.of(), List.of()), Map.class);
-        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-        assertEquals("WorkingSetAlreadyExists", response.getBody().get("reason"));
+        var failure = assertThrows(sk.workingset.domain.BindingFailure.class, () ->
+                creations.submit(new Request("1", child, "existing-target", List.of(), List.of(), List.of()),
+                        Caller.of("test")));
+        assertEquals("WorkingSetAlreadyExists", failure.reason().name());
         assertEquals(HttpStatus.OK, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
     }
 
     @Test
     void rejectsParentThatIsBeingCreated() throws Exception {
-        String pendingParent = "pending-" + child;
+        String pendingParent = fixtureId("pending-" + child);
         String id;
         try (var connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -310,15 +318,15 @@ class WorkingSetCreationAcceptanceTest {
 
     @Test
     void ancestorsExcludeCreatingWorkingSet() {
-        String mid = "mid-" + child;
-        String leaf = "leaf-" + child;
+        String mid = fixtureId("mid-" + child);
+        String leaf = fixtureId("leaf-" + child);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", mid);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, ?)", leaf, mid);
         jdbc.update("""
                 INSERT INTO working_set_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, '1', ?, 'running', 'Running', CAST(? AS jsonb), now())
-                """, "task-" + child, mid, "{}");
+                """, fixtureId("task-" + child), mid, "{}");
         try {
             var ancestors = rest.getForObject("/api/worksets/" + leaf + "/ancestors", List.class);
             assertFalse(ancestors.contains(mid));
@@ -332,14 +340,14 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void indexesAllThreeNativeItemsWithInheritedIdentityAndSource() {
         seedRange();
-        var families = List.of("a-" + child, "b-" + child, "c-" + child);
+        var families = orderedFamilies();
         for (String family : families) {
             seedItem(unshared, family, family, false);
         }
-        seedItem(unshared, "deleted-" + child, "deleted-" + child, true);
-        String second = "other-tracker-" + child;
+        seedItem(unshared, fixtureId("deleted-" + child), fixtureId("deleted-" + child), true);
+        String second = fixtureId("other-tracker-" + child);
         seedTracker(second, otherSpace, unshared, "UNSHARED");
-        seedItem(second, "other-item-" + child, "other-item-" + child, false);
+        seedItem(second, fixtureId("other-item-" + child), fixtureId("other-item-" + child), false);
         String id = submit(new Request("1", child, "index", List.of(space, otherSpace), List.of(), List.of(unshared, second)));
         var completed = awaitStatus(id, Status.Succeeded);
         assertEquals(2, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).succeeded());
@@ -366,29 +374,28 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void indexesDerivedParentAndExcludesDeletedSourcesWhileRecordingMissingSources() {
         seedRange();
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
-                Map.of("workingSetId", parent), Map.class).getStatusCode());
+        FixtureIds.insertWorkingSet(jdbc, "1", parent);
         assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
                 null, Map.class).getStatusCode());
-        String nativeId = "root-" + child;
+        String nativeId = fixtureId("root-" + child);
         seedItem(unshared, nativeId, nativeId, false);
         DeriveResult derive = workingSets.derive(new DeriveCommand(WorkingSetId.of(parent),
                 TrackerId.of(unshared), LocalId.of(nativeId), Revision.of(3), CommonId.of(nativeId)));
         String parentTracker = derive.tracker().trackerId().value();
-        String overlap = "overlap-" + child;
+        String overlap = fixtureId("overlap-" + child);
         seedItem(parentTracker, overlap, overlap, false);
         seedParentLti(parentTracker, overlap, overlap, overlap, true);
-        String deleted = "deleted-" + child;
+        String deleted = fixtureId("deleted-" + child);
         seedItem(unshared, deleted, deleted, true);
-        seedParentLti(parentTracker, "virtual-deleted-" + child, deleted, deleted, false);
-        String localDeleted = "local-deleted-" + child;
+        seedParentLti(parentTracker, fixtureId("virtual-deleted-" + child), deleted, deleted, false);
+        String localDeleted = fixtureId("local-deleted-" + child);
         seedItem(parentTracker, localDeleted, localDeleted, true);
         seedParentLti(parentTracker, localDeleted, localDeleted, localDeleted, true);
-        String broken = "broken-" + child;
-        seedParentLti(parentTracker, broken, broken, "missing-" + child, false);
-        String stale = "stale-" + child;
+        String broken = fixtureId("broken-" + child);
+        seedParentLti(parentTracker, broken, broken, fixtureId("missing-" + child), false);
+        String stale = fixtureId("stale-" + child);
         seedItem(unshared, stale, stale, false);
-        seedParentLti(parentTracker, "virtual-stale-" + child, stale, stale, false);
+        seedParentLti(parentTracker, fixtureId("virtual-stale-" + child), stale, stale, false);
         jdbc.update("UPDATE requirements SET revision = 4 WHERE local_id = ?", stale);
 
         String id = submit(new Request(parent, child, "index-derived", List.of(space), List.of(), List.of(parentTracker)));
@@ -396,9 +403,10 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(2, completed.indexProgress().get(parentTracker).succeeded());
         assertEquals(2, completed.indexProgress().get(parentTracker).skipped());
         assertEquals(0, completed.indexProgress().get(parentTracker).failed());
-        assertEquals(List.of("NOT_FOUND", "HISTORY_UNAVAILABLE"),
-                completed.failures().stream().map(details -> details.reason()).toList());
-        var failure = completed.failures().getFirst();
+        assertEquals(List.of("HISTORY_UNAVAILABLE", "NOT_FOUND"),
+                completed.failures().stream().map(details -> details.reason()).sorted().toList());
+        var failure = completed.failures().stream().filter(it -> it.reason().equals("NOT_FOUND"))
+                .findFirst().orElseThrow();
         assertEquals(Stage.INDEX_UNSHARED_TRACKERS, failure.stage());
         assertEquals(broken, failure.localId());
         assertEquals(parentTracker, failure.trackerId());
@@ -420,10 +428,10 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void keepsPreparingBetweenCommittedBatchesAndSerializesEventRedelivery() throws Exception {
         seedRange();
-        String first = "a-" + child;
-        String second = "b-" + child;
-        String last = "c-" + child;
-        for (String family : List.of(first, second, last)) {
+        var families = orderedFamilies();
+        String first = families.getFirst();
+        String last = families.getLast();
+        for (String family : families) {
             seedItem(unshared, family, family, false);
         }
         String id;
@@ -453,7 +461,7 @@ class WorkingSetCreationAcceptanceTest {
                 jdbc.update("""
                         INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                             source_local_id, source_revision, materialized) VALUES (?, ?, ?, ?, 3, ?, 3, false)
-                        """, "existing-" + child, last, tracker, child, last);
+                        """, fixtureId("existing-" + child), last, tracker, child, last);
                 transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmitted(id)));
             } finally {
                 connection.rollback();
@@ -467,31 +475,33 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
-    void extendsAnExistingChildWithBatchDerivationAndFiltersAlreadyDerivedTrackers() {
+    void extendsAnExistingChildWithSharedAndDerivedTrackersAndFiltersAlreadyIncludedSources() {
         seedRange();
         createTarget();
-        String secondSource = "unshared2-" + child;
+        String secondSource = fixtureId("unshared2-" + child);
         seedTracker(secondSource, space, unshared, "UNSHARED");
-        seedItem(unshared, "extension-" + child, "extension-" + child, false);
-        seedItem(secondSource, "extension2-" + child, "extension2-" + child, false);
-        String first = extension(List.of(unshared, secondSource));
+        seedItem(unshared, fixtureId("extension-" + child), fixtureId("extension-" + child), false);
+        seedItem(secondSource, fixtureId("extension2-" + child), fixtureId("extension2-" + child), false);
+        String first = extension(List.of(unshared, secondSource, shared));
         awaitStatus(first, Status.Succeeded);
 
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?",
+        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?",
                 Integer.class, child));
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
                 Integer.class, child));
-        assertTrue(rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length == 2);
+        var trackers = rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class);
+        assertEquals(3, trackers.length);
+        assertTrue(java.util.Arrays.stream(trackers).anyMatch(tracker -> shared.equals(tracker.trackerId())));
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/derive",
-                Map.of("sourceTrackerId", unshared, "sourceLocalId", "extension-" + child,
-                        "sourceRevision", 3, "commonId", "extension-" + child), Map.class).getStatusCode());
+                Map.of("sourceTrackerId", unshared, "sourceLocalId", fixtureId("extension-" + child),
+                        "sourceRevision", 3, "commonId", fixtureId("extension-" + child)), Map.class).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/spaces/" + space
                 + "/classifications/" + unshared + "/derive", Map.of(), Map.class).getStatusCode());
 
         var duplicate = rest.postForEntity("/api/worksets/" + child + "/extensions",
-                Map.of("requestId", "duplicate-" + child, "trackerIds", List.of(unshared, secondSource)), Map.class);
+                Map.of("requestId", fixtureId("duplicate-" + child), "trackerIds", List.of(unshared, secondSource, shared)), Map.class);
         assertEquals(HttpStatus.CONFLICT, duplicate.getStatusCode());
         assertEquals("NoDerivableTracker", duplicate.getBody().get("reason"));
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
@@ -502,9 +512,9 @@ class WorkingSetCreationAcceptanceTest {
     void extensionKeepsValidTrackerWhenAnotherSelectionFails() {
         seedRange();
         createTarget();
-        String valid = "valid-" + child;
+        String valid = fixtureId("valid-" + child);
         seedItem(unshared, valid, valid, false);
-        String id = extension(List.of(unshared, "missing-" + child));
+        String id = extension(List.of(unshared, fixtureId("missing-" + child)));
         var completed = awaitStatus(id, Status.PartiallySucceeded);
         assertEquals(1, completed.failures().size());
         assertEquals("SourceTrackerNotFound", completed.failures().getFirst().reason());
@@ -515,8 +525,8 @@ class WorkingSetCreationAcceptanceTest {
     void rejectsAnotherExtensionWhileOneIsUnfinished() throws Exception {
         seedRange();
         createTarget();
-        String activeId = "active-" + child;
-        var request = new Request("1", child, "active-request-" + child, List.of(), List.of(),
+        String activeId = fixtureId("active-" + child);
+        var request = new Request("1", child, fixtureId("active-request-" + child), List.of(), List.of(),
                 List.of(unshared), null, Mode.EXTEND);
         var active = WorkingSetCreation.submit(activeId, request, "test", Instant.now()).start(Instant.now());
         jdbc.update("""
@@ -526,14 +536,13 @@ class WorkingSetCreationAcceptanceTest {
                 """, activeId, child, request.requestId(), mapper.writeValueAsString(active));
 
         var response = rest.postForEntity("/api/worksets/" + child + "/extensions",
-                Map.of("requestId", "another-" + child, "trackerIds", List.of(unshared)), Map.class);
+                Map.of("requestId", fixtureId("another-" + child), "trackerIds", List.of(unshared)), Map.class);
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("PREPARING", response.getBody().get("reason"));
     }
 
     private void createTarget() {
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/1/children",
-                Map.of("workingSetId", child), Map.class).getStatusCode());
+        FixtureIds.insertWorkingSet(jdbc, "1", child);
     }
 
     private String extension(List<String> trackerIds) {
@@ -562,7 +571,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED'), (?, 'UNSHARED')", shared, unshared);
         seedTracker(shared, space, shared, "SHARED");
         seedTracker(unshared, space, unshared, "UNSHARED");
-        seedTracker("unselected-" + child, otherSpace, shared, "SHARED");
+        seedTracker(fixtureId("unselected-" + child), otherSpace, shared, "SHARED");
     }
 
     private void seedTracker(String id, String spaceId, String classification, String mode) {
@@ -577,9 +586,12 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private String submit(Request request) {
-        var response = rest.postForEntity(CREATIONS, request, CreationView.class);
-        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
-        return response.getBody().creationId();
+        return creations.submit(request, Caller.of("test")).id();
+    }
+
+    private List<String> orderedFamilies() {
+        return java.util.stream.Stream.of("a-", "b-", "c-").map(label -> fixtureId(label + child))
+                .sorted(java.util.Comparator.comparingLong(Long::parseLong)).toList();
     }
 
     private CreationView awaitStatus(String id, Status expected) {
@@ -592,7 +604,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private Request request(String parent, String requestId) {
-        return new Request(parent, child, requestId, List.of(), List.of(), List.of());
+        return new Request(parent, child, requestId + "-" + UUID.randomUUID(), List.of(), List.of(), List.of());
     }
 
     @TestConfiguration

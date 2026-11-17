@@ -24,16 +24,29 @@ public final class WorkingSet {
     public enum SpaceState { ACTIVE }
     public enum TrackerOrigin { SHARED_REUSE, UNSHARED_DERIVATION }
 
-    public record SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
+    public record SpaceBinding(WorkingSetId workingSetId, Long numericProductSpaceId, String name,
                                SpaceOrigin origin, SpaceState state) {
+        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
+                            SpaceOrigin origin, SpaceState state) {
+            this(workingSetId, Long.valueOf(productSpaceId), name, origin, state);
+        }
         public SpaceBinding(WorkingSetId workingSetId, String productSpaceId,
                             SpaceOrigin origin, SpaceState state) {
             this(workingSetId, productSpaceId, null, origin, state);
         }
+        public String productSpaceId() { return numericProductSpaceId.toString(); }
     }
 
-    public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
-                                 String classificationId, SharingMode sharingMode, TrackerOrigin origin) {}
+    public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
+                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
+        public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
+                              String classificationId, SharingMode sharingMode, TrackerOrigin origin) {
+            this(workingSetId, trackerId, Long.valueOf(productSpaceId), Long.valueOf(classificationId),
+                    sharingMode, origin);
+        }
+        public String productSpaceId() { return numericProductSpaceId.toString(); }
+        public String classificationId() { return numericClassificationId.toString(); }
+    }
 
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;

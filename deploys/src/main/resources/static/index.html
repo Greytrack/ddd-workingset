@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Working Set Explorer</title>
-<link rel="stylesheet" href="/app.css?v=3">
+<link rel="stylesheet" href="/app.css?v=4">
 <link rel="stylesheet" href="/merge.css?v=3">
 </head>
 <body>
@@ -25,7 +25,8 @@
   </details>
   <div class="actions">
     <span id="status" class="status" role="status">准备就绪</span>
-    <button id="createWorksetBtn" type="button" class="btn primary">＋ 创建工作集</button>
+    <button id="createWorksetBtn" type="button" class="btn primary hidden">＋ 新建工作集</button>
+    <button id="extendWorksetBtn" type="button" class="btn primary hidden">＋ 扩展工作集</button>
     <button id="taskCenterBtn" type="button" class="btn">任务中心 <span id="taskBadge" class="badge task-badge">0</span></button>
     <button id="refresh" type="button" class="btn">刷新</button>
   </div>
@@ -59,7 +60,7 @@
     <div class="panel-head"><h2>Item</h2><span id="itemCount" class="muted"></span></div>
     <div id="selectedTracker" class="selected-tracker"><div class="empty">请选择跟踪分类</div></div>
     <div id="itemToolbar" class="item-toolbar hidden">
-      <input id="itemFilter" type="search" aria-label="筛选 Item" placeholder="按名称或 ID 筛选">
+      <input id="itemFilter" type="search" aria-label="筛选 Item" placeholder="按名称、编号或 ID 筛选">
     </div>
     <div id="itemArea" class="item-area" aria-busy="false"><div class="empty">选择跟踪分类后查看 Item</div></div>
     <div id="itemDetail" class="item-detail hidden" aria-label="Item 详情" role="region"></div>
@@ -78,9 +79,9 @@
   </section>
 </div>
 
-<script src="/js/core.js?v=3" defer></script>
-<script src="/js/worksets.js?v=5" defer></script>
-<script src="/js/features.js?v=5" defer></script>
-<script src="/js/merge.js?v=6" defer></script>
+<script src="/js/core.js?v=5" defer></script>
+<script src="/js/worksets.js?v=7" defer></script>
+<script src="/js/features.js?v=7" defer></script>
+<script src="/js/merge.js?v=7" defer></script>
 </body>
 </html>

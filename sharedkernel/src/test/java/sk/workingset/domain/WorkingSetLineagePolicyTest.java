@@ -19,16 +19,16 @@ import sk.workingset.domain.WorkingSet.TrackerOrigin;
 
 class WorkingSetLineagePolicyTest {
     private final WorkingSet root = new WorkingSet(WorkingSet.DEFAULT_ID, null, List.of(), List.of());
-    private final WorkingSetId childId = WorkingSetId.of("child");
-    private final WorkingSetId grandchildId = WorkingSetId.of("grandchild");
+    private final WorkingSetId childId = WorkingSetId.of("259712159403968");
+    private final WorkingSetId grandchildId = WorkingSetId.of("265077320994752");
 
     @Test
     void allowsDirectParentChildInEitherDirectionAndExcludesSharedTrackers() {
-        var shared = new TrackerBinding(childId, TrackerId.of("shared"), "space", "shared-class",
+        var shared = new TrackerBinding(childId, TrackerId.of("259191613022144"), "259944010602432", "258520000000031",
                 SharingMode.SHARED, TrackerOrigin.SHARED_REUSE);
-        var unshared = new TrackerBinding(childId, TrackerId.of("unshared"), "space", "unshared-class",
+        var unshared = new TrackerBinding(childId, TrackerId.of("267052500774848"), "259944010602432", "258520000000032",
                 SharingMode.UNSHARED, TrackerOrigin.UNSHARED_DERIVATION);
-        var space = new SpaceBinding(childId, "space", SpaceOrigin.EXPLICIT, SpaceState.ACTIVE);
+        var space = new SpaceBinding(childId, "259944010602432", SpaceOrigin.EXPLICIT, SpaceState.ACTIVE);
         var child = new WorkingSet(childId, root.id(), List.of(space), List.of(shared, unshared));
         var grandchild = WorkingSet.child(grandchildId, child.id());
 
@@ -39,12 +39,12 @@ class WorkingSetLineagePolicyTest {
 
     @Test
     void directDerivationRequiresChildSourceIdToBeTheImmediateParent() {
-        var productSpace = new ProductSpace("space");
-        var classification = new Classification("class", SharingMode.UNSHARED);
-        var parent = Tracker.original(TrackerId.of("parent"), productSpace, classification, null);
-        var child = Tracker.derived(TrackerId.of("child"), parent, childId);
-        var sibling = Tracker.derived(TrackerId.of("sibling"), parent, childId);
-        var grandchild = Tracker.derived(TrackerId.of("grandchild"), child, grandchildId);
+        var productSpace = new ProductSpace("259944010602432");
+        var classification = new Classification("266673196957632", SharingMode.UNSHARED);
+        var parent = Tracker.original(TrackerId.of("260634912653248"), productSpace, classification, null);
+        var child = Tracker.derived(TrackerId.of("259712159403968"), parent, childId);
+        var sibling = Tracker.derived(TrackerId.of("263561533034432"), parent, childId);
+        var grandchild = Tracker.derived(TrackerId.of("265077320994752"), child, grandchildId);
 
         assertTrue(WorkingSetLineagePolicy.isDirectDerivation(child, parent));
         assertFalse(WorkingSetLineagePolicy.isDirectDerivation(grandchild, parent));
@@ -54,7 +54,7 @@ class WorkingSetLineagePolicyTest {
     @Test
     void rejectsSiblingsAndNonAdjacentAncestorsInEitherDirection() {
         var child = WorkingSet.child(childId, root.id());
-        var sibling = WorkingSet.child(WorkingSetId.of("sibling"), root.id());
+        var sibling = WorkingSet.child(WorkingSetId.of("263561533034432"), root.id());
         var grandchild = WorkingSet.child(grandchildId, child.id());
 
         assertNotAdjacent(child, sibling);

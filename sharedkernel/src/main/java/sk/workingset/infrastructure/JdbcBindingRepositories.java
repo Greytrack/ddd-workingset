@@ -28,9 +28,9 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     private static final String TRACKER_COLUMNS =
             "tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id, is_default";
     private static final RowMapper<Tracker> TRACKER_MAPPER = (rs, row) -> new Tracker(
-            TrackerId.of(rs.getString("tracker_id")), rs.getString("name"),
-            optionalId(rs, "source_id"), WorkingSetId.of(rs.getString("working_set_id")),
-            rs.getString("product_space_id"), rs.getString("classification_id"),
+            TrackerId.of(rs.getLong("tracker_id")), rs.getString("name"),
+            optionalId(rs, "source_id"), WorkingSetId.of(rs.getLong("working_set_id")),
+            rs.getLong("product_space_id"), rs.getLong("classification_id"),
             SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id"),
             rs.getBoolean("is_default"));
 
@@ -72,7 +72,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         }
         var rows = jdbc.query(sql,
                 (rs, row) -> new String[]{rs.getString("parent_working_set_id"), rs.getString("name")},
-                id.value());
+                id.numericValue());
         if (rows.isEmpty()) {
             return Optional.empty();
         }
@@ -81,17 +81,17 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 FROM space_bindings sb
                 LEFT JOIN product_spaces ps ON ps.product_space_id = sb.product_space_id
                 WHERE sb.working_set_id = ? ORDER BY sb.product_space_id
-                """, (rs, row) -> new WorkingSet.SpaceBinding(id, rs.getString("product_space_id"),
+                """, (rs, row) -> new WorkingSet.SpaceBinding(id, rs.getLong("product_space_id"),
                 rs.getString("product_space_name"),
                 WorkingSet.SpaceOrigin.valueOf(rs.getString("origin")),
-                WorkingSet.SpaceState.valueOf(rs.getString("state"))), id.value());
+                WorkingSet.SpaceState.valueOf(rs.getString("state"))), id.numericValue());
         var trackers = jdbc.query("""
                 SELECT tracker_id, product_space_id, classification_id, sharing_mode, origin FROM tracker_bindings
                 WHERE working_set_id = ? ORDER BY product_space_id, classification_id
-                """, (rs, row) -> new WorkingSet.TrackerBinding(id, TrackerId.of(rs.getString("tracker_id")),
-                rs.getString("product_space_id"), rs.getString("classification_id"),
+                """, (rs, row) -> new WorkingSet.TrackerBinding(id, TrackerId.of(rs.getLong("tracker_id")),
+                rs.getLong("product_space_id"), rs.getLong("classification_id"),
                 SharingMode.valueOf(rs.getString("sharing_mode")),
-                WorkingSet.TrackerOrigin.valueOf(rs.getString("origin"))), id.value());
+                WorkingSet.TrackerOrigin.valueOf(rs.getString("origin"))), id.numericValue());
         String parent = rows.getFirst()[0];
         String name = rows.getFirst()[1];
         return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), name, spaces, trackers));
@@ -102,7 +102,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         boolean preparing = Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM working_set_creations
                     WHERE new_working_set_id = ? AND status IN ('Pending', 'Running'))
-                """, Boolean.class, id.value()));
+                """, Boolean.class, id.numericValue()));
         if (preparing) {
             throw new ApplicationFailure(FailureReason.PREPARING, id.value());
         }
@@ -113,7 +113,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         return jdbc.update("""
                 INSERT INTO working_sets (working_set_id, parent_working_set_id, name)
                 VALUES (?, ?, ?) ON CONFLICT (working_set_id) DO NOTHING
-                """, workingSet.id().value(), workingSet.parentWorkingSetId().value(), workingSet.name()) == 1;
+                """, workingSet.id().numericValue(), workingSet.parentWorkingSetId().numericValue(), workingSet.name()) == 1;
     }
 
     @Override
@@ -124,7 +124,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                     SELECT 1 FROM working_set_creations c WHERE c.new_working_set_id = w.working_set_id
                     AND c.status IN ('Pending', 'Running'))
                 ORDER BY w.working_set_id
-                """, String.class, id.value()).stream().map(WorkingSetId::of).toList();
+                """, Long.class, id.numericValue()).stream().map(WorkingSetId::of).toList();
     }
 
     @Override
@@ -143,8 +143,8 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                     WHERE c.new_working_set_id = lineage.working_set_id
                     AND c.status IN ('Pending', 'Running'))
                 ORDER BY distance
-                """, String.class, id.value());
-        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.value().equals(ancestors.getLast())) {
+                """, Long.class, id.numericValue());
+        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.numericValue().equals(ancestors.getLast())) {
             throw new BindingFailure(Reason.WorkingSetCycle, id.value());
         }
         return ancestors.stream().map(WorkingSetId::of).toList();
@@ -154,7 +154,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     public void insertSpaceBinding(WorkingSet.SpaceBinding binding) {
         jdbc.update("""
                 INSERT INTO space_bindings (working_set_id, product_space_id, origin, state) VALUES (?, ?, ?, ?)
-                """, binding.workingSetId().value(), binding.productSpaceId(), binding.origin().name(),
+                """, binding.workingSetId().numericValue(), binding.numericProductSpaceId(), binding.origin().name(),
                 binding.state().name());
     }
 
@@ -164,8 +164,8 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 INSERT INTO tracker_bindings
                     (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """, binding.workingSetId().value(), binding.trackerId().value(), binding.productSpaceId(),
-                binding.classificationId(), binding.sharingMode().name(), binding.origin().name());
+                """, binding.workingSetId().numericValue(), binding.trackerId().numericValue(), binding.numericProductSpaceId(),
+                binding.numericClassificationId(), binding.sharingMode().name(), binding.origin().name());
     }
 
     @Override
@@ -182,13 +182,13 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
         return jdbc.query("""
                 SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?
-                """, (rs, row) -> TrackerId.of(rs.getString(1)), target.value(), source.value())
+                """, (rs, row) -> TrackerId.of(rs.getLong(1)), target.numericValue(), source.numericValue())
                 .stream().findFirst().flatMap(this::findTracker);
     }
 
     private Optional<Tracker> loadTracker(TrackerId id, boolean lock) {
         String sql = "SELECT " + TRACKER_COLUMNS + " FROM trackers WHERE tracker_id = ?";
-        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, TRACKER_MAPPER, id.value()).stream().findFirst();
+        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, TRACKER_MAPPER, id.numericValue()).stream().findFirst();
     }
 
     @Override
@@ -200,7 +200,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                      WHERE b.working_set_id = ? AND b.tracker_id = t.tracker_id
                  ))
                  ORDER BY t.tracker_id
-                """, TRACKER_MAPPER, workingSetId.value(), workingSetId.value());
+                """, TRACKER_MAPPER, workingSetId.numericValue(), workingSetId.numericValue());
     }
 
     @Override
@@ -219,17 +219,17 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                     (tracker_id, name, source_id, working_set_id, product_space_id, classification_id,
                      sharing_mode, parent_id, is_default, visible)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, tracker.trackerId().value(), tracker.name(),
-                tracker.sourceId() == null ? null : tracker.sourceId().value(),
-                tracker.workingSetId().value(), tracker.productSpaceId(), tracker.classificationId(),
-                tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().value(),
+                """, tracker.trackerId().numericValue(), tracker.name(),
+                tracker.sourceId() == null ? null : tracker.sourceId().numericValue(),
+                tracker.workingSetId().numericValue(), tracker.numericProductSpaceId(), tracker.numericClassificationId(),
+                tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().numericValue(),
                 tracker.isDefault(), visible);
     }
 
     @Override
     public boolean isVisible(TrackerId trackerId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT visible FROM trackers WHERE tracker_id = ?", Boolean.class, trackerId.value()));
+                "SELECT visible FROM trackers WHERE tracker_id = ?", Boolean.class, trackerId.numericValue()));
     }
 
     @Override
@@ -240,33 +240,33 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                     WHERE t.working_set_id = ? AND t.source_id = ? AND NOT t.visible
                       AND EXISTS (SELECT 1 FROM tracker_bindings b
                                   WHERE b.working_set_id = t.working_set_id AND b.tracker_id = t.tracker_id)
-                    """, target.value(), parent.value());
+                    """, target.numericValue(), parent.numericValue());
         }
     }
 
     @Override
     public Optional<ProductSpace> lockProductSpace(String id) {
         return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
-                (rs, row) -> new ProductSpace(rs.getString(1), rs.getString(2)), id).stream().findFirst();
+                (rs, row) -> new ProductSpace(rs.getLong(1), rs.getString(2)), Long.valueOf(id)).stream().findFirst();
     }
 
     @Override
     public Optional<Classification> findClassification(String id) {
-        return jdbc.query("SELECT classification_id, sharing_mode FROM classifications WHERE classification_id = ?",
-                (rs, row) -> new Classification(rs.getString(1), SharingMode.valueOf(rs.getString(2))),
-                id).stream().findFirst();
+        return jdbc.query("SELECT classification_id, sharing_mode, name FROM classifications WHERE classification_id = ?",
+                (rs, row) -> new Classification(rs.getLong(1), SharingMode.valueOf(rs.getString(2)), rs.getString(3)),
+                Long.valueOf(id)).stream().findFirst();
     }
 
     @Override
     public List<Classification> findClassifications() {
-        return jdbc.query("SELECT classification_id, sharing_mode FROM classifications ORDER BY classification_id",
-                (rs, row) -> new Classification(rs.getString(1), SharingMode.valueOf(rs.getString(2))));
+        return jdbc.query("SELECT classification_id, sharing_mode, name FROM classifications ORDER BY classification_id",
+                (rs, row) -> new Classification(rs.getLong(1), SharingMode.valueOf(rs.getString(2)), rs.getString(3)));
     }
 
     @Override
     public void insertProductSpace(ProductSpace space) {
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
-                space.id(), space.name());
+                space.numericId(), space.name());
     }
 
     @Override
@@ -274,47 +274,47 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM trackers
                     WHERE working_set_id = ? AND product_space_id = ? AND classification_id = ? AND is_default)
-                """, Boolean.class, workingSetId.value(), spaceId, classificationId));
+                """, Boolean.class, workingSetId.numericValue(), Long.valueOf(spaceId), Long.valueOf(classificationId)));
     }
 
     @Override
     public void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId) {
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ? AND tracker_id = ?",
-                id.value(), trackerId.value());
+                id.numericValue(), trackerId.numericValue());
     }
 
     @Override
     public void deleteBindingsToTracker(TrackerId trackerId) {
-        jdbc.update("DELETE FROM tracker_bindings WHERE tracker_id = ?", trackerId.value());
+        jdbc.update("DELETE FROM tracker_bindings WHERE tracker_id = ?", trackerId.numericValue());
     }
 
     @Override
     public void deleteSpaceBinding(WorkingSetId id, String spaceId) {
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
-                id.value(), spaceId);
+                id.numericValue(), Long.valueOf(spaceId));
     }
 
     @Override
     public List<WorkingSetId> findWorkingSetsBoundToSpace(String spaceId) {
         return jdbc.query("SELECT working_set_id FROM space_bindings WHERE product_space_id = ? ORDER BY working_set_id",
-                (rs, row) -> WorkingSetId.of(rs.getString(1)), spaceId);
+                (rs, row) -> WorkingSetId.of(rs.getLong(1)), Long.valueOf(spaceId));
     }
 
     @Override
     public void deleteWorkingSet(WorkingSetId id) {
-        jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", id.value());
+        jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", id.numericValue());
     }
 
     @Override
     public boolean hasOrgChildren(TrackerId id) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM trackers WHERE parent_id = ?)", Boolean.class, id.value()));
+                "SELECT EXISTS (SELECT 1 FROM trackers WHERE parent_id = ?)", Boolean.class, id.numericValue()));
     }
 
     @Override
     public boolean hasDerivedChildren(TrackerId id) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM trackers WHERE source_id = ?)", Boolean.class, id.value()));
+                "SELECT EXISTS (SELECT 1 FROM trackers WHERE source_id = ?)", Boolean.class, id.numericValue()));
     }
 
     @Override
@@ -325,12 +325,12 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
 
     @Override
     public void deleteTracker(TrackerId id) {
-        jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", id.value());
+        jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", id.numericValue());
     }
 
     @Override
     public void deleteProductSpace(String id) {
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", id);
+        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", Long.valueOf(id));
     }
 
     private static TrackerId optionalId(ResultSet rs, String column) throws SQLException {

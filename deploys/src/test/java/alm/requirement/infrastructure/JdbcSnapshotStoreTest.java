@@ -26,9 +26,9 @@ import sk.workingset.application.port.IdentifierGenerator;
 @SpringBootTest(classes = WorkingsetApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class JdbcSnapshotStoreTest {
 
-    private final LocalId localId = LocalId.of("snapshot-" + UUID.randomUUID());
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T0 = TrackerId.of("T0");
+    private final LocalId localId = LocalId.of(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
+    private static final CommonId C1 = CommonId.of("265506033508288");
+    private static final TrackerId T0 = TrackerId.of("264905365135296");
     private static final Revision R3 = Revision.of(3);
 
     @Autowired private JdbcSnapshotStore store;

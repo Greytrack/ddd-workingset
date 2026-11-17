@@ -19,9 +19,9 @@ import sk.workingset.domain.Version;
 
 class RequirementTest {
 
-    private static final LocalId L0 = LocalId.of("L0");
-    private static final CommonId C1 = CommonId.of("C1");
-    private static final TrackerId T0 = TrackerId.of("T0");
+    private static final LocalId L0 = LocalId.of("260574482192320");
+    private static final CommonId C1 = CommonId.of("265506033508288");
+    private static final TrackerId T0 = TrackerId.of("264905365135296");
     private static final Revision R3 = Revision.of(3);
 
     private Requirement givenRequirement() {
