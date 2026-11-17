@@ -1,12 +1,15 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 /** 最小分类元数据。共享策略由分类初始化时确定。 */
 public record Classification(String id, SharingMode sharingMode) {
     public Classification {
         if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException("classificationId must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "classificationId must not be blank");
         }
         Objects.requireNonNull(sharingMode, "sharingMode");
     }

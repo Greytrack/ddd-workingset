@@ -2,6 +2,7 @@ package bootstrap.web;
 
 import sk.common.error.APIException;
 import sk.common.error.AppException;
+import sk.common.error.DomainException;
 import sk.common.error.WorkingsetResultCode;
 
 import java.util.LinkedHashMap;
@@ -9,6 +10,9 @@ import java.util.Map;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -28,44 +32,25 @@ import sk.workingset.domain.merge.MergeFailure;
 public class ApiExceptionHandler {
 
     @ExceptionHandler(ApplicationFailure.class)
-    public ResponseEntity<Map<String, Object>> handleApplicationFailure(ApplicationFailure failure) {
-        int status = switch (failure.reason()) {
-            case NOT_FOUND -> 404;
-            case NOT_INCLUDED, DENIED -> 403;
-            case DELETED -> 410;
-            case HISTORY_UNAVAILABLE, PREPARING -> 409;
-            case CAPABILITY_NOT_SUPPORTED -> 422;
-            case DEPENDENCY_UNAVAILABLE, UNKNOWN -> 503;
-        };
-        return ResponseEntity.status(status).body(Map.of(
+    public ResponseEntity<?> handleApplicationFailure(ApplicationFailure failure) {
+        return domainResponse(failure, Map.of(
                 "code", failure.getCode(), "reason", failure.reason().name(),
                 "message", failure.getMessage()));
     }
 
     @ExceptionHandler(MergeFailure.class)
-    public ResponseEntity<Map<String, Object>> handleMergeFailure(MergeFailure failure) {
-        int status = switch (failure.reason()) {
-            case RoundNotFound -> 404;
-            case InvalidDecision, Rejected -> 422;
-            default -> 409;
-        };
-        return ResponseEntity.status(status).body(Map.of("code", failure.getCode(), "reason", failure.reason().name(),
+    public ResponseEntity<?> handleMergeFailure(MergeFailure failure) {
+        return domainResponse(failure, Map.of("code", failure.getCode(), "reason", failure.reason().name(),
                 "message", failure.getMessage() == null ? failure.reason().name() : failure.getMessage()));
     }
 
     @ExceptionHandler(BindingFailure.class)
-    public ResponseEntity<Map<String, Object>> handleBindingFailure(BindingFailure failure) {
-        int status = switch (failure.reason()) {
-            case WorkingSetNotFound, ProductSpaceNotFound, SourceTrackerNotFound, TrackerNotFound,
-                    TrackerBindingNotFound, SpaceBindingNotFound, SourceItemNotFound -> 404;
-            case SharingModeMismatch, TrackerOutsideSlot, SourceItemMismatch -> 422;
-            default -> 409;
-        };
+    public ResponseEntity<?> handleBindingFailure(BindingFailure failure) {
         Map<String, Object> body = new LinkedHashMap<>(failure.context());
         body.put("code", failure.getCode());
         body.put("reason", failure.reason().name());
         body.put("message", failure.getMessage());
-        return ResponseEntity.status(status).body(body);
+        return domainResponse(failure, body);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -75,13 +60,39 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(LockVersionConflictException.class)
-    public ResponseEntity<Map<String, Object>> handleLockVersionConflict(LockVersionConflictException conflict) {
-        return ResponseEntity.status(409).body(Map.of(
+    public ResponseEntity<?> handleLockVersionConflict(LockVersionConflictException conflict) {
+        return domainResponse(conflict, Map.of(
                 "code", conflict.getCode(),
                 "reason", "LOCK_VERSION_CONFLICT",
                 "message", conflict.getMessage(),
                 "expectedLockVersion", conflict.expected().value(),
                 "actualLockVersion", conflict.actual().value()));
+    }
+
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<?> handleDomainFailure(DomainException failure) {
+        var resultCode = failure.getResCode();
+        String reason = resultCode instanceof Enum<?> value ? value.name() : failure.getType().name();
+        var body = new LinkedHashMap<String, Object>();
+        body.put("code", failure.getCode());
+        body.put("reason", reason);
+        body.put("message", failure.getType().httpStatus() >= 500 || failure.getMessage() == null
+                ? "Unexpected error" : failure.getMessage());
+        return domainResponse(failure, body);
+    }
+
+    private ResponseEntity<?> domainResponse(DomainException failure, Map<String, Object> body) {
+        int status = failure.getType().httpStatus();
+        if (failure.getFieldViolations().isEmpty()) {
+            return ResponseEntity.status(status).body(body);
+        }
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status), (String) body.get("message"));
+        body.forEach(problem::setProperty);
+        problem.setProperty("fieldViolations", failure.getFieldViolations().stream()
+                .map(violation -> Map.of("field", violation.field(), "code", violation.code().getCode(),
+                        "args", violation.args()))
+                .toList());
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
     }
 
     @ExceptionHandler(APIException.class)

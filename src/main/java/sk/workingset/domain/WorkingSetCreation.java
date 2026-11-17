@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -77,17 +80,17 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
             }
             String trimmed = name.trim();
             if (trimmed.isEmpty()) {
-                throw new IllegalArgumentException("name must not be blank");
+                throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must not be blank");
             }
             if (trimmed.length() > 255) {
-                throw new IllegalArgumentException("name must contain at most 255 characters");
+                throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain at most 255 characters");
             }
             return trimmed;
         }
 
         private static void validateId(String id, String field) {
             if (id == null || id.isBlank() || id.length() > 128 || id.indexOf(0) >= 0) {
-                throw new IllegalArgumentException(field + " must contain 1 to 128 characters");
+                throw new DomainException(WorkingsetResultCode.BAD_REQUEST, field + " must contain 1 to 128 characters");
             }
         }
     }
@@ -124,7 +127,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
         var initial = firstStage(request);
         if (initial == null) {
-            throw new IllegalArgumentException("working set request has no work");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "working set request has no work");
         }
         return new WorkingSetCreation(id, request, caller, Status.Pending,
                 initial, new Progress(0, 0, 0, total(request)), List.of(), now, null, null,
@@ -150,7 +153,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
 
     public WorkingSetCreation start(Instant now) {
         if (status != Status.Pending) {
-            throw new IllegalStateException("Only a pending creation can start");
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Only a pending creation can start");
         }
         return new WorkingSetCreation(id, request, requestedBy, Status.Running,
                 stage, progress, failures, createdAt, now, null, stageProgress, indexProgress);
@@ -164,7 +167,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
     public WorkingSetCreation advance(ItemOutcome outcome, Failure failure, Instant now) {
         requireRunning();
         if ((outcome == ItemOutcome.Failed) != (failure != null) || failure != null && failure.stage() != stage) {
-            throw new IllegalArgumentException("Failure detail must match the current step and outcome");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Failure detail must match the current step and outcome");
         }
         return advance(outcome, failure == null ? List.of() : List.of(failure), now);
     }
@@ -172,7 +175,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
     public WorkingSetCreation recordIndexBatch(IndexProgress batch, List<Failure> batchFailures,
                                                 boolean finished, Instant now) {
         if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
-            throw new IllegalStateException("Not indexing");
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Not indexing");
         }
         var updatedIndex = new HashMap<>(indexProgress);
         updatedIndex.put(currentItem(), batch);
@@ -223,7 +226,7 @@ public record WorkingSetCreation(String id, Request request, String requestedBy,
 
     private void requireRunning() {
         if (status != Status.Running) {
-            throw new IllegalStateException("Only a running creation can finish");
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Only a running creation can finish");
         }
     }
 }

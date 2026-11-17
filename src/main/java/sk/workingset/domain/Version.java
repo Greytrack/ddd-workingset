@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 /**
  * 业务对象发布的大版本（用户 2026-11-11 术语裁定）：字符串标识，**可以为空**；
  * 只有某个版次发布了大版本时才会出现。
@@ -11,7 +14,7 @@ public record Version(String value) {
 
     public Version {
         if (value != null && value.isBlank()) {
-            throw new IllegalArgumentException("version must not be blank when present");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "version must not be blank when present");
         }
     }
 

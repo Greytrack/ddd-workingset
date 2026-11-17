@@ -1,6 +1,6 @@
 package bootstrap.web;
 
-import sk.common.error.AppException;
+import sk.common.error.DomainException;
 import sk.common.error.WorkingsetResultCode;
 
 import java.time.Instant;
@@ -66,19 +66,19 @@ public class MergeController {
     @ResponseStatus(HttpStatus.CREATED)
     public MergeRound submit(@PathVariable String target, @RequestBody SubmitRequest request) {
         if (request.sourceWorkingSetId() == null || request.sourceWorkingSetId().isBlank()) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, "sourceWorkingSetId is required");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "sourceWorkingSetId is required");
         }
         if (request.requestId() == null || request.requestId().isBlank()) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, "requestId is required");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "requestId is required");
         }
         if (request.requestId().length() > MAX_REQUEST_ID) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, "requestId must be at most " + MAX_REQUEST_ID + " characters");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "requestId must be at most " + MAX_REQUEST_ID + " characters");
         }
         if (request.decisions() == null || request.decisions().isEmpty()) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, "decisions must contain at least one entry");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "decisions must contain at least one entry");
         }
         if (request.decisions().size() > MAX_DECISIONS) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, "decisions must contain at most " + MAX_DECISIONS + " entries");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "decisions must contain at most " + MAX_DECISIONS + " entries");
         }
         return rounds.submit(WorkingSetId.of(target), WorkingSetId.of(request.sourceWorkingSetId()),
                 request.requestId(), List.copyOf(request.decisions()), CALLER);
@@ -104,7 +104,7 @@ public class MergeController {
 
     private static void checkPage(int offset, int limit) {
         if (offset < 0 || limit < 1 || limit > MAX_COMPARE_LIMIT) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, "offset must be nonnegative and limit must be between 1 and "
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "offset must be nonnegative and limit must be between 1 and "
                     + MAX_COMPARE_LIMIT);
         }
     }

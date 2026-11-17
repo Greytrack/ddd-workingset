@@ -1,12 +1,12 @@
 package sk.workingset.domain;
 
-import sk.common.error.AppException;
+import sk.common.error.DomainException;
 import sk.common.error.WorkingsetResultCode;
 
 import java.util.Map;
 
 /** 绑定/删除失败：携带原因与可观察详情（子级、成员、空间等），由 Web 层映射为 HTTP 状态。 */
-public final class BindingFailure extends AppException {
+public final class BindingFailure extends DomainException {
     public enum Reason {
         WorkingSetNotFound(WorkingsetResultCode.WORKING_SET_NOT_EXISTS),
         WorkingSetNotWritable(WorkingsetResultCode.WORKING_SET_NOT_WRITABLE),

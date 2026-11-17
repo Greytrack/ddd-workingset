@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 /**
@@ -10,7 +13,7 @@ public record CommonId(String value) {
     public CommonId {
         Objects.requireNonNull(value, "commonId");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("commonId must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "commonId must not be blank");
         }
     }
 

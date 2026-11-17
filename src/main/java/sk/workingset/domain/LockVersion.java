@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 /**
  * 乐观锁版本（用户 2026-11-11 术语裁定）：每次 command 处理后数据发生变动、事务提交时自动 +1；
  * 不需要业务调用方手动显式触发。
@@ -11,7 +14,7 @@ public record LockVersion(long value) {
 
     public LockVersion {
         if (value < 0) {
-            throw new IllegalArgumentException("lockVersion must not be negative");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "lockVersion must not be negative");
         }
     }
 

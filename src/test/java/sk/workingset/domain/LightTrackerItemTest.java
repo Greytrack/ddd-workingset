@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,7 +35,7 @@ class LightTrackerItemTest {
 
     @Test
     void derive_rejects_local_id_equal_to_source() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DomainException.class,
                 () -> LightTrackerItem.derive(L0, C1, T1, WS1, R3, L0));
     }
 
@@ -58,14 +60,14 @@ class LightTrackerItemTest {
         LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0);
         item.switchToLocalBacked(R3);
 
-        assertThrows(IllegalStateException.class, () -> item.switchToLocalBacked(R3));
+        assertThrows(DomainException.class, () -> item.switchToLocalBacked(R3));
     }
 
     @Test
     void switchToLocalBacked_rejects_revision_mismatch() {
         LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0);
 
-        assertThrows(IllegalArgumentException.class, () -> item.switchToLocalBacked(Revision.of(4)));
+        assertThrows(DomainException.class, () -> item.switchToLocalBacked(Revision.of(4)));
     }
 
     @Test

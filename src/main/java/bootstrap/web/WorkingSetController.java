@@ -1,6 +1,6 @@
 package bootstrap.web;
 
-import sk.common.error.AppException;
+import sk.common.error.DomainException;
 import sk.common.error.WorkingsetResultCode;
 
 import org.springframework.http.HttpStatus;
@@ -178,7 +178,7 @@ public class WorkingSetController {
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {
-            throw new AppException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
         }
         return value;
     }

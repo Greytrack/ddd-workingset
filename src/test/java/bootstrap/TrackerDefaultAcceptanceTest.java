@@ -1,5 +1,7 @@
 package bootstrap;
 
+import sk.common.error.DomainException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -159,7 +161,7 @@ class TrackerDefaultAcceptanceTest {
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
         var space = new ProductSpace("PS-DOM-" + suffix, "domain");
         var classification = new Classification("CL-REQ", Classification.SharingMode.UNSHARED);
-        assertThrows(IllegalArgumentException.class, () -> new Tracker(
+        assertThrows(DomainException.class, () -> new Tracker(
                 TrackerId.of("T-CHILD-" + suffix), "子工作集原生 Tracker", null,
                 WorkingSetId.of(child), space.id(), classification.id(), classification.sharingMode(), null, false));
     }

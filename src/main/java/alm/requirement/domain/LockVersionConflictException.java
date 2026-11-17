@@ -1,7 +1,6 @@
 package alm.requirement.domain;
 
-import sk.common.error.AppException;
-import sk.common.error.WorkingsetResultCode;
+import sk.common.error.DomainException;
 
 import sk.workingset.domain.LockVersion;
 
@@ -11,13 +10,13 @@ import sk.workingset.domain.LockVersion;
  * <p>业务 {@code revision} 与发布大版本 {@code version} 都不参与乐观锁判定；
  * 冲突必须显式失败，不得静默覆盖。
  */
-public class LockVersionConflictException extends AppException {
+public class LockVersionConflictException extends DomainException {
 
     private final LockVersion expected;
     private final LockVersion actual;
 
     public LockVersionConflictException(LockVersion expected, LockVersion actual) {
-        super(WorkingsetResultCode.LOCK_VERSION_CONFLICT, "lock_version conflict: expected " + expected.value() + " but actual is " + actual.value(), null);
+        super(RequirementResultCode.LOCK_VERSION_CONFLICT, "lock_version conflict: expected " + expected.value() + " but actual is " + actual.value(), null);
         this.expected = expected;
         this.actual = actual;
     }

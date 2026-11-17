@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 /**
@@ -10,7 +13,7 @@ public record TrackerId(String value) {
     public TrackerId {
         Objects.requireNonNull(value, "trackerId");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("trackerId must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "trackerId must not be blank");
         }
     }
 

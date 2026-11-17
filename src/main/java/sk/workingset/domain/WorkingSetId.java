@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 /**
@@ -10,7 +13,7 @@ public record WorkingSetId(String value) {
     public WorkingSetId {
         Objects.requireNonNull(value, "workingSetId");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("workingSetId must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "workingSetId must not be blank");
         }
     }
 

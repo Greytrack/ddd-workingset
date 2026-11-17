@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 /**
@@ -12,7 +15,7 @@ public record LocalId(String value) {
     public LocalId {
         Objects.requireNonNull(value, "localId");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("localId must not be blank");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "localId must not be blank");
         }
     }
 

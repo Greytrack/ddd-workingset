@@ -1,5 +1,8 @@
 package sk.common.error;
 
+import java.util.IllegalFormatException;
+import java.util.Locale;
+
 public class APIException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
@@ -18,5 +21,16 @@ public class APIException extends RuntimeException {
 
     public Object[] getArgs() {
         return args == null ? null : args.clone();
+    }
+
+    protected static String formatMessage(String template, Object[] args) {
+        if (args == null || args.length == 0) {
+            return template;
+        }
+        try {
+            return String.format(Locale.ROOT, template, args);
+        } catch (IllegalFormatException invalidTemplate) {
+            return template;
+        }
     }
 }

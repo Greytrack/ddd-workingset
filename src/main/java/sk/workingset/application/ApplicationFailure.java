@@ -1,13 +1,13 @@
 package sk.workingset.application;
 
-import sk.common.error.AppException;
+import sk.common.error.DomainException;
 
 import java.util.Objects;
 
 /**
  * 应用层失败（携带 T4 九分类中的适用子集）；调用方可据此区分「不存在」与「未纳入」，两者不得合并。
  */
-public class ApplicationFailure extends AppException {
+public class ApplicationFailure extends DomainException {
 
     private final FailureReason reason;
 

@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 /**
@@ -68,7 +71,7 @@ public final class LightTrackerItem {
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
         Objects.requireNonNull(sourceRevision, "sourceRevision");
         if (localId.equals(sourceLocalId)) {
-            throw new IllegalArgumentException(
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST,
                     "derived variant must be source-backed: localId must differ from sourceLocalId");
         }
         LightTrackerItem item = new LightTrackerItem(
@@ -112,10 +115,10 @@ public final class LightTrackerItem {
     public void switchToLocalBacked(Revision expectedRevision) {
         Objects.requireNonNull(expectedRevision, "expectedRevision");
         if (materialized) {
-            throw new IllegalStateException("already materialized: localId=" + localId.value());
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "already materialized: localId=" + localId.value());
         }
         if (!revision.equals(expectedRevision)) {
-            throw new IllegalArgumentException(
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST,
                     "revision mismatch: expected " + revision.value() + " but got " + expectedRevision.value());
         }
         this.materialized = true;
@@ -127,10 +130,10 @@ public final class LightTrackerItem {
     private void checkInvariants() {
         if (!materialized) {
             if (sourceLocalId.equals(localId)) {
-                throw new IllegalStateException("L1 violated: source-backed variant must not point to itself");
+                throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "L1 violated: source-backed variant must not point to itself");
             }
         } else if (!sourceLocalId.equals(localId) || !sourceRevision.equals(revision)) {
-            throw new IllegalStateException(
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE,
                     "L2 violated: local-backed variant must have sourceLocalId=localId and sourceRevision=revision");
         }
     }

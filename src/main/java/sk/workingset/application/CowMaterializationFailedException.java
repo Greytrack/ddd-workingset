@@ -1,11 +1,11 @@
 package sk.workingset.application;
 
-import sk.common.error.AppException;
+import sk.common.error.DomainException;
 import sk.common.error.WorkingsetResultCode;
 
 import java.util.List;
 
-public class CowMaterializationFailedException extends AppException {
+public class CowMaterializationFailedException extends DomainException {
     private final long eventId;
     private final List<CowFailureLog.Failure> failures;
 

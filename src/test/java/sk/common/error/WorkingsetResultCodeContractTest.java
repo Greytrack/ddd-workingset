@@ -1,6 +1,7 @@
 package sk.common.error;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
@@ -9,15 +10,28 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import alm.requirement.domain.RequirementResultCode;
 import sk.workingset.application.FailureReason;
 
 /** T4 §5.4: numeric API codes are stable, unique, and assigned to fixed ranges. */
 class WorkingsetResultCodeContractTest {
 
     @Test
+    void domainErrorKeepsBusinessCodeWhenStatusIsOverridden() {
+        var cause = new IllegalStateException("original failure");
+        var error = new DomainException(DomainErrorType.CONFLICT, WorkingsetResultCode.BAD_REQUEST,
+                cause, "invalid title");
+
+        assertEquals(1001, error.getCode());
+        assertEquals(409, error.getType().httpStatus());
+        assertEquals("invalid title", error.getMessage());
+        assertSame(cause, error.getCause());
+    }
+
+    @Test
     void codesAreUniqueAndInsideDeclaredPublicRanges() {
-        var values = WorkingsetResultCode.values();
-        var codes = Arrays.stream(values).map(WorkingsetResultCode::getCode).toList();
+        var codes = java.util.stream.Stream.concat(Arrays.stream(WorkingsetResultCode.values()),
+                Arrays.stream(RequirementResultCode.values())).map(DomainResCode::getCode).toList();
         assertEquals(codes.size(), new HashSet<>(codes).size(), "duplicate public error code");
         assertTrue(codes.stream().allMatch(code -> code >= 1000 && code <= 1499),
                 "public error code outside 1000-1499");
@@ -50,7 +64,7 @@ class WorkingsetResultCodeContractTest {
         assertRange(WorkingsetResultCode.MERGE_PAIR_MERGE_IN_PROGRESS, 1300, 1399);
         assertRange(WorkingsetResultCode.MERGE_STALE_EVIDENCE, 1300, 1399);
         assertRange(WorkingsetResultCode.MATERIALIZATION_REJECTED, 1400, 1499);
-        assertRange(WorkingsetResultCode.LOCK_VERSION_CONFLICT, 1400, 1499);
+        assertEquals(1403, RequirementResultCode.LOCK_VERSION_CONFLICT.getCode());
     }
 
     private static void assertRange(WorkingsetResultCode code, int from, int to) {

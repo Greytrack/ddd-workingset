@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Objects;
 
 import sk.workingset.domain.Classification.SharingMode;
@@ -33,10 +36,10 @@ public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, Work
         Objects.requireNonNull(classificationId, "classificationId");
         Objects.requireNonNull(sharingMode, "sharingMode");
         if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId)) {
-            throw new IllegalArgumentException("original Tracker must belong to the default Working Set");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "original Tracker must belong to the default Working Set");
         }
         if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
-            throw new IllegalArgumentException("derived Tracker must be unshared and belong to a child Working Set");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "derived Tracker must be unshared and belong to a child Working Set");
         }
     }
 

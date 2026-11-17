@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.common.error.DomainException;
+import sk.common.error.WorkingsetResultCode;
+
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,7 +53,7 @@ public final class WorkingSet {
             throw new BindingFailure(Reason.WorkingSetCycle, id.value());
         }
         if (DEFAULT_ID.equals(id) != (parentWorkingSetId == null)) {
-            throw new IllegalArgumentException("only the default Working Set has no parent");
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "only the default Working Set has no parent");
         }
         this.parentWorkingSetId = parentWorkingSetId;
         this.name = name;
