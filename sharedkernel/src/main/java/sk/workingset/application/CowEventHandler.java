@@ -59,13 +59,12 @@ public final class CowEventHandler {
                 }
                 if (!receipt.businessSaved()) {
                     // D3-B：业务保存独立提交；SK 凭据与 LTI 切换随后各自独立事务。
-                    var targetIdentity = transactionRunner.inNewTransaction(
-                            () -> lifecycle.lockMaterializationTarget(target.trackerId(), target.localId()));
                     transactionRunner.inNewTransaction(() -> writePort.materialize(
                             new MaterializeRequest(target.localId(), target.trackerId(),
                                     target.commonId(), event.sourceLocalId(), event.beforeRevision(),
                                     event.afterRevision(), event.beforeLockVersion(), event.afterLockVersion(),
-                                    target.revision(), event.eventId(), event.snapshotRef()), targetIdentity));
+                                    target.revision(), event.eventId(), event.snapshotRef()),
+                            lifecycle.lockMaterializationTarget(target.trackerId(), target.localId())));
                     transactionRunner.inNewTransaction(() ->
                             store.markMaterialized(event.eventId(), target.localId()));
                 }

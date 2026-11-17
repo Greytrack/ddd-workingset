@@ -52,13 +52,15 @@ public class MergeController {
     }
 
     @PostMapping("/worksets/{target}/compare/{source}")
-    public ComparisonPage compare(@PathVariable String target, @PathVariable String source,
-                                  @RequestParam(required = false) String trackerId,
+    public ComparisonPage compare(@PathVariable String target,
+                                  @PathVariable String source,
+                                  @RequestParam String sourceTrackerId,
+                                  @RequestParam String targetTrackerId,
                                   @RequestParam(defaultValue = "0") int offset,
                                   @RequestParam(defaultValue = "100") int limit) {
         checkPage(offset, limit);
         var result = comparisons.compare(WorkingSetId.of(source), WorkingSetId.of(target),
-                trackerId == null ? null : TrackerId.of(trackerId), CALLER);
+                TrackerId.of(sourceTrackerId), TrackerId.of(targetTrackerId), CALLER);
         return page(result, offset, limit);
     }
 

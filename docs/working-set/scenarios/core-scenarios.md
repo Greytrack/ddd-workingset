@@ -70,7 +70,7 @@
 - **Given** 目标 Item Variant 已存在、无本地内容，并有可回读 Source Cut。
 - **When** 两个命令并发首次修改它。
 - **Then（候选预期）** 最多一个本地内容提交获胜；LocalId 和 parent identity 不变；失败方重读后重新校验，不覆盖赢家。
-- **待确认**：内容提交与变体状态的可见窗口、冲突反馈。
+- 单次直接编辑的保存与回读承诺见 [T4 §3.2](../domain/cross-bc-contract-v1.md)；并发首次编辑的场景仍按候选规则跟踪。
 
 ## `SCN-005` 多次扩展 Working Set
 

@@ -19,9 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import alm.requirement.application.RequirementApplicationService;
 import alm.requirement.application.RequirementLifecycleService;
 import alm.requirement.domain.Requirement;
-import alm.requirement.domain.RequirementRepository;
-import sk.workingset.application.ApplicationFailure;
-import sk.workingset.application.FailureReason;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -38,14 +35,11 @@ import sk.workingset.domain.WorkingSetId;
 public class RequirementController {
 
     private final RequirementApplicationService applicationService;
-    private final RequirementRepository repository;
     private final RequirementLifecycleService lifecycle;
 
     public RequirementController(RequirementApplicationService applicationService,
-                                 RequirementRepository repository,
                                  RequirementLifecycleService lifecycle) {
         this.applicationService = applicationService;
-        this.repository = repository;
         this.lifecycle = lifecycle;
     }
 
@@ -113,15 +107,7 @@ public class RequirementController {
 
     @GetMapping("/{localId}")
     public RequirementView find(@PathVariable("localId") String localId) {
-        return repository.findById(LocalId.of(localId))
-                .map(item -> {
-                    if (item.deleted()) {
-                        throw new ApplicationFailure(FailureReason.DELETED, item.localId().value());
-                    }
-                    return RequirementView.from(item);
-                })
-                .orElseThrow(() -> new ApplicationFailure(
-                        FailureReason.NOT_FOUND, "requirement not found: " + localId));
+        return RequirementView.from(applicationService.find(LocalId.of(localId)));
     }
 
     private static String requireText(String value, String name) {

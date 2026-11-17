@@ -11,7 +11,7 @@
 
 | 能力 | 接口 |
 | --- | --- |
-| 比较（只读、瞬时、分页） | `POST /api/worksets/{target}/compare/{source}?offset&limit` |
+| 比较（只读、瞬时、分页） | `POST /api/worksets/{target}/compare/{source}?sourceTrackerId=…&targetTrackerId=…`，分页使用可选的 `offset` 和 `limit` |
 | 提交一页决策 | `POST /api/worksets/{target}/merge-rounds`，body `{sourceWorkingSetId, requestId, decisions}` |
 | 轮询轮次 | `GET /api/merge-rounds/{id}`（完整 entries/result，不分页） |
 | 执行触发器 | `POST /api/merge-rounds/{id}/apply`（幂等，重复调用返回原结果） |
@@ -41,4 +41,4 @@
 
 ## 前端
 
-`src/main/resources/static/js/merge.js`：面板顶部「源 / 目标」下拉（默认当前工作集 → 其父；默认工作集取第一个子），前端预判直接父子并禁用非法组合；compare 分页、按差异类型给默认决策（`ADDED`/`MODIFIED` 采纳源，`DELETED` 保留目标），整页决策以 `crypto.randomUUID()` 作为 `requestId` 提交，随后轮询轮次终态并展示摘要与条目结果。全局函数带 `merge` 前缀（避免覆盖 `features.js` 的 `flattenWorksets`），静态资源按 `?v=N` 版本化；约定见 [前端脚本约定](../../../deploys/src/main/resources/static/js/README.md)。
+从 Tracker 详情的「比较 / 合并」进入，选择直属派生对象和方向。比较、翻页和整页决策都围绕该 Tracker 对，提交后轮询轮次结果。入口见 [merge.js](../../../deploys/src/main/resources/static/js/merge.js)，验收见 [MergeAcceptanceTest](../../../deploys/src/test/java/bootstrap/MergeAcceptanceTest.java)。

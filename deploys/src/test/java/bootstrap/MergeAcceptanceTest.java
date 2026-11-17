@@ -339,7 +339,7 @@ class MergeAcceptanceTest {
 
     private void assertNativeMergeBack(String parent, String sourceWs, String parentTracker, String sourceTracker) {
         var source = createRequirement(sourceWs, sourceTracker, "native child item");
-        var comparison = compare(sourceWs, parent);
+        var comparison = compare(sourceWs, parent, sourceTracker, parentTracker);
         var difference = diff(comparison, source.commonId());
         assertEquals(Presence.ABSENT, difference.target().presence());
         String round = submit(parent, comparison, existence(difference, "CREATE"));
@@ -359,18 +359,18 @@ class MergeAcceptanceTest {
         }
 
         change(source.localId(), "updated child", 0);
-        var active = compare(sourceWs, parent);
+        var active = compare(sourceWs, parent, sourceTracker, parentTracker);
         assertEquals(Presence.PRESENT, diff(active, source.commonId()).target().presence());
         assertTrue(submitFails(parent, active, existence(diff(active, source.commonId()), "CREATE")));
 
         assertStatus(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + parentLocal + "/delete", null, Void.class));
         assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + parentLocal, Map.class));
-        var afterDelete = compare(sourceWs, parent);
+        var afterDelete = compare(sourceWs, parent, sourceTracker, parentTracker);
         var absent = diff(afterDelete, source.commonId());
         assertEquals(Presence.ABSENT, absent.target().presence());
         assertTrue(submitFails(parent, afterDelete, existence(absent, "RESTORE")));
-        var fresh = compare(sourceWs, parent);
+        var fresh = compare(sourceWs, parent, sourceTracker, parentTracker);
         String restoreRound = submit(parent, fresh, existence(diff(fresh, source.commonId()), "CREATE"));
         var restored = awaitResult(restoreRound);
         assertEquals(State.Succeeded, restored.state(), restored::toString);
@@ -601,7 +601,7 @@ class MergeAcceptanceTest {
                 parentLocal);
         redis.delete("workingset:lti:" + parentLocal);
 
-        var compared = compare(child, grandchild);
+        var compared = compare(child, grandchild, childTracker, grand.trackerId());
         var item = diff(compared, anchor);
         assertEquals(grand.item().localId(), item.target().localId().value());
         assertFalse(item.target().localId().equals(item.target().contentId()));
@@ -617,13 +617,13 @@ class MergeAcceptanceTest {
     }
 
     @Test
-    void rejectsSiblingAcrossGenerationAndOutOfScopeTrackerAndReturnsEmptyCandidates() {
+    void rejectsNonAdjacentWorkingSetsAndTrackersOutsideAValidPair() {
         String sibling = id("sibling");
         String grandchild = id("grandchild");
         createChild("1", sibling);
         createChild(child, grandchild);
-        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/compare/" + sibling, null, Map.class));
-        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(grandchild) + "/compare/1", null, Map.class));
+        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(comparePath(sibling, child, rootTracker, childTracker), null, Map.class));
+        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(comparePath("1", grandchild, rootTracker, childTracker), null, Map.class));
         String shared = id("shared");
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED')", sharedClassification);
         jdbc.update("""
@@ -636,11 +636,16 @@ class MergeAcceptanceTest {
         assertTrue(compare(child, "1").differences().stream()
                 .noneMatch(item -> sharedItem.commonId().equals(item.family().value())));
         assertStatus(HttpStatus.CONFLICT,
-                rest.postForEntity(ws(child) + "/compare/1?trackerId=" + shared, null, Map.class));
+                rest.postForEntity(comparePath("1", child, shared, childTracker), null, Map.class));
+        assertStatus(HttpStatus.CONFLICT,
+                rest.postForEntity(comparePath(child, grandchild, childTracker, id("missing")), null, Map.class));
+    }
 
-        var empty = compare(child, grandchild);
-        assertTrue(empty.candidates().isEmpty());
-        assertTrue(empty.differences().isEmpty());
+    @Test
+    void compareRequiresBothTrackerIds() {
+        String path = ws(child) + "/compare/1";
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(path + "?sourceTrackerId=" + rootTracker, null, Map.class));
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(path + "?targetTrackerId=" + childTracker, null, Map.class));
     }
 
     @Test
@@ -724,19 +729,23 @@ class MergeAcceptanceTest {
                 VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
                 """, child, secondChild, space, classification);
 
-        var page = compare("1", child);
+        String firstFamily = id("first-family");
+        String secondFamily = id("second-family");
+        seed(rootTracker, firstFamily, "first");
+        seed(secondRoot, secondFamily, "second");
         var first = new TrackerPair(WorkingSetId.of("1"), TrackerId.of(rootTracker),
                 WorkingSetId.of(child), TrackerId.of(childTracker));
         var second = new TrackerPair(WorkingSetId.of("1"), TrackerId.of(secondRoot),
                 WorkingSetId.of(child), TrackerId.of(secondChild));
 
-        assertEquals(2, page.candidates().size());
-        assertTrue(page.candidates().contains(first));
-        assertTrue(page.candidates().contains(second));
-        assertFalse(page.candidates().contains(new TrackerPair(WorkingSetId.of("1"), TrackerId.of(secondRoot),
-                WorkingSetId.of(child), TrackerId.of(childTracker))));
-        assertFalse(page.candidates().contains(new TrackerPair(WorkingSetId.of(child), TrackerId.of(childTracker),
-                WorkingSetId.of("1"), TrackerId.of(secondChild))));
+        var page = compare("1", child);
+        assertEquals(List.of(first), page.candidates());
+        assertEquals(List.of(firstFamily), page.differences().stream().map(d -> d.family().value()).toList());
+        assertEquals(List.of(second), compare("1", child, secondRoot, secondChild).candidates());
+        assertStatus(HttpStatus.CONFLICT,
+                rest.postForEntity(comparePath("1", child, secondRoot, childTracker), null, Map.class));
+        assertStatus(HttpStatus.CONFLICT,
+                rest.postForEntity(comparePath(child, "1", rootTracker, childTracker), null, Map.class));
     }
 
     @Test
@@ -865,7 +874,17 @@ class MergeAcceptanceTest {
     }
 
     private ComparisonPage compare(String source, String target) {
-        var response = rest.postForEntity(ws(target) + "/compare/" + source, null, ComparisonPage.class);
+        return "1".equals(source) ? compare(source, target, rootTracker, childTracker)
+                : compare(source, target, childTracker, rootTracker);
+    }
+
+    private String comparePath(String source, String target, String sourceTracker, String targetTracker) {
+        return ws(target) + "/compare/" + source + "?sourceTrackerId=" + sourceTracker
+                + "&targetTrackerId=" + targetTracker;
+    }
+
+    private ComparisonPage compare(String source, String target, String sourceTracker, String targetTracker) {
+        var response = rest.postForEntity(comparePath(source, target, sourceTracker, targetTracker), null, ComparisonPage.class);
         assertStatus(HttpStatus.OK, response);
         return response.getBody();
     }

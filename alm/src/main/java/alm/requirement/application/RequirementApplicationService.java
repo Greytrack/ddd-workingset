@@ -2,10 +2,12 @@ package alm.requirement.application;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
+import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.port.RequirementSnapshot;
@@ -16,6 +18,7 @@ import sk.workingset.application.event.RequirementChanged;
 import sk.workingset.application.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
+import sk.workingset.application.port.TrackerItemLifecyclePort.InheritedEditTarget;
 import sk.workingset.application.port.TrackerScopePort;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
@@ -111,18 +114,62 @@ public class RequirementApplicationService {
      */
     @Transactional
     public Requirement changeTitle(LocalId localId, String newTitle, LockVersion expectedLockVersion) {
-        Requirement current = load(localId);
-        requireActive(current);
-        return saveChange(current, current.changeTitle(newTitle, expectedLockVersion));
+        return edit(localId, expectedLockVersion, current -> current.changeTitle(newTitle, expectedLockVersion));
     }
 
     /** 普通修改标题和描述；业务 revision 不升级，仍按乐观锁写入并发布来源事件。 */
     @Transactional
     public Requirement changeContent(LocalId localId, String newTitle, String newDescription,
                                      LockVersion expectedLockVersion) {
-        Requirement current = load(localId);
+        return edit(localId, expectedLockVersion,
+                current -> current.changeContent(newTitle, newDescription, expectedLockVersion));
+    }
+
+    @Transactional(readOnly = true)
+    public Requirement find(LocalId localId) {
+        Requirement requirement = repository.findById(localId).orElseGet(() -> lifecycle.findInheritedTarget(localId)
+                .map(target -> {
+                    trackerScope.requireWorkingSetReady(target.workingSetId());
+                    return rebuildInherited(target);
+                })
+                // 读取索引时可能已经切换为本地内容，此时重新查主表。
+                .orElseGet(() -> load(localId)));
+        requireActive(requirement);
+        return requirement;
+    }
+
+    private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
+        var inherited = lifecycle.lockInheritedEditTarget(localId);
+        Requirement current = inherited.map(target -> {
+            trackerScope.requireWorkingSetReady(target.workingSetId());
+            return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
+        }).orElseGet(() -> load(localId));
         requireActive(current);
-        return saveChange(current, current.changeContent(newTitle, newDescription, expectedLockVersion));
+        Requirement changed = saveChange(current, change.apply(current));
+        if (inherited.isPresent()) {
+            lifecycle.completeInheritedEdit(localId, changed.revision());
+        }
+        return changed;
+    }
+
+    private Requirement createEditBase(InheritedEditTarget target, LockVersion expectedLockVersion) {
+        if (!LockVersion.initial().equals(expectedLockVersion)) {
+            throw new LockVersionConflictException(expectedLockVersion, LockVersion.initial());
+        }
+        Requirement base = rebuildInherited(target);
+        repository.save(base);
+        return base;
+    }
+
+    private Requirement rebuildInherited(InheritedEditTarget target) {
+        Requirement source = load(target.sourceLocalId());
+        requireActive(source);
+        if (!source.revision().equals(target.sourceRevision())) {
+            throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
+        }
+        var identity = target.identity();
+        return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
+                source.title(), source.description(), identity.revision(), source.version());
     }
 
     @Transactional
@@ -145,16 +192,16 @@ public class RequirementApplicationService {
         saveChange(current, current.undelete(current.lockVersion()));
     }
 
-    private static void requireActive(Requirement requirement) {
-        if (requirement.deleted()) {
-            throw new ApplicationFailure(FailureReason.DELETED, requirement.localId().value());
-        }
-    }
-
     private Requirement load(LocalId localId) {
         Objects.requireNonNull(localId, "localId");
         return repository.findById(localId)
                 .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
+    }
+
+    private static void requireActive(Requirement requirement) {
+        if (requirement.deleted()) {
+            throw new ApplicationFailure(FailureReason.DELETED, requirement.localId().value());
+        }
     }
 
     Requirement saveChange(Requirement current, Requirement changed) {

@@ -1,5 +1,8 @@
 package sk.workingset.application;
 
+import java.util.Optional;
+
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import sk.workingset.application.port.LightTrackerItemRepository;
@@ -29,6 +32,30 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     public TrackerItemLifecycleService(TrackerRepository trackers, LightTrackerItemRepository items) {
         this.trackers = trackers;
         this.items = items;
+    }
+
+    @Override
+    public Optional<InheritedEditTarget> findInheritedTarget(LocalId localId) {
+        return items.findById(localId).filter(item -> !item.materialized())
+                .map(item -> new InheritedEditTarget(TargetIdentity.of(item), item.workingSetId(),
+                        item.sourceLocalId(), item.sourceRevision()));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<InheritedEditTarget> lockInheritedEditTarget(LocalId localId) {
+        var candidate = items.findById(localId).filter(item -> !item.materialized());
+        if (candidate.isEmpty()) {
+            return Optional.empty();
+        }
+        trackers.lockTracker(candidate.orElseThrow().trackerId());
+        return findInheritedTarget(localId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void completeInheritedEdit(LocalId localId, Revision revision) {
+        switchToLocalContent(localId, revision);
     }
 
     @Override
@@ -71,18 +98,22 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     @Transactional
     public void applyMergeTarget(MergeTarget target) {
         if (target.inherited()) {
-            var item = items.findById(target.localId())
-                    .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
-                            "target variant disappeared: " + target.localId().value()));
-            if (!item.materialized()) {
-                item.switchToLocalBacked(target.revision());
-                items.save(item);
-            }
+            switchToLocalContent(target.localId(), target.revision());
             return;
         }
         if (target.create()) {
             items.save(LightTrackerItem.local(target.localId(), target.commonId(), target.trackerId(),
                     target.workingSetId(), target.revision()));
+        }
+    }
+
+    private void switchToLocalContent(LocalId localId, Revision revision) {
+        var item = items.findById(localId)
+                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
+                        "target variant disappeared: " + localId.value()));
+        if (!item.materialized()) {
+            item.switchToLocalBacked(revision);
+            items.save(item);
         }
     }
 }

@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import sk.workingset.adapters.ReadView;
+import sk.workingset.adapters.LightTrackerItemView;
 import alm.requirement.adapters.RequirementView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,8 @@ class CowAcceptanceTest {
             jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", source);
         }
         for (String target : targets) {
+            jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + target + "%");
+            jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", target);
             redis.delete("workingset:lti:" + target);
             jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
@@ -106,6 +109,102 @@ class CowAcceptanceTest {
                         SELECT r.title, l.materialized, l.source_local_id, l.source_revision
                         FROM requirements r JOIN light_tracker_items l USING (local_id) WHERE r.local_id = ?
                         """, first.id()), completedEvents());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void editingChildRefreshesItsListNameAndContent(boolean materializeBeforeEdit) {
+        createSource();
+        Target child = derive();
+        if (materializeBeforeEdit) {
+            change("Parent edit", 0);
+            await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+        }
+        assertEquals(materializeBeforeEdit, read(child).materialized());
+
+        var changed = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
+                new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
+                        "expectedLockVersion", 0)), RequirementView.class);
+
+        assertEquals(HttpStatus.OK, changed.getStatusCode(), String.valueOf(changed.getBody()));
+        var listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/items",
+                LightTrackerItemView[].class);
+        assertEquals(1, listed.length);
+        assertEquals(child.id(), listed[0].localId());
+        assertEquals("Child edit", listed[0].name());
+        ReadView content = read(child);
+        assertTrue(content.materialized());
+        assertEquals(child.id(), content.contentLocalId());
+        assertEquals(Map.of("title", "Child edit", "description", "Child description"), content.fields());
+        assertEquals(materializeBeforeEdit ? "Parent edit" : "A",
+                rest.getForObject("/api/requirements/" + source, RequirementView.class).title());
+        await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM event_publication WHERE serialized_event LIKE ? AND completion_date IS NOT NULL)",
+                Boolean.class, "%" + child.id() + "%")));
+    }
+
+    @Test
+    void editingOnlyTheTitleOfAnInheritedChildPreservesItsDescription() {
+        createSource();
+        Target child = derive();
+        ReadView inherited = read(child);
+        assertFalse(inherited.materialized());
+
+        var response = rest.exchange("/api/requirements/" + child.id() + "/title", HttpMethod.PUT,
+                new HttpEntity<>(Map.of("title", "Child title", "expectedLockVersion", 0)), RequirementView.class);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ReadView edited = read(child);
+        assertTrue(edited.materialized());
+        assertEquals(child.id(), edited.contentLocalId());
+        assertEquals("Child title", edited.fields().get("title"));
+        assertEquals(inherited.fields().get("description"), edited.fields().get("description"));
+        assertEquals("A", rest.getForObject("/api/requirements/" + source, RequirementView.class).title());
+        await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM event_publication WHERE serialized_event LIKE ? AND completion_date IS NOT NULL)",
+                Boolean.class, "%" + child.id() + "%")));
+    }
+
+    @Test
+    void readsUnindexedSourceAndRebuildsIndexedChildWithoutSavingIt() {
+        createSource();
+        Target child = derive();
+        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", source);
+
+        var sourceView = rest.getForObject("/api/requirements/" + source, RequirementView.class);
+        assertEquals(source, sourceView.localId());
+        assertEquals("A", sourceView.title());
+
+        var childView = rest.getForObject("/api/requirements/" + child.id(), RequirementView.class);
+        assertEquals(child.id(), childView.localId());
+        assertEquals(common, childView.commonId());
+        assertEquals(child.trackerId(), childView.trackerId());
+        assertEquals(3, childView.revision());
+        assertEquals(0, childView.lockVersion());
+        assertEquals("A", childView.title());
+        assertEquals("COW", childView.description());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+                Integer.class, child.id()));
+        assertFalse(read(child).materialized());
+    }
+
+    @Test
+    void firstEditRollsBackIfSwitchToLocalContentFails() {
+        createSource();
+        Target child = derive();
+        failNextSwitch(child);
+
+        var response = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
+                new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
+                        "expectedLockVersion", 0)), String.class);
+
+        assertTrue(response.getStatusCode().is5xxServerError());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+                Integer.class, child.id()));
+        ReadView content = read(child);
+        assertFalse(content.materialized());
+        assertEquals(source, content.contentLocalId());
+        assertEquals("A", content.fields().get("title"));
     }
 
     @Test
@@ -296,7 +395,7 @@ class CowAcceptanceTest {
                 TrackerId.of(sourceTracker), LocalId.of(sourceLocalId), Revision.of(3), CommonId.of(common)));
         String id = result.item().localId().value();
         targets.add(id);
-        return new Target(ws, id);
+        return new Target(ws, id, result.tracker().trackerId().value());
     }
 
     private void change(String title, int expectedLock) {
@@ -329,5 +428,5 @@ class CowAcceptanceTest {
         assertEquals(title, content.fields().get("title"));
     }
 
-    private record Target(String ws, String id) {}
+    private record Target(String ws, String id, String trackerId) {}
 }

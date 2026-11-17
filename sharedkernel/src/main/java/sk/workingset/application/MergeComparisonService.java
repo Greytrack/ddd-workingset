@@ -60,51 +60,38 @@ public class MergeComparisonService {
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId selected, Caller caller) {
-        var candidates = candidates(source, target);
-        if (selected != null) {
-            candidates = candidates.stream()
-                    .filter(pair -> selected.equals(pair.source()) || selected.equals(pair.target())).toList();
-            if (candidates.isEmpty()) {
-                throw new MergeFailure(Reason.MergeNotAllowed, "tracker is outside the comparable range");
-            }
+    public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId sourceTracker,
+                              TrackerId targetTracker, Caller caller) {
+        var pair = new TrackerPair(source, sourceTracker, target, targetTracker);
+        if (!candidates(source, target).contains(pair)) {
+            throw new MergeFailure(Reason.MergeNotAllowed, "trackers must form a direct derivation pair in the supplied working sets");
         }
         var differences = new ArrayList<Difference>();
-        for (var pair : candidates) {
-            var sources = familyIds(pair.source());
-            var targets = familyIds(pair.target());
-            var families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
-            families.addAll(sources.keySet());
-            families.addAll(targets.keySet());
-            for (var family : families) {
-                Side left = read(sources.get(family), caller);
-                Side right = read(targets.get(family), caller);
-                if (handled(pair, family, left, right)) {
-                    continue;
-                }
-                if (left.presence() == Presence.ABSENT && right.presence() == Presence.ABSENT) {
-                    continue;
-                }
-                var kind = Difference.classify(left, right);
-                boolean unreadable = left.presence() == Presence.UNREADABLE
-                        || right.presence() == Presence.UNREADABLE;
-                // 新增/删除只下发存在性差异，不进入字段比较。
-                List<String> fields = kind == ChangeKind.MODIFIED ? differingFields(left, right) : List.of();
-                if (kind == ChangeKind.MODIFIED && !unreadable && fields.isEmpty()) {
-                    continue;
-                }
-                differences.add(new Difference(kind, family, pair, left, right, fields));
+        var sources = familyIds(pair.source());
+        var targets = familyIds(pair.target());
+        var families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
+        families.addAll(sources.keySet());
+        families.addAll(targets.keySet());
+        for (var family : families) {
+            Side left = read(sources.get(family), caller);
+            Side right = read(targets.get(family), caller);
+            if (handled(pair, family, left, right)) {
+                continue;
             }
+            if (left.presence() == Presence.ABSENT && right.presence() == Presence.ABSENT) {
+                continue;
+            }
+            var kind = Difference.classify(left, right);
+            boolean unreadable = left.presence() == Presence.UNREADABLE
+                    || right.presence() == Presence.UNREADABLE;
+            // 新增/删除只下发存在性差异，不进入字段比较。
+            List<String> fields = kind == ChangeKind.MODIFIED ? differingFields(left, right) : List.of();
+            if (kind == ChangeKind.MODIFIED && !unreadable && fields.isEmpty()) {
+                continue;
+            }
+            differences.add(new Difference(kind, family, pair, left, right, fields));
         }
-        // Deterministic order makes offset/limit pages stable for an unchanged data set.
-        // The key itself is deliberately not persisted or accepted from clients.
-        differences.sort(java.util.Comparator
-                .comparing((Difference difference) -> difference.trackers().sourceWorkingSetId().value())
-                .thenComparing(difference -> difference.trackers().source().value())
-                .thenComparing(difference -> difference.trackers().targetWorkingSetId().value())
-                .thenComparing(difference -> difference.trackers().target().value())
-                .thenComparing(difference -> difference.family().value()));
-        return new Comparison(source, target, Instant.now(), candidates, differences);
+        return new Comparison(source, target, Instant.now(), List.of(pair), differences);
     }
 
     private boolean handled(Comparison.TrackerPair trackers, CommonId family, Side left, Side right) {

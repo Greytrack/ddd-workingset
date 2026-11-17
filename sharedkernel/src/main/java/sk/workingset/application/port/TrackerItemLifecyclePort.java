@@ -1,5 +1,7 @@
 package sk.workingset.application.port;
 
+import java.util.Optional;
+
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -12,6 +14,18 @@ import sk.workingset.domain.WorkingSetId;
  * <p>实现位于 SK 应用层，ALM 等业务 BC 只依赖本接口。
  */
 public interface TrackerItemLifecyclePort {
+
+    /** 读取未物化变体的身份和内容来源，不锁定也不切换索引。 */
+    Optional<InheritedEditTarget> findInheritedTarget(LocalId localId);
+
+    /** 锁定仍在继承内容的目标，供调用方在同一事务内完成用户首次编辑。 */
+    Optional<InheritedEditTarget> lockInheritedEditTarget(LocalId localId);
+
+    /** 用户首次编辑保存成功后，在调用方事务内切换到本地内容。 */
+    void completeInheritedEdit(LocalId localId, Revision revision);
+
+    record InheritedEditTarget(TargetIdentity identity, WorkingSetId workingSetId,
+                               LocalId sourceLocalId, Revision sourceRevision) {}
 
     /**
      * 在调用方事务内锁定 Tracker 并读取物化目标变体的身份证据。

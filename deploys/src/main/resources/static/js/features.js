@@ -362,16 +362,15 @@ function openRequirementCreate() {
 }
 
 async function openRequirementEdit(item) {
-  const localId = item.sourceLocalId || item.localId;
+  const localId = item.localId;
   try {
     const requirement = await api('/api/requirements/' + encodeURIComponent(localId));
     requirementContext = { mode: 'edit', localId, lockVersion: requirement.lockVersion };
-    openModal(`${modalHeader('编辑需求', `来源需求 ${shortId(localId)}`)}
+    openModal(`${modalHeader('编辑需求', `当前需求 ${shortId(localId)}`)}
       <form id="requirementForm">
         <div class="modal-body">
           <div class="field"><label for="reqTitle">标题</label><input id="reqTitle" name="title" value="${escapeHtml(requirement.title)}" required></div>
           <div class="field"><label for="reqDescription">描述</label><textarea id="reqDescription" name="description" required>${escapeHtml(requirement.description)}</textarea></div>
-          <div class="field"><span class="hint">编辑的是 Item 的实际内容来源；乐观锁版本 ${escapeHtml(requirement.lockVersion)}。</span></div>
           <div id="requirementFormError" class="form-error"></div>
         </div>
         <div class="modal-foot"><button type="button" class="btn" data-close-modal>取消</button><button type="submit" class="btn primary">保存</button></div>

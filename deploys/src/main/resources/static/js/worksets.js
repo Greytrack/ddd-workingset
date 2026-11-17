@@ -246,6 +246,9 @@ function renderTracker() {
       ${bound
         ? '<button type="button" class="btn small primary" data-action="new-requirement">＋ 新建需求</button>'
         : '<span class="muted">该 Tracker 未绑定，不能新建需求</span>'}
+      ${tracker.sharingMode === 'UNSHARED' && (bound || state.selectedWs === '1')
+        ? '<button type="button" class="btn small" data-action="compare-tracker">比较 / 合并</button>'
+        : ''}
     </div>`;
 }
 
