@@ -28,7 +28,9 @@ import sk.workingset.application.CowMaterializationStore;
 import sk.workingset.application.CowRecoveryService;
 import sk.workingset.application.MergeComparisonService;
 import sk.workingset.application.MergeExecutionService;
+import sk.workingset.application.RelationEventPublisher;
 import sk.workingset.application.TrackerItemLifecycleService;
+import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.application.port.RequirementCatalog;
 import sk.workingset.application.port.MergeStore;
 import sk.workingset.infrastructure.JdbcMergeStore;
@@ -43,6 +45,7 @@ import sk.workingset.application.WorkingSetItemIndexer;
 import sk.workingset.application.port.TrackerItemCatalog;
 import sk.workingset.application.port.WorkingSetCreationSnapshotStore;
 import sk.workingset.application.port.WorkingSetCreationStore;
+import sk.workingset.infrastructure.EmptyRelationSourcePort;
 import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotStore;
 import sk.workingset.infrastructure.JdbcWorkingSetCreationStore;
 import sk.workingset.application.port.BusinessTrackerItems;
@@ -185,6 +188,18 @@ public class ApplicationConfiguration {
     @Bean
     public WorkingSetCreationSnapshotStore workingSetCreationSnapshotStore(JdbcTemplate jdbc) {
         return new JdbcWorkingSetCreationSnapshotStore(jdbc);
+    }
+
+    @Bean
+    public RelationSourcePort relationSourcePort() {
+        // 业务 BC 关系事实 Adapter 接入前保持空实现；不能伪造关系事件。
+        return new EmptyRelationSourcePort();
+    }
+
+    @Bean
+    public RelationEventPublisher relationEventPublisher(ApplicationEventPublisher events,
+                                                         IdentifierGenerator ids) {
+        return new RelationEventPublisher(events, ids);
     }
 
     @Bean

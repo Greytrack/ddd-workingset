@@ -16,6 +16,7 @@ public record ReferenceEndpoint(WorkingSetId workingSetId, LocalId localId, Comm
                                 TrackerId trackerId, Revision revision) {
 
     public ReferenceEndpoint {
+        Objects.requireNonNull(workingSetId, "workingSetId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
     }

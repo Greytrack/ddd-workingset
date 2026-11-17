@@ -23,7 +23,8 @@ class RelationEventContractTest {
     void referenceEventCarriesBothEndpointsAndAllowsDanglingTarget() {
         var source = new ReferenceEndpoint(WorkingSetId.of("child"), LocalId.of("L1"), CommonId.of("C1"),
                 TrackerId.of("T1"), Revision.of(3));
-        var target = new ReferenceEndpoint(null, null, CommonId.of("C2"), TrackerId.of("T2"), null);
+        var target = new ReferenceEndpoint(WorkingSetId.of("parent"), null, CommonId.of("C2"),
+                TrackerId.of("T2"), null);
 
         var event = new ReferenceCreationRequested(metadata, source, target);
 
@@ -35,9 +36,10 @@ class RelationEventContractTest {
 
     @Test
     void referenceSourceMustBeFullyResolved() {
-        var source = new ReferenceEndpoint(null, LocalId.of("L1"), CommonId.of("C1"), TrackerId.of("T1"),
+        var source = new ReferenceEndpoint(WorkingSetId.of("child"), null, CommonId.of("C1"), TrackerId.of("T1"),
                 Revision.of(3));
-        var target = new ReferenceEndpoint(null, null, CommonId.of("C2"), TrackerId.of("T2"), null);
+        var target = new ReferenceEndpoint(WorkingSetId.of("parent"), null, CommonId.of("C2"),
+                TrackerId.of("T2"), null);
 
         assertThrows(IllegalArgumentException.class,
                 () -> new ReferenceCreationRequested(metadata, source, target));

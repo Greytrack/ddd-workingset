@@ -22,8 +22,8 @@ Reference 不再指定“引用属性”，与 Association 一样只表达两个
 | source | `sourceWorkingSetId`、`sourceLocalId`、`sourceCommonId`、`sourceTrackerId`、`sourceRevision` |
 | target | `targetWorkingSetId`、`targetLocalId`、`targetCommonId`、`targetTrackerId`、`targetRevision` |
 
-- `targetLocalId` 可为空：悬空引用仍存在，逻辑目标（target tracker/common + revision）保留。
-- `targetWorkingSetId` 在目标尚未纳入时也可为空。
+- `targetWorkingSetId` **必填**，悬空时也要写入；`targetLocalId` 可为空，表示目标尚未纳入/不可解析。
+- 悬空引用仍保留逻辑目标（target tracker/common + revision）。
 - `targetRevision` 是钉版；无钉版时为空。
 - 关系身份由关系服务拥有；事件携带 `originalRelationId` 供消费方回查原始关系聚合。
 
@@ -51,7 +51,7 @@ flowchart LR
         A["AssociationCreationRequested"]
     end
     subgraph TGT["Target / 目标端"]
-        T["targetWorkingSetId?<br/>targetLocalId?<br/>targetCommonId<br/>targetTrackerId<br/>targetRevision?"]
+        T["targetWorkingSetId<br/>targetLocalId?<br/>targetCommonId<br/>targetTrackerId<br/>targetRevision?"]
     end
     S --> R
     R --> T
@@ -60,7 +60,7 @@ flowchart LR
 ```
 
 - Reference 事件带 `sourceRevision` / `targetRevision`；Association 事件不带版次。
-- `targetLocalId` 为空表示悬空 Reference；Association 创建事件要求端点在消费时齐全。
+- `targetWorkingSetId` 必填；`targetLocalId` 为空表示悬空 Reference；Association 创建事件要求端点在消费时齐全。
 - 箭头是 ID 关联，不是聚合包含。
 
 ## 3. 事件类
@@ -83,7 +83,7 @@ occurredAt         事件发生时间
 
 - 元数据；
 - `ReferenceEndpoint source`；
-- `ReferenceEndpoint target`（`targetLocalId`、`targetWorkingSetId` 可空）。
+- `ReferenceEndpoint target`（`targetWorkingSetId` 必填，`targetLocalId` 可空）。
 
 ### 3.2 `DanglingReferenceRepairRequested`
 
@@ -167,10 +167,18 @@ Merge 完成
 | 钉版不可读 | 保留 pin，标记历史不可用，不降级 HEAD | 目标不可读标记 |
 | 权限 | 工作集跳过；关系服务按自身权限策略处理 | 同左 |
 
-## 6. 待确认
+## 6. 已实现的契约骨架
+
+- `RelationSourcePort`：业务 BC 只读事实端口，提供 `upstreamReferences`、`upstreamAssociations`、`referencesTargeting`、`associationsTargeting` 及 `ReferenceFact`/`AssociationFact`。
+- `EmptyRelationSourcePort`：业务 BC Adapter 尚未接入时的空实现，不伪造事件。
+- `RelationEventPublisher`：按 fact 生成 `eventId`，保留业务 `originalRelationId`，发布三类 `...Requested` 事件。
+- `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
+- **尚未接入**：T7 创建/扩展的 `PUBLISH_RELATION_EVENTS`、Merge 的 `PUBLISH_RELATION_REPAIR_EVENTS` 实际 step。
+
+## 7. 待确认
 
 1. `originalRelationId` 是业务关系聚合 ID，还是 WorkingSet 侧生成的关联事件 ID？建议使用业务关系聚合 ID。
-2. `targetWorkingSetId` 在悬空 Reference 中为空的契约是否接受。
+2. `targetWorkingSetId` 悬空时也必填；`targetLocalId` 允许为空。此条已确认。
 3. `PUBLISH_RELATION_EVENTS` 是否进入 T7 任务 stage/终态，还是独立关系构建记录；建议进入 stage 但不阻塞主流程。
 4. Merge 后关系修复是独立 step，还是由 Merge 事件触发关系服务自行处理；建议独立 step + 事件。
 5. 事件命名是否采用 `...Requested`（推荐，因为 WorkingSet 不拥有关系聚合）还是 `...Created`。
