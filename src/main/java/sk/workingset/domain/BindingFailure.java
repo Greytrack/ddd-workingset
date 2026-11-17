@@ -19,7 +19,6 @@ public final class BindingFailure extends AppException {
         AlreadyBound(WorkingsetResultCode.ALREADY_BOUND),
         MissingSpaceBinding(WorkingsetResultCode.MISSING_SPACE_BINDING),
         TrackerAlreadyBound(WorkingsetResultCode.TRACKER_ALREADY_BOUND),
-        SlotOccupied(WorkingsetResultCode.SLOT_OCCUPIED),
         SourceTrackerNotFound(WorkingsetResultCode.SOURCE_TRACKER_NOT_FOUND),
         SharingModeMismatch(WorkingsetResultCode.SHARING_MODE_MISMATCH),
         TrackerOutsideSlot(WorkingsetResultCode.TRACKER_OUTSIDE_SLOT),

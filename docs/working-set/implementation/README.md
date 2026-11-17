@@ -6,17 +6,17 @@
 
 | 主题 | 已完成 | 进行中/后续 |
 | --- | --- | --- |
-| T6 Merge 与身份 | T6-B 并发与恢复、T6-C 身份分配、T6-D 子工作集回并、T6-E 瞬时 compare + 一页决策 MergeRound 幂等与异步 LRO、Checkpoint 身份改为 Tracker 对（2026-11-16） | T6-F 谱系约束（已裁定、待实现，剩余 `is_default`/配对规则）、T6-G 关系/Baseline/治理；见 [T6 后续大纲](t6-next-stage-outline.md) |
+| T6 Merge 与身份 | T6-B 并发与恢复、T6-C 身份分配、T6-D 子工作集回并、T6-E 瞬时 compare + 一页决策、T6-F 谱系约束（`is_default`、多派生、名称唯一、产品空间创建默认 Tracker）、Checkpoint 身份改为 Tracker 对 | T6-G 关系/Baseline/治理（QUESTION-011／014）；i 批量派生转 T7-G；见 [T6 收尾](t6-next-stage-outline.md) |
 | T7 创建工作集 | T7-A 契约、T7-B 任务骨架、T7-C 范围绑定、T7-D 批量索引（受理时冻结快照） | T7-E 关系构建（QUESTION-010 已裁定 C，待实现）、T7-F 规模/保留/恢复（依赖 QUESTION-012）；见 [T7 后续计划](t7-implementation-prompt.md) |
 
-下一步建议：T6-E 与 Checkpoint 收尾（当前 `mvn -B test` 113 项通过，见 [T6-E 验收](t6-e-merge-round-verification.md) 与 [Checkpoint 重构](merge-checkpoint-rework-plan.md)）。建议顺序：① 先敲定 `QUESTION-002.j`（多 Tracker 配对）与 `QUESTION-002.k`（`is_default` 归属），再实现 T6-F 的 schema/lineage 改动；② 实现 T7-E 的 Reference/Association 构建与修复（`QUESTION-010` 已裁定 C，剩余六类可见性/守卫待确认）；③ T6-G 的 Baseline 含义与 Shared Kernel 版本治理（`QUESTION-011`／`014`，需四 BC 访谈）。规模、保留与恢复验证统一见[规模压测与保留专题](performance-testing.md)，可与 ①② 并行采样，不阻塞实现。T7-E 接入前继续保留 `TrackerItemsIndexed` 生产占位监听器。
+下一步建议：T6 已收尾（全量 122 项通过，见 [T6 收尾](t6-next-stage-outline.md)），进入 T7。① 先做 T7-G 扩展工作集（Tracker 粒度、整批原子，承接 T6-F 的 i 裁定）；② 再做 T7-E 关系构建（QUESTION-010 已裁定 C）；③ T7-F 规模/保留与[规模压测与保留专题](performance-testing.md)合并采样，阈值依赖 QUESTION-012。T7-G 就位后删除 `/api/worksets/{ws}/derive` 公开入口（内部派生能力保留给创建/扩展任务）。T6-G 待 QUESTION-011／014 裁定，不阻塞 T7。T7-E 接入前继续保留 `TrackerItemsIndexed` 生产占位监听器。
 
 ## 验收记录
 
 | 范围 | 验收记录 |
 | --- | --- |
 | T7 工作集异步创建 | [A 契约评审](../reviews/2026-11-13-t7-a-creation-lro-review.md)、[B 任务骨架](t7-b-creation-task-verification.md)、[C 范围绑定](t7-c-binding-verification.md)、[D 批量索引](t7-d-index-verification.md) |
-| T6 Merge 与身份 | [B 并发与恢复](t6-b-merge-recovery-verification.md)、[C 身份分配](t6-c-identity-verification.md)、[D 回并](t6-d-merge-back-verification.md)、[E 一页决策](t6-e-merge-round-verification.md) |
+| T6 Merge 与身份 | [B 并发与恢复](t6-b-merge-recovery-verification.md)、[C 身份分配](t6-c-identity-verification.md)、[D 回并](t6-d-merge-back-verification.md)、[E 一页决策](t6-e-merge-round-verification.md)、[F 谱系](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
 | T5 首个纵向切片 | [S1 查询](t5-s1-verification-result.md)、[S2 保存与事件](t5-s2-verification-result.md)、[S3 首次物化](t5-s3-verification-result.md)、[S4 恢复](t5-s4-verification-result.md)、[S5 绑定与删除](t5-s5-verification-result.md)、[S6 谱系](t5-s6-verification-result.md)、[S7 Merge](t5-s7-verification-result.md) |
 | T5 支撑证据 | [运行时](t5-runtime-verification.md)、[D2 家族作用域](t5-d2-family-scope-verification.md)、[D4 SK 边界](t5-d4-sk-boundary-verification.md) |
 

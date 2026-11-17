@@ -74,7 +74,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | 操作 | 入参 | 前置 | 后置 / 结果 | 失败语义 |
 | --- | --- | --- | --- | --- |
 | `bindSpace` | workingSetId、productSpaceId | WorkingSet 可用；ProductSpace 存在；同 WS 无同空间的有效 SpaceBinding（INV-055） | 建立 SpaceBinding | `AlreadyBound`、`ProductSpaceNotFound`、`WorkingSetNotWritable` |
-| `bindTracker`（Shared） | workingSetId、trackerId | 同 WS 已有该空间 SpaceBinding（INV-053）；槽位未占用（INV-056）；未重复纳入；共享特性相容 | 建立 TrackerBinding，复用上游 `trackerId` | `MissingSpaceBinding`、`SlotOccupied`、`TrackerAlreadyBound`、`SharingModeMismatch` |
+| `bindTracker`（Shared） | workingSetId、trackerId | 同 WS 已有该空间 SpaceBinding（INV-053）；未重复纳入；共享特性相容 | 建立 TrackerBinding，复用上游 `trackerId` | `MissingSpaceBinding`、`TrackerAlreadyBound`、`SharingModeMismatch` |
 | `bindTracker`（非共享派生） | workingSetId、productSpaceId、classificationId | 同上；来源为直接上游 Tracker | 创建新 Tracker 聚合（直接 `sourceId`）+ 新 TrackerBinding | 同上 + `SourceTrackerNotFound` |
 
 ### 4.2 绑定移除（按共享策略分别约束）

@@ -74,13 +74,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 ## 5. 实施状态（2026-11-16）
 
-已落地：
-
-- `trackers.is_default` + 部分唯一索引：每个（工作集，空间，分类）恰好一个默认 Tracker；
-- 名称唯一：同一（工作集，空间，分类）内业务原生 Tracker 名称唯一；派生 Tracker 继承来源名称，不参与该约束；
-- 去掉 `tracker_bindings` 的 `(工作集, 空间, 分类)` 三元唯一键；`WorkingSet.bindTracker` 不再抛 `SlotOccupied`；
-- `POST /api/worksets/1/product-spaces`：创建产品空间，并为每个分类同步创建默认 Tracker；
-- 派生时按“目标工作集是否已有默认”设置 `is_default`；
+- 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/1/product-spaces` 同步默认 Tracker、派生默认标记；
 - `TrackerDefaultAcceptanceTest` 覆盖默认唯一、名称唯一、产品空间创建、绑定约束移除；
 - 全量测试 122 项通过。
 

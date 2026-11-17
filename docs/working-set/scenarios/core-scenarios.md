@@ -835,7 +835,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When SK 通过 `TrackerItemReadPort` 查询能力声明，得到 `comparable = false`。
 - Then 返回 `CapabilityNotSupported`，**不得返回「无差异」或空结果**，也不得进入 Merge 路径（`mergeable = false`）。
 - When 用户对 ALM Requirement 发起同一操作。
-- Then `comparable = true`，按 T1 的 Diff 契约产生有向冻结差异与 `ComparisonToken`。
+- Then `comparable = true`，按 T1 的 Diff 契约产生有向瞬时差异（compare 不持久化，无 ComparisonToken）。
 - When 用户对 ALM Requirement 提交字段决定（ACCEPT）。
 - Then SK 只能经 `<BC>WritePort` 请求 ALM 应用服务；由 ALM 重建聚合、整体校验、提交，SK **不代写**、不通过通用字段写入绕过聚合。
 - 边界：`TrackerItemReadPort` 只提供身份、Revision、内容解析、能力声明与授权事实；整体校验与提交属业务 BC 职责，不是只读契约的方法。
