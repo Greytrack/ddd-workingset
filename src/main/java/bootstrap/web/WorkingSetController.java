@@ -93,6 +93,10 @@ public class WorkingSetController {
                 workingSet.trackers().stream().map(TrackerBindingView::from).toList());
     }
 
+    /**
+     * 创建产品空间。路径中的 {@code workingSetId} 仅是入口占位，不参与目标工作集选择：
+     * 产品空间只能创建在默认工作集，服务层固定使用默认工作集；入口层不做来源限制。
+     */
     @PostMapping("/{workingSetId}/product-spaces")
     @ResponseStatus(HttpStatus.CREATED)
     public ProductSpaceView createProductSpace(@PathVariable String workingSetId,

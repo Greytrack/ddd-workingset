@@ -133,7 +133,12 @@ public class WorkingSetApplicationService {
     /** UI read model: LTI plus the readable name of its effective content source. */
     public record IndexedItem(LightTrackerItem item, String name) {}
 
-    /** 创建产品空间，并将空间和各分类的默认 Tracker 同步纳入默认工作集。 */
+    /**
+     * 创建产品空间，并将空间和各分类的默认 Tracker 同步纳入默认工作集。
+     *
+     * <p>产品空间只能归属默认工作集：调用方传入的工作集入口仅用于路由，不参与目标选择，
+     * 本方法一律固定使用 {@link WorkingSet#DEFAULT_ID}。入口层不限制调用来源，这是有意设计。
+     */
     @Transactional
     public ProductSpace createProductSpace(String spaceId, String name) {
         var space = new ProductSpace(spaceId, name);

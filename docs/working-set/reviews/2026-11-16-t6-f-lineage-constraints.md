@@ -46,7 +46,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 1. `trackers` 增加 `is_default BOOLEAN NOT NULL DEFAULT FALSE`，部分唯一索引保证每个（工作集，空间，分类）只有一个默认。**已实施**。
 2. `tracker_bindings` 去掉 `UNIQUE (working_set_id, product_space_id, classification_id)`，主键保持 `(working_set_id, tracker_id)`。**已实施**。
-3. 新增产品空间创建命令并同步创建默认 Tracker。**已实施**（`POST /api/worksets/{id}/product-spaces`；路径中的工作集当前未参与，见遗留项）。
+3. 新增产品空间创建命令并同步创建默认 Tracker。**已实施**（`POST /api/worksets/{id}/product-spaces`）。产品空间只能归属默认工作集：路径中的 `{id}` 仅为入口占位，不参与目标选择，所有调用一律固定到默认工作集；入口层不做额外限制，这是有意设计，不是待收紧项。
 4. Tracker 名称唯一约束：**已实施**为 `(working_set_id, product_space_id, classification_id, name)`，仅业务原生 Tracker 参与；因业务原生 Tracker 只存在于默认工作集，实际等价于（空间，分类）内唯一。作用域说明见 §4 注。
 5. compare/merge 候选配对：**未实现完整裁定**。当前 `candidates` 实际按直接 `sourceId` 配对；`Difference.key` 仍是页内序号，尚未按复合身份生成（`QUESTION-002.j`）。
 
@@ -58,12 +58,12 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 | 名称唯一作用域 | 同一（产品空间，分类）内唯一；2026-11-17 实施为（工作集，空间，分类），因业务原生 Tracker 只在默认工作集，两者当前等价 |
 | 多派生后的 compare/merge 配对 | 条目身份 = 左 trackerId + 右 trackerId + 左 workingSetId + 右 workingSetId + commonId + 左 localId + 右 localId + 左版次 + 右版次 |
 | Shared 与 `is_default` | Shared 分类也参与；每个（工作集，空间，分类）都有默认 Tracker |
-| 产品空间创建入口 | 新增 `POST /api/worksets/1/product-spaces`，同时创建默认 Tracker；当前实现接受任意 `{id}` 但实际仍在默认工作集创建，需收紧 |
+| 产品空间创建入口 | 新增 `POST /api/worksets/{id}/product-spaces`，同时创建默认 Tracker。产品空间只能在默认工作集创建：`{id}` 仅为入口占位、不参与目标选择，任何调用都固定到默认工作集；入口层不限制调用来源，这是有意设计 |
 
 ### 4.1 实现含义
 
 - `is_default` 是（工作集，空间，分类）上的唯一默认标记，用部分唯一索引兑现；Shared 与 UNSHARED 都参与。
-- 名称唯一改为（产品空间，分类）内唯一，不再跨空间或跨工作集比较。
+- 名称唯一按（工作集，空间，分类）实现，仅业务原生 Tracker 参与。由于业务原生 Tracker 只存在于默认工作集，当前等价于原裁定的（产品空间，分类）内唯一；若未来允许子工作集原生创建 Tracker，需要重新确认作用域。
 - 条目身份包含双侧 Tracker 与工作集：`Comparison.TrackerPair` 需要携带 workingSetId；`Difference.key` 改为由该复合键派生的稳定串，不再使用序号。**截至 2026-11-17 未实现**，当前仍是页内序号，见 §3.5。
 - 同一家族的 Item 在同一工作集只属于一个 Tracker（POL-005 与 Item 归属），所以“左侧 Tracker 集合 × 右侧 Tracker 集合”不会让同一家族重复出现。
 - Checkpoint 按（规范化 Tracker 对，家族）判定“已处理”，方向只是属性；WorkingSet 不进入 Checkpoint 身份。条目证据中的双侧定位（含工作集、LocalId、版次）用于过期校验，不改变 Checkpoint 键。详见 [Checkpoint 身份修正](2026-11-16-merge-checkpoint-legacy-alignment.md)。
@@ -74,7 +74,7 @@ LRO 成功后即可见、可绑定、可合并；不引入发布闸门。发布/
 
 ## 5. 实施状态（2026-11-16）
 
-- 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/1/product-spaces` 同步默认 Tracker、派生默认标记；
+- 已按 §2 落地：`trackers.is_default` + 部分唯一索引、名称唯一（仅业务原生 Tracker）、去掉绑定三元唯一键、`POST /api/worksets/{id}/product-spaces` 固定到默认工作集并同步默认 Tracker/绑定、派生默认标记；
 - [TrackerDefaultAcceptanceTest](../../../src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 覆盖默认唯一、名称唯一、绑定约束移除，以及 [SCN-051](../scenarios/core-scenarios.md#scn-051) 的产品空间初始绑定和 Item 读取；
 - 全量测试 122 项通过。
 
