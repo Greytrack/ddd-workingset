@@ -31,6 +31,8 @@ public final class JdbcMergeStore implements MergeStore {
 
     @Override
     public Optional<MergeRound> insertOrFindRound(MergeRound round, TrackerId trackerA, TrackerId trackerB) {
+        // Serialize duplicate requestId submissions before touching the unique indexes.
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", round.requestId());
         return jdbc.query("""
                 INSERT INTO merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
                 VALUES (?, ?, ?, CAST(? AS jsonb), ?, ?)

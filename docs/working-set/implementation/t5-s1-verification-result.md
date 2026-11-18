@@ -17,7 +17,7 @@ BUILD SUCCESS
 
 | 编号 | 测试类/方法 | 结果 |
 | --- | --- | --- |
-| AT-01 派生身份与不复制内容 | `bootstrap.WorkingSetSliceIntegrationTest#AT01_derive_creates_independent_variant_without_copying_content` | ✅ |
+| AT-01 派生身份与不复制内容 | Historical：原 `AT01_derive_creates_independent_variant_without_copying_content` 已随单 Item 派生入口删除；现由 T7 创建/扩展与领域测试覆盖 | ✅（当时） |
 | AT-02 Source-backed 读来源内容 | 同上 `#AT02_source_backed_read_resolves_source_content` | ✅ |
 | 失败语义：NotFound | 同上 `#resolve_missing_item_is_not_found` | ✅ |
 | 失败语义：NotIncluded（不降级为 NotFound） | 同上 `#resolve_item_outside_workspace_is_not_included` | ✅ |
@@ -30,7 +30,7 @@ BUILD SUCCESS
 | 层 | 包 | 内容 |
 | --- | --- | --- |
 | SK 领域 | `sk.workingset.domain` | `LocalId`、`CommonId`、`Revision`、`Version`（发布大版本，可空）、`LockVersion`（乐观锁）、`TrackerId`、`WorkingSetId`、`TrackerItem`、`Tracker`、`LightTrackerItem` |
-| SK 应用 | `sk.workingset.application` + `port` | `WorkingSetApplicationService`（derive/resolve/read）、`TrackerItemReadPort`、`LightTrackerItemRepository`、`CapabilitySet`、`Operation`、`Caller`、`TrackerItemContent`、`FailureReason`、`ApplicationFailure`、`DeriveCommand/Result`、`ReadResult` |
+| SK 应用 | `sk.workingset.application` + `port` | Historical：`WorkingSetApplicationService`（resolve/read）、`TrackerItemReadPort`、`LightTrackerItemRepository`、`CapabilitySet`、`Operation`、`Caller`、`TrackerItemContent`、`FailureReason`、`ApplicationFailure`、`ReadResult`；`derive`/`DeriveCommand/Result` 已删除 |
 | SK 基础 | `sk.workingset.infrastructure` | `InMemoryLightTrackerItemRepository` |
 | ALM | `alm.requirement.{domain,application,infrastructure}` | `Requirement`（实现 `TrackerItem`，`RequirementId = LocalId`）、`RequirementRepository`、`RequirementApplicationService`、`InMemoryRequirementRepository`、`RequirementAdapter` |
 | 组合根 | `bootstrap.configuration` | `ApplicationConfiguration`（Spring `@Configuration`，唯一同时引用两侧的位置） |

@@ -29,21 +29,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.application.DeriveCommand;
-import sk.workingset.application.DeriveResult;
-import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BindingAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestRestTemplate rest;
-    @Autowired private WorkingSetApplicationService workingSets;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String ws = fixtureId("WS-" + suffix);
@@ -115,7 +109,7 @@ class BindingAcceptanceTest {
     @Test
     void trackerListIncludesOwnedAndBoundSharedTrackersExactlyOnce() {
         bindSpace(ws);
-        String owned = derive(ws, unshared, sourceItem).tracker().trackerId().value();
+        String owned = derive(ws, unshared, sourceItem).trackerId();
         String listPath = path(ws) + "/trackers";
         assertEquals(List.of(owned), trackerIds(listPath));
 
@@ -181,8 +175,8 @@ class BindingAcceptanceTest {
         assertDirectSourceFailure(() -> derive(grandchild, unshared, sourceItem));
 
         bindSpace(other);
-        DeriveResult sibling = derive(other, unshared, sourceItem);
-        assertDirectSourceFailure(() -> derive(grandchild, sibling.tracker().trackerId().value(), sourceItem));
+        DeriveFixture.Result sibling = derive(other, unshared, sourceItem);
+        assertDirectSourceFailure(() -> derive(grandchild, sibling.trackerId(), sourceItem));
 
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
@@ -219,8 +213,8 @@ class BindingAcceptanceTest {
     @Test
     void nonsharedUnbindRejectsItemsAndEmptyTrackerCanBeRemoved() {
         bindSpace(ws);
-        DeriveResult target = derive(ws, unshared, sourceItem);
-        String tracker = target.tracker().trackerId().value();
+        DeriveFixture.Result target = derive(ws, unshared, sourceItem);
+        String tracker = target.trackerId();
         assertFailure(delete(unbindPath(ws, tracker)), HttpStatus.CONFLICT, "TrackerHasItems");
         assertEquals(1, count("SELECT count(*) FROM light_tracker_items WHERE tracker_id = ?", tracker));
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
@@ -281,21 +275,19 @@ class BindingAcceptanceTest {
         assertFailure(delete(path("1")), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
-        DeriveResult target = derive(ws, unshared, sourceItem);
+        DeriveFixture.Result target = derive(ws, unshared, sourceItem);
         businessItem(fixtureId("ITEM-" + suffix), shared);
 
         var blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "MemberCannotBeUnbound");
-        assertEquals(Map.of(target.tracker().trackerId().value(), "TrackerHasItems"),
-                blocked.getBody().get("members"));
+        assertEquals(Map.of(target.trackerId(), "TrackerHasItems"), blocked.getBody().get("members"));
         assertEquals(2, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
 
         jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId().value());
         assertEquals(HttpStatus.NO_CONTENT, delete(path(ws)).getStatusCode());
         assertEquals(0, count("SELECT count(*) FROM working_sets WHERE working_set_id = ?", ws));
-        assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?",
-                target.tracker().trackerId().value()));
+        assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", target.trackerId()));
         assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
     }
@@ -419,9 +411,9 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.CREATED, rest.postForEntity(spacePath(id), null, Void.class).getStatusCode());
     }
 
-    private DeriveResult derive(String target, String sourceTracker, String sourceLocalId) {
-        return workingSets.derive(new DeriveCommand(WorkingSetId.of(target), TrackerId.of(sourceTracker),
-                LocalId.of(sourceLocalId), Revision.of(3), CommonId.of(fixtureId("family-" + sourceLocalId))));
+    private DeriveFixture.Result derive(String target, String sourceTracker, String sourceLocalId) {
+        return DeriveFixture.derive(jdbc, target, sourceTracker, sourceLocalId, Revision.of(3),
+                CommonId.of(fixtureId("family-" + sourceLocalId)));
     }
 
     private static void assertDirectSourceFailure(org.junit.jupiter.api.function.Executable action) {

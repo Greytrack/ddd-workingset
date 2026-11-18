@@ -15,7 +15,6 @@ import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.CommonId;
 import sk.workingset.domain.ProductSpace;
 import sk.workingset.domain.WorkingSet;
 
@@ -294,35 +293,6 @@ public class WorkingSetApplicationService {
                 .orElseThrow(() -> new BindingFailure(Reason.SharingModeMismatch, tracker.classificationId()));
     }
 
-    /** 非共享派生：创建目标 Tracker 与 Source-backed 的 LightTrackerItem，不复制业务内容。 */
-    @Transactional
-    public DeriveResult derive(DeriveCommand command) {
-        var workingSet = writable(command.workingSetId());
-        return bindTrackerDerived(workingSet, directParentTracker(workingSet, command.sourceTrackerId()), command);
-    }
-
-    private DeriveResult bindTrackerDerived(WorkingSet workingSet, Tracker source, DeriveCommand command) {
-        requireUnshared(source);
-        if (trackers.findDerivedTracker(workingSet.id(), source.trackerId()).isPresent()) {
-            throw new BindingFailure(Reason.TrackerAlreadyBound, source.trackerId().value());
-        }
-        Tracker tracker = derivedTracker(workingSet, source);
-        var binding = workingSet.bindTracker(tracker, classification(source), SharingMode.UNSHARED);
-        var contentSource = resolveContentSource(source, command);
-        LightTrackerItem item = LightTrackerItem.derive(
-                nextDistinctLocalId(command.commonId()),
-                command.commonId(),
-                tracker.trackerId(),
-                workingSet.id(),
-                command.sourceRevision(),
-                contentSource.localId(),
-                contentSource.revision());
-        trackers.insertTracker(tracker);
-        workingSets.insertTrackerBinding(binding);
-        items.save(item);
-        return new DeriveResult(tracker, item);
-    }
-
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
             throw new BindingFailure(Reason.SharingModeMismatch, source.classificationId());
@@ -335,45 +305,6 @@ public class WorkingSetApplicationService {
         return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())), source, target.id(),
                 isDefault);
     }
-
-    private LocalId nextDistinctLocalId(CommonId commonId) {
-        LocalId candidate = LocalId.of(String.valueOf(identifierGenerator.nextId()));
-        while (candidate.value().equals(commonId.value())) {
-            candidate = LocalId.of(String.valueOf(identifierGenerator.nextId()));
-        }
-        return candidate;
-    }
-
-    private ContentSource resolveContentSource(Tracker source, DeriveCommand command) {
-        LocalId sourceId = command.sourceLocalId();
-        if (source.isDerived()) {
-            var variant = items.findById(sourceId).orElseThrow(
-                    () -> new BindingFailure(Reason.SourceItemNotFound, sourceId.value()));
-            if (!source.workingSetId().equals(variant.workingSetId())
-                    || !source.trackerId().equals(variant.trackerId())
-                    || !command.commonId().equals(variant.commonId())
-                    || !command.sourceRevision().equals(variant.revision())) {
-                throw new BindingFailure(Reason.SourceItemMismatch, sourceId.value());
-            }
-            LocalId contentId = variant.effectiveContentSource();
-            if (!businessItems.lockContentSource(contentId)) {
-                throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE, contentId.value());
-            }
-            if (variant.materialized() && businessItems.isDeleted(sourceId)) {
-                throw new ApplicationFailure(FailureReason.DELETED, sourceId.value());
-            }
-            return new ContentSource(contentId, variant.effectiveContentRevision());
-        }
-
-        var sourceItem = businessItems.findIdentity(sourceId).orElseThrow(
-                () -> new BindingFailure(Reason.SourceItemNotFound, sourceId.value()));
-        if (!source.trackerId().equals(sourceItem.trackerId()) || !command.commonId().equals(sourceItem.commonId())) {
-            throw new BindingFailure(Reason.SourceItemMismatch, sourceId.value());
-        }
-        return new ContentSource(sourceId, command.sourceRevision());
-    }
-
-    private record ContentSource(LocalId localId, Revision revision) {}
 
     /** 按工作集 + 变体身份解析；未命中 → NotFound；存在但不在该工作集 → NotIncluded。 */
     public LightTrackerItem resolve(WorkingSetId workingSetId, LocalId localId) {

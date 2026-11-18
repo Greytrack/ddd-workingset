@@ -25,7 +25,7 @@ BUILD SUCCESS
 | Spring Boot 非 web 上下文可加载 | `bootstrap.ApplicationContextTest#context_loads_without_web_and_exposes_composition_root_beans` | ✅ |
 | `RequirementChanged` 经 Spring Event 同步派发 | 同上 `#requirement_changed_is_delivered_through_spring_event_synchronously` | ✅ |
 | 雪花 ID 唯一性、位段、时钟回拨 | `sk.workingset.infrastructure.SnowflakeIdGeneratorTest`（5 项） | ✅ |
-| 派生 LocalId/TrackerId 为雪花值（非 UUID） | `bootstrap.WorkingSetSliceIntegrationTest#derived_local_id_is_a_snowflake_value_not_uuid` | ✅ |
+| 派生 LocalId/TrackerId 为雪花值（非 UUID） | Historical：原 `derived_local_id_is_a_snowflake_value_not_uuid` 已随单 Item 派生入口删除；雪花身份由现有 ID/存储测试覆盖 | ✅（当时） |
 | changeTitle 不可变、version 可空与 lock_version 自动递增 | `alm.requirement.domain.RequirementTest`（6 项） | ✅ |
 | 快照完整性与修改隔离（含 version/lock_version） | `alm.requirement.infrastructure.SnapshotStoreTest`（4 项） | ✅ |
 | S1 回归（AT-01/AT-02、AC-01、AC-02） | `bootstrap.WorkingSetSliceIntegrationTest`（6 项）、`architecture.ArchitectureTest`、`sk.workingset.domain.LightTrackerItemTest`（6 项） | ✅ |

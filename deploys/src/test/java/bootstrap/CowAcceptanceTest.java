@@ -33,17 +33,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.CowFailureLog;
-import sk.workingset.application.DeriveCommand;
-import sk.workingset.application.DeriveResult;
-import sk.workingset.application.WorkingSetApplicationService;
 import alm.requirement.application.RequirementApplicationService;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CowAcceptanceTest {
@@ -51,7 +46,6 @@ class CowAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private StringRedisTemplate redis;
     @Autowired private CowFailureLog failures;
-    @Autowired private WorkingSetApplicationService workingSets;
     @Autowired private RequirementApplicationService requirements;
     @SpyBean private LightTrackerItemRepository items;
 
@@ -391,11 +385,10 @@ class CowAcceptanceTest {
         worksets.add(ws);
         assertEquals(HttpStatus.CREATED,
                 rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());
-        DeriveResult result = workingSets.derive(new DeriveCommand(WorkingSetId.of(ws),
-                TrackerId.of(sourceTracker), LocalId.of(sourceLocalId), Revision.of(3), CommonId.of(common)));
+        var result = DeriveFixture.derive(jdbc, ws, sourceTracker, sourceLocalId, Revision.of(3), CommonId.of(common));
         String id = result.item().localId().value();
         targets.add(id);
-        return new Target(ws, id, result.tracker().trackerId().value());
+        return new Target(ws, id, result.trackerId());
     }
 
     private void change(String title, int expectedLock) {

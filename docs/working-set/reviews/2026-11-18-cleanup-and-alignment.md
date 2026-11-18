@@ -14,7 +14,8 @@
 | 运行残留 | 删除根目录 `run-web.log`、`run-web-err.log`。 |
 | 文档 | 修正 `reviews/README.md` 断链；T7-E 标为 Reviewed 并只保留真实未决项；T1 删除已废弃的 `Compared`/`ComparisonToken` 表述；facts 的 `POL-013/015` 去掉已落地的“待定”；T5 验收标 Historical，`BusinessObject` 设计并入 T4 后标 Historical。 |
 | 代码 | 删除未使用的 `CowRecoveryService.listFailures`、`CapabilitySet.readOnly`、`ResCode.getValue`、`ReferenceEndpoint.isResolved`。 |
-| 修复 | `WorkingSetItemIndexer` 的 LocalId 排序改为数值序，与 SQL 一致；`TrackerItemsIndexed` 使用索引完成时点；扩展任务运行期间不再拦截目标 WorkingSet 的已有范围读取。 |
+| 单 Item 派生 | 删除 `WorkingSetApplicationService.derive`、`DeriveCommand`、`DeriveResult` 及仅供其使用的 `nextDistinctLocalId`/`resolveContentSource`；验收夹具迁移到测试侧 `DeriveFixture`，读取/解析测试改用 `LightTrackerItem.derive`。 |
+| 修复 | `WorkingSetItemIndexer` 的 LocalId 排序改为数值序，与 SQL 一致；`TrackerItemsIndexed` 使用索引完成时点；扩展任务运行期间不再拦截目标 WorkingSet 的已有范围读取；Merge 同一 `requestId` 并发提交先取 advisory lock，消除唯一索引死锁。 |
 
 ## 验证
 

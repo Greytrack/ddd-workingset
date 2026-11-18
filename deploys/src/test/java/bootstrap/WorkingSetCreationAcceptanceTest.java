@@ -35,17 +35,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import sk.workingset.application.event.TrackerItemsIndexed;
-import sk.workingset.application.DeriveCommand;
-import sk.workingset.application.DeriveResult;
-import sk.workingset.application.WorkingSetApplicationService;
 import sk.workingset.application.WorkingSetCreationService;
 import sk.workingset.application.Caller;
 import sk.workingset.application.event.WorkingSetCreationSubmitted;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.WorkingSetCreation;
 import sk.workingset.domain.WorkingSetCreation.Mode;
 import sk.workingset.domain.WorkingSetCreation.Request;
@@ -70,7 +64,6 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transaction;
     @Autowired private IndexEvents indexEvents;
-    @Autowired private WorkingSetApplicationService workingSets;
     @Autowired private WorkingSetCreationService creations;
     @Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
 
@@ -379,9 +372,8 @@ class WorkingSetCreationAcceptanceTest {
                 null, Map.class).getStatusCode());
         String nativeId = fixtureId("root-" + child);
         seedItem(unshared, nativeId, nativeId, false);
-        DeriveResult derive = workingSets.derive(new DeriveCommand(WorkingSetId.of(parent),
-                TrackerId.of(unshared), LocalId.of(nativeId), Revision.of(3), CommonId.of(nativeId)));
-        String parentTracker = derive.tracker().trackerId().value();
+        var derive = DeriveFixture.derive(jdbc, parent, unshared, nativeId, Revision.of(3), CommonId.of(nativeId));
+        String parentTracker = derive.trackerId();
         String overlap = fixtureId("overlap-" + child);
         seedItem(parentTracker, overlap, overlap, false);
         seedParentLti(parentTracker, overlap, overlap, overlap, true);
