@@ -77,7 +77,7 @@ class RelationEventStepTest {
                 targetEndpoint)));
 
         var published = new ArrayList<Object>();
-        var publisher = new RelationEventPublisher(published::add, new AtomicLong(10)::incrementAndGet);
+        var publisher = new RelationEventPublisher(published::add, entity -> 10L);
         var step = new RelationEventStep(trackers, workingSets, items, source, publisher);
 
         var result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
@@ -111,7 +111,7 @@ class RelationEventStepTest {
         when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
 
         var step = new RelationEventStep(trackers, workingSets, items, source,
-                new RelationEventPublisher(event -> { }, new AtomicLong(1)::incrementAndGet));
+                new RelationEventPublisher(event -> { }, entity -> 1L));
 
         var result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 

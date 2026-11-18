@@ -57,7 +57,7 @@ class MergeRelationRepairStepTest {
         round = round.complete(Instant.now());
 
         var step = new MergeRelationRepairStep(mock(RelationSourcePort.class),
-                new RelationEventPublisher(event -> { }, new AtomicLong(1)::incrementAndGet));
+                new RelationEventPublisher(event -> { }, entity -> 1L));
         assertEquals(0, step.changedTargets(round).size());
     }
 
@@ -83,7 +83,7 @@ class MergeRelationRepairStepTest {
                         TrackerId.of("265625955250112"), Revision.of(3)), changedTarget)));
 
         var published = new ArrayList<Object>();
-        var publisher = new RelationEventPublisher(published::add, new AtomicLong(10)::incrementAndGet);
+        var publisher = new RelationEventPublisher(published::add, entity -> 10L);
         var step = new MergeRelationRepairStep(source, publisher);
 
         var result = step.repair(round);

@@ -22,7 +22,7 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Version;
-import sk.workingset.application.port.IdentifierGenerator;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 
 @SpringBootTest(classes = WorkingsetApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class JdbcSnapshotStoreTest {
@@ -83,6 +83,6 @@ class JdbcSnapshotStoreTest {
 
     @Test
     void unknown_snapshot_ref_returns_empty() {
-        assertTrue(store.find(SnapshotRef.of(Long.toString(ids.nextId()))).isEmpty());
+        assertTrue(store.find(SnapshotRef.of(Long.toString(ids.nextId(null).longValue()))).isEmpty());
     }
 }

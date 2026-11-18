@@ -22,7 +22,7 @@ import alm.requirement.application.command.RequirementCommandService;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.domain.event.RequirementChanged;
-import sk.workingset.application.port.IdentifierGenerator;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;

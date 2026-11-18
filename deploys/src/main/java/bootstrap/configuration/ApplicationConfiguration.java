@@ -64,7 +64,6 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.port.RequirementWritePort;
-import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerScopePort;
 import sk.workingset.infrastructure.repositories.CachingLightTrackerItemRepository;
@@ -103,11 +102,6 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public TargetTransactionRunner targetTransactionRunner(TransactionTemplate newTransactionTemplate) {
-        return new SpringTargetTransactionRunner(newTransactionTemplate);
-    }
-
-    @Bean
     public SourceSerialCowCoordinator sourceSerialCowCoordinator(
             @Value("${workingset.cow.order-gap-wait:1s}") Duration orderGapWait) {
         return new SourceSerialCowCoordinator(orderGapWait);
@@ -120,9 +114,10 @@ public class ApplicationConfiguration {
 
     @Bean
     public CowRecoveryService cowRecoveryService(CowMaterializationRepository store, LightTrackerItemRepository items,
-                                                 RequirementWritePort writePort, CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+                                                 RequirementWritePort writePort, CowFailureLog failureLog,
+                                                 TransactionTemplate newTransactionTemplate,
                                                  IncompleteEventPublications publications) {
-        return new CowRecoveryService(store, items, writePort, failureLog, transactionRunner,
+        return new CowRecoveryService(store, items, writePort, failureLog, newTransactionTemplate,
                 () -> publications.resubmitIncompletePublications(p ->
                         p.getEvent() instanceof RequirementChanged
                                 || p.getEvent() instanceof RequirementPurged
@@ -132,9 +127,9 @@ public class ApplicationConfiguration {
     @Bean
     public CowEventHandler cowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
                                            RequirementWritePort writePort,
-                                           CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+                                           CowFailureLog failureLog, TransactionTemplate newTransactionTemplate,
                                            CowMaterializationRepository store, CowRecoveryService recovery) {
-        return new CowEventHandler(items, lifecycle, writePort, failureLog, transactionRunner, store, recovery);
+        return new CowEventHandler(items, lifecycle, writePort, failureLog, newTransactionTemplate, store, recovery);
     }
 
     @Bean

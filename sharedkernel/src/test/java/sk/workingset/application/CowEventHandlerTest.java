@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
 import java.time.Instant;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.mockito.ArgumentCaptor;
 import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.domain.event.RequirementChanged;
@@ -60,8 +63,13 @@ class CowEventHandlerTest {
         when(lifecycle.lockMaterializationTarget(eligible.trackerId(), eligible.localId()))
                 .thenReturn(TargetIdentity.of(eligible));
         var writePort = mock(RequirementWritePort.class);
-        var recovery = new CowRecoveryService(store, items, writePort, failures, Runnable::run, () -> {});
-        var handler = new CowEventHandler(items, lifecycle, writePort, failures, Runnable::run, store, recovery);
+        var transaction = mock(TransactionTemplate.class);
+        doAnswer(invocation -> {
+            ((java.util.function.Consumer<TransactionStatus>) invocation.getArgument(0)).accept(null);
+            return null;
+        }).when(transaction).executeWithoutResult(any());
+        var recovery = new CowRecoveryService(store, items, writePort, failures, transaction, () -> {});
+        var handler = new CowEventHandler(items, lifecycle, writePort, failures, transaction, store, recovery);
 
         handler.onRequirementChanged(event);
         handler.onRequirementChanged(event);

@@ -18,7 +18,7 @@ class SnowflakeIdGeneratorTest {
         IdentifierGenerator generator = new SnowflakeIdGenerator(1, 2);
         Set<Long> ids = new HashSet<>();
         for (int i = 0; i < 10_000; i++) {
-            long id = generator.nextId();
+            long id = generator.nextId(null).longValue();
             assertTrue(id > 0, "雪花 ID 应为正数");
             assertTrue(ids.add(id), "重复的雪花 ID: " + id);
         }
@@ -32,7 +32,7 @@ class SnowflakeIdGeneratorTest {
 
         Set<Long> ids = new HashSet<>();
         for (int i = 0; i < 32; i++) {
-            ids.add(generator.nextId());
+            ids.add(generator.nextId(null).longValue());
         }
 
         assertEquals(32, ids.size(), "同一毫秒内 5 位 sequence 可产生 32 个不同 ID");
@@ -45,7 +45,7 @@ class SnowflakeIdGeneratorTest {
         AtomicLong now = new AtomicLong(1_700_000_000_000L);
         SnowflakeIdGenerator generator = new SnowflakeIdGenerator(3, 5, now::get);
 
-        long id = generator.nextId();
+        long id = generator.nextId(null).longValue();
 
         assertEquals(3, (id >> 8) & 7L, "datacenter 位段");
         assertEquals(5, (id >> 5) & 7L, "machine 位段");
@@ -56,11 +56,11 @@ class SnowflakeIdGeneratorTest {
     void clock_moving_backwards_is_rejected() {
         AtomicLong now = new AtomicLong(1_700_000_000_000L);
         SnowflakeIdGenerator generator = new SnowflakeIdGenerator(1, 2, now::get);
-        generator.nextId();
+        generator.nextId(null).longValue();
 
         now.addAndGet(-1);
 
-        assertThrows(IllegalStateException.class, generator::nextId);
+        assertThrows(IllegalStateException.class, () -> generator.nextId(null).longValue());
     }
 
     @Test

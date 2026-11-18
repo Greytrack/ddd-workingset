@@ -29,7 +29,7 @@ class RelationEventPublisherTest {
     private final List<Object> published = new ArrayList<>();
     private final AtomicLong sequence = new AtomicLong(10);
     private final RelationEventPublisher publisher = new RelationEventPublisher(event -> published.add(event),
-            sequence::incrementAndGet);
+            entity -> sequence.incrementAndGet());
 
     @Test
     void publishesReferenceCreationAndRepairWithBusinessRelationIdentity() {

@@ -1,5 +1,6 @@
 package sk.workingset.application.command;
 
+import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.application.CowMaterializationFailedException;
 import sk.workingset.domain.repository.CowMaterializationRepository;
@@ -12,7 +13,6 @@ import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
-import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.LightTrackerItem;
 
@@ -27,19 +27,20 @@ public final class CowEventHandler {
     private final TrackerItemLifecyclePort lifecycle;
     private final RequirementWritePort writePort;
     private final CowFailureLog failureLog;
-    private final TargetTransactionRunner transactionRunner;
+    private final TransactionTemplate transactionTemplate;
     private final CowMaterializationRepository store;
     private final CowRecoveryService recovery;
 
     public CowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
                            RequirementWritePort writePort,
-                           CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+                           CowFailureLog failureLog,
+                           TransactionTemplate transactionTemplate,
                            CowMaterializationRepository store, CowRecoveryService recovery) {
         this.items = items;
         this.lifecycle = lifecycle;
         this.writePort = writePort;
         this.failureLog = failureLog;
-        this.transactionRunner = transactionRunner;
+        this.transactionTemplate = transactionTemplate;
         this.store = store;
         this.recovery = recovery;
     }
@@ -54,7 +55,7 @@ public final class CowEventHandler {
             String stage = "MATERIALIZE";
             int attempts = 1;
             try {
-                transactionRunner.inNewTransaction(() -> store.markPending(event.eventId(), target.localId(),
+                transactionTemplate.executeWithoutResult(status -> store.markPending(event.eventId(), target.localId(),
                         event.sourceLocalId(), event.beforeRevision()));
                 var receipt = store.findByEventAndTarget(event.eventId(), target.localId()).orElseThrow();
                 attempts = receipt.attempts();
@@ -63,13 +64,13 @@ public final class CowEventHandler {
                 }
                 if (!receipt.businessSaved()) {
                     // D3-B：业务保存独立提交；SK 凭据与 LTI 切换随后各自独立事务。
-                    transactionRunner.inNewTransaction(() -> writePort.materialize(
+                    transactionTemplate.executeWithoutResult(status -> writePort.materialize(
                             new MaterializeRequest(target.localId(), target.trackerId(),
                                     target.commonId(), event.sourceLocalId(), event.beforeRevision(),
                                     event.afterRevision(), event.beforeLockVersion(), event.afterLockVersion(),
                                     target.revision(), event.eventId(), event.snapshotRef()),
                             lifecycle.lockMaterializationTarget(target.trackerId(), target.localId())));
-                    transactionRunner.inNewTransaction(() ->
+                    transactionTemplate.executeWithoutResult(status ->
                             store.markMaterialized(event.eventId(), target.localId()));
                 }
                 stage = "SWITCH";
@@ -82,7 +83,7 @@ public final class CowEventHandler {
                 failures.add(failure);
                 causes.add(error);
                 try {
-                    transactionRunner.inNewTransaction(() ->
+                    transactionTemplate.executeWithoutResult(status ->
                             store.markFailed(event.eventId(), target.localId(), error.getMessage()));
                 } catch (RuntimeException recordingError) {
                     causes.add(recordingError);

@@ -8,7 +8,7 @@ import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.common.TargetIdentity;
-import sk.workingset.application.port.TargetTransactionRunner;
+import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.domain.LocalId;
 
 /**
@@ -21,12 +21,12 @@ public final class CowRecoveryService {
     private final LightTrackerItemRepository items;
     private final RequirementWritePort writePort;
     private final CowFailureLog failures;
-    private final TargetTransactionRunner transactions;
+    private final TransactionTemplate transactions;
     private final Runnable resubmit;
 
     public CowRecoveryService(CowMaterializationRepository store, LightTrackerItemRepository items,
                               RequirementWritePort writePort, CowFailureLog failures,
-                              TargetTransactionRunner transactions, Runnable resubmit) {
+                              TransactionTemplate transactions, Runnable resubmit) {
         this.store = store;
         this.items = items;
         this.writePort = writePort;
@@ -40,7 +40,7 @@ public final class CowRecoveryService {
     }
 
     public void recoverSwitchOnly(long eventId, LocalId targetId) {
-        transactions.inNewTransaction(() -> {
+        transactions.executeWithoutResult(status -> {
             var receipt = store.lockByEventAndTarget(eventId, targetId)
                     .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "COW receipt is missing"));
             if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {

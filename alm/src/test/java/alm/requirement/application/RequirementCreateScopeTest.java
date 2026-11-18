@@ -44,7 +44,7 @@ class RequirementCreateScopeTest {
 
     @BeforeEach
     void stubIdentifiers() {
-        when(ids.nextId(null).longValue()).thenReturn(100L, 200L, 300L, 400L);
+        when(ids.nextId(null)).thenReturn(100L, 200L, 300L, 400L);
     }
 
     @Test
