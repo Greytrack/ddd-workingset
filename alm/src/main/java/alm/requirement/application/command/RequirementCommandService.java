@@ -19,13 +19,15 @@ import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.common.InheritedEditTarget;
-import sk.workingset.application.query.provider.TrackerScopePort;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
@@ -38,20 +40,23 @@ public class RequirementCommandService {
     private final SnapshotRepository snapshotStore;
     private final IdentifierGenerator identifierGenerator;
     private final ApplicationEventPublisher eventPublisher;
-    private final TrackerScopePort trackerScope;
+    private final TrackerRepository trackers;
+    private final WorkingSetRepository workingSets;
     private final TrackerItemLifecyclePort lifecycle;
 
     public RequirementCommandService(RequirementRepository repository,
                                           SnapshotRepository snapshotStore,
                                           IdentifierGenerator identifierGenerator,
                                           ApplicationEventPublisher eventPublisher,
-                                          TrackerScopePort trackerScope,
+                                          TrackerRepository trackers,
+                                          WorkingSetRepository workingSets,
                                           TrackerItemLifecyclePort lifecycle) {
         this.repository = Objects.requireNonNull(repository, "repository");
         this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
         this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
         this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
-        this.trackerScope = Objects.requireNonNull(trackerScope, "trackerScope");
+        this.trackers = Objects.requireNonNull(trackers, "trackers");
+        this.workingSets = Objects.requireNonNull(workingSets, "workingSets");
         this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
     }
 
@@ -69,11 +74,12 @@ public class RequirementCommandService {
                               String description,
                               Revision revision) {
         if (requestedWorkingSetId != null) {
-            trackerScope.requireWorkingSetReady(requestedWorkingSetId);
+            workingSets.requireReady(requestedWorkingSetId);
         }
-        java.util.Optional<TrackerScopePort.TrackerScope> scope = trackerScope.find(trackerId);
+        java.util.Optional<Tracker> tracker = trackers.findTracker(trackerId);
+        tracker.ifPresent(found -> workingSets.requireReady(found.workingSetId()));
         if (requestedWorkingSetId != null) {
-            scope.ifPresent(current -> {
+            tracker.ifPresent(current -> {
                 if (current.sharingMode() == SharingMode.UNSHARED
                         && !current.workingSetId().equals(requestedWorkingSetId)) {
                     throw DomainException.withMessage(FailureReason.NOT_INCLUDED,
@@ -82,7 +88,7 @@ public class RequirementCommandService {
                 }
             });
         }
-        boolean defaultWorkingSet = scope
+        boolean defaultWorkingSet = tracker
                 .map(current -> current.sharingMode() == SharingMode.SHARED
                         || WorkingSet.DEFAULT_ID.equals(current.workingSetId()))
                 .orElse(false);
@@ -92,7 +98,7 @@ public class RequirementCommandService {
                 LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
                 trackerId, title, description, revision);
         repository.save(requirement);
-        scope.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
+        tracker.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
                 requirement.localId(), requirement.commonId(), trackerId,
                 current.workingSetId(), requirement.revision())));
         return requirement;
@@ -128,7 +134,7 @@ public class RequirementCommandService {
     private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
         java.util.Optional<InheritedEditTarget> inherited = lifecycle.lockInheritedEditTarget(localId);
         Requirement current = inherited.map(target -> {
-            trackerScope.requireWorkingSetReady(target.workingSetId());
+            workingSets.requireReady(target.workingSetId());
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
         }).orElseGet(() -> load(localId));
         requireActive(current);

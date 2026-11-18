@@ -12,7 +12,7 @@ import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.common.InheritedEditTarget;
-import sk.workingset.application.query.provider.TrackerScopePort;
+import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.LocalId;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
@@ -20,14 +20,14 @@ public class RequirementQueryService {
     private final RequirementQueryProvider query;
     private final RequirementRepository repository;
     private final TrackerItemLifecyclePort lifecycle;
-    private final TrackerScopePort trackerScope;
+    private final WorkingSetRepository workingSets;
 
     public RequirementQueryService(RequirementQueryProvider query, RequirementRepository repository,
-                                   TrackerItemLifecyclePort lifecycle, TrackerScopePort trackerScope) {
+                                   TrackerItemLifecyclePort lifecycle, WorkingSetRepository workingSets) {
         this.query = Objects.requireNonNull(query, "query");
         this.repository = Objects.requireNonNull(repository, "repository");
         this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
-        this.trackerScope = Objects.requireNonNull(trackerScope, "trackerScope");
+        this.workingSets = Objects.requireNonNull(workingSets, "workingSets");
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +41,7 @@ public class RequirementQueryService {
         }
         return lifecycle.findInheritedTarget(localId)
                 .map(target -> {
-                    trackerScope.requireWorkingSetReady(target.workingSetId());
+                    workingSets.requireReady(target.workingSetId());
                     return detail(rebuildInherited(target));
                 })
                 .orElseGet(() -> detail(load(localId)));

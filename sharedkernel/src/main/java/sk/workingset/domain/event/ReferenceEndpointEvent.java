@@ -2,6 +2,7 @@ package sk.workingset.domain.event;
 
 import java.util.Objects;
 
+import org.springframework.data.domain.DomainEvents;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;

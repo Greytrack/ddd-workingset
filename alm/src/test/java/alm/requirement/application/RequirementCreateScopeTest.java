@@ -22,11 +22,12 @@ import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.domain.SnapshotRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.provider.TrackerScopePort;
-import sk.workingset.application.query.provider.TrackerScopePort.TrackerScope;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.WorkingSetId;
 
 /** T6-C：创建时的身份分配与工作集归属。 */
@@ -36,11 +37,19 @@ class RequirementCreateScopeTest {
     private static final Revision REVISION = Revision.of(3);
 
     private final RequirementRepository repository = mock(RequirementRepository.class);
-    private final TrackerScopePort trackerScope = mock(TrackerScopePort.class);
+    private final TrackerRepository trackers = mock(TrackerRepository.class);
+    private final WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
-            repository, mock(SnapshotRepository.class), ids, mock(ApplicationEventPublisher.class), trackerScope,
-            mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
+            repository, mock(SnapshotRepository.class), ids, mock(ApplicationEventPublisher.class), trackers,
+            workingSets, mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
+
+    private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
+        Tracker tracker = mock(Tracker.class);
+        when(tracker.workingSetId()).thenReturn(WorkingSetId.of(workingSetId));
+        when(tracker.sharingMode()).thenReturn(sharingMode);
+        return tracker;
+    }
 
     @BeforeEach
     void stubIdentifiers() {
@@ -49,8 +58,8 @@ class RequirementCreateScopeTest {
 
     @Test
     void default_working_set_uses_the_same_snowflake_for_both_ids() {
-        when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
-                new TrackerScope(WorkingSetId.of("1"), SharingMode.UNSHARED)));
+        Tracker tracker = tracker("1", SharingMode.UNSHARED);
+        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 
@@ -59,8 +68,8 @@ class RequirementCreateScopeTest {
 
     @Test
     void non_default_working_set_uses_two_distinct_ids() {
-        when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
-                new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
+        Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
+        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
@@ -69,8 +78,8 @@ class RequirementCreateScopeTest {
 
     @Test
     void unshared_tracker_must_be_created_from_its_own_working_set() {
-        when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
-                new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
+        Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
+        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
 
         DomainException failure = assertThrows(DomainException.class,
                 () -> service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION));
@@ -80,8 +89,8 @@ class RequirementCreateScopeTest {
 
     @Test
     void shared_tracker_can_be_created_from_any_working_set() {
-        when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
-                new TrackerScope(WorkingSetId.of("1"), SharingMode.SHARED)));
+        Tracker tracker = tracker("1", SharingMode.SHARED);
+        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
@@ -91,7 +100,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void unknown_tracker_is_left_to_persistence_validation() {
-        when(trackerScope.find(TRACKER)).thenReturn(Optional.empty());
+        when(trackers.findTracker(TRACKER)).thenReturn(Optional.empty());
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 

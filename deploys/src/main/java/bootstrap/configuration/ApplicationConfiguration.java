@@ -56,11 +56,11 @@ import sk.workingset.infrastructure.repositories.JdbcWorkingSetCreationRepositor
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
-import sk.workingset.application.query.provider.TrackerScopePort;
 import sk.workingset.infrastructure.repositories.CachingLightTrackerItemRepository;
 import sk.workingset.infrastructure.repositories.JdbcBindingRepositories;
 import sk.workingset.infrastructure.repositories.JdbcLightTrackerItemRepository;
@@ -140,10 +140,12 @@ public class ApplicationConfiguration {
             JdbcSnapshotRepository snapshotStore,
             IdentifierGenerator identifierGenerator,
             ApplicationEventPublisher eventPublisher,
-            TrackerScopePort trackerScopePort,
+            TrackerRepository trackerRepository,
+            WorkingSetRepository workingSetRepository,
             TrackerItemLifecyclePort lifecycle) {
         return new RequirementCommandService(
-                requirements, snapshotStore, identifierGenerator, eventPublisher, trackerScopePort, lifecycle);
+                requirements, snapshotStore, identifierGenerator, eventPublisher, trackerRepository,
+                workingSetRepository, lifecycle);
     }
 
     @Bean
@@ -154,26 +156,8 @@ public class ApplicationConfiguration {
     @Bean
     public RequirementQueryService requirementQueryService(RequirementQueryProvider query,
             JdbcRequirementRepository repository, TrackerItemLifecyclePort lifecycle,
-            TrackerScopePort trackerScopePort) {
-        return new RequirementQueryService(query, repository, lifecycle, trackerScopePort);
-    }
-
-    @Bean
-    public TrackerScopePort trackerScopePort(JdbcBindingRepositories trackers) {
-        return new TrackerScopePort() {
-            @Override
-            public Optional<TrackerScope> find(TrackerId trackerId) {
-                return trackers.findTracker(trackerId).map(tracker -> {
-                    requireWorkingSetReady(tracker.workingSetId());
-                    return new TrackerScope(tracker.workingSetId(), tracker.sharingMode());
-                });
-            }
-
-            @Override
-            public void requireWorkingSetReady(WorkingSetId workingSetId) {
-                trackers.requireReady(workingSetId);
-            }
-        };
+            WorkingSetRepository workingSetRepository) {
+        return new RequirementQueryService(query, repository, lifecycle, workingSetRepository);
     }
 
     @Bean
