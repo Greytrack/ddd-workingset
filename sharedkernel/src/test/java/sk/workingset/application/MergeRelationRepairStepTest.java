@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import sk.workingset.domain.event.ReferenceEndpoint;
-import sk.workingset.application.port.RelationSourcePort;
-import sk.workingset.application.port.RelationSourcePort.ReferenceFact;
+import sk.workingset.application.query.provider.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;

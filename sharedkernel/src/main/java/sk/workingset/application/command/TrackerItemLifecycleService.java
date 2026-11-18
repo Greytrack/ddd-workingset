@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
+import sk.workingset.application.common.InheritedEditTarget;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.domain.event.MergeTarget;

@@ -15,7 +15,7 @@ import sk.workingset.application.ReadResult;
 import sk.workingset.application.TrackerItemContent;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.port.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemReadPort;
 import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
@@ -124,9 +124,6 @@ public class WorkingSetQueryService {
         LocalId contentLocalId = item.effectiveContentSource();
         Revision contentRevision = item.effectiveContentRevision();
         TrackerItemReadPort port = readPorts.apply(contentLocalId);
-        if (!port.authorize(Operation.READ, caller)) {
-            throw DomainException.withMessage(FailureReason.DENIED, contentLocalId.value());
-        }
         TrackerItemContent content = item.materialized() ? port.readAt(contentRevision)
                 : port.readInheritedAt(contentRevision);
         return new ReadResult(content, item.materialized(), contentLocalId, contentRevision);

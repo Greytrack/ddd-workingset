@@ -1,4 +1,4 @@
-package sk.workingset.application.port;
+package sk.workingset.application.query.provider;
 
 import sk.workingset.application.Caller;
 import sk.workingset.application.CapabilitySet;
@@ -34,6 +34,4 @@ public interface TrackerItemReadPort {
     /** 能力声明。 */
     CapabilitySet capabilities();
 
-    /** 授权事实（BC 或 Privilege 提供）；S1 恒允许。 */
-    boolean authorize(Operation operation, Caller caller);
 }

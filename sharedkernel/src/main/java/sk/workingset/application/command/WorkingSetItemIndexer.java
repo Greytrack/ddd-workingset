@@ -18,8 +18,8 @@ import org.springframework.transaction.SavepointManager;
 
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.port.TrackerItemCatalog;
-import sk.workingset.application.port.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemCatalog;
+import sk.workingset.application.query.provider.TrackerItemReadPort;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;

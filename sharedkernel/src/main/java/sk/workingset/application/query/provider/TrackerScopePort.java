@@ -1,4 +1,4 @@
-package sk.workingset.application.port;
+package sk.workingset.application.query.provider;
 
 import java.util.Optional;
 

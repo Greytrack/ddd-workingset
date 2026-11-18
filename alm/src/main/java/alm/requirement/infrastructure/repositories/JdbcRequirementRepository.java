@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import sk.workingset.application.port.TrackerItemCatalog;
+import sk.workingset.application.query.provider.TrackerItemCatalog;
 import sk.workingset.application.port.BusinessTrackerItems.Presentation;
 
 import alm.requirement.domain.LockVersionConflictException;

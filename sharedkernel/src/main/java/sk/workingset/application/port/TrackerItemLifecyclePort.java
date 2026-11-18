@@ -1,5 +1,6 @@
 package sk.workingset.application.port;
 
+import sk.workingset.application.common.InheritedEditTarget;
 import sk.workingset.application.common.TargetIdentity;
 
 import sk.workingset.domain.event.MergeTarget;
@@ -9,7 +10,6 @@ import java.util.Optional;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 
 /**
  * SK 拥有的 LTI 生命周期协作接口（D4 方案 A：LTI 校验/移除移回 SK，业务 BC 不再操作 SK 仓储）。
@@ -26,9 +26,6 @@ public interface TrackerItemLifecyclePort {
 
     /** 用户首次编辑保存成功后，在调用方事务内切换到本地内容。 */
     void completeInheritedEdit(LocalId localId, Revision revision);
-
-    record InheritedEditTarget(TargetIdentity identity, WorkingSetId workingSetId,
-                               LocalId sourceLocalId, Revision sourceRevision) {}
 
     /**
      * 在调用方事务内锁定 Tracker 并读取物化目标变体的身份证据。

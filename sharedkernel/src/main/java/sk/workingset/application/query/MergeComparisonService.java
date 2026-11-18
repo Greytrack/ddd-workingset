@@ -17,8 +17,8 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.application.Operation;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.merge.MergeRepository;
-import sk.workingset.application.port.TrackerItemCatalog;
-import sk.workingset.application.port.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemCatalog;
+import sk.workingset.application.query.provider.TrackerItemReadPort;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.CommonId;
@@ -179,9 +179,6 @@ public class MergeComparisonService {
         boolean inherited = variant != null && !variant.materialized();
         var port = readPorts.apply(contentId);
         try {
-            if (!port.authorize(Operation.READ, caller)) {
-                return unreadable(null, FailureReason.DENIED);
-            }
             if (!port.capabilities().comparable()) {
                 return unreadable(id, FailureReason.CAPABILITY_NOT_SUPPORTED);
             }
@@ -207,9 +204,6 @@ public class MergeComparisonService {
     public void assertWriteCapability(Difference difference, boolean create, Caller caller) {
         LocalId capabilityId = create ? difference.source().localId() : difference.target().localId();
         var port = readPorts.apply(capabilityId);
-        if (!port.authorize(Operation.WRITE, caller)) {
-            throw DomainException.withMessage(FailureReason.DENIED, capabilityId.value());
-        }
         var capability = port.capabilities();
         if (!capability.mergeable() || (create && !capability.creatable())) {
             throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED, capabilityId.value());

@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import sk.workingset.domain.event.ReferenceEndpoint;
 import sk.workingset.domain.event.RelationEventMetadata.OriginType;
-import sk.workingset.application.port.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.Entry;

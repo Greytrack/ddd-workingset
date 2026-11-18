@@ -4,7 +4,7 @@ import java.util.List;
 
 import sk.workingset.domain.event.AssociationEndpoint;
 import sk.workingset.domain.event.ReferenceEndpoint;
-import sk.workingset.application.port.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourcePort;
 
 /**
  * 过渡实现：业务 BC 尚未提供关系事实时为空。接入真实关系事实后替换为 BC Adapter。

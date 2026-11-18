@@ -11,8 +11,8 @@ import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
-import sk.workingset.application.port.TrackerItemLifecyclePort.InheritedEditTarget;
-import sk.workingset.application.port.TrackerScopePort;
+import sk.workingset.application.common.InheritedEditTarget;
+import sk.workingset.application.query.provider.TrackerScopePort;
 import sk.workingset.domain.LocalId;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */

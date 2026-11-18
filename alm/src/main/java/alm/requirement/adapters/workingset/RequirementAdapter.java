@@ -11,7 +11,7 @@ import sk.workingset.application.CapabilitySet;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.Operation;
 import sk.workingset.application.TrackerItemContent;
-import sk.workingset.application.port.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemReadPort;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
@@ -74,12 +74,6 @@ public class RequirementAdapter implements TrackerItemReadPort {
     @Override
     public CapabilitySet capabilities() {
         return CapabilitySet.full();
-    }
-
-    @Override
-    public boolean authorize(Operation operation, Caller caller) {
-        // S1 不接入权限平台；恒允许，权限模型留后续切片
-        return true;
     }
 
     private Requirement find() {

@@ -5,7 +5,7 @@ import java.util.List;
 
 import sk.workingset.domain.event.RelationEventMetadata.OriginType;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.port.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.LightTrackerItem;
