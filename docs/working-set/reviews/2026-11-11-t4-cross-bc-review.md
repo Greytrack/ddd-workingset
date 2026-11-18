@@ -18,17 +18,17 @@
 
 | 裁定要点 | 落地位置 |
 | --- | --- |
-| SK 定义 TrackerItem 公共**读取与能力**契约（身份、Revision、内容解析、能力声明、授权事实） | §3.1 `TrackerItemReadPort` 五项 |
+| SK 定义 TrackerItem 公共**读取与能力**契约（身份、Revision、内容解析、能力声明、授权事实） | §3.1 `TrackerItemQueryProvider` 五项 |
 | 聚合创建、物化、修改、删除、整体校验、提交由所属 BC 执行 | §3.3 五项 BC 职责 |
 | SK 可协调 COW/Merge，但不能绕过聚合、领域规则或 Repository 执行通用 Save | §3 开头 + §3.3 |
 | SK 应用层可定义 Outbound Port，BC 通过 Adapter 提供；SPI 特征但不强制 ServiceLoader | §3.2 |
-| **分开** `TrackerItemReadPort` 与写入协作 Port，不能合并为通用 CRUD 接口 | §3.1/§3.2 分节；图 §1 |
+| **分开** `TrackerItemQueryProvider` 与写入协作 Port，不能合并为通用 CRUD 接口 | §3.1/§3.2 分节；图 §1 |
 | BC 应用服务保留写入决定权（聚合、不变量、持久化、领域事件） | §3.3 |
 | 不要求所有 BC 实现全部能力，按能力声明控制协作契约 | §3.4 |
 | 只通过稳定身份与必要公共数据跨 BC 传递，不共享完整可变聚合 | §3.1（只读）+ §3.3（内容由 BC 持有） |
 | 不新增聚合、不改变 T1/T3 行为 | §7、§8 |
 
-**修正项**：原「五项必需能力」把「整体校验、提交」列为 TrackerItem 能力——已改为**业务 BC 职责**（§3.3），`TrackerItemReadPort` 明确不含这些方法。
+**修正项**：原「五项必需能力」把「整体校验、提交」列为 TrackerItem 能力——已改为**业务 BC 职责**（§3.3），`TrackerItemQueryProvider` 明确不含这些方法。
 
 ## 3. K2″ 落地（九分类公共失败语义）
 

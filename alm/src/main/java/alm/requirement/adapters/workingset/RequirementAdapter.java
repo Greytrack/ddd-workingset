@@ -8,7 +8,7 @@ import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.TrackerItemContent;
-import sk.workingset.application.query.provider.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
@@ -17,7 +17,7 @@ import sk.workingset.domain.Revision;
  *
  * <p>构造时绑定一个变体身份（{@code LocalId}）；SK 只通过该 Port 读取内容，不接触 Requirement 聚合类型。
  */
-public class RequirementAdapter implements TrackerItemReadPort {
+public class RequirementAdapter implements TrackerItemQueryProvider {
 
     private final RequirementRepository repository;
     private final LocalId localId;

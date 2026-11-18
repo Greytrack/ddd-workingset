@@ -169,7 +169,7 @@ Merge 完成
 
 ## 6. 已实现的契约骨架
 
-- `RelationSourcePort`：业务 BC 只读事实端口，提供 `upstreamReferences`、`upstreamAssociations`、`referencesTargeting`、`associationsTargeting` 及 `ReferenceFact`/`AssociationFact`。
+- `RelationSourceQueryProvider`：业务 BC 只读事实端口，提供 `upstreamReferences`、`upstreamAssociations`、`referencesTargeting`、`associationsTargeting` 及 `ReferenceFact`/`AssociationFact`。
 - `EmptyRelationSourcePort`：业务 BC Adapter 尚未接入时的空实现，不伪造事件。
 - `RelationEventPublisher`：按 fact 生成 `eventId`，保留业务 `originalRelationId`，发布三类 `...Requested` 事件。
 - `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
@@ -180,7 +180,7 @@ Merge 完成
 
 ## 7. 仍开放
 
-1. 关系消费方与真实业务 BC `RelationSourcePort` Adapter 尚未接入；五类守卫由消费方实现（QUESTION-010）。
+1. 关系消费方与真实业务 BC `RelationSourceQueryProvider` Adapter 尚未接入；五类守卫由消费方实现（QUESTION-010）。
 2. 关系请求事件当前经 Spring `ApplicationEventPublisher` 发布，尚无 Modulith 消费者/outbox 持久化；需保证事件不因进程退出丢失，或明确降级语义。
 3. Merge 关系修复失败目前只记日志，未持久化独立状态；是否补修复状态/重试按 QUESTION-018 裁定。
 4. Merge 后仅修复 Reference；Association 的缺失意图恢复是否进入首版仍开放。

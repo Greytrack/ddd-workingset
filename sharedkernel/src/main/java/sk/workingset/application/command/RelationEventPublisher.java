@@ -12,8 +12,8 @@ import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
 import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.application.query.provider.RelationSourcePort.AssociationFact;
-import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 
 /**
  * 发布关系请求事件。WorkingSet 不写 Reference/Association 聚合；事件由关系服务消费。

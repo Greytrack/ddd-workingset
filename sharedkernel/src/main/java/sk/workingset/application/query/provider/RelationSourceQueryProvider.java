@@ -11,7 +11,7 @@ import sk.workingset.domain.event.ReferenceEndpointEvent;
  *
  * <p>{@code originalRelationId} 必须来自业务关系聚合，供消费方回查传播怀疑、关系类型和方向。
  */
-public interface RelationSourcePort {
+public interface RelationSourceQueryProvider {
 
     List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source);
 

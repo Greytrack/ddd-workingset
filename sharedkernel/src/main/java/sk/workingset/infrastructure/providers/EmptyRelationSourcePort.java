@@ -4,12 +4,12 @@ import java.util.List;
 
 import sk.workingset.domain.event.AssociationEndpointEvent;
 import sk.workingset.domain.event.ReferenceEndpointEvent;
-import sk.workingset.application.query.provider.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 
 /**
  * 过渡实现：业务 BC 尚未提供关系事实时为空。接入真实关系事实后替换为 BC Adapter。
  */
-public final class EmptyRelationSourcePort implements RelationSourcePort {
+public final class EmptyRelationSourcePort implements RelationSourceQueryProvider {
 
     @Override
     public List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source) {

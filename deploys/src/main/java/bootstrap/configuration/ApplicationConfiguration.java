@@ -27,8 +27,9 @@ import alm.requirement.infrastructure.providers.RequirementQueryMapper;
 import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import alm.requirement.infrastructure.repositories.JdbcSnapshotRepository;
 import alm.requirement.adapters.workingset.RequirementAdapter;
-import alm.requirement.adapters.workingset.RequirementMaterializationAdapter;
+import alm.requirement.application.command.RequirementMaterializationService;
 import sk.workingset.application.command.CowEventHandler;
+import sk.workingset.application.command.CowMaterializationCompletionService;
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.application.merge.MergeComparisonService;
@@ -37,7 +38,7 @@ import sk.workingset.application.command.MergeRelationRepairStep;
 import sk.workingset.application.command.RelationEventPublisher;
 import sk.workingset.application.command.RelationEventStep;
 import sk.workingset.application.command.TrackerItemLifecycleService;
-import sk.workingset.application.query.provider.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.infrastructure.repositories.JdbcMergeRepository;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
@@ -49,7 +50,7 @@ import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.infrastructure.providers.WorkingSetQueryProviderImpl;
 import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
 import sk.workingset.application.command.WorkingSetItemIndexer;
-import sk.workingset.application.query.provider.TrackerItemCatalog;
+import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.infrastructure.providers.EmptyRelationSourcePort;
@@ -61,7 +62,6 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.infrastructure.repositories.CachingLightTrackerItemRepository;
 import sk.workingset.infrastructure.repositories.JdbcBindingRepositories;
@@ -86,9 +86,9 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
-                                                     JdbcSnapshotRepository snapshots, RequirementCommandService requirements) {
-        return new RequirementMaterializationAdapter(repository, snapshots);
+    public RequirementMaterializationService requirementMaterializationService(JdbcRequirementRepository repository,
+                                                                               JdbcSnapshotRepository snapshots) {
+        return new RequirementMaterializationService(repository, snapshots);
     }
 
     @Bean
@@ -109,11 +109,17 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public CowEventHandler cowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
-                                           RequirementWritePort writePort,
-                                           CowFailureLog failureLog, TransactionTemplate newTransactionTemplate,
-                                           CowMaterializationRepository store) {
-        return new CowEventHandler(items, lifecycle, writePort, failureLog, newTransactionTemplate, store);
+    public CowEventHandler cowEventHandler(LightTrackerItemRepository items, CowFailureLog failureLog,
+                                           TransactionTemplate newTransactionTemplate,
+                                           CowMaterializationRepository store, ApplicationEventPublisher events) {
+        return new CowEventHandler(items, failureLog, newTransactionTemplate, store, events);
+    }
+
+    @Bean
+    public CowMaterializationCompletionService cowMaterializationCompletionService(
+            CowMaterializationRepository store, LightTrackerItemRepository items, CowFailureLog failureLog,
+            TransactionTemplate newTransactionTemplate) {
+        return new CowMaterializationCompletionService(store, items, failureLog, newTransactionTemplate);
     }
 
     @Bean
@@ -177,7 +183,7 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public RelationSourcePort relationSourcePort() {
+    public RelationSourceQueryProvider RelationSourceQueryProvider() {
         // 业务 BC 关系事实 Adapter 接入前保持空实现；不能伪造关系事件。
         return new EmptyRelationSourcePort();
     }
@@ -191,7 +197,7 @@ public class ApplicationConfiguration {
     @Bean
     public RelationEventStep relationEventStep(JdbcBindingRepositories bindings,
                                                 LightTrackerItemRepository items,
-                                                RelationSourcePort source,
+                                                RelationSourceQueryProvider source,
                                                 RelationEventPublisher publisher) {
         return new RelationEventStep(bindings, bindings, items, source, publisher);
     }
@@ -206,8 +212,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public TrackerItemCatalog trackerItemCatalog(JdbcRequirementRepository requirements) {
-        return new TrackerItemCatalog() {
+    public TrackerItemCatalogQueryProvider TrackerItemCatalogQueryProvider(JdbcRequirementRepository requirements) {
+        return new TrackerItemCatalogQueryProvider() {
             @Override
             public java.util.List<Identity> page(TrackerId trackerId, String afterLocalId, int limit) {
                 return requirements.pageActiveIdentities(trackerId, afterLocalId, limit);
@@ -227,7 +233,7 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetItemIndexer workingSetItemIndexer(JdbcBindingRepositories bindings,
-                                                       LightTrackerItemRepository items, TrackerItemCatalog catalog,
+                                                       LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
                                                        WorkingSetCreationSnapshotRepository snapshots, BusinessTrackerItems businessItems,
                                                        JdbcRequirementRepository requirements, IdentifierGenerator ids,
                                                        @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
@@ -274,14 +280,14 @@ public class ApplicationConfiguration {
 
     @Bean
     public MergeComparisonService mergeComparisonService(JdbcBindingRepositories bindings,
-            LightTrackerItemRepository items, TrackerItemCatalog catalog,
+            LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
             JdbcRequirementRepository requirements, MergeRepository store) {
         return new MergeComparisonService(bindings, bindings, items, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
     }
 
     @Bean
-    public MergeRelationRepairStep mergeRelationRepairStep(RelationSourcePort source,
+    public MergeRelationRepairStep mergeRelationRepairStep(RelationSourceQueryProvider source,
                                                            RelationEventPublisher publisher) {
         return new MergeRelationRepairStep(source, publisher);
     }

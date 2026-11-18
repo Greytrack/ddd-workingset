@@ -19,7 +19,7 @@ alm.requirement.application.query
 - 查询服务：`WorkingSetQueryService`、`RequirementQueryService`。
 - 查询模型 ID 使用 `Long`；Controller 继续输出字符串 ID，保持现有 JSON 契约。
 - 事件定义已迁移到 `domain/event`；事件监听器仍在 `application/eventhandler`。
-- 查询端口改为 `application/query/provider`；`TrackerItemCatalog`、`TrackerItemReadPort`、`RelationSourcePort`、`TrackerScopePort` 也已从 `application/port` 移入。
+- 查询端口改为 `application/query/provider`；`TrackerItemCatalogQueryProvider`、`TrackerItemQueryProvider`、`RelationSourceQueryProvider`、`TrackerScopePort` 也已从 `application/port` 移入。
 - 查询 Provider 实现位于 `infrastructure/providers` 与 `infrastructure/providers/mybatis`。
 - Provider 实现可以复用聚合 Repository、写自定义 SQL，或使用 MyBatis-Plus Lambda；查询模型不受聚合装载方式限制。
 - 聚合 Repository 接口声明在 domain；Jdbc/缓存实现在 `infrastructure/repositories`。

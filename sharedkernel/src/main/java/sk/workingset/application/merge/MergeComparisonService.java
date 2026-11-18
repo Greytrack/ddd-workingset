@@ -16,8 +16,8 @@ import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.merge.MergeRepository;
-import sk.workingset.application.query.provider.TrackerItemCatalog;
-import sk.workingset.application.query.provider.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.CommonId;
@@ -47,13 +47,13 @@ public class MergeComparisonService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
-    private final TrackerItemCatalog catalog;
-    private final Function<LocalId, TrackerItemReadPort> readPorts;
+    private final TrackerItemCatalogQueryProvider catalog;
+    private final Function<LocalId, TrackerItemQueryProvider> readPorts;
     private final MergeRepository store;
 
     public MergeComparisonService(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                  LightTrackerItemRepository items, TrackerItemCatalog catalog,
-                                  Function<LocalId, TrackerItemReadPort> readPorts, MergeRepository store) {
+                                  LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
+                                  Function<LocalId, TrackerItemQueryProvider> readPorts, MergeRepository store) {
         this.workingSets = workingSets;
         this.trackers = trackers;
         this.items = items;
@@ -176,9 +176,9 @@ public class MergeComparisonService {
         sk.workingset.domain.LightTrackerItem variant = items.findById(id).orElse(null);
         LocalId contentId = variant == null ? id : variant.effectiveContentSource();
         boolean inherited = variant != null && !variant.materialized();
-        TrackerItemReadPort port = readPorts.apply(contentId);
+        TrackerItemQueryProvider port = readPorts.apply(contentId);
         try {
-            TrackerItemReadPort.ContentEvidence stamp = port.evidence();
+            TrackerItemQueryProvider.ContentEvidence stamp = port.evidence();
             sk.workingset.domain.Revision revision = variant == null || !inherited ? stamp.revision() : variant.revision();
             sk.workingset.domain.Revision contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
             if (!inherited && stamp.deleted()) {

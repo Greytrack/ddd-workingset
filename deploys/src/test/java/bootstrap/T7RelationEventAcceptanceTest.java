@@ -31,9 +31,9 @@ import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.AssociationEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.application.query.provider.RelationSourcePort;
-import sk.workingset.application.query.provider.RelationSourcePort.AssociationFact;
-import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -112,8 +112,8 @@ class T7RelationEventAcceptanceTest {
     static class RelationConfiguration {
         @Bean
         @Primary
-        RelationSourcePort relationSource() {
-            return new RelationSourcePort() {
+        RelationSourceQueryProvider relationSource() {
+            return new RelationSourceQueryProvider() {
                 @Override
                 public List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source) {
                     return List.of(new ReferenceFact("reference-" + source.commonId().value(), source, target()));

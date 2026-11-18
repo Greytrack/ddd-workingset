@@ -18,8 +18,8 @@ import org.springframework.transaction.SavepointManager;
 
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.query.provider.TrackerItemCatalog;
-import sk.workingset.application.query.provider.TrackerItemReadPort;
+import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
@@ -46,17 +46,17 @@ public final class WorkingSetItemIndexer {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
-    private final TrackerItemCatalog catalog;
+    private final TrackerItemCatalogQueryProvider catalog;
     private final WorkingSetCreationSnapshotRepository snapshots;
     private final BusinessTrackerItems businessItems;
-    private final Function<LocalId, TrackerItemReadPort> readPorts;
+    private final Function<LocalId, TrackerItemQueryProvider> readPorts;
     private final IdentifierGenerator ids;
     private final int batchSize;
 
     public WorkingSetItemIndexer(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                 LightTrackerItemRepository items, TrackerItemCatalog catalog,
+                                 LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
                                  WorkingSetCreationSnapshotRepository snapshots, BusinessTrackerItems businessItems,
-                                 Function<LocalId, TrackerItemReadPort> readPorts,
+                                 Function<LocalId, TrackerItemQueryProvider> readPorts,
                                  IdentifierGenerator ids, int batchSize) {
         if (batchSize < 1) {
             throw new IllegalArgumentException("Index batch size must be positive");
@@ -190,7 +190,7 @@ public final class WorkingSetItemIndexer {
         if (!businessItems.lockContentSource(candidate.sourceId())) {
             return skipped(parent, child, candidate, FailureReason.NOT_FOUND);
         }
-        TrackerItemReadPort reader = readPorts.apply(candidate.sourceId());
+        TrackerItemQueryProvider reader = readPorts.apply(candidate.sourceId());
         try {
             reader.readInheritedAt(candidate.sourceRevision());
         } catch (DomainException failure) {
@@ -240,7 +240,7 @@ public final class WorkingSetItemIndexer {
                     item.effectiveContentSource(), item.effectiveContentRevision(), true);
         }
 
-        static Candidate from(TrackerItemCatalog.Identity item) {
+        static Candidate from(TrackerItemCatalogQueryProvider.Identity item) {
             return new Candidate(item.localId(), item.commonId(), item.revision(), item.localId(), item.revision(), false);
         }
 

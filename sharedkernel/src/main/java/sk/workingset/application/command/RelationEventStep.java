@@ -5,7 +5,7 @@ import java.util.List;
 
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.query.provider.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.LightTrackerItem;
@@ -21,11 +21,11 @@ public final class RelationEventStep {
     private final TrackerRepository trackers;
     private final WorkingSetRepository workingSets;
     private final LightTrackerItemRepository items;
-    private final RelationSourcePort source;
+    private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
 
     public RelationEventStep(TrackerRepository trackers, WorkingSetRepository workingSets,
-                             LightTrackerItemRepository items, RelationSourcePort source,
+                             LightTrackerItemRepository items, RelationSourceQueryProvider source,
                              RelationEventPublisher publisher) {
         this.trackers = trackers;
         this.workingSets = workingSets;

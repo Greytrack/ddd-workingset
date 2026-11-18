@@ -833,13 +833,13 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 **业务规则：用户确认（2026-11-11，K1″）；POL-003、QUESTION-013、B05 已确认。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)。
 
 - Given 用户对两个工作集中的 Part（或 DQA 对象）发起 Diff。
-- When SK 通过 `TrackerItemReadPort` 查询能力声明，得到 `comparable = false`。
+- When SK 通过 `TrackerItemQueryProvider` 查询能力声明，得到 `comparable = false`。
 - Then 返回 `CapabilityNotSupported`，**不得返回「无差异」或空结果**，也不得进入 Merge 路径（`mergeable = false`）。
 - When 用户对 ALM Requirement 发起同一操作。
 - Then `comparable = true`，按 T1 的 Diff 契约产生有向瞬时差异（compare 不持久化，无 ComparisonToken）。
 - When 用户对 ALM Requirement 提交字段决定（ACCEPT）。
 - Then SK 只能经 `<BC>WritePort` 请求 ALM 应用服务；由 ALM 重建聚合、整体校验、提交，SK **不代写**、不通过通用字段写入绕过聚合。
-- 边界：`TrackerItemReadPort` 只提供身份、Revision、内容解析、能力声明与授权事实；整体校验与提交属业务 BC 职责，不是只读契约的方法。
+- 边界：`TrackerItemQueryProvider` 只提供身份、Revision、内容解析、能力声明与授权事实；整体校验与提交属业务 BC 职责，不是只读契约的方法。
 
 <a id="scn-071"></a>
 ## SCN-071 契约版本与能力协商（团队开放项）

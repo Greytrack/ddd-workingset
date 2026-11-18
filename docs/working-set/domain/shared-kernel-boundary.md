@@ -65,7 +65,7 @@ Shared Tracker 从子工作集移除仅解除 TrackerBinding，聚合保留；�
 
 ## 跨 BC 契约结论（T4）
 
-- **K1″**：Shared Kernel 定义只读 `TrackerItemReadPort` 与能力声明；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属 BC 执行。SK 可协调 COW/Merge，但不能绕过 BC 聚合、领域规则或 Repository 通用 Save。
+- **K1″**：Shared Kernel 定义只读 `TrackerItemQueryProvider` 与能力声明；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属 BC 执行。SK 可协调 COW/Merge，但不能绕过 BC 聚合、领域规则或 Repository 通用 Save。
 - **K2″**：九分类公共失败语义（`NotFound`、`NotIncluded`、`Denied`、`Deleted`、`HistoryUnavailable`、`Preparing`、`CapabilityNotSupported`、`DependencyUnavailable`、`Unknown`）是跨 BC 词汇表，不是聚合生命周期；每个用例只暴露适用子集。
 - **两层接口**：业务聚合实现领域接口 `TrackerItem`（并继承 `BusinessObject`）；BC Adapter 另行实现只读 Port 与写入协作 Port。聚合不实现应用层 Port，也不向 SK 开放 Repository。
 - **K3″ 保持 Open**：Shared Kernel 的版本治理、兼容期与变更审批需四 BC 共同评审，不阻塞当前实现。

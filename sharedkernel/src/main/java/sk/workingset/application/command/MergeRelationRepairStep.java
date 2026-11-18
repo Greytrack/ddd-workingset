@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.application.query.provider.RelationSourcePort;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.Entry;
@@ -22,10 +22,10 @@ import sk.workingset.domain.merge.MergeRound.ItemResult;
 public final class MergeRelationRepairStep {
     private static final Logger log = LoggerFactory.getLogger(MergeRelationRepairStep.class);
 
-    private final RelationSourcePort source;
+    private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
 
-    public MergeRelationRepairStep(RelationSourcePort source, RelationEventPublisher publisher) {
+    public MergeRelationRepairStep(RelationSourceQueryProvider source, RelationEventPublisher publisher) {
         this.source = source;
         this.publisher = publisher;
     }

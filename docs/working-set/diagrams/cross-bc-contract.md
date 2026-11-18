@@ -40,7 +40,7 @@ flowchart LR
     ADP -->|"调用业务能力"| AGG
 ```
 
-要点：`TrackerItemReadPort` **不含**整体校验、提交、删除等写入方法；写入只能经 `<BC>WritePort` 进入 BC 的聚合与应用服务。
+要点：`TrackerItemQueryProvider` **不含**整体校验、提交、删除等写入方法；写入只能经 `<BC>WritePort` 进入 BC 的聚合与应用服务。
 
 ## 2. 能力声明
 

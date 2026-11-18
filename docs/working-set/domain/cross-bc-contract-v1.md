@@ -46,11 +46,11 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 **K1″（用户确认，2026-11-11）**：Shared Kernel 定义 `TrackerItem` 公共能力契约与只读应用 Port；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属业务 BC 执行。SK 可以协调 COW、Merge 等跨 BC 流程，但**不能绕过**业务 BC 聚合、领域规则或 Repository 执行通用 Save。
 
-> **“只读”的准确范围**：`TrackerItemReadPort` 是应用层只读 Port，不提供通用校验/保存/删除。领域接口 `TrackerItem` 继承 `BusinessObject` 后包含 `delete`/`undelete`/`delete2` 的能力声明（D14），但这些能力由各 BC 实现，不是 SK 的通用写入口。两者不矛盾：只读约束的是跨 BC Port，不是业务聚合对自身生命周期的能力声明。
+> **“只读”的准确范围**：`TrackerItemQueryProvider` 是应用层只读 Port，不提供通用校验/保存/删除。领域接口 `TrackerItem` 继承 `BusinessObject` 后包含 `delete`/`undelete`/`delete2` 的能力声明（D14），但这些能力由各 BC 实现，不是 SK 的通用写入口。两者不矛盾：只读约束的是跨 BC Port，不是业务聚合对自身生命周期的能力声明。
 
-### 3.1 `TrackerItemReadPort`（SK 定义，各 BC 实现，**只读**）
+### 3.1 `TrackerItemQueryProvider`（SK 定义，各 BC 实现，**只读**）
 
-**两层接口并存（用户确认，2026-11-11，选择 B）**：业务聚合继续实现领域公共接口 `TrackerItem`（D-007）；BC Adapter 另行实现应用层 `TrackerItemReadPort` 与适用的写入协作 Port。前者表达对象的公共领域能力，后者承接跨 BC 调用、授权与适配；聚合不因此实现应用层 Port，也不向 SK 开放 Repository 或通用 Save。字段/方法的精确签名留实现契约，不从两层接口推导新的业务能力。见[裁定依据](../reviews/2026-11-11-consistency-reconciliation.md)、SCN-073。
+**两层接口并存（用户确认，2026-11-11，选择 B）**：业务聚合继续实现领域公共接口 `TrackerItem`（D-007）；BC Adapter 另行实现应用层 `TrackerItemQueryProvider` 与适用的写入协作 Port。前者表达对象的公共领域能力，后者承接跨 BC 调用、授权与适配；聚合不因此实现应用层 Port，也不向 SK 开放 Repository 或通用 Save。字段/方法的精确签名留实现契约，不从两层接口推导新的业务能力。见[裁定依据](../reviews/2026-11-11-consistency-reconciliation.md)、SCN-073。
 
 | 能力 | 语义 | 归属 |
 | --- | --- | --- |
@@ -60,9 +60,9 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 | 能力声明 | 声明 `comparable` / `mergeable` / `derivable` / `creatable` / `historyReadable` | 同上 |
 | 授权事实 | 对指定操作与调用者返回授权结论（BC 或 Privilege 提供） | 同上 |
 
-**明确不属于 `TrackerItemReadPort`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见 §3.3），不是只读契约的方法。
+**明确不属于 `TrackerItemQueryProvider`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见 §3.3），不是只读契约的方法。
 
-**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；`BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemReadPort` 仍保持只读；写入协作仍走各 BC 的 WritePort。`Requirement` 作为 ALM 实现已具备该能力，`RequirementLifecycleService.delete2` 先调用聚合 guard 再删除。设计见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
+**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；`BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemQueryProvider` 仍保持只读；写入协作仍走各 BC 的 WritePort。`Requirement` 作为 ALM 实现已具备该能力，`RequirementLifecycleService.delete2` 先调用聚合 guard 再删除。设计见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
 
 **2026-11-12 D4 用户裁定（方案 A：移回 SK）**：`Tracker` 与 `LightTrackerItem` 两个聚合及其仓储归 SK 独占；业务 BC **不得**注入 `TrackerRepository` / `LightTrackerItemRepository`，也不接收 SK 聚合对象。物化所需的 Tracker 锁定与目标变体读取由 SK 应用层完成，业务 BC 只接收值对象 `TargetIdentity`（localId / trackerId / commonId / revision / materialized）。业务对象永久删除后的 LTI 清理由 SK 定义、业务 BC 发布的 `CompleteDeleteEvent` 事件驱动，SK 侧处理幂等。协作接口为 SK 定义的 `TrackerItemLifecyclePort`（`lockMaterializationTarget` / `assertPurgeable` / `removePurged`，由 SK 实现），不走通用 Save 或聚合透传。实现证据见 [S7 验证](../implementation/t5-s7-verification-result.md)与 [D4 边界验证](../implementation/t5-d4-sk-boundary-verification.md)。
 
@@ -241,7 +241,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | 内容 | 性质 |
 | --- | --- |
 | 四 BC 提交权与校验职责、Part/DQA 接入范围与不参与派生/比对/合并、GateFlow 版次链、共享可见性、创建入口归属、直接父子双向准入、共享特性不可变 | **已确认**（AC-001、D-007、QUESTION-013、POL-002/003/004/007/008、FACT-007/011/012） |
-| 只读 `TrackerItemReadPort` + 独立写入协作 Port；整体校验与提交归 BC | **用户确认**（2026-11-11，K1″） |
+| 只读 `TrackerItemQueryProvider` + 独立写入协作 Port；整体校验与提交归 BC | **用户确认**（2026-11-11，K1″） |
 | 九分类公共失败语义与「跨 BC 词汇表而非生命周期」定位 | **用户确认**（2026-11-11，K2″） |
 | 数值错误码、响应结构与稳定性规则（§5.4） | **API 契约 v1**（2026-11-17 登记；新增/变更需 T4 评审） |
 | 六个用例的边界划分与适用分类矩阵 | **契约 v1（本文件冻结）** |

@@ -8,7 +8,7 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 
 /** Active business identities ordered by numeric LocalId (Snowflake). */
-public interface TrackerItemCatalog {
+public interface TrackerItemCatalogQueryProvider {
     List<Identity> page(TrackerId trackerId, String afterLocalId, int limit);
 
     /** Full active identity list for a tracker; used by compare/merge. */

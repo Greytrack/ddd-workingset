@@ -9,7 +9,7 @@ import sk.workingset.domain.CommonId;
  *
  * <p>该接口按「一个变体」实例化（构造时绑定 {@code LocalId}），不提供写方法、整体校验或提交。
  */
-public interface TrackerItemReadPort {
+public interface TrackerItemQueryProvider {
 
     /** 按业务版次读取完整内容（BC 内部重建）；版次不可读时须显式失败，不得用当前值冒充。 */
     TrackerItemContent readAt(Revision revision);

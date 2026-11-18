@@ -11,7 +11,7 @@
 1. `TrackerItem` 继承顶级公共接口 `BusinessObject`。
 2. `BusinessObject` 声明所有业务对象共有的生命周期能力：`delete`（软删）、`undelete`（恢复）、`delete2`（永久删除）。
 3. 具体删除规则、guard、删除编排由各业务 BC 实现；能力公开，所有 BC 的所有 Object 都具备。
-4. `TrackerItemReadPort` 仍保持只读；生命周期能力不是通用 SK 写入口。
+4. `TrackerItemQueryProvider` 仍保持只读；生命周期能力不是通用 SK 写入口。
 
 ## 2. 接口定位
 
@@ -51,7 +51,7 @@ public interface TrackerItem extends BusinessObject {
 
 - T2 的 K1～K3 只约束 Tracker、ProductSpace、WorkingSet 的绑定/删除；**业务 TrackerItem 删除不在 T2 契约内**。
 - S7 的 `Requirement.delete`/`undelete`/`delete2` 是 ALM 业务对象的实现，不是 Working Set 聚合删除规则。
-- T4 的 `TrackerItemReadPort` 继续只读；`BusinessObject` 是领域公共能力，不替代 `RequirementWritePort` 等 BC 写入协作 Port。
+- T4 的 `TrackerItemQueryProvider` 继续只读；`BusinessObject` 是领域公共能力，不替代 `RequirementWritePort` 等 BC 写入协作 Port。
 - 该扩展改变 T4 §3.1 对 `TrackerItem` “只读”的表述，必须经接口评审/ADR 记录；不得静默改写冻结契约。
 
 ## 4. 各 BC 的责任

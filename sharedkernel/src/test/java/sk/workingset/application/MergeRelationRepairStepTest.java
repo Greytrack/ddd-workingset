@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import sk.workingset.domain.event.ReferenceEndpointEvent;
-import sk.workingset.application.query.provider.RelationSourcePort;
-import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -56,7 +56,7 @@ class MergeRelationRepairStepTest {
         }
         round = round.complete(Instant.now());
 
-        sk.workingset.application.command.MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourcePort.class),
+        sk.workingset.application.command.MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourceQueryProvider.class),
                 new RelationEventPublisher(event -> { }, entity -> 1L));
         assertEquals(0, step.changedTargets(round).size());
     }
@@ -75,7 +75,7 @@ class MergeRelationRepairStepTest {
         round = round.finishEntry(entry, new ItemResult("263525235173312", Outcome.Applied, "ACCEPT", "265864557082560", null, null))
                 .complete(Instant.now());
 
-        RelationSourcePort source = mock(RelationSourcePort.class);
+        RelationSourceQueryProvider source = mock(RelationSourceQueryProvider.class);
         ReferenceEndpointEvent changedTarget = new ReferenceEndpointEvent(targetWorkingSet, LocalId.of("265864557082560"), CommonId.of("265506033508288"),
                 TrackerId.of("261538396602304"), Revision.of(4));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-1",

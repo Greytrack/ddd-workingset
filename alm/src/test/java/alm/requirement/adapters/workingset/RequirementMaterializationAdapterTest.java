@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import java.util.Optional;
 
 import alm.requirement.application.command.RequirementSnapshot;
+import alm.requirement.application.command.RequirementMaterializationService;
 import alm.requirement.domain.SnapshotRepository;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
@@ -24,7 +25,7 @@ import sk.workingset.domain.Version;
 class RequirementMaterializationAdapterTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final SnapshotRepository snapshots = mock(SnapshotRepository.class);
-    private final RequirementMaterializationAdapter adapter = new RequirementMaterializationAdapter(
+    private final RequirementMaterializationService adapter = new RequirementMaterializationService(
             repository, snapshots);
 
     private final MaterializeRequest request = new MaterializeRequest(

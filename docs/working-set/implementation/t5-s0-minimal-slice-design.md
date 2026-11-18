@@ -99,10 +99,10 @@ bootstrap.configuration    → 所有实现（组合根）
 | `CowEventHandler` | SK | 消费来源事件、定位目标、编排物化 | 业务内容构建 |
 | `LightTrackerItem` / `Tracker` / `WorkingSet` | SK | 派生身份、物化状态与有效来源、范围与绑定 | 业务状态机、业务字段 |
 | `TrackerItem`（领域接口） | SK 定义 | 公共身份与 Revision（由 BC 聚合实现） | 应用层调用与授权 |
-| `TrackerItemReadPort` / `RequirementWritePort` | SK 定义（应用层 Outbound Port） | 只读能力；写入协作（物化保存） | 不实现业务逻辑 |
+| `TrackerItemQueryProvider` / `RequirementWritePort` | SK 定义（应用层 Outbound Port） | 只读能力；写入协作（物化保存） | 不实现业务逻辑 |
 | `Requirement`（聚合） | ALM | 完整内容、不变量、`revision`/`version`/`lock_version`、提交；实现 `TrackerItem` | 工作集范围、绑定、物化状态；不实现应用层 Port |
 | `RequirementApplicationService` | ALM | 创建/普通修改/保存；产生快照与事件 | 工作集编排 |
-| `RequirementAdapter` | ALM | **另行实现** `TrackerItemReadPort` 与 `RequirementWritePort` | 不向 SK 开放 Repository 或通用 Save |
+| `RequirementAdapter` | ALM | **另行实现** `TrackerItemQueryProvider` 与 `RequirementWritePort` | 不向 SK 开放 Repository 或通用 Save |
 | `bootstrap` | 组合根 | 装配实现（Spring Bean） | 领域行为 |
 
 **两层接口并存**（T4 §3.1 选择 B）：领域接口 `TrackerItem` 表达公共领域能力；应用层 Port 承接跨 BC 调用、授权与适配；聚合不实现应用层 Port。
@@ -188,7 +188,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `SourceSerialCowCoordinator` | `runSerial(sourceLocalId, sequence, task)`：按来源串行、按 `afterLockVersion` 排序；不拥有线程池 |
 | `CowFailureLog` | 记录 `MATERIALIZE`/`SWITCH` 失败（事件、目标、来源、版次、异常、时间），供 S4 恢复查询 |
 | `CowEventHandler` | `onRequirementChanged(RequirementChanged)`：由 Modulith 异步监听器调用；按 `sourceLocalId + beforeRevision` 定位目标，逐目标调用写入 Port 并切换；失败写 `CowFailureLog` 并抛聚合异常 |
-| `TrackerItemReadPort`（port） | `readAt(Revision)`、`revision()`、`capabilities()`、`authorize(Operation, Caller)` |
+| `TrackerItemQueryProvider`（port） | `readAt(Revision)`、`revision()`、`capabilities()`、`authorize(Operation, Caller)` |
 | `RequirementWritePort`（port） | `materialize(MaterializeRequest)`；正常返回表示 BC 已确认有效物化写入 |
 | `MaterializeRequest`（port） | 目标身份、目标版次、来源身份、来源修改前后 Revision/LockVersion、事件身份与快照引用；不建构建器框架 |
 | `DomainException(MATERIALIZATION_REJECTED)` | 表达“拒绝物化”这一事实；不建立独立异常类型 |
@@ -203,7 +203,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `Requirement`（聚合，实现 `TrackerItem`） | `create(...)`、`changeTitle(String, LockVersion)`、`upgradeRevision()`（S4 实现；升级触发 COW，D-018/INV-052）、访问器；`version` 发布大版本可空、`lockVersion` 乐观锁 |
 | `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
 | `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件；事件携带修改前/提交后 Revision） |
-| `RequirementAdapter` | 实现 `TrackerItemReadPort`；按变体构造，保留读取职责 |
+| `RequirementAdapter` | 实现 `TrackerItemQueryProvider`；按变体构造，保留读取职责 |
 | `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，只依赖 `RequirementRepository` + `SnapshotRepository`（D4，2026-11-12 已按此边界实现：不注入 `TrackerRepository`/`LightTrackerItemRepository`） |
 | `RequirementLifecycleService` | `delete2` 先经 SK `TrackerItemLifecyclePort.assertPurgeable` 判定 COW 依赖，删除业务行后发布 `CompleteDeleteEvent` 由 SK 清理 LTI（D4） |
 | `SnapshotRepository` / `RequirementRepository` | 快照存取、聚合存取 |
