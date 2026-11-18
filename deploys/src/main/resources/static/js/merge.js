@@ -342,7 +342,7 @@ function renderMergeRound(round) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('#selectedTracker').addEventListener('click', (event) => {
+  $('#itemActions').addEventListener('click', (event) => {
     if (event.target.closest('[data-action="compare-tracker"]')) {
       openMerge().catch((error) => setStatus('无法加载可比较的 跟踪分类：' + error.message, 'error'));
     }

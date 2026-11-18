@@ -12,6 +12,16 @@ function showPane(pane, moveFocus = false) {
   });
 }
 
+function setTrackerPanelCollapsed(collapsed) {
+  $('.layout').dataset.sidebarCollapsed = String(collapsed);
+  $('#trackerPaneContent').classList.toggle('hidden', collapsed);
+  const button = $('#toggleTrackerPanel');
+  const label = collapsed ? '展开跟踪分类' : '收起跟踪分类';
+  button.setAttribute('aria-expanded', String(!collapsed));
+  button.setAttribute('aria-label', label);
+  button.title = label;
+}
+
 async function loadWorksetTree() {
   setStatus('加载工作集…');
   const seen = new Set();
@@ -100,10 +110,10 @@ async function selectWorkset(id) {
   }
 }
 
-function worksetLabel(id) {
+function worksetLabel(id, fallback = shortId(id)) {
   const node = findNode(state.worksets, id);
   const ws = node?.ws;
-  return ws?.name || (ws?.defaultWorkingSet ? '默认工作集' : shortId(id));
+  return ws?.name || (ws?.defaultWorkingSet ? '默认工作集' : fallback);
 }
 
 function currentSpaces() {
@@ -126,12 +136,16 @@ function currentSpaces() {
 
 function renderSpaces() {
   const list = $('#spaceList');
+  const spaces = currentSpaces();
+  const selectedSpace = spaces.get(state.selectedSpace);
+  const activeSpace = $('#activeSpace');
+  activeSpace.textContent = selectedSpace ? selectedSpace.name || shortId(state.selectedSpace) : '请选择';
+  activeSpace.title = selectedSpace ? activeSpace.textContent : '';
   if (!state.selectedWs) {
     list.innerHTML = '<div class="empty">请先选择工作集</div>';
     $('#spaceCount').textContent = '';
     return;
   }
-  const spaces = currentSpaces();
   if (!spaces.size) {
     list.innerHTML = '<div class="empty">该工作集还没有绑定产品空间或 跟踪分类</div>';
     $('#spaceCount').textContent = '';
@@ -306,27 +320,26 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
 }
 
 function renderTracker() {
-  const area = $('#selectedTracker');
-  if (!state.selectedTracker) {
-    area.innerHTML = '<div class="empty">从中间选择一个 跟踪分类</div>';
-    return;
-  }
   const tracker = state.selectedTracker;
-  const space = (state.bindings?.spaces || []).find((item) => item.productSpaceId === tracker.productSpaceId);
-  const trackerName = tracker.name || shortId(tracker.trackerId);
-  const spaceName = space?.name || tracker.productSpaceId;
-  const bound = (state.bindings?.trackers || []).some((item) => item.trackerId === tracker.trackerId);
-  area.innerHTML = `
-    <div class="ws-title">${escapeHtml(trackerName)} <span class="mono">${escapeHtml(tracker.trackerId)}</span></div>
-    <div class="ws-meta">空间 ${escapeHtml(spaceName)} · ${escapeHtml(tracker.sharingMode)} · 分类 <span class="mono">${escapeHtml(tracker.classificationId)}</span>${tracker.sourceId ? ` · 源 <span class="mono">${escapeHtml(tracker.sourceId)}</span>` : ''}</div>
-    <div class="tracker-actions">
-      ${bound
-        ? '<button type="button" class="btn small primary" data-action="new-requirement">＋ 新建需求</button>'
-        : '<span class="muted">该 跟踪分类 未绑定，不能新建需求</span>'}
-      ${tracker.sharingMode === 'UNSHARED' && (bound || state.selectedWs === '1')
-        ? '<button type="button" class="btn small" data-action="compare-tracker">比较 / 合并</button>'
-        : ''}
-    </div>`;
+  const bound = tracker && (state.bindings?.trackers || []).some((item) => item.trackerId === tracker.trackerId);
+  const canCompare = tracker?.sharingMode === 'UNSHARED' && (bound || state.selectedWs === '1');
+  $('#itemActions').classList.toggle('hidden', !bound && !canCompare);
+  $('[data-action="new-requirement"]').classList.toggle('hidden', !bound);
+  $('[data-action="compare-tracker"]').classList.toggle('hidden', !canCompare);
+  $('#itemContext').classList.toggle('hidden', !tracker);
+  if (!tracker) return;
+
+  const space = currentSpaces().get(tracker.productSpaceId);
+  const names = {
+    itemWorksetName: worksetLabel(state.selectedWs, '未命名工作集'),
+    itemSpaceName: space?.name || '未命名产品空间',
+    itemTrackerName: tracker.name || '未命名跟踪分类'
+  };
+  for (const [id, name] of Object.entries(names)) {
+    const label = document.getElementById(id);
+    label.textContent = name;
+    label.title = name;
+  }
 }
 
 function renderItems() {
@@ -335,7 +348,7 @@ function renderItems() {
   area.setAttribute('aria-busy', String(state.itemsLoading));
   renderItemDetail();
   if (!state.selectedTracker) {
-    area.innerHTML = '<div class="empty item-empty"><strong>尚未选择 跟踪分类</strong><span>选择一个 跟踪分类，查看它的 Item。</span></div>';
+    area.innerHTML = '<div class="empty item-empty">选择跟踪分类后查看 Item</div>';
     $('#itemCount').textContent = '';
     return;
   }
@@ -360,7 +373,7 @@ function renderItems() {
     .some((value) => String(value ?? '').toLocaleLowerCase().includes(query)));
   $('#itemCount').textContent = query ? visibleItems.length + ' / ' + state.items.length + ' 个' : state.items.length + ' 个';
   if (!visibleItems.length) {
-    area.innerHTML = '<div class="empty item-empty"><strong>没有匹配的 Item</strong><span>试试其他名称或 ID。</span></div>';
+    area.innerHTML = '<div class="empty item-empty"><strong>没有匹配的 Item</strong><button type="button" class="btn small" data-clear-item-filter>清除筛选</button></div>';
     return;
   }
   const rows = visibleItems.map((item) => {

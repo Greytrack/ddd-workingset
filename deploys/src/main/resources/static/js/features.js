@@ -686,9 +686,17 @@ async function refreshSelectedRange() {
 }
 
 function bindEvents() {
+  const openPicker = () => $('.context-picker[open]');
   $('.pane-nav').addEventListener('click', (event) => {
     const tab = event.target.closest('[data-pane]');
-    if (tab) showPane(tab.dataset.pane);
+    if (!tab) return;
+    if (tab.dataset.pane === 'trackers') setTrackerPanelCollapsed(false);
+    showPane(tab.dataset.pane);
+  });
+  $('#toggleTrackerPanel').addEventListener('click', (event) => {
+    const collapsed = event.currentTarget.getAttribute('aria-expanded') === 'true';
+    setTrackerPanelCollapsed(collapsed);
+    showPane(collapsed ? 'items' : 'trackers');
   });
   $('#worksetTree').addEventListener('click', (event) => {
     const row = event.target.closest('[data-ws-id]');
@@ -697,7 +705,7 @@ function bindEvents() {
     $('#worksetPicker summary').focus();
     if (row.dataset.wsId !== state.selectedWs) {
       selectWorkset(row.dataset.wsId);
-      showPane('spaces');
+      if ($('#toggleTrackerPanel').getAttribute('aria-expanded') === 'true') showPane('trackers');
     }
   });
 
@@ -705,8 +713,10 @@ function bindEvents() {
     const space = event.target.closest('[data-space-id]');
     if (!space) return;
     selectSpace(space.dataset.spaceId);
-    $('#spaceList [aria-current="true"]')?.focus({ preventScroll: true });
-    showPane('trackers', true);
+    $('#spacePicker').open = false;
+    $('#spacePicker summary').focus();
+    setTrackerPanelCollapsed(false);
+    showPane('trackers');
   });
   $('#trackerList').addEventListener('click', (event) => {
     const tracker = event.target.closest('[data-tracker-id]');
@@ -717,8 +727,8 @@ function bindEvents() {
     }
   });
   document.addEventListener('click', (event) => {
-    const picker = $('#worksetPicker');
-    if (picker.open && !picker.contains(event.target)) picker.open = false;
+    const picker = openPicker();
+    if (picker && !picker.contains(event.target)) picker.open = false;
   });
 
   $('#itemFilter').addEventListener('input', renderItems);
@@ -733,6 +743,13 @@ function bindEvents() {
   });
 
   $('#itemArea').addEventListener('click', (event) => {
+    if (event.target.closest('[data-clear-item-filter]')) {
+      const filter = $('#itemFilter');
+      filter.value = '';
+      renderItems();
+      filter.focus();
+      return;
+    }
     const edit = event.target.closest('[data-edit-requirement]');
     if (edit) {
       const item = state.items.find((candidate) => candidate.localId === edit.dataset.editRequirement);
@@ -749,7 +766,7 @@ function bindEvents() {
     if (row) loadContent(row.dataset.localId, row.dataset.itemWs);
   });
 
-  $('#selectedTracker').addEventListener('click', (event) => {
+  $('#itemActions').addEventListener('click', (event) => {
     if (event.target.closest('[data-action="new-requirement"]')) openRequirementCreate();
   });
 
@@ -818,8 +835,8 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', (event) => {
-    const picker = $('#worksetPicker');
-    if (event.key === 'Escape' && picker.open) {
+    const picker = openPicker();
+    if (event.key === 'Escape' && picker) {
       picker.open = false;
       picker.querySelector('summary').focus();
     }
