@@ -325,7 +325,7 @@ class CowAcceptanceTest {
 
     private int completedEvents() {
         return jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE serialized_event LIKE ?"
-                + " AND event_type LIKE '%.RequirementChanged' AND completion_date IS NOT NULL",
+                + " AND event_type LIKE '%.BusinessObjectUpdateEvent' AND completion_date IS NOT NULL",
                 Integer.class, eventPattern());
     }
 

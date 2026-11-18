@@ -17,7 +17,7 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
     /**
      * 起始的时间戳，可以修改为服务第一次启动的时间 一旦服务已经开始使用，起始时间戳就不应该改变
      */
-    static final long START_STAMP = 1484754361114L;
+    static final long START_STAMP = 1577836800000L;
 
     /**
      * 序列号占用的位数
@@ -95,7 +95,7 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
     public synchronized Number nextId(Object entity) {
         long currStmp = getNewStamp();
         if (currStmp < lastStamp) {
-            throw new IllegalArgumentException("ID生成异常");
+            throw new IllegalStateException("clock moved backwards");
         }
 
         if (currStmp == lastStamp) {
@@ -129,7 +129,7 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
     }
 
     private long getNewStamp() {
-        return System.currentTimeMillis();
+        return clock.getAsLong();
     }
 
     public static long getMaxMachineNum() {

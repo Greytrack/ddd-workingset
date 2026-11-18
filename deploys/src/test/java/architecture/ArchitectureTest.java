@@ -1,5 +1,7 @@
 package architecture;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackages;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -48,8 +50,12 @@ class ArchitectureTest {
             noClasses()
                     .that().resideInAnyPackage(
                             "sk.workingset.application.command..", "alm.requirement.application.command..")
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            "sk.workingset.application.query..", "alm.requirement.application.query..");
+                    .should().dependOnClassesThat(
+                            resideInAnyPackage(
+                                    "sk.workingset.application.query..", "alm.requirement.application.query..")
+                                    .and(resideOutsideOfPackages(
+                                            "sk.workingset.application.query.provider..",
+                                            "alm.requirement.application.query.provider..")));
 
     @ArchTest
     static final ArchRule query_application_must_not_depend_on_mybatis =

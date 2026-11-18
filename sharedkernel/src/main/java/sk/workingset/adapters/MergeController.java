@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import sk.workingset.application.Caller;
-import sk.workingset.application.query.MergeComparisonService;
+import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeExecutionService.EntryRequest;
 import sk.workingset.domain.CommonId;

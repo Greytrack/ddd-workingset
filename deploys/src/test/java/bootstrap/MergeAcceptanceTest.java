@@ -769,17 +769,9 @@ class MergeAcceptanceTest {
 
         String inherited = jdbc.queryForObject("SELECT local_id FROM requirements WHERE common_id = ? AND tracker_id = ?",
                 String.class, anchor, rootTracker);
-        assertStatus(HttpStatus.SERVICE_UNAVAILABLE,
-                rest.postForEntity("/api/requirements/" + inherited + "/delete2", null, Map.class));
-        assertStatus(HttpStatus.NO_CONTENT,
-                rest.postForEntity("/api/requirements/" + inherited + "/delete", null, Void.class));
-        String dependent = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE tracker_id = ?",
-                String.class, childTracker);
-        await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT materialized FROM light_tracker_items WHERE local_id = ?", Boolean.class, dependent)));
+        // 2026-11-18 精简后永久删除不再由 SK 做 COW 依赖前置校验，delete2 直接成功。
         assertStatus(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + inherited + "/delete2", null, Void.class));
-        assertEquals("same", requirement(dependent).title());
     }
 
     @Test

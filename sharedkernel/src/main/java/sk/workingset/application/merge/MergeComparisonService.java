@@ -1,4 +1,4 @@
-package sk.workingset.application.query;
+package sk.workingset.application.merge;
 
 import sk.common.error.DomainException;
 

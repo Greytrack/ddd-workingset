@@ -3,7 +3,9 @@ package bootstrap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,18 +29,23 @@ class ModuleEntrypointsTest {
         assertTrue(components.contains("sk.workingset.adapters.WorkingSetController"));
         assertTrue(components.contains("bootstrap.web.ApiExceptionHandler"));
 
-        Set<String> existingListeners = Set.of("MergeRoundSubmittedListener", "RequirementChangedListener",
-                "RequirementMergeAppliedListener", "RequirementPurgedListener", "TrackerItemsIndexedListener",
-                "TrackerItemCreatedListener", "WorkingSetCreationSubmittedListener");
-        for (String name : existingListeners) {
-            String className = "sk.workingset.application.eventhandler." + name;
+        Map<String, String> existingListeners = Map.of(
+                "MergeRoundSubmittedListener", "MergeRoundSubmittedListener",
+                "TrackerItemChangedListener", "RequirementChangedListener",
+                "MergeAppliedListener", "RequirementMergeAppliedListener",
+                "TrackerItemCompleteDeteleListener", "RequirementPurgedListener",
+                "TrackerItemsIndexedListener", "TrackerItemsIndexedListener",
+                "TrackerItemCreatedListener", "TrackerItemCreatedListener",
+                "WorkingSetCreationSubmittedListener", "WorkingSetCreationSubmittedListener");
+        for (Map.Entry<String, String> entry : existingListeners.entrySet()) {
+            String className = "sk.workingset.application.eventhandler." + entry.getKey();
             assertTrue(components.contains(className));
             Class<?> listener = Class.forName(className);
-            reflect.Method method = Arrays.stream(listener.getDeclaredMethods())
+            Method method = Arrays.stream(listener.getDeclaredMethods())
                     .filter(candidate -> candidate.isAnnotationPresent(ApplicationModuleListener.class))
                     .findFirst().orElseThrow();
-            ApplicationListenerMethodAdapter adapter = new ApplicationListenerMethodAdapter(name, listener, method);
-            assertEquals("bootstrap." + name + ".on(" + method.getParameterTypes()[0].getName() + ")",
+            ApplicationListenerMethodAdapter adapter = new ApplicationListenerMethodAdapter(entry.getKey(), listener, method);
+            assertEquals("bootstrap." + entry.getValue() + ".on(" + method.getParameterTypes()[0].getName() + ")",
                     adapter.getListenerId());
         }
     }

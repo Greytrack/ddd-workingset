@@ -156,7 +156,7 @@ class RequirementAcceptanceTest {
             try {
                 Boolean completed = jdbc.queryForObject(
                         "SELECT completion_date IS NOT NULL FROM event_publication "
-                                + "WHERE serialized_event LIKE ? AND event_type LIKE '%.RequirementChanged' LIMIT 1",
+                                + "WHERE serialized_event LIKE ? AND event_type LIKE '%.BusinessObjectUpdateEvent' LIMIT 1",
                         Boolean.class,
                         "%" + localId + "%");
                 return Boolean.TRUE.equals(completed);
@@ -167,13 +167,13 @@ class RequirementAcceptanceTest {
 
         Map<String, Object> event = jdbc.queryForMap(
                 "SELECT listener_id, event_type, publication_date, completion_date, serialized_event "
-                        + "FROM event_publication WHERE serialized_event LIKE ? AND event_type LIKE '%.RequirementChanged' "
+                        + "FROM event_publication WHERE serialized_event LIKE ? AND event_type LIKE '%.BusinessObjectUpdateEvent' "
                         + "ORDER BY publication_date DESC LIMIT 1",
                 "%" + localId + "%");
 
         assertNotNull(event.get("listener_id"), "Modulith 必须记录监听器身份");
         assertTrue(String.valueOf(event.get("listener_id")).contains("RequirementChangedListener"));
-        assertTrue(String.valueOf(event.get("event_type")).contains("RequirementChanged"));
+        assertTrue(String.valueOf(event.get("event_type")).contains("BusinessObjectUpdateEvent"));
         assertNotNull(event.get("publication_date"), "事件记录必须有发布时间");
         assertNotNull(event.get("completion_date"), "监听器成功后应标记完成");
         assertTrue(String.valueOf(event.get("serialized_event")).contains(localId),

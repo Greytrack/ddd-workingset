@@ -20,7 +20,7 @@ public class MergeAppliedListener {
         this.lifecycle = lifecycle;
     }
 
-    @ApplicationModuleListener(id = "bootstrap.RequirementMergeAppliedListener.on(sk.workingset.domain.event.RequirementMergeAppliedEvent)")
+    @ApplicationModuleListener(id = "bootstrap.RequirementMergeAppliedListener.on(sk.workingset.domain.event.MergeAppliedEvent)")
     public void on(MergeAppliedEvent event) {
         lifecycle.applyMergeTarget(event.target());
     }
