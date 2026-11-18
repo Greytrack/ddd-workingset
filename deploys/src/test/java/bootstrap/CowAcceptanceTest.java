@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import sk.workingset.adapters.ReadView;
 import sk.workingset.adapters.LightTrackerItemView;
 import alm.requirement.adapters.RequirementView;
 import org.junit.jupiter.api.AfterEach;

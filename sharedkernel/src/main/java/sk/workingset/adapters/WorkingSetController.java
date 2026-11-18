@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import sk.workingset.application.Caller;
-import sk.workingset.application.ReadResult;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.ClassificationSummary;
@@ -37,8 +35,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/worksets")
 public class WorkingSetController {
-
-    private static final Caller WEB_CALLER = Caller.of("web");
 
     private final WorkingSetCommandService commands;
     private final WorkingSetQueryService queries;

@@ -6,7 +6,6 @@ import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import sk.workingset.application.query.provider.TrackerItemCatalog;
-import sk.workingset.application.port.BusinessTrackerItems.Presentation;
 
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
@@ -80,13 +79,6 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                 "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag "
                         + "FROM requirements WHERE local_id = ?",
                 MAPPER,
-                localId.numericValue()).stream().findFirst();
-    }
-
-    /** UI read model: display name of the content source, falling back to title for legacy rows. */
-    public Optional<Presentation> findPresentation(LocalId localId) {
-        return jdbc.query("SELECT COALESCE(name, title), number FROM requirements WHERE local_id = ?",
-                (rs, row) -> new Presentation(rs.getString(1), rs.getString(2)),
                 localId.numericValue()).stream().findFirst();
     }
 
