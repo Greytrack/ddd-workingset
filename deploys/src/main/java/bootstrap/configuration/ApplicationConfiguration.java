@@ -308,7 +308,7 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public WorkingSetQueryProvider WorkingSetQueryProvider(WorkingSetQueryMapper mapper) {
+    public WorkingSetQueryProvider workingSetQueryProvider(WorkingSetQueryMapper mapper) {
         return new WorkingSetQueryProviderImpl(mapper);
     }
 
@@ -319,4 +319,5 @@ public class ApplicationConfiguration {
             BusinessTrackerItems businessItems) {
         return new WorkingSetQueryService(query, items, businessItems);
     }
+
 }

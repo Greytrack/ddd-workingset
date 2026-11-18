@@ -23,7 +23,7 @@ import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
-/** Working Set 查询侧应用服务：不重建聚合，不执行写操作。 */
+/** Working Set 查询侧应用服务：读模型优先，不重建聚合，不执行写操作。 */
 public class WorkingSetQueryService {
     private final WorkingSetQueryProvider query;
     private final LightTrackerItemRepository items;
