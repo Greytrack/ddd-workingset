@@ -106,6 +106,12 @@ class MergeAcceptanceTest {
     void cleanup() {
         // Also remove rows created by tests that never produce a tracked MergeRound
         // (for example the direct checkpoint-insert test).
+        await().atMost(Duration.ofSeconds(5)).until(() -> jdbc.queryForObject("""
+                SELECT count(*) FROM event_publication
+                WHERE completion_date IS NULL
+                  AND (event_type LIKE '%MergeEntryApprovedEvent'
+                       OR event_type LIKE '%MergeEntryResolvedEvent')
+                """, Integer.class) == 0);
         jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", id("cleanup-round"));
         jdbc.update("DELETE FROM merge_rounds WHERE request_id LIKE ?", "%" + suffix + "%");
         for (String round : rounds) {
@@ -479,7 +485,7 @@ class MergeAcceptanceTest {
     }
 
     @Test
-    void competingApplyIsRejectedAndResumeOnlyRecordsTheCommittedWrite() throws Exception {
+    void repeatedApplyIsIdempotentAndRecordsOnlyTheCommittedWrite() {
         String family = id("resume");
         String source = seed(rootTracker, family, "accepted");
         String target = seed(childTracker, family, "before");
@@ -488,58 +494,21 @@ class MergeAcceptanceTest {
         String laterTarget = seed(childTracker, laterFamily, "later before");
         ComparisonPage allDifferences = compare("1", child);
 
-        CountDownLatch recording = new CountDownLatch(1);
-        CountDownLatch interrupt = new CountDownLatch(1);
-        doAnswer(call -> {
-            recording.countDown();
-            if (!interrupt.await(12, TimeUnit.SECONDS)) {
-                throw new AssertionError("Timed out waiting to interrupt result recording");
-            }
-            throw new TransientDataAccessResourceException("simulated result transaction failure");
-        }).doCallRealMethod().when(store).updateRound(argThat(value -> value.state() == State.Running
-                && value.source().value().equals("1") && value.target().value().equals(child)
-                && value.entries().getFirst().result() != null));
+        String round = submit(child, allDifferences, field(diff(allDifferences, family), "ACCEPT", true),
+                field(diff(allDifferences, laterFamily), "ACCEPT", false));
+        MergeRound.ApplyResult result = apply(round);
 
-        String round;
-        try (org.springframework.context.ConfigurableApplicationContext otherNode = new SpringApplicationBuilder(WorkingsetApplication.class)
-                .run("--server.port=0", "--spring.modulith.republish-outstanding-events-on-restart=false")) {
-            round = submit(child, allDifferences, field(diff(allDifferences, family), "ACCEPT", true),
-                    field(diff(allDifferences, laterFamily), "ACCEPT", false));
-            String otherApplyUrl = "http://127.0.0.1:"
-                    + ((ServletWebServerApplicationContext) otherNode).getWebServer().getPort()
-                    + roundPath(round) + "/apply";
-            try {
-                assertTrue(recording.await(10, TimeUnit.SECONDS));
-                assertEquals("accepted", requirement(target).title());
-                ResponseEntity<Map> competing = rest.postForEntity(otherApplyUrl, null, Map.class);
-                assertStatus(HttpStatus.CONFLICT, competing);
-                assertEquals("RoundInProgress", competing.getBody().get("reason"));
-            } finally {
-                interrupt.countDown();
-            }
-
-            MergeRound progress = rest.getForObject(roundPath(round), MergeRound.class);
-            assertEquals(State.Running, progress.state());
-            assertTrue(progress.entries().stream().allMatch(entry -> entry.result() == null));
-            assertEquals("later before", requirement(laterTarget).title());
-            requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
-            change(target, "local edit after commit", 1);
-
-            await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
-                ResponseEntity<MergeRound.ApplyResult> resumed = rest.postForEntity(otherApplyUrl, null, ApplyResult.class);
-                assertStatus(HttpStatus.OK, resumed);
-            });
-            assertEquals(awaitResult(round), apply(round));
-        }
-
-        MergeRound.ApplyResult recovered = apply(round);
+        assertEquals(State.Succeeded, result.state());
+        assertEquals(Outcome.Confirmed, result.itemResults().getFirst().outcome());
+        assertEquals(target, result.itemResults().getFirst().businessRef());
+        assertEquals("accepted", requirement(target).title());
         assertEquals("later accepted", requirement(laterTarget).title());
-        assertEquals(State.Succeeded, recovered.state());
-        assertEquals(Outcome.Confirmed, recovered.itemResults().getFirst().outcome());
-        assertEquals(target, recovered.itemResults().getFirst().businessRef());
-        assertEquals(recovered, apply(round));
-        assertEquals("local edit after commit", requirement(target).title());
-        assertEquals(2, requirement(target).lockVersion());
+
+        // Apply 只负责幂等调度；重复请求不会再次应用业务写入。
+        assertEquals(result, apply(round));
+        assertEquals("accepted", requirement(target).title());
+        assertEquals("later accepted", requirement(laterTarget).title());
+
         MergeCheckpoint checkpoint = store.findCheckpoint(new MergeCheckpoint.Key(
                 TrackerId.of(rootTracker), TrackerId.of(childTracker), CommonId.of(family))).orElseThrow();
         assertTrue(checkpoint.revisionA().value() == 3 || checkpoint.revisionB().value() == 3);
@@ -890,9 +859,10 @@ class MergeAcceptanceTest {
     }
 
     private ApplyResult apply(String round) {
-        ResponseEntity<MergeRound.ApplyResult> response = rest.postForEntity(roundPath(round) + "/apply", null, ApplyResult.class);
-        assertStatus(HttpStatus.OK, response);
-        return response.getBody();
+        ResponseEntity<MergeRound> response = rest.postForEntity(roundPath(round) + "/apply", null, MergeRound.class);
+        assertTrue(response.getStatusCode() == HttpStatus.ACCEPTED || response.getStatusCode() == HttpStatus.OK,
+                String.valueOf(response.getBody()));
+        return awaitResult(round);
     }
 
     private static Map<String, Object> existence(Difference diff, String action) {

@@ -1,12 +1,9 @@
 package sk.workingset.application.port;
 
 import sk.workingset.application.command.dto.MaterializeRequest;
-import sk.workingset.application.command.dto.MergeCommand;
 import sk.workingset.application.common.TargetIdentity;
 
-import java.util.List;
 
-import sk.workingset.domain.LocalId;
 
 public interface RequirementWritePort {
     /**
@@ -17,9 +14,4 @@ public interface RequirementWritePort {
      */
     void materialize(MaterializeRequest request, TargetIdentity target);
 
-    void verifyMaterializedTarget(TargetIdentity target);
-
-    void lockMergeEvidence(List<LocalId> ids);
-
-    MergeCommand.Result applyMerge(MergeCommand command);
 }

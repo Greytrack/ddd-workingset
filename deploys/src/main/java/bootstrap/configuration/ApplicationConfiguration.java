@@ -19,7 +19,9 @@ import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.application.query.RequirementQueryService;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
 import alm.requirement.application.command.RequirementLifecycleService;
+import alm.requirement.application.command.RequirementMergeReceiptStore;
 import alm.requirement.application.command.RequirementMergeWriter;
+import alm.requirement.infrastructure.repositories.JdbcRequirementMergeReceiptStore;
 import alm.requirement.infrastructure.providers.RequirementQueryProviderImpl;
 import alm.requirement.infrastructure.providers.RequirementQueryMapper;
 import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
@@ -86,8 +88,7 @@ public class ApplicationConfiguration {
     @Bean
     public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
                                                      JdbcSnapshotRepository snapshots, RequirementCommandService requirements) {
-        return new RequirementMaterializationAdapter(repository, snapshots,
-                new RequirementMergeWriter(repository, requirements));
+        return new RequirementMaterializationAdapter(repository, snapshots);
     }
 
     @Bean
@@ -287,11 +288,23 @@ public class ApplicationConfiguration {
 
     @Bean
     public MergeExecutionService mergeExecutionService(MergeRepository store, MergeComparisonService comparisons,
-            RequirementWritePort writer, JdbcBindingRepositories trackers, IdentifierGenerator ids,
+            JdbcBindingRepositories trackers, IdentifierGenerator ids,
             TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events,
             MergeRelationRepairStep relationRepair) {
-        return new MergeExecutionService(store, comparisons, writer, trackers, ids, newTransactionTemplate, events,
+        return new MergeExecutionService(store, comparisons, trackers, ids, newTransactionTemplate, events,
                 relationRepair);
+    }
+
+    @Bean
+    public RequirementMergeReceiptStore requirementMergeReceiptStore(JdbcTemplate jdbc) {
+        return new JdbcRequirementMergeReceiptStore(jdbc);
+    }
+
+    @Bean
+    public RequirementMergeWriter requirementMergeWriter(JdbcRequirementRepository repository,
+                                                          RequirementCommandService requirements,
+                                                          RequirementMergeReceiptStore receipts) {
+        return new RequirementMergeWriter(repository, requirements, receipts);
     }
 
     @Bean

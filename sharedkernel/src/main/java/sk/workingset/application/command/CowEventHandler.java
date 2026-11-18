@@ -111,7 +111,6 @@ public final class CowEventHandler {
                         sk.workingset.error.WorkingsetResultCode.MATERIALIZATION_REJECTED,
                         "LightTrackerItem no longer matches the receipt");
             }
-            writePort.verifyMaterializedTarget(sk.workingset.application.common.TargetIdentity.of(target));
             if (!target.materialized()) {
                 target.switchToLocalBacked(target.revision());
                 items.save(target);

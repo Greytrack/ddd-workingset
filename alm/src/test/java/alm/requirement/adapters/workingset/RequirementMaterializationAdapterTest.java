@@ -7,7 +7,6 @@ import java.util.Optional;
 
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.SnapshotRepository;
-import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,7 @@ class RequirementMaterializationAdapterTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final SnapshotRepository snapshots = mock(SnapshotRepository.class);
     private final RequirementMaterializationAdapter adapter = new RequirementMaterializationAdapter(
-            repository, snapshots, mock(RequirementMergeWriter.class));
+            repository, snapshots);
 
     private final MaterializeRequest request = new MaterializeRequest(
             LocalId.of("260939964213184"), TrackerId.of("263244057497536"), CommonId.of("264220103598016"), LocalId.of("261802623213504"),

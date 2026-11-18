@@ -287,6 +287,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_checkpoints_tracker_pair_family
 CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_round ON merge_checkpoints (round_id);
 CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_family ON merge_checkpoints (common_id);
 
+CREATE TABLE IF NOT EXISTS requirement_merge_receipts (
+    round_id       BIGINT NOT NULL,
+    entry_id       BIGINT NOT NULL,
+    outcome        VARCHAR(32) NOT NULL,
+    business_ref   BIGINT,
+    source_revision INTEGER NOT NULL,
+    target_revision INTEGER NOT NULL,
+    created        BOOLEAN NOT NULL,
+    inherited      BOOLEAN NOT NULL,
+    failure        TEXT,
+    PRIMARY KEY (round_id, entry_id)
+);
+
 CREATE TABLE IF NOT EXISTS merge_commit_receipts (
     round_id BIGINT NOT NULL REFERENCES merge_rounds (id) ON DELETE CASCADE,
     entry_id BIGINT NOT NULL,

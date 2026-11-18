@@ -87,7 +87,8 @@ public class MergeController {
     }
 
     @PostMapping("/merge-rounds/{id}/apply")
-    public MergeRound.ApplyResult apply(@PathVariable String id) {
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public MergeRound apply(@PathVariable String id) {
         return rounds.apply(id);
     }
 

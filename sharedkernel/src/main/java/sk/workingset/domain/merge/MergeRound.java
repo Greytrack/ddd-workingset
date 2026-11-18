@@ -23,9 +23,9 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
     public enum State { Preparing, Running, Succeeded, PartiallySucceeded, Failed }
     public enum Outcome { Applied, Confirmed, Rejected, Conflict, StaleEvidence, Deferred, Unknown }
 
-    public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
+    public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result, boolean requested) {
         public Entry(String id, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
-            this(Long.valueOf(id), decisionVersion, evidence, decision, result);
+            this(Long.valueOf(id), decisionVersion, evidence, decision, result, false);
         }
 
         public String id() { return numericId.toString(); }
@@ -34,7 +34,11 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
             if (this.result != null) {
                 throw new MergeFailure(Reason.RoundClosed, id());
             }
-            return new Entry(numericId, decisionVersion, evidence, decision, result);
+            return new Entry(numericId, decisionVersion, evidence, decision, result, requested);
+        }
+
+        Entry request() {
+            return requested ? this : new Entry(numericId, decisionVersion, evidence, decision, result, true);
         }
     }
 
@@ -88,6 +92,16 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         List<MergeRound.Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entry.id())
                 ? candidate.finish(itemResult) : candidate).toList();
         return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
+    }
+
+    public MergeRound request(String entryId) {
+        List<Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entryId)
+                ? candidate.request() : candidate).toList();
+        return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, result);
+    }
+
+    public boolean awaitingResults() {
+        return entries.stream().anyMatch(entry -> entry.result() == null);
     }
 
     public MergeRound complete(Instant completedAt) {

@@ -1,47 +1,63 @@
 package alm.requirement.application.command;
 
-import sk.common.error.DomainException;
-
-import java.util.List;
 import java.util.Map;
 
-import alm.requirement.domain.LockVersionConflictException;
-import alm.requirement.domain.Requirement;
-import alm.requirement.application.port.RequirementMutationStore;
-import sk.workingset.application.command.dto.MergeCommand;
+import sk.common.error.DomainException;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.Version;
+import sk.workingset.domain.event.MergeEntryApprovedEvent;
+import sk.workingset.domain.event.MergeEntryResolvedEvent;
+import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 
-/** ALM 写入边界。按既有 Requirement 行为校验和提交整个条目。 */
+import alm.requirement.application.port.RequirementMutationStore;
+import alm.requirement.domain.LockVersionConflictException;
+import alm.requirement.domain.Requirement;
+
+/** ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。 */
 public final class RequirementMergeWriter {
     private final RequirementMutationStore repository;
     private final RequirementCommandService requirements;
+    private final RequirementMergeReceiptStore receipts;
 
-    public RequirementMergeWriter(RequirementMutationStore repository, RequirementCommandService requirements) {
+    public RequirementMergeWriter(RequirementMutationStore repository, RequirementCommandService requirements,
+                                  RequirementMergeReceiptStore receipts) {
         this.repository = repository;
         this.requirements = requirements;
+        this.receipts = receipts;
     }
 
-    public void lockEvidence(List<LocalId> ids) {
-        ids.forEach(repository::lockById);
+    public MergeEntryResolvedEvent apply(MergeEntryApprovedEvent command) {
+        java.util.Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());
+        if (existing.isPresent()) {
+            return existing.orElseThrow();
+        }
+        MergeEntryResolvedEvent result = applyChecked(command);
+        receipts.save(result);
+        return result;
     }
 
-    public MergeCommand.Result apply(MergeCommand command) {
+    private MergeEntryResolvedEvent applyChecked(MergeEntryApprovedEvent command) {
         try {
-            return applyChecked(command);
+            MergeEntryResolvedEvent applied = applyCommand(command);
+            return applied;
         } catch (LockVersionConflictException failure) {
-            throw new MergeFailure(Reason.Conflict, failure.getMessage());
+            return rejected(command, Outcome.CONFLICT, failure.getMessage());
+        } catch (MergeFailure failure) {
+            return rejected(command, failure.reason() == Reason.Conflict ? Outcome.CONFLICT : Outcome.REJECTED,
+                    failure.getMessage());
         } catch (DomainException | IllegalArgumentException | IllegalStateException failure) {
-            throw new MergeFailure(Reason.Rejected, failure.getMessage());
+            return rejected(command, Outcome.REJECTED, failure.getMessage());
         }
     }
 
-    private MergeCommand.Result applyChecked(MergeCommand command) {
+    private MergeEntryResolvedEvent applyCommand(MergeEntryApprovedEvent command) {
         if (command.mergeBackCreate()) {
-            java.util.Optional<Requirement> familyMember = repository.lockFamilyInWorkingSet(command.trackerId(), command.commonId());
+            java.util.Optional<Requirement> familyMember = repository.lockFamilyInWorkingSet(
+                    command.trackerId(), command.commonId());
             if (familyMember.isPresent()) {
                 return restoreMergeBack(command, familyMember.orElseThrow());
             }
@@ -54,10 +70,12 @@ public final class RequirementMergeWriter {
         if (existing.isEmpty()) {
             Requirement created = create(command);
             repository.save(created);
-            if (command.operation() == MergeCommand.Operation.DELETE) {
+            if (command.operation() == MergeEntryApprovedEvent.Operation.DELETE) {
                 repository.save(created.delete(created.lockVersion()));
             }
-            return new MergeCommand.Result(created.localId(), created.revision(), true);
+            return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
+                    created.localId(), command.sourceRevision(), created.revision(), true,
+                    command.inherited(), null);
         }
         Requirement current = existing.orElseThrow();
         if (!current.trackerId().equals(command.trackerId()) || !current.commonId().equals(command.commonId())) {
@@ -73,27 +91,37 @@ public final class RequirementMergeWriter {
             case CREATE -> throw new MergeFailure(Reason.Conflict, "target already exists");
         };
         requirements.saveChange(current, changed);
-        return new MergeCommand.Result(changed.localId(), changed.revision(), false);
+        return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
+                changed.localId(), command.sourceRevision(), changed.revision(), false,
+                command.inherited(), null);
     }
 
-    private MergeCommand.Result restoreMergeBack(MergeCommand command, Requirement current) {
+    private MergeEntryResolvedEvent restoreMergeBack(MergeEntryApprovedEvent command, Requirement current) {
         if (!current.deleted() || !current.trackerId().equals(command.trackerId())) {
             throw new MergeFailure(Reason.Conflict, "target working set family is already occupied");
         }
         Requirement changed = current.restoreContent(text(command.baseFields(), "title", null),
                 text(command.baseFields(), "description", null), current.lockVersion());
         requirements.saveChange(current, changed);
-        return new MergeCommand.Result(changed.localId(), changed.revision(), false);
+        return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
+                changed.localId(), command.sourceRevision(), changed.revision(), false,
+                command.inherited(), null);
     }
 
-    private static Requirement create(MergeCommand command) {
-        if (command.operation() == MergeCommand.Operation.RESTORE) {
+    private static MergeEntryResolvedEvent rejected(MergeEntryApprovedEvent command, Outcome outcome,
+                                                    String failure) {
+        return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), outcome, null,
+                command.sourceRevision(), command.targetRevision(), false, command.inherited(), failure);
+    }
+
+    private static Requirement create(MergeEntryApprovedEvent command) {
+        if (command.operation() == MergeEntryApprovedEvent.Operation.RESTORE) {
             throw new MergeFailure(Reason.Conflict, "deleted target is absent");
         }
         return Requirement.create(command.localId(), command.commonId(), command.trackerId(),
                 text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),
                 text(command.acceptedFields(), "description", text(command.baseFields(), "description", null)),
-                command.revision(), command.version() == null ? Version.none() : Version.of(command.version()));
+                command.targetRevision(), command.version() == null ? Version.none() : Version.of(command.version()));
     }
 
     private static String text(Map<String, Object> values, String field, String fallback) {
@@ -104,4 +132,3 @@ public final class RequirementMergeWriter {
         return text;
     }
 }
-
