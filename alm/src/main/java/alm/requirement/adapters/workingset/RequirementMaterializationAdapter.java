@@ -4,11 +4,12 @@ import java.util.List;
 import java.util.Objects;
 
 import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.application.port.SnapshotStore;
+import alm.requirement.domain.SnapshotRepository;
 import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import sk.workingset.application.common.MaterializationRejectedException;
+import sk.common.error.DomainException;
+import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.command.dto.RequirementMergeCommand;
 import sk.workingset.application.port.RequirementWritePort;
@@ -24,10 +25,10 @@ import sk.workingset.domain.LocalId;
  */
 public final class RequirementMaterializationAdapter implements RequirementWritePort {
     private final RequirementRepository repository;
-    private final SnapshotStore snapshotStore;
+    private final SnapshotRepository snapshotStore;
     private final RequirementMergeWriter mergeWriter;
 
-    public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotStore snapshotStore,
+    public RequirementMaterializationAdapter(RequirementRepository repository, SnapshotRepository snapshotStore,
                                              RequirementMergeWriter mergeWriter) {
         this.repository = repository;
         this.snapshotStore = snapshotStore;
@@ -47,17 +48,17 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     @Override
     public void materialize(MaterializeRequest request, TargetIdentity target) {
         var snapshot = snapshotStore.find(request.snapshotRef())
-                .orElseThrow(() -> new MaterializationRejectedException("Source snapshot is missing"));
+                .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot is missing"));
         if (!snapshot.localId().equals(request.sourceLocalId())
                 || !snapshot.revision().equals(request.beforeRevision())
                 || !snapshot.lockVersion().equals(request.beforeLockVersion())
                 || !snapshot.commonId().equals(request.commonId())) {
-            throw new MaterializationRejectedException("Source snapshot does not match event evidence");
+            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot does not match event evidence");
         }
         if (!target.localId().equals(request.targetLocalId())
                 || !target.trackerId().equals(request.targetTrackerId())
                 || !target.commonId().equals(request.commonId())) {
-            throw new MaterializationRejectedException("Target identity does not match materialization evidence");
+            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target identity does not match materialization evidence");
         }
 
         if (target.materialized()) {
@@ -77,11 +78,11 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     @Override
     public void verifyMaterializedTarget(TargetIdentity target) {
         var existing = repository.findById(target.localId())
-                .orElseThrow(() -> new MaterializationRejectedException("Target business object is missing"));
+                .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business object is missing"));
         if (!existing.commonId().equals(target.commonId())
                 || !existing.trackerId().equals(target.trackerId())
                 || !existing.revision().equals(target.revision())) {
-            throw new MaterializationRejectedException("Target business identity does not match the receipt");
+            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business identity does not match the receipt");
         }
     }
 
@@ -93,7 +94,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
                 || !Objects.equals(existing.title(), snapshot.title())
                 || !Objects.equals(existing.description(), snapshot.description())
                 || !Objects.equals(existing.version(), snapshot.version())) {
-            throw new MaterializationRejectedException("Existing target does not match materialization evidence");
+            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Existing target does not match materialization evidence");
         }
     }
 }

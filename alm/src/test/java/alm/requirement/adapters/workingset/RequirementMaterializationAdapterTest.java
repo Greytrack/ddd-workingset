@@ -6,13 +6,13 @@ import static org.mockito.Mockito.*;
 import java.util.Optional;
 
 import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.application.port.SnapshotStore;
+import alm.requirement.domain.SnapshotRepository;
 import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
 import sk.workingset.domain.event.SnapshotRef;
-import sk.workingset.application.common.MaterializationRejectedException;
+import sk.common.error.DomainException;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.domain.CommonId;
@@ -24,7 +24,7 @@ import sk.workingset.domain.Version;
 
 class RequirementMaterializationAdapterTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
-    private final SnapshotStore snapshots = mock(SnapshotStore.class);
+    private final SnapshotRepository snapshots = mock(SnapshotRepository.class);
     private final RequirementMaterializationAdapter adapter = new RequirementMaterializationAdapter(
             repository, snapshots, mock(RequirementMergeWriter.class));
 
@@ -39,7 +39,7 @@ class RequirementMaterializationAdapterTest {
     @Test
     void refuses_missing_or_mismatched_snapshot_without_writing_target() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.empty());
-        assertThrows(MaterializationRejectedException.class,
+        assertThrows(DomainException.class,
                 () -> adapter.materialize(request, target));
 
         var invalid = java.util.List.of(
@@ -49,7 +49,7 @@ class RequirementMaterializationAdapterTest {
                 snapshot("261802623213504", "265987761440704", 3, 1));
         for (var evidence : invalid) {
             when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(evidence));
-            assertThrows(MaterializationRejectedException.class,
+            assertThrows(DomainException.class,
                     () -> adapter.materialize(request, target));
         }
         verifyNoInteractions(repository);
@@ -60,7 +60,7 @@ class RequirementMaterializationAdapterTest {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("261802623213504", "264220103598016", 3, 1)));
         var mismatched = new TargetIdentity(LocalId.of("265987761440704"), request.targetTrackerId(),
                 request.commonId(), request.targetRevision(), false);
-        assertThrows(MaterializationRejectedException.class,
+        assertThrows(DomainException.class,
                 () -> adapter.materialize(request, mismatched));
         verifyNoInteractions(repository);
     }
@@ -71,9 +71,9 @@ class RequirementMaterializationAdapterTest {
         when(repository.findById(request.targetLocalId())).thenReturn(Optional.of(existing("different", "v1")),
                 Optional.of(existing("A", "v2")), Optional.of(existing("A", "v1")));
 
-        assertThrows(MaterializationRejectedException.class,
+        assertThrows(DomainException.class,
                 () -> adapter.materialize(request, target));
-        assertThrows(MaterializationRejectedException.class,
+        assertThrows(DomainException.class,
                 () -> adapter.materialize(request, target));
         assertDoesNotThrow(() -> adapter.materialize(request, target));
         verify(repository, never()).save(any());

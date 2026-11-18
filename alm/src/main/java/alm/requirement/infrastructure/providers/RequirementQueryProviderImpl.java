@@ -4,13 +4,12 @@ import java.util.Optional;
 
 import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
-import alm.requirement.infrastructure.providers.mybatis.RequirementQueryMapper;
 
 /** Requirement MyBatis-Plus 查询适配器；只读。 */
-public final class RequirementQueryAdapter implements RequirementQueryProvider {
+public final class RequirementQueryProviderImpl implements RequirementQueryProvider {
     private final RequirementQueryMapper mapper;
 
-    public RequirementQueryAdapter(RequirementQueryMapper mapper) {
+    public RequirementQueryProviderImpl(RequirementQueryMapper mapper) {
         this.mapper = mapper;
     }
 

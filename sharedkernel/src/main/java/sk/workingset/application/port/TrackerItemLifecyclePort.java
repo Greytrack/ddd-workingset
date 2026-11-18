@@ -34,7 +34,7 @@ public interface TrackerItemLifecyclePort {
     /**
      * 在调用方事务内锁定 Tracker 并读取物化目标变体的身份证据。
      *
-     * @throws MaterializationRejectedException 目标变体不存在
+     * @throws sk.common.error.DomainException 目标变体不存在（MATERIALIZATION_REJECTED）
      */
     TargetIdentity lockMaterializationTarget(TrackerId trackerId, LocalId targetLocalId);
 

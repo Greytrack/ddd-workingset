@@ -22,6 +22,11 @@ public class DomainException extends APIException {
         this(type, code, formatMessage(code.getDesc(), args), args);
     }
 
+    /** Creates a domain failure with a concrete message instead of formatting the code description. */
+    public static DomainException withMessage(DomainResCode code, String message) {
+        return new DomainException(code.getType(), code, message, null);
+    }
+
     public DomainException(DomainErrorType type, ResCode code, Throwable cause, Object... args) {
         this(type, code, args);
         initCause(cause);

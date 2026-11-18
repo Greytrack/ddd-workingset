@@ -191,7 +191,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `TrackerItemReadPort`（port） | `readAt(Revision)`、`revision()`、`capabilities()`、`authorize(Operation, Caller)` |
 | `RequirementWritePort`（port） | `materialize(MaterializeRequest)`；正常返回表示 BC 已确认有效物化写入 |
 | `MaterializeRequest`（port） | 目标身份、目标版次、来源身份、来源修改前后 Revision/LockVersion、事件身份与快照引用；不建构建器框架 |
-| `MaterializationRejectedException`（port） | 表达“拒绝物化”这一事实；不建立九分类异常层次 |
+| `DomainException(MATERIALIZATION_REJECTED)` | 表达“拒绝物化”这一事实；不建立独立异常类型 |
 | `LightTrackerItemRepository`（port） | `findBySource(LocalId, Revision)`、`findById(LocalId)`、`save(LightTrackerItem)` |
 | `EventPublisher`（port） | `publish(DomainEvent)`（进程内实现） |
 | `IdentifierGenerator`（port） | `long nextId()`：雪花 ID 生成（P1/用户 2026-11-11）；`LocalId` 由其产生 |
@@ -204,9 +204,9 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | `RequirementId` | **即 `LocalId`**（用户 2026-11-11 裁定：LocalId 是所有业务对象聚合的唯一标识，不另建独立 ID） |
 | `RequirementApplicationService` | `create(...)`、`changeTitle(...)`（快照 + 事件；事件携带修改前/提交后 Revision） |
 | `RequirementAdapter` | 实现 `TrackerItemReadPort`；按变体构造，保留读取职责 |
-| `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，只依赖 `RequirementRepository` + `SnapshotStore`（D4，2026-11-12 已按此边界实现：不注入 `TrackerRepository`/`LightTrackerItemRepository`） |
+| `RequirementMaterializationAdapter` | 实现 `RequirementWritePort`；无 `LocalId` 绑定，只依赖 `RequirementRepository` + `SnapshotRepository`（D4，2026-11-12 已按此边界实现：不注入 `TrackerRepository`/`LightTrackerItemRepository`） |
 | `RequirementLifecycleService` | `delete2` 先经 SK `TrackerItemLifecyclePort.assertPurgeable` 判定 COW 依赖，删除业务行后发布 `RequirementPurged` 由 SK 清理 LTI（D4） |
-| `SnapshotStore` / `RequirementRepository` | 快照存取、聚合存取 |
+| `SnapshotRepository` / `RequirementRepository` | 快照存取、聚合存取 |
 
 **共享事件**
 

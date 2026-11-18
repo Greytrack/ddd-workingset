@@ -1,4 +1,4 @@
-package alm.requirement.infrastructure.providers.mybatis;
+package alm.requirement.infrastructure.providers;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

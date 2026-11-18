@@ -1,4 +1,4 @@
-package alm.requirement.application.port;
+package alm.requirement.domain;
 
 import java.util.Optional;
 
@@ -8,7 +8,7 @@ import sk.workingset.domain.event.SnapshotRef;
 /**
  * ALM 自有快照存储：保存「修改前」不可变内容并返回引用；SK 只持有引用。
  */
-public interface SnapshotStore {
+public interface SnapshotRepository {
 
     /** 保存快照并返回不可变引用。 */
     SnapshotRef save(RequirementSnapshot snapshot);

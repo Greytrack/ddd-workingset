@@ -13,7 +13,6 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.application.port.RequirementMutationStore;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.RequirementCatalog.Identity;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -91,10 +90,11 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                 localId.numericValue()).stream().findFirst();
     }
 
-    public List<Identity> findIdentitiesByTracker(TrackerId trackerId) {
-        return jdbc.query("SELECT local_id, common_id FROM requirements "
+    public List<TrackerItemCatalog.Identity> findIdentitiesByTracker(TrackerId trackerId) {
+        return jdbc.query("SELECT local_id, common_id, revision FROM requirements "
                         + "WHERE tracker_id = ? AND delete_flag = FALSE ORDER BY local_id",
-                (rs, row) -> new Identity(LocalId.of(rs.getLong(1)), CommonId.of(rs.getLong(2))), trackerId.numericValue());
+                (rs, row) -> new TrackerItemCatalog.Identity(LocalId.of(rs.getLong(1)),
+                        CommonId.of(rs.getLong(2)), Revision.of(rs.getInt(3))), trackerId.numericValue());
     }
 
     public List<TrackerItemCatalog.Identity> pageActiveIdentities(TrackerId trackerId, String afterLocalId, int limit) {

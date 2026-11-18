@@ -111,7 +111,7 @@
 
 ### 7.2 端口
 
-- `TrackerItemCatalog`（SK 定义、BC 实现）：按 Tracker 和 LocalId 游标提供未软删的业务身份页及有效同族查询。`RequirementCatalog` 继续服务 Merge。
+- `TrackerItemCatalog`（SK 定义、BC 实现）：按 Tracker 和 LocalId 游标提供未软删的业务身份页、Merge 用的完整有效身份列表，以及有效同族查询。
 - `LightTrackerItemRepository` 提供父 LTI 分页查询与按工作集/家族条件插入。内容可读性沿用 T3 读取边界。
 - 关系事件：WorkingSet 不定义 Reference/Association 仓储或写入 Port；只定义关系事件契约与发布器。字段、事件类、失败明细见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 

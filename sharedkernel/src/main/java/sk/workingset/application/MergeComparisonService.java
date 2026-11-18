@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.merge.MergeRepository;
-import sk.workingset.application.port.RequirementCatalog;
+import sk.workingset.application.port.TrackerItemCatalog;
 import sk.workingset.application.port.TrackerItemReadPort;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
@@ -44,12 +44,12 @@ public class MergeComparisonService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
-    private final RequirementCatalog catalog;
+    private final TrackerItemCatalog catalog;
     private final Function<LocalId, TrackerItemReadPort> readPorts;
     private final MergeRepository store;
 
     public MergeComparisonService(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                  LightTrackerItemRepository items, RequirementCatalog catalog,
+                                  LightTrackerItemRepository items, TrackerItemCatalog catalog,
                                   Function<LocalId, TrackerItemReadPort> readPorts, MergeRepository store) {
         this.workingSets = workingSets;
         this.trackers = trackers;

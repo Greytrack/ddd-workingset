@@ -4,7 +4,8 @@ import sk.workingset.application.CowFailureLog;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.common.MaterializationRejectedException;
+import sk.common.error.DomainException;
+import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.application.port.TargetTransactionRunner;
@@ -41,18 +42,18 @@ public final class CowRecoveryService {
     public void recoverSwitchOnly(long eventId, LocalId targetId) {
         transactions.inNewTransaction(() -> {
             var receipt = store.lockByEventAndTarget(eventId, targetId)
-                    .orElseThrow(() -> new MaterializationRejectedException("COW receipt is missing"));
+                    .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "COW receipt is missing"));
             if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {
                 return;
             }
             if (!receipt.businessSaved()) {
-                throw new MaterializationRejectedException("Target business save was not confirmed");
+                throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business save was not confirmed");
             }
             var target = items.findById(targetId)
-                    .orElseThrow(() -> new MaterializationRejectedException("LightTrackerItem is missing"));
+                    .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "LightTrackerItem is missing"));
             if (!target.materialized() && (!target.sourceLocalId().equals(receipt.sourceLocalId())
                     || !target.sourceRevision().equals(receipt.sourceRevision()))) {
-                throw new MaterializationRejectedException("LightTrackerItem no longer matches the receipt");
+                throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "LightTrackerItem no longer matches the receipt");
             }
             writePort.verifyMaterializedTarget(TargetIdentity.of(target));
             if (!target.materialized()) {

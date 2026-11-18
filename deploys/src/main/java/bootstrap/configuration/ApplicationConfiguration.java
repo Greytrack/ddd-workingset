@@ -20,10 +20,10 @@ import alm.requirement.application.query.RequirementQueryService;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
 import alm.requirement.application.command.RequirementLifecycleService;
 import alm.requirement.application.command.RequirementMergeWriter;
-import alm.requirement.infrastructure.providers.RequirementQueryAdapter;
-import alm.requirement.infrastructure.providers.mybatis.RequirementQueryMapper;
+import alm.requirement.infrastructure.providers.RequirementQueryProviderImpl;
+import alm.requirement.infrastructure.providers.RequirementQueryMapper;
 import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
-import alm.requirement.infrastructure.JdbcSnapshotStore;
+import alm.requirement.infrastructure.repositories.JdbcSnapshotRepository;
 import alm.requirement.adapters.workingset.RequirementAdapter;
 import alm.requirement.adapters.workingset.RequirementMaterializationAdapter;
 import sk.workingset.application.command.CowEventHandler;
@@ -37,7 +37,6 @@ import sk.workingset.application.command.RelationEventPublisher;
 import sk.workingset.application.command.RelationEventStep;
 import sk.workingset.application.command.TrackerItemLifecycleService;
 import sk.workingset.application.port.RelationSourcePort;
-import sk.workingset.application.port.RequirementCatalog;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.infrastructure.repositories.JdbcMergeRepository;
 import sk.workingset.domain.event.RequirementChanged;
@@ -92,7 +91,7 @@ public class ApplicationConfiguration {
 
     @Bean
     public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
-            JdbcSnapshotStore snapshots, RequirementCommandService requirements) {
+                                                     JdbcSnapshotRepository snapshots, RequirementCommandService requirements) {
         return new RequirementMaterializationAdapter(repository, snapshots,
                 new RequirementMergeWriter(repository, requirements));
     }
@@ -153,14 +152,14 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public JdbcSnapshotStore snapshotStore(JdbcTemplate jdbc, IdentifierGenerator identifierGenerator) {
-        return new JdbcSnapshotStore(jdbc, identifierGenerator);
+    public JdbcSnapshotRepository snapshotStore(JdbcTemplate jdbc, IdentifierGenerator identifierGenerator) {
+        return new JdbcSnapshotRepository(jdbc, identifierGenerator);
     }
 
     @Bean
     public RequirementCommandService requirementCommandService(
             JdbcRequirementRepository requirements,
-            JdbcSnapshotStore snapshotStore,
+            JdbcSnapshotRepository snapshotStore,
             IdentifierGenerator identifierGenerator,
             ApplicationEventPublisher eventPublisher,
             TrackerScopePort trackerScopePort,
@@ -171,7 +170,7 @@ public class ApplicationConfiguration {
 
     @Bean
     public RequirementQueryProvider RequirementQueryProvider(RequirementQueryMapper mapper) {
-        return new RequirementQueryAdapter(mapper);
+        return new RequirementQueryProviderImpl(mapper);
     }
 
     @Bean
@@ -252,6 +251,11 @@ public class ApplicationConfiguration {
             }
 
             @Override
+            public java.util.List<Identity> identities(TrackerId trackerId) {
+                return requirements.findIdentitiesByTracker(trackerId);
+            }
+
+            @Override
             public boolean hasActiveFamily(TrackerId trackerId, sk.workingset.domain.CommonId commonId) {
                 return requirements.hasActiveFamily(trackerId, commonId);
             }
@@ -318,8 +322,8 @@ public class ApplicationConfiguration {
 
     @Bean
     public MergeComparisonService mergeComparisonService(JdbcBindingRepositories bindings,
-            LightTrackerItemRepository items, JdbcRequirementRepository requirements, MergeRepository store) {
-        RequirementCatalog catalog = requirements::findIdentitiesByTracker;
+            LightTrackerItemRepository items, TrackerItemCatalog catalog,
+            JdbcRequirementRepository requirements, MergeRepository store) {
         return new MergeComparisonService(bindings, bindings, items, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
     }

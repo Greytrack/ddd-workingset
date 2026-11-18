@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.application.port.SnapshotStore;
+import alm.requirement.domain.SnapshotRepository;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.RequirementChanged;
@@ -34,14 +34,14 @@ import sk.workingset.domain.WorkingSetId;
 public class RequirementCommandService {
 
     private final RequirementRepository repository;
-    private final SnapshotStore snapshotStore;
+    private final SnapshotRepository snapshotStore;
     private final IdentifierGenerator identifierGenerator;
     private final ApplicationEventPublisher eventPublisher;
     private final TrackerScopePort trackerScope;
     private final TrackerItemLifecyclePort lifecycle;
 
     public RequirementCommandService(RequirementRepository repository,
-                                          SnapshotStore snapshotStore,
+                                          SnapshotRepository snapshotStore,
                                           IdentifierGenerator identifierGenerator,
                                           ApplicationEventPublisher eventPublisher,
                                           TrackerScopePort trackerScope,

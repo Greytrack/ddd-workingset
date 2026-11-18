@@ -39,7 +39,7 @@ BUILD SUCCESS
 | SK 基础设施 | `sk.workingset.infrastructure` | `SnowflakeIdGenerator`（3/3/5 位宽、2020-01-01 纪元、回拨拒绝、`synchronized`） |
 | ALM 领域 | `alm.requirement.domain` | `Requirement.changeTitle(String, LockVersion)`（不可变、`lock_version` 自动 +1、`revision`/`version` 不变）、`LockVersionConflictException` |
 | ALM 应用 | `alm.requirement.application` | `RequirementApplicationService.changeTitle`（并发校验 → 修改前快照 → 保存 → 发布事件） |
-| ALM 基础设施 | `alm.requirement.infrastructure` | `RequirementSnapshot`、`SnapshotStore`、`InMemorySnapshotStore`（引用为雪花 ID） |
+| ALM 基础设施 | `alm.requirement.infrastructure` | `RequirementSnapshot`、`SnapshotRepository`、`InMemorySnapshotStore`（引用为雪花 ID） |
 | 组合根 | `bootstrap` / `bootstrap.configuration` | `WorkingsetApplication`（`@SpringBootApplication`，非 web）、`IdGeneratorConfig`、`ApplicationConfiguration`（装配快照存储与 Spring Event 发布器） |
 
 ## 4. 工程前置落地
@@ -55,7 +55,7 @@ BUILD SUCCESS
 | 项 | 偏离 | 原因 |
 | --- | --- | --- |
 | 事件监听测试 | 使用 `PayloadApplicationEvent<RequirementChanged>` 监听（Spring `ApplicationListener<E extends ApplicationEvent>` 的泛型边界） | 不把 SK 事件信封改成 Spring 类型；事件类型保持框架无关 |
-| 快照类型位置 | `RequirementSnapshot` 放在 `alm.requirement.infrastructure` | 遵循 S2 白名单（仅允许新增 infrastructure 快照存储）；S3 通过 `SnapshotStore` 回读 |
+| 快照类型位置 | `RequirementSnapshot` 放在 `alm.requirement.infrastructure` | 遵循 S2 白名单（仅允许新增 infrastructure 快照存储）；S3 通过 `SnapshotRepository` 回读 |
 | 快照引用 | `SnapshotRef.id` 为雪花 ID 字符串 | 与 FACT-005 一致；引用不含内容 |
 | `TrackerId` | 由雪花生成器产生（原 `T-<UUID>` 移除） | 完成 UUID 路径清理，未改动 TrackerId 契约 |
 | `lock_version` 自动递增 | 内存实现由 `Requirement.changeTitle` 在数据变动时自动 +1；未引入数据库事务钩子 | 与用户术语一致（不需要调用方显式触发）；持久化落地时由事务层统一维护 |

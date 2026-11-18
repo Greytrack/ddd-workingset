@@ -1,4 +1,4 @@
-package alm.requirement.infrastructure;
+package alm.requirement.infrastructure.repositories;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.application.port.SnapshotStore;
+import alm.requirement.domain.SnapshotRepository;
 import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.CommonId;
@@ -20,7 +20,7 @@ import sk.workingset.domain.Version;
 /**
  * Requirement 修改前快照的 PostgreSQL/Spring JDBC 存储。
  */
-public class JdbcSnapshotStore implements SnapshotStore {
+public class JdbcSnapshotRepository implements SnapshotRepository {
 
     private static final String INSERT = """
             INSERT INTO requirement_snapshots
@@ -42,7 +42,7 @@ public class JdbcSnapshotStore implements SnapshotStore {
     private final JdbcTemplate jdbc;
     private final IdentifierGenerator identifierGenerator;
 
-    public JdbcSnapshotStore(JdbcTemplate jdbc, IdentifierGenerator identifierGenerator) {
+    public JdbcSnapshotRepository(JdbcTemplate jdbc, IdentifierGenerator identifierGenerator) {
         this.jdbc = jdbc;
         this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
     }

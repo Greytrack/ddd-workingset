@@ -9,7 +9,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.common.MaterializationRejectedException;
+import sk.common.error.DomainException;
+import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.domain.event.MergeTarget;
 import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
@@ -67,7 +68,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
         trackers.lockTracker(trackerId);
         return items.findById(targetLocalId)
                 .map(TargetIdentity::of)
-                .orElseThrow(() -> new MaterializationRejectedException("Target variant is missing"));
+                .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target variant is missing"));
     }
 
     @Override

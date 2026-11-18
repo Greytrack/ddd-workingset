@@ -18,7 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.application.port.SnapshotStore;
+import alm.requirement.domain.SnapshotRepository;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.IdentifierGenerator;
@@ -39,7 +39,7 @@ class RequirementCreateScopeTest {
     private final TrackerScopePort trackerScope = mock(TrackerScopePort.class);
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
-            repository, mock(SnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackerScope,
+            repository, mock(SnapshotRepository.class), ids, mock(ApplicationEventPublisher.class), trackerScope,
             mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
 
     @BeforeEach
