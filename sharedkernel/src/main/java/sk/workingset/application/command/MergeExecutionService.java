@@ -1,6 +1,7 @@
 package sk.workingset.application.command;
 
-import sk.workingset.application.ApplicationFailure;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.MergeComparisonService;
@@ -24,7 +25,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import sk.workingset.domain.event.RequirementMergeApplied;
 import sk.workingset.domain.event.MergeRoundSubmitted;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.merge.MergeCommitReceipt;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.event.MergeTarget;
@@ -91,7 +91,7 @@ public class MergeExecutionService {
             return matching(existing.get(), source, target);
         }
         var pair = trackerPair(decisions);
-        var prepared = MergeRound.prepare(Long.toString(ids.nextId()), requestId, source, target, caller.id());
+        var prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller.id());
         MergeRound round;
         try {
             round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
@@ -163,7 +163,7 @@ public class MergeExecutionService {
                 throw new MergeFailure(Reason.InvalidDecision, "decision is required");
             }
             request.decision().validate(frozen);
-            updated = updated.register(new Entry(Long.toString(ids.nextId()), store.nextDecisionVersion(),
+            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), store.nextDecisionVersion(),
                     frozen, request.decision(), null));
         }
         store.updateRound(updated);
@@ -195,7 +195,7 @@ public class MergeExecutionService {
             return transaction.execute(status -> runWithExecutionLock(id));
         } catch (DataAccessException | TransactionException failure) {
             log.error("Merge round {} could not confirm execution progress", id, failure);
-            throw new ApplicationFailure(FailureReason.UNKNOWN, "execution progress unavailable: " + id);
+            throw DomainException.withMessage(FailureReason.UNKNOWN, "execution progress unavailable: " + id);
         }
     }
 
@@ -305,15 +305,16 @@ public class MergeExecutionService {
         } catch (DataIntegrityViolationException failure) {
             return Execution.finished(result(entry, Outcome.Conflict, operation(entry), null, null,
                     "target persistence conflict"));
-        } catch (ApplicationFailure failure) {
-            if (failure.reason() == FailureReason.UNKNOWN) {
+        } catch (DomainException failure) {
+            var reason = FailureReason.of(failure);
+            if (reason == FailureReason.UNKNOWN) {
                 throw failure;
             }
             return Execution.finished(result(entry, Outcome.Rejected, operation(entry), null, null,
-                    failure.reason().name()));
+                    reason.name()));
         } catch (RuntimeException failure) {
             log.error("Merge entry {} could not complete", entry.id(), failure);
-            throw new ApplicationFailure(FailureReason.UNKNOWN, "execution result unavailable: " + entry.id());
+            throw DomainException.withMessage(FailureReason.UNKNOWN, "execution result unavailable: " + entry.id());
         }
     }
 
@@ -341,7 +342,7 @@ public class MergeExecutionService {
             LocalId localId = action == Operation.CREATE
                     ? (WorkingSet.DEFAULT_ID.equals(round.target())
                             ? LocalId.of(current.family().value())
-                            : LocalId.of(Long.toString(ids.nextId())))
+                            : LocalId.of(Long.toString(ids.nextId(null).longValue())))
                     : target.localId();
             boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
             boolean create = action == Operation.CREATE;
@@ -402,7 +403,7 @@ public class MergeExecutionService {
             if (decision == FieldAction.ACCEPT) {
                 var value = current.source().fields().get(path);
                 if (value == null) {
-                    throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE, path);
+                    throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, path);
                 }
                 accepted.put(path, value);
             }

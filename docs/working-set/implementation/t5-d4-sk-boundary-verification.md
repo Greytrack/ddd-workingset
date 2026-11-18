@@ -17,7 +17,7 @@ D4 选择方案 A：把 LightTrackerItem 的校验与移除**移回 SK**；跨�
 | LTI 移除 | SK | `TrackerItemLifecycleService.removePurged` |
 | 业务对象的创建/校验/提交 | ALM | `RequirementWritePort.materialize` / `verifyMaterializedTarget` |
 | 业务对象永久删除决定 | ALM | `RequirementLifecycleService.delete2` |
-| 删除后清理 LTI 的通知 | 跨 BC 事件 | `RequirementPurged` → `RequirementPurgedListener` |
+| 删除后清理 LTI 的通知 | 跨 BC 事件 | `RequirementPurged` → `TrackerItemPurgedListener` |
 
 - 业务 BC 不再接收 SK 聚合对象：物化时 SK 传入值对象 `TargetIdentity`（localId / trackerId / commonId / revision / materialized）。
 - 业务 BC 不再注入 SK 仓储：ALM 侧只依赖自身 `RequirementRepository`、`SnapshotRepository` 与 SK 定义的协作端口。

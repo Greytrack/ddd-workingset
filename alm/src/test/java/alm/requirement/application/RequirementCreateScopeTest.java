@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -19,9 +20,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.domain.SnapshotRepository;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.TrackerScopePort;
 import sk.workingset.application.port.TrackerScopePort.TrackerScope;
 import sk.workingset.domain.Classification.SharingMode;
@@ -44,7 +44,7 @@ class RequirementCreateScopeTest {
 
     @BeforeEach
     void stubIdentifiers() {
-        when(ids.nextId()).thenReturn(100L, 200L, 300L, 400L);
+        when(ids.nextId(null).longValue()).thenReturn(100L, 200L, 300L, 400L);
     }
 
     @Test
@@ -72,9 +72,9 @@ class RequirementCreateScopeTest {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
                 new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
 
-        var failure = assertThrows(ApplicationFailure.class,
+        var failure = assertThrows(DomainException.class,
                 () -> service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION));
-        assertSame(FailureReason.NOT_INCLUDED, failure.reason());
+        assertSame(FailureReason.NOT_INCLUDED, FailureReason.of(failure));
         verify(repository, never()).save(any());
     }
 

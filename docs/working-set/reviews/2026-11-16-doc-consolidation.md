@@ -30,7 +30,7 @@
 ## 代码清理
 
 - `JdbcBindingRepositories`：去除重复 `requireReady` 与重复 Tracker 行映射。
-- `WorkingSetApplicationService.read`：授权拒绝改为 `ApplicationFailure(DENIED)`，不再抛无映射的 `UnsupportedOperationException`。
+- `WorkingSetApplicationService.read`：授权拒绝改为 `DomainException(FailureReason.DENIED)`，不再抛无映射的 `UnsupportedOperationException`。
 - `JdbcMergeStore.recordCheckpoint`：重新确认时刷新 `confirmed_at`。
 - `MergeRoundSubmittedListener`：忽略已不存在轮次的提交事件，避免清理/删除后无限重投。
 

@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.repository.ProductSpaceRepository;
 import sk.workingset.domain.repository.TrackerRepository;
@@ -105,7 +105,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                       AND COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE')
                 """, Boolean.class, id.numericValue()));
         if (preparing) {
-            throw new ApplicationFailure(FailureReason.PREPARING, id.value());
+            throw DomainException.withMessage(FailureReason.PREPARING, id.value());
         }
     }
 

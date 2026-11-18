@@ -3,10 +3,10 @@ package bootstrap.configuration;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.infrastructure.SnowflakeIdGenerator;
 
 /**

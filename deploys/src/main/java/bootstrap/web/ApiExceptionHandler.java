@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import alm.requirement.domain.LockVersionConflictException;
-import sk.workingset.application.ApplicationFailure;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.merge.MergeFailure;
 
@@ -30,13 +29,6 @@ import sk.workingset.domain.merge.MergeFailure;
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {
-
-    @ExceptionHandler(ApplicationFailure.class)
-    public ResponseEntity<?> handleApplicationFailure(ApplicationFailure failure) {
-        return domainResponse(failure, Map.of(
-                "code", failure.getCode(), "reason", failure.reason().name(),
-                "message", failure.getMessage()));
-    }
 
     @ExceptionHandler(MergeFailure.class)
     public ResponseEntity<?> handleMergeFailure(MergeFailure failure) {

@@ -2,12 +2,12 @@ package sk.workingset.infrastructure.repositories;
 
 import java.util.Optional;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import sk.workingset.domain.merge.MergeCommitReceipt;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -112,7 +112,7 @@ public final class JdbcMergeRepository implements MergeRepository {
                 WHERE merge_checkpoints.decision_version < EXCLUDED.decision_version
                    OR (merge_checkpoints.decision_version = EXCLUDED.decision_version
                        AND EXCLUDED.revoked AND NOT merge_checkpoints.revoked)
-                """, ids.nextId(), Long.valueOf(checkpoint.roundId()), key.a().numericValue(), key.b().numericValue(), key.family().numericValue(),
+                """, ids.nextId(null).longValue(), Long.valueOf(checkpoint.roundId()), key.a().numericValue(), key.b().numericValue(), key.family().numericValue(),
                 localId(checkpoint.localIdA()), localId(checkpoint.localIdB()),
                 revision(checkpoint.revisionA()), revision(checkpoint.revisionB()),
                 checkpoint.changeKind() == null ? null : checkpoint.changeKind().name(),

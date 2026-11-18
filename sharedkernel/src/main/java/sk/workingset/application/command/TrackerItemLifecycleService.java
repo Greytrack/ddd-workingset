@@ -1,6 +1,6 @@
 package sk.workingset.application.command;
 
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 
 import java.util.Optional;
@@ -77,7 +77,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
         trackers.lockTracker(trackerId);
         if (items.hasSourceBackedDependents(localId)
                 || items.findById(localId).filter(item -> !item.materialized()).isPresent()) {
-            throw new ApplicationFailure(FailureReason.DEPENDENCY_UNAVAILABLE,
+            throw DomainException.withMessage(FailureReason.DEPENDENCY_UNAVAILABLE,
                     "Requirement content is still needed by COW");
         }
     }
@@ -113,7 +113,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
 
     private void switchToLocalContent(LocalId localId, Revision revision) {
         var item = items.findById(localId)
-                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "target variant disappeared: " + localId.value()));
         if (!item.materialized()) {
             item.switchToLocalBacked(revision);

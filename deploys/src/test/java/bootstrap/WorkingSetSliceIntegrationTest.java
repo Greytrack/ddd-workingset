@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import alm.requirement.adapters.workingset.RequirementAdapter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.ReadResult;
@@ -92,10 +92,10 @@ class WorkingSetSliceIntegrationTest {
 
     @Test
     void resolve_missing_item_is_not_found() {
-        ApplicationFailure failure = assertThrows(ApplicationFailure.class,
+        DomainException failure = assertThrows(DomainException.class,
                 () -> workingSet.resolve(WS1, LocalId.of("266787736178624")));
 
-        assertEquals(FailureReason.NOT_FOUND, failure.reason());
+        assertEquals(FailureReason.NOT_FOUND, FailureReason.of(failure));
     }
 
     @Test
@@ -103,10 +103,10 @@ class WorkingSetSliceIntegrationTest {
         LightTrackerItem item = derivedItem();
         when(items.findById(item.localId())).thenReturn(Optional.of(item));
 
-        ApplicationFailure failure = assertThrows(ApplicationFailure.class,
+        DomainException failure = assertThrows(DomainException.class,
                 () -> workingSet.resolve(WS0, item.localId()));
 
-        assertEquals(FailureReason.NOT_INCLUDED, failure.reason(), "未纳入不得降级为 NotFound");
+        assertEquals(FailureReason.NOT_INCLUDED, FailureReason.of(failure), "未纳入不得降级为 NotFound");
     }
 
     @Test

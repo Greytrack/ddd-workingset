@@ -30,7 +30,7 @@ BUILD SUCCESS
 | 层 | 包 | 内容 |
 | --- | --- | --- |
 | SK 领域 | `sk.workingset.domain` | `LocalId`、`CommonId`、`Revision`、`Version`（发布大版本，可空）、`LockVersion`（乐观锁）、`TrackerId`、`WorkingSetId`、`TrackerItem`、`Tracker`、`LightTrackerItem` |
-| SK 应用 | `sk.workingset.application` + `port` | Historical：`WorkingSetApplicationService`（resolve/read）、`TrackerItemReadPort`、`LightTrackerItemRepository`、`CapabilitySet`、`Operation`、`Caller`、`TrackerItemContent`、`FailureReason`、`ApplicationFailure`、`ReadResult`；`derive`/`DeriveCommand/Result` 已删除 |
+| SK 应用 | `sk.workingset.application` + `port` | Historical：`WorkingSetApplicationService`（resolve/read）、`TrackerItemReadPort`、`LightTrackerItemRepository`、`CapabilitySet`、`Operation`、`Caller`、`TrackerItemContent`、`FailureReason`、`DomainException`、`ReadResult`；`derive`/`DeriveCommand/Result` 已删除 |
 | SK 基础 | `sk.workingset.infrastructure` | `InMemoryLightTrackerItemRepository` |
 | ALM | `alm.requirement.{domain,application,infrastructure}` | `Requirement`（实现 `TrackerItem`，`RequirementId = LocalId`）、`RequirementRepository`、`RequirementApplicationService`、`InMemoryRequirementRepository`、`RequirementAdapter` |
 | 组合根 | `bootstrap.configuration` | `ApplicationConfiguration`（Spring `@Configuration`，唯一同时引用两侧的位置） |

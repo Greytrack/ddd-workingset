@@ -8,7 +8,7 @@ import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerItemLifecyclePort.InheritedEditTarget;
@@ -35,7 +35,7 @@ public class RequirementQueryService {
         var persisted = query.find(localId.numericValue());
         if (persisted.isPresent()) {
             if (persisted.get().deleted()) {
-                throw new ApplicationFailure(FailureReason.DELETED, localId.value());
+                throw DomainException.withMessage(FailureReason.DELETED, localId.value());
             }
             return persisted.get();
         }
@@ -52,7 +52,7 @@ public class RequirementQueryService {
         Requirement source = load(target.sourceLocalId());
         requireActive(source);
         if (!source.revision().equals(target.sourceRevision())) {
-            throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
+            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
         var identity = target.identity();
         return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
@@ -61,13 +61,13 @@ public class RequirementQueryService {
 
     private Requirement load(LocalId localId) {
         return repository.findById(localId)
-                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "requirement not found: " + localId.value()));
     }
 
     private static void requireActive(Requirement requirement) {
         if (requirement.deleted()) {
-            throw new ApplicationFailure(FailureReason.DELETED, requirement.localId().value());
+            throw DomainException.withMessage(FailureReason.DELETED, requirement.localId().value());
         }
     }
 

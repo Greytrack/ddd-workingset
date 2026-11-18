@@ -4,11 +4,11 @@ package sk.workingset.application.command;
 import java.util.List;
 import java.util.Objects;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.transaction.annotation.Transactional;
 
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.repository.ProductSpaceRepository;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
@@ -48,7 +48,7 @@ public class WorkingSetCommandService {
 
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name) {
-        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId()), name);
+        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId(null).longValue()), name);
     }
 
     // Called by the creation runner with the user-supplied display name.
@@ -80,8 +80,8 @@ public class WorkingSetCommandService {
         var space = lockSpace(spaceId);
         workingSet.requireSpaceBinding(spaceId);
         var classification = spaces.findClassification(classificationId)
-                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
-        var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId())),
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
+        var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
                 name, space, classification, sharingMode);
         var binding = workingSet.bindTracker(tracker, classification, sharingMode);
         trackers.insertTracker(tracker);
@@ -97,12 +97,12 @@ public class WorkingSetCommandService {
      */
     @Transactional
     public ProductSpace createProductSpace(String name) {
-        var space = new ProductSpace(identifierGenerator.nextId(), name);
+        var space = new ProductSpace(identifierGenerator.nextId(null).longValue(), name);
         var defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
         spaces.insertProductSpace(space);
         workingSets.insertSpaceBinding(defaultWorkingSet.bindSpace(space, WorkingSet.SpaceOrigin.INITIAL_PROJECTION));
         for (var classification : spaces.findClassifications()) {
-            var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId())),
+            var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
                     space, classification, null, true);
             var binding = defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
             trackers.insertTracker(tracker);
@@ -145,7 +145,7 @@ public class WorkingSetCommandService {
         var parent = writable(target.requireParentId());
         var space = lockSpace(spaceId);
         if (!WorkingSet.DEFAULT_ID.equals(parent.id()) && !parent.hasSpaceBinding(spaceId)) {
-            throw new ApplicationFailure(FailureReason.NOT_INCLUDED, spaceId);
+            throw DomainException.withMessage(FailureReason.NOT_INCLUDED, spaceId);
         }
         if (target.hasSpaceBinding(spaceId)) {
             return false;
@@ -235,7 +235,7 @@ public class WorkingSetCommandService {
     private Tracker derivedTracker(WorkingSet target, Tracker source) {
         boolean isDefault = !spaces.existsDefaultTracker(target.id(), source.productSpaceId(),
                 source.classificationId());
-        return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId())), source, target.id(),
+        return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
                 isDefault);
     }
 

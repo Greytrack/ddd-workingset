@@ -7,7 +7,7 @@ import java.util.function.Function;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.Operation;
@@ -90,7 +90,7 @@ public class WorkingSetQueryService {
     public List<IndexedItem> findItems(WorkingSetId workingSetId, TrackerId trackerId) {
         find(workingSetId);
         if (!query.hasTrackerBinding(workingSetId.numericValue(), trackerId.numericValue())) {
-            throw new ApplicationFailure(FailureReason.NOT_INCLUDED, trackerId.value());
+            throw DomainException.withMessage(FailureReason.NOT_INCLUDED, trackerId.value());
         }
         return items.findInTracker(trackerId).stream()
                 .filter(item -> !businessItems.isDeleted(item.effectiveContentSource()))
@@ -106,14 +106,13 @@ public class WorkingSetQueryService {
         Objects.requireNonNull(localId, "localId");
         requireReady(workingSetId);
         LightTrackerItem item = items.findById(localId)
-                .orElseThrow(() -> new ApplicationFailure(
-                        FailureReason.NOT_FOUND, "item not found: " + localId.value()));
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "item not found: " + localId.value()));
         if (!item.workingSetId().equals(workingSetId)) {
-            throw new ApplicationFailure(FailureReason.NOT_INCLUDED,
+            throw DomainException.withMessage(FailureReason.NOT_INCLUDED,
                     "item " + localId.value() + " is not included in working set " + workingSetId.value());
         }
         if (item.materialized() && businessItems.isDeleted(localId)) {
-            throw new ApplicationFailure(FailureReason.DELETED, localId.value());
+            throw DomainException.withMessage(FailureReason.DELETED, localId.value());
         }
         return item;
     }
@@ -126,7 +125,7 @@ public class WorkingSetQueryService {
         Revision contentRevision = item.effectiveContentRevision();
         TrackerItemReadPort port = readPorts.apply(contentLocalId);
         if (!port.authorize(Operation.READ, caller)) {
-            throw new ApplicationFailure(FailureReason.DENIED, contentLocalId.value());
+            throw DomainException.withMessage(FailureReason.DENIED, contentLocalId.value());
         }
         TrackerItemContent content = item.materialized() ? port.readAt(contentRevision)
                 : port.readInheritedAt(contentRevision);
@@ -136,7 +135,7 @@ public class WorkingSetQueryService {
     private void requireReady(WorkingSetId id) {
         Objects.requireNonNull(id, "workingSetId");
         if (query.isPreparing(id.numericValue())) {
-            throw new ApplicationFailure(FailureReason.PREPARING, id.value());
+            throw DomainException.withMessage(FailureReason.PREPARING, id.value());
         }
     }
 }

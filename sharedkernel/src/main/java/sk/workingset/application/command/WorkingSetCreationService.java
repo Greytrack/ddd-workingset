@@ -1,6 +1,7 @@
 package sk.workingset.application.command;
 
-import sk.workingset.application.ApplicationFailure;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 
@@ -18,7 +19,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.domain.event.WorkingSetCreationSubmitted;
 import sk.workingset.domain.event.TrackerItemsIndexed;
 import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.BindingFailure;
@@ -70,7 +70,7 @@ public class WorkingSetCreationService {
             var task = existing.get();
             return replay(task, request.apply(task.request().newWorkingSetId()));
         }
-        return submit(request.apply(Long.toString(ids.nextId())), caller);
+        return submit(request.apply(Long.toString(ids.nextId(null).longValue())), caller);
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -90,7 +90,7 @@ public class WorkingSetCreationService {
             throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
-        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId()), request, caller.id(), Instant.now());
+        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
@@ -113,7 +113,7 @@ public class WorkingSetCreationService {
             if (active.get().request().requestId().equals(requestId)) {
                 return active.get();
             }
-            throw new ApplicationFailure(FailureReason.PREPARING, target.value());
+            throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
         workingSets.requireReady(target);
         var targetSet = workingSets.findWorkingSet(target)
@@ -144,7 +144,7 @@ public class WorkingSetCreationService {
         }
         var request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
                 List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
-        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId()), request, caller.id(), Instant.now());
+        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
@@ -155,10 +155,10 @@ public class WorkingSetCreationService {
             if (concurrent.get().request().requestId().equals(requestId)) {
                 return concurrent.get();
             }
-            throw new ApplicationFailure(FailureReason.PREPARING, target.value());
+            throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
         return replay(store.findByRequest(requestId)
-                .orElseThrow(() -> new ApplicationFailure(FailureReason.PREPARING, target.value())), request);
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, target.value())), request);
     }
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
@@ -176,7 +176,7 @@ public class WorkingSetCreationService {
     public WorkingSet findTarget(String id) {
         var creation = find(id);
         return workingSets.findWorkingSetForCreation(WorkingSetId.of(creation.request().newWorkingSetId()))
-                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "Working set is not created yet: " + creation.request().newWorkingSetId()));
     }
 
@@ -250,11 +250,12 @@ public class WorkingSetCreationService {
             return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
         } catch (BindingFailure failure) {
             return recordFailure(creation, item, failure.reason().name());
-        } catch (ApplicationFailure failure) {
-            if (failure.reason() == FailureReason.PREPARING) {
+        } catch (DomainException failure) {
+            var reason = FailureReason.of(failure);
+            if (reason == FailureReason.PREPARING) {
                 throw failure;
             }
-            return recordFailure(creation, item, failure.reason().name());
+            return recordFailure(creation, item, reason.name());
         }
     }
 
@@ -275,7 +276,7 @@ public class WorkingSetCreationService {
         return store.find(id, true).orElseThrow(() -> notFound(id));
     }
 
-    private static ApplicationFailure notFound(String id) {
-        return new ApplicationFailure(FailureReason.NOT_FOUND, "Creation task not found: " + id);
+    private static DomainException notFound(String id) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
     }
 }

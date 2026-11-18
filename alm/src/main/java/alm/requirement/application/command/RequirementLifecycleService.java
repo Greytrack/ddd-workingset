@@ -6,7 +6,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import alm.requirement.application.port.RequirementMutationStore;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.RequirementPurged;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
@@ -39,13 +39,13 @@ public class RequirementLifecycleService {
         var current = requirements.lockById(id).orElseThrow(() -> missing(id));
         var decision = current.delete2(LifecycleCommand.locked("permanent delete"));
         if (!decision.succeeded()) {
-            throw new ApplicationFailure(FailureReason.DELETED, id.value());
+            throw DomainException.withMessage(FailureReason.DELETED, id.value());
         }
         requirements.purge(current);
         eventPublisher.publishEvent(new RequirementPurged(id, candidate.trackerId(), Instant.now()));
     }
 
-    private static ApplicationFailure missing(LocalId id) {
-        return new ApplicationFailure(FailureReason.NOT_FOUND, id.value());
+    private static DomainException missing(LocalId id) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, id.value());
     }
 }

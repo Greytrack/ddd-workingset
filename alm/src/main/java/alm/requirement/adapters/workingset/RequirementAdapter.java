@@ -5,7 +5,7 @@ import java.util.Objects;
 
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.CapabilitySet;
 import sk.workingset.application.FailureReason;
@@ -34,7 +34,7 @@ public class RequirementAdapter implements TrackerItemReadPort {
     public TrackerItemContent readAt(Revision revision) {
         Requirement requirement = find();
         if (requirement.deleted()) {
-            throw new ApplicationFailure(FailureReason.DELETED, "requirement deleted: " + localId.value());
+            throw DomainException.withMessage(FailureReason.DELETED, "requirement deleted: " + localId.value());
         }
         return contentAt(requirement, revision);
     }
@@ -43,7 +43,7 @@ public class RequirementAdapter implements TrackerItemReadPort {
     public TrackerItemContent readInheritedAt(Revision revision) {
         Requirement requirement = find();
         if (requirement.deleted()) {
-            throw new ApplicationFailure(FailureReason.DELETED, "requirement deleted: " + localId.value());
+            throw DomainException.withMessage(FailureReason.DELETED, "requirement deleted: " + localId.value());
         }
         return contentAt(requirement, revision);
     }
@@ -57,7 +57,7 @@ public class RequirementAdapter implements TrackerItemReadPort {
 
     private TrackerItemContent contentAt(Requirement requirement, Revision revision) {
         if (!requirement.revision().equals(revision)) {
-            throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE,
+            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE,
                     "required revision is unavailable: " + revision.value());
         }
         Map<String, Object> fields = Map.of(
@@ -84,7 +84,7 @@ public class RequirementAdapter implements TrackerItemReadPort {
 
     private Requirement find() {
         return repository.findById(localId)
-                .orElseThrow(() -> new ApplicationFailure(
+                .orElseThrow(() -> DomainException.withMessage(
                         FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
     }
 }

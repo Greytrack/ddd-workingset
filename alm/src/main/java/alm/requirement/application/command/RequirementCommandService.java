@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,11 +12,10 @@ import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.domain.SnapshotRepository;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.event.SnapshotRef;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerItemLifecyclePort.InheritedEditTarget;
 import sk.workingset.application.port.TrackerScopePort;
@@ -75,7 +75,7 @@ public class RequirementCommandService {
             scope.ifPresent(current -> {
                 if (current.sharingMode() == SharingMode.UNSHARED
                         && !current.workingSetId().equals(requestedWorkingSetId)) {
-                    throw new ApplicationFailure(FailureReason.NOT_INCLUDED,
+                    throw DomainException.withMessage(FailureReason.NOT_INCLUDED,
                             "tracker " + trackerId.value() + " is not included in working set "
                                     + requestedWorkingSetId.value());
                 }
@@ -85,7 +85,7 @@ public class RequirementCommandService {
                 .map(current -> current.sharingMode() == SharingMode.SHARED
                         || WorkingSet.DEFAULT_ID.equals(current.workingSetId()))
                 .orElse(false);
-        long local = identifierGenerator.nextId();
+        long local = identifierGenerator.nextId(null).longValue();
         long common = defaultWorkingSet ? local : nextDistinct(local);
         Requirement requirement = Requirement.create(
                 LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
@@ -98,9 +98,9 @@ public class RequirementCommandService {
     }
 
     private long nextDistinct(long local) {
-        long common = identifierGenerator.nextId();
+        long common = identifierGenerator.nextId(null).longValue();
         while (common == local) {
-            common = identifierGenerator.nextId();
+            common = identifierGenerator.nextId(null).longValue();
         }
         return common;
     }
@@ -151,7 +151,7 @@ public class RequirementCommandService {
         Requirement source = load(target.sourceLocalId());
         requireActive(source);
         if (!source.revision().equals(target.sourceRevision())) {
-            throw new ApplicationFailure(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
+            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
         var identity = target.identity();
         return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
@@ -181,12 +181,12 @@ public class RequirementCommandService {
     private Requirement load(LocalId localId) {
         Objects.requireNonNull(localId, "localId");
         return repository.findById(localId)
-                .orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
     }
 
     private static void requireActive(Requirement requirement) {
         if (requirement.deleted()) {
-            throw new ApplicationFailure(FailureReason.DELETED, requirement.localId().value());
+            throw DomainException.withMessage(FailureReason.DELETED, requirement.localId().value());
         }
     }
 
@@ -197,7 +197,7 @@ public class RequirementCommandService {
         repository.save(changed);
 
         RequirementChanged event = new RequirementChanged(
-                identifierGenerator.nextId(),
+                identifierGenerator.nextId(null).longValue(),
                 changed.localId(),
                 changed.localId(),
                 current.revision(),

@@ -1,5 +1,6 @@
 package bootstrap.configuration;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -58,7 +59,6 @@ import sk.workingset.infrastructure.EmptyRelationSourcePort;
 import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotRepository;
 import sk.workingset.infrastructure.repositories.JdbcWorkingSetCreationRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;

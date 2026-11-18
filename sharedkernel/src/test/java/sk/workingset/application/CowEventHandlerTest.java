@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.application.command.dto.MaterializeRequest;

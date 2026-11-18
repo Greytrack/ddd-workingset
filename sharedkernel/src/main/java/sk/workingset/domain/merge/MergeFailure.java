@@ -3,7 +3,7 @@ package sk.workingset.domain.merge;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
-/** Merge 失败：冲突、拒绝、证据过期、轮次关闭等，区别于业务 BC 的 ApplicationFailure。 */
+/** Merge 失败：冲突、拒绝、证据过期、轮次关闭等，区别于应用层的 DomainException + FailureReason。 */
 public final class MergeFailure extends DomainException {
     public enum Reason {
         MergeNotAllowed(WorkingsetResultCode.MERGE_MERGE_NOT_ALLOWED),

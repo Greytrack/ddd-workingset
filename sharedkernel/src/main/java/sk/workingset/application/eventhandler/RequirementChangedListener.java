@@ -2,9 +2,8 @@ package sk.workingset.application.eventhandler;
 
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
-import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.application.command.CowEventHandler;
+import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
 
 /**

@@ -4,6 +4,7 @@ package sk.workingset.application.command;
 import java.time.Instant;
 import java.util.List;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.ApplicationEventPublisher;
 
 import sk.workingset.domain.event.AssociationCreationRequested;
@@ -11,7 +12,6 @@ import sk.workingset.domain.event.DanglingReferenceRepairRequested;
 import sk.workingset.domain.event.ReferenceCreationRequested;
 import sk.workingset.domain.event.RelationEventMetadata;
 import sk.workingset.domain.event.RelationEventMetadata.OriginType;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.application.port.RelationSourcePort.AssociationFact;
 import sk.workingset.application.port.RelationSourcePort.ReferenceFact;
 
@@ -51,7 +51,7 @@ public final class RelationEventPublisher {
     }
 
     private RelationEventMetadata metadata(String originalRelationId, String originId, OriginType originType) {
-        return new RelationEventMetadata(Long.toString(ids.nextId()), originalRelationId, originId, originType,
+        return new RelationEventMetadata(Long.toString(ids.nextId(null).longValue()), originalRelationId, originId, originType,
                 Instant.now());
     }
 }

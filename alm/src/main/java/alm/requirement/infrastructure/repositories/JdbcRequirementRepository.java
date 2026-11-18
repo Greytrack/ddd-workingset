@@ -11,7 +11,7 @@ import sk.workingset.application.port.BusinessTrackerItems.Presentation;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.application.port.RequirementMutationStore;
-import sk.workingset.application.ApplicationFailure;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
@@ -145,7 +145,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                 rs -> rs.next() ? rs.getLong(1) : null,
                 localId.numericValue());
         if (value == null) {
-            throw new ApplicationFailure(FailureReason.NOT_FOUND, "Requirement no longer exists: " + localId.numericValue());
+            throw DomainException.withMessage(FailureReason.NOT_FOUND, "Requirement no longer exists: " + localId.numericValue());
         }
         return LockVersion.of(value);
     }

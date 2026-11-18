@@ -790,7 +790,7 @@ class MergeAcceptanceTest {
         assertEquals("lifecycle", requirement(local).title());
         var staleUpdate = repository.findById(LocalId.of(local)).orElseThrow().changeTitle("stale", LockVersion.of(2));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete2", null, Void.class));
-        assertThrows(sk.workingset.application.ApplicationFailure.class, () -> repository.save(staleUpdate));
+        assertThrows(sk.common.error.DomainException.class, () -> repository.save(staleUpdate));
         assertStatus(HttpStatus.NOT_FOUND, rest.postForEntity(path + "/undelete", null, Map.class));
         assertStatus(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class));
 

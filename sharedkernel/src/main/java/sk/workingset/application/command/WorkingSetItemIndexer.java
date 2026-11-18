@@ -1,6 +1,7 @@
 package sk.workingset.application.command;
 
-import sk.workingset.application.ApplicationFailure;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 
 import java.time.Instant;
@@ -16,7 +17,6 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.SavepointManager;
 
 import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.port.TrackerItemCatalog;
 import sk.workingset.application.port.TrackerItemReadPort;
@@ -193,17 +193,16 @@ public final class WorkingSetItemIndexer {
         var reader = readPorts.apply(candidate.sourceId());
         try {
             reader.readInheritedAt(candidate.sourceRevision());
-        } catch (ApplicationFailure failure) {
-            if (failure.reason() == FailureReason.DELETED
-                    || failure.reason() == FailureReason.NOT_FOUND
-                    || failure.reason() == FailureReason.HISTORY_UNAVAILABLE) {
-                return skipped(parent, child, candidate, failure.reason());
+        } catch (DomainException failure) {
+            var reason = FailureReason.of(failure);
+            if (reason == FailureReason.DELETED || reason == FailureReason.NOT_FOUND || reason == FailureReason.HISTORY_UNAVAILABLE) {
+                return skipped(parent, child, candidate, reason);
             }
             throw failure;
         }
         LocalId id;
         do {
-            id = LocalId.of(Long.toString(ids.nextId()));
+            id = LocalId.of(Long.toString(ids.nextId(null).longValue()));
         } while (id.value().equals(candidate.commonId().value()) || id.equals(candidate.sourceId()));
         var item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
                 candidate.revision(), candidate.sourceId(), candidate.sourceRevision());
@@ -222,8 +221,8 @@ public final class WorkingSetItemIndexer {
     }
 
     private static FailureReason reason(RuntimeException failure) {
-        if (failure instanceof ApplicationFailure applicationFailure) {
-            return applicationFailure.reason();
+        if (failure instanceof DomainException domainFailure) {
+            return FailureReason.of(domainFailure);
         }
         log.warn("Working set indexing operation failed", failure);
         return failure instanceof DataAccessResourceFailureException

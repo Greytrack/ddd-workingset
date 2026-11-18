@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.common.error.DomainException;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -190,9 +192,10 @@ public class MergeComparisonService {
             var content = inherited ? port.readInheritedAt(contentRevision) : port.readAt(contentRevision);
             return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),
                     Presence.PRESENT, null, content.fields());
-        } catch (ApplicationFailure failure) {
-            var reason = inherited && failure.reason() == FailureReason.NOT_FOUND
-                    ? FailureReason.HISTORY_UNAVAILABLE : failure.reason();
+        } catch (DomainException failure) {
+            var failureReason = FailureReason.of(failure);
+            var reason = inherited && failureReason == FailureReason.NOT_FOUND
+                    ? FailureReason.HISTORY_UNAVAILABLE : failureReason;
             return unreadable(id, reason);
         } catch (UnsupportedOperationException failure) {
             return unreadable(id, FailureReason.CAPABILITY_NOT_SUPPORTED);
@@ -203,11 +206,11 @@ public class MergeComparisonService {
         LocalId capabilityId = create ? difference.source().localId() : difference.target().localId();
         var port = readPorts.apply(capabilityId);
         if (!port.authorize(Operation.WRITE, caller)) {
-            throw new ApplicationFailure(FailureReason.DENIED, capabilityId.value());
+            throw DomainException.withMessage(FailureReason.DENIED, capabilityId.value());
         }
         var capability = port.capabilities();
         if (!capability.mergeable() || (create && !capability.creatable())) {
-            throw new ApplicationFailure(FailureReason.CAPABILITY_NOT_SUPPORTED, capabilityId.value());
+            throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED, capabilityId.value());
         }
     }
 
@@ -226,6 +229,6 @@ public class MergeComparisonService {
     }
 
     private WorkingSet workingSet(WorkingSetId id) {
-        return workingSets.findWorkingSet(id).orElseThrow(() -> new ApplicationFailure(FailureReason.NOT_FOUND, id.value()));
+        return workingSets.findWorkingSet(id).orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, id.value()));
     }
 }

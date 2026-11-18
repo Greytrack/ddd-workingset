@@ -8,9 +8,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
-
-import sk.workingset.application.port.IdentifierGenerator;
 
 class SnowflakeIdGeneratorTest {
 
