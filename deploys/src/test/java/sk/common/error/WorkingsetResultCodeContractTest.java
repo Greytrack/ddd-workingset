@@ -19,8 +19,8 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void domainErrorKeepsBusinessCodeWhenStatusIsOverridden() {
-        var cause = new IllegalStateException("original failure");
-        var error = new DomainException(DomainErrorType.CONFLICT, WorkingsetResultCode.BAD_REQUEST,
+        IllegalStateException cause = new IllegalStateException("original failure");
+        DomainException error = new DomainException(DomainErrorType.CONFLICT, WorkingsetResultCode.BAD_REQUEST,
                 cause, "invalid title");
 
         assertEquals(1001, error.getCode());
@@ -31,7 +31,7 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void codesAreUniqueAndInsideDeclaredPublicRanges() {
-        var codes = java.util.stream.Stream.concat(Arrays.stream(WorkingsetResultCode.values()),
+        java.util.List<Integer> codes = java.util.stream.Stream.concat(Arrays.stream(WorkingsetResultCode.values()),
                 Arrays.stream(RequirementResultCode.values())).map(DomainResCode::getCode).toList();
         assertEquals(codes.size(), new HashSet<>(codes).size(), "duplicate public error code");
         assertTrue(codes.stream().allMatch(code -> code >= 1000 && code <= 1499),
@@ -50,7 +50,7 @@ class WorkingsetResultCodeContractTest {
                 FailureReason.CAPABILITY_NOT_SUPPORTED, 1107,
                 FailureReason.DEPENDENCY_UNAVAILABLE, 1108,
                 FailureReason.UNKNOWN, 1109);
-        for (var reason : FailureReason.values()) {
+        for (FailureReason reason : FailureReason.values()) {
             assertEquals(expected.get(reason), reason.resultCode().getCode(), reason.name());
         }
     }

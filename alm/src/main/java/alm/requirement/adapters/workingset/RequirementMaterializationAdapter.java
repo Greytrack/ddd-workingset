@@ -47,7 +47,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
 
     @Override
     public void materialize(MaterializeRequest request, TargetIdentity target) {
-        var snapshot = snapshotStore.find(request.snapshotRef())
+        RequirementSnapshot snapshot = snapshotStore.find(request.snapshotRef())
                 .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot is missing"));
         if (!snapshot.localId().equals(request.sourceLocalId())
                 || !snapshot.revision().equals(request.beforeRevision())
@@ -65,7 +65,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
             verifyMaterializedTarget(target);
             return;
         }
-        var existing = repository.findById(request.targetLocalId());
+        java.util.Optional<Requirement> existing = repository.findById(request.targetLocalId());
         if (existing.isPresent()) {
             verifyExisting(existing.get(), request, snapshot);
         } else {
@@ -77,7 +77,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
 
     @Override
     public void verifyMaterializedTarget(TargetIdentity target) {
-        var existing = repository.findById(target.localId())
+        Requirement existing = repository.findById(target.localId())
                 .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business object is missing"));
         if (!existing.commonId().equals(target.commonId())
                 || !existing.trackerId().equals(target.trackerId())

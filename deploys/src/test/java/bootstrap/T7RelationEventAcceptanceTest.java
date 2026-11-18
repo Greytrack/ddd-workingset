@@ -74,7 +74,7 @@ class T7RelationEventAcceptanceTest {
     void extensionPublishesReferenceAssociationAndDanglingRepairEvents() {
         seedParentRange();
         FixtureIds.insertWorkingSet(jdbc, "1", child);
-        var accepted = rest.postForEntity("/api/worksets/" + child + "/extensions",
+        org.springframework.http.ResponseEntity<CreationView> accepted = rest.postForEntity("/api/worksets/" + child + "/extensions",
                 Map.of("requestId", "extension-" + suffix, "trackerIds", List.of(parentTracker)), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
 

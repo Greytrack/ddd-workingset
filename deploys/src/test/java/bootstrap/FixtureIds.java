@@ -9,7 +9,7 @@ public final class FixtureIds {
     private FixtureIds() {}
 
     public static String fixtureId(String label) {
-        var digest = new CRC32();
+        CRC32 digest = new CRC32();
         digest.update(label.getBytes(StandardCharsets.UTF_8));
         return Long.toString(((126_230_400_000L + digest.getValue()) << 11) | 1984);
     }

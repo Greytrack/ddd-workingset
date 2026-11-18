@@ -21,12 +21,12 @@ class RelationEventContractTest {
 
     @Test
     void referenceEventCarriesBothEndpointsAndAllowsDanglingTarget() {
-        var source = new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+        ReferenceEndpointEvent source = new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
                 TrackerId.of("265625955250112"), Revision.of(3));
-        var target = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
+        ReferenceEndpointEvent target = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
                 TrackerId.of("261538396602304"), null);
 
-        var event = new ReferenceCreationRequestedEvent(metadata, source, target);
+        ReferenceCreationRequestedEvent event = new ReferenceCreationRequestedEvent(metadata, source, target);
 
         assertEquals(source, event.source());
         assertEquals(target, event.target());
@@ -36,9 +36,9 @@ class RelationEventContractTest {
 
     @Test
     void referenceSourceMustBeFullyResolved() {
-        var source = new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), null, CommonId.of("265506033508288"), TrackerId.of("265625955250112"),
+        ReferenceEndpointEvent source = new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), null, CommonId.of("265506033508288"), TrackerId.of("265625955250112"),
                 Revision.of(3));
-        var target = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
+        ReferenceEndpointEvent target = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
                 TrackerId.of("261538396602304"), null);
 
         assertThrows(IllegalArgumentException.class,
@@ -47,12 +47,12 @@ class RelationEventContractTest {
 
     @Test
     void associationEventHasNoRevisionFields() {
-        var source = new AssociationEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+        AssociationEndpointEvent source = new AssociationEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
                 TrackerId.of("265625955250112"));
-        var target = new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
+        AssociationEndpointEvent target = new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
                 TrackerId.of("261538396602304"));
 
-        var event = new AssociationCreationRequestedEvent(metadata, source, target);
+        AssociationCreationRequestedEvent event = new AssociationCreationRequestedEvent(metadata, source, target);
 
         assertEquals("265625955250112", event.source().trackerId().value());
         assertEquals("265864557082560", event.target().localId().value());

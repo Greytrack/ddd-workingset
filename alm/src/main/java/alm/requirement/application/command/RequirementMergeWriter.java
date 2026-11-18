@@ -42,30 +42,30 @@ public final class RequirementMergeWriter {
 
     private RequirementMergeCommand.Result applyChecked(RequirementMergeCommand command) {
         if (command.mergeBackCreate()) {
-            var familyMember = repository.lockFamilyInWorkingSet(command.trackerId(), command.commonId());
+            java.util.Optional<Requirement> familyMember = repository.lockFamilyInWorkingSet(command.trackerId(), command.commonId());
             if (familyMember.isPresent()) {
                 return restoreMergeBack(command, familyMember.orElseThrow());
             }
         }
-        var existing = repository.lockById(command.localId());
+        java.util.Optional<Requirement> existing = repository.lockById(command.localId());
         if (command.expectedLockVersion() == null && existing.isPresent()
                 || command.expectedLockVersion() != null && existing.isEmpty()) {
             throw new MergeFailure(Reason.Conflict, "target business state changed");
         }
         if (existing.isEmpty()) {
-            var created = create(command);
+            Requirement created = create(command);
             repository.save(created);
             if (command.operation() == RequirementMergeCommand.Operation.DELETE) {
                 repository.save(created.delete(created.lockVersion()));
             }
             return new RequirementMergeCommand.Result(created.localId(), created.revision(), true);
         }
-        var current = existing.orElseThrow();
+        Requirement current = existing.orElseThrow();
         if (!current.trackerId().equals(command.trackerId()) || !current.commonId().equals(command.commonId())) {
             throw new MergeFailure(Reason.Conflict, "target identity changed");
         }
-        var expected = LockVersion.of(command.expectedLockVersion());
-        var changed = switch (command.operation()) {
+        LockVersion expected = LockVersion.of(command.expectedLockVersion());
+        Requirement changed = switch (command.operation()) {
             case UPDATE -> current.changeContent(
                     text(command.acceptedFields(), "title", current.title()),
                     text(command.acceptedFields(), "description", current.description()), expected);
@@ -81,7 +81,7 @@ public final class RequirementMergeWriter {
         if (!current.deleted() || !current.trackerId().equals(command.trackerId())) {
             throw new MergeFailure(Reason.Conflict, "target working set family is already occupied");
         }
-        var changed = current.restoreContent(text(command.baseFields(), "title", null),
+        Requirement changed = current.restoreContent(text(command.baseFields(), "title", null),
                 text(command.baseFields(), "description", null), current.lockVersion());
         requirements.saveChange(current, changed);
         return new RequirementMergeCommand.Result(changed.localId(), changed.revision(), false);

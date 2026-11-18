@@ -59,12 +59,12 @@ class ApplicationContextTest {
             RequirementCommandService service = context.getBean(RequirementCommandService.class);
             TrackerId trackerId = TrackerId.of(fixtureId("tracker-" + UUID.randomUUID()));
 
-            var jdbc = context.getBean(JdbcTemplate.class);
-            var fixture = new RootTrackerFixture(jdbc, trackerId.value());
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            RootTrackerFixture fixture = new RootTrackerFixture(jdbc, trackerId.value());
             fixture.provision();
             LocalId created = null;
             try {
-                var requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
+                alm.requirement.domain.Requirement requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
                 created = requirement.localId();
                 await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject("""
                         SELECT EXISTS (SELECT 1 FROM event_publication WHERE event_type LIKE '%.TrackerItemCreatedEvent'

@@ -51,7 +51,7 @@ public class CachingLightTrackerItemRepository implements LightTrackerItemReposi
     @Override
     public void save(LightTrackerItem item) {
         delegate.save(item);
-        var snapshot = CachedLightTrackerItem.from(item);
+        CachedLightTrackerItem snapshot = CachedLightTrackerItem.from(item);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

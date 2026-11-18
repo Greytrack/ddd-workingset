@@ -60,11 +60,11 @@ public class WorkingSetCommandService {
         if (workingSets.findAncestors(parentId).contains(newId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
-        var child = WorkingSet.child(newId, parentId, name);
+        WorkingSet child = WorkingSet.child(newId, parentId, name);
         if (!workingSets.insertWorkingSet(child)) {
-            var existing = workingSets.findAncestors(newId);
+            List<WorkingSetId> existing = workingSets.findAncestors(newId);
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
-            var reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
+            Reason reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
             throw new BindingFailure(reason, newId.value());
         }
         return child;
@@ -76,14 +76,14 @@ public class WorkingSetCommandService {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw new BindingFailure(Reason.WorkingSetNotWritable, "只允许在默认工作集新建跟踪分类");
         }
-        var workingSet = writable(id);
-        var space = lockSpace(spaceId);
+        WorkingSet workingSet = writable(id);
+        ProductSpace space = lockSpace(spaceId);
         workingSet.requireSpaceBinding(spaceId);
-        var classification = spaces.findClassification(classificationId)
+        Classification classification = spaces.findClassification(classificationId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
-        var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
+        Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
                 name, space, classification, sharingMode);
-        var binding = workingSet.bindTracker(tracker, classification, sharingMode);
+        WorkingSet.TrackerBinding binding = workingSet.bindTracker(tracker, classification, sharingMode);
         trackers.insertTracker(tracker);
         workingSets.insertTrackerBinding(binding);
         return tracker;
@@ -97,14 +97,14 @@ public class WorkingSetCommandService {
      */
     @Transactional
     public ProductSpace createProductSpace(String name) {
-        var space = new ProductSpace(identifierGenerator.nextId(null).longValue(), name);
-        var defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
+        ProductSpace space = new ProductSpace(identifierGenerator.nextId(null).longValue(), name);
+        WorkingSet defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
         spaces.insertProductSpace(space);
         workingSets.insertSpaceBinding(defaultWorkingSet.bindSpace(space, WorkingSet.SpaceOrigin.INITIAL_PROJECTION));
-        for (var classification : spaces.findClassifications()) {
-            var tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
+        for (Classification classification : spaces.findClassifications()) {
+            Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
                     space, classification, null, true);
-            var binding = defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
+            WorkingSet.TrackerBinding binding = defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
             trackers.insertTracker(tracker);
             workingSets.insertTrackerBinding(binding);
         }
@@ -122,28 +122,28 @@ public class WorkingSetCommandService {
     }
 
     private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space) {
-        var binding = workingSet.bindSpace(space);
+        WorkingSet.SpaceBinding binding = workingSet.bindSpace(space);
         workingSets.insertSpaceBinding(binding);
         return binding;
     }
 
     @Transactional
     public WorkingSet.TrackerBinding bindTrackerShared(WorkingSetId id, TrackerId trackerId) {
-        var workingSet = writable(id);
+        WorkingSet workingSet = writable(id);
         return bindTracker(workingSet, directParentTracker(workingSet, trackerId), SharingMode.SHARED);
     }
 
     private WorkingSet.TrackerBinding bindTracker(WorkingSet target, Tracker tracker, SharingMode mode) {
-        var binding = target.bindTracker(tracker, classification(tracker), mode);
+        WorkingSet.TrackerBinding binding = target.bindTracker(tracker, classification(tracker), mode);
         workingSets.insertTrackerBinding(binding);
         return binding;
     }
 
     // These methods run only under the creation task row lock and the item transaction.
     boolean bindSpaceForTask(WorkingSetId id, String spaceId) {
-        var target = lockTaskTarget(id);
-        var parent = writable(target.requireParentId());
-        var space = lockSpace(spaceId);
+        WorkingSet target = lockTaskTarget(id);
+        WorkingSet parent = writable(target.requireParentId());
+        ProductSpace space = lockSpace(spaceId);
         if (!WorkingSet.DEFAULT_ID.equals(parent.id()) && !parent.hasSpaceBinding(spaceId)) {
             throw DomainException.withMessage(FailureReason.NOT_INCLUDED, spaceId);
         }
@@ -155,14 +155,14 @@ public class WorkingSetCommandService {
     }
 
     boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId, boolean visible) {
-        var target = lockTaskTarget(id);
-        var source = directParentTracker(target, parentTrackerId);
+        WorkingSet target = lockTaskTarget(id);
+        Tracker source = directParentTracker(target, parentTrackerId);
         requireUnshared(source);
         target.requireSpaceBinding(source.productSpaceId());
         if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
             return false;
         }
-        var copy = derivedTracker(target, source);
+        Tracker copy = derivedTracker(target, source);
         if (visible) {
             trackers.insertTracker(copy);
         } else {
@@ -176,9 +176,9 @@ public class WorkingSetCommandService {
     }
 
     boolean bindUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
-        var target = lockTaskTarget(id);
+        WorkingSet target = lockTaskTarget(id);
         directParentTracker(target, parentTrackerId);
-        var copy = trackers.findDerivedTracker(id, parentTrackerId)
+        Tracker copy = trackers.findDerivedTracker(id, parentTrackerId)
                 .orElseThrow(() -> new BindingFailure(Reason.SourceTrackerNotFound, parentTrackerId.value()));
         if (target.hasTrackerBinding(copy.trackerId())) {
             return false;
@@ -188,8 +188,8 @@ public class WorkingSetCommandService {
     }
 
     boolean bindSharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
-        var target = lockTaskTarget(id);
-        var source = directParentTracker(target, parentTrackerId);
+        WorkingSet target = lockTaskTarget(id);
+        Tracker source = directParentTracker(target, parentTrackerId);
         if (target.hasTrackerBinding(source.trackerId())) {
             return false;
         }
@@ -215,7 +215,7 @@ public class WorkingSetCommandService {
         WorkingSetId parentId = target.requireParentId();
         // 非根父级锁定绑定范围，串行化解绑与新纳入。根原生 Tracker 由 Tracker 行锁保护。
         boolean boundInParent = !WorkingSet.DEFAULT_ID.equals(parentId) && writable(parentId).hasTrackerBinding(id);
-        var source = trackers.lockTracker(id)
+        Tracker source = trackers.lockTracker(id)
                 .orElseThrow(() -> new BindingFailure(Reason.SourceTrackerNotFound, id.value()));
         target.requireDirectParent(source, boundInParent);
         return source;

@@ -118,12 +118,12 @@ class CowAcceptanceTest {
         }
         assertEquals(materializeBeforeEdit, read(child).materialized());
 
-        var changed = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
+        org.springframework.http.ResponseEntity<RequirementView> changed = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
                         "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, changed.getStatusCode(), String.valueOf(changed.getBody()));
-        var listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/items",
+        LightTrackerItemView[] listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/items",
                 LightTrackerItemView[].class);
         assertEquals(1, listed.length);
         assertEquals(child.id(), listed[0].localId());
@@ -146,7 +146,7 @@ class CowAcceptanceTest {
         ReadView inherited = read(child);
         assertFalse(inherited.materialized());
 
-        var response = rest.exchange("/api/requirements/" + child.id() + "/title", HttpMethod.PUT,
+        org.springframework.http.ResponseEntity<RequirementView> response = rest.exchange("/api/requirements/" + child.id() + "/title", HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child title", "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -167,11 +167,11 @@ class CowAcceptanceTest {
         Target child = derive();
         jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", source);
 
-        var sourceView = rest.getForObject("/api/requirements/" + source, RequirementView.class);
+        RequirementView sourceView = rest.getForObject("/api/requirements/" + source, RequirementView.class);
         assertEquals(source, sourceView.localId());
         assertEquals("A", sourceView.title());
 
-        var childView = rest.getForObject("/api/requirements/" + child.id(), RequirementView.class);
+        RequirementView childView = rest.getForObject("/api/requirements/" + child.id(), RequirementView.class);
         assertEquals(child.id(), childView.localId());
         assertEquals(common, childView.commonId());
         assertEquals(child.trackerId(), childView.trackerId());
@@ -190,7 +190,7 @@ class CowAcceptanceTest {
         Target child = derive();
         failNextSwitch(child);
 
-        var response = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
+        org.springframework.http.ResponseEntity<String> response = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
                         "expectedLockVersion", 0)), String.class);
 
@@ -250,7 +250,7 @@ class CowAcceptanceTest {
         createSource();
         Target target = derive();
         jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
-        var upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
+        alm.requirement.domain.Requirement upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
         assertEquals(Revision.of(4), upgraded.revision());
         assertEquals(LockVersion.of(1), upgraded.lockVersion());
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
@@ -261,7 +261,7 @@ class CowAcceptanceTest {
     }
 
     private void failNextSwitch(Target target) {
-        var first = new AtomicBoolean(true);
+        AtomicBoolean first = new AtomicBoolean(true);
         doAnswer(invocation -> {
             invocation.callRealMethod();
             if (first.getAndSet(false)) {
@@ -289,7 +289,7 @@ class CowAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
                 """, tracker, space, classification);
-        var result = rest.postForEntity("/api/requirements", Map.of("trackerId", tracker,
+        org.springframework.http.ResponseEntity<RequirementView> result = rest.postForEntity("/api/requirements", Map.of("trackerId", tracker,
                 "title", "A", "description", "COW", "revision", 3), RequirementView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         source = result.getBody().localId();
@@ -308,14 +308,14 @@ class CowAcceptanceTest {
         worksets.add(ws);
         assertEquals(HttpStatus.CREATED,
                 rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());
-        var result = DeriveFixture.derive(jdbc, ws, sourceTracker, sourceLocalId, Revision.of(3), CommonId.of(common));
+        DeriveFixture.Result result = DeriveFixture.derive(jdbc, ws, sourceTracker, sourceLocalId, Revision.of(3), CommonId.of(common));
         String id = result.item().localId().value();
         targets.add(id);
         return new Target(ws, id, result.trackerId());
     }
 
     private void change(String title, int expectedLock) {
-        var result = rest.exchange("/api/requirements/" + source + "/title", HttpMethod.PUT,
+        org.springframework.http.ResponseEntity<RequirementView> result = rest.exchange("/api/requirements/" + source + "/title", HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", title, "expectedLockVersion", expectedLock)), RequirementView.class);
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals(title, result.getBody().title());

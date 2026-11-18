@@ -33,10 +33,10 @@ class RelationEventPublisherTest {
 
     @Test
     void publishesReferenceCreationAndRepairWithBusinessRelationIdentity() {
-        var fact = new ReferenceFact("reference-42", source(), target());
+        ReferenceFact fact = new ReferenceFact("reference-42", source(), target());
 
-        var creation = publisher.publishReferenceCreations("task-1", OriginType.CREATION, List.of(fact));
-        var repair = publisher.publishReferenceRepairs("round-1", OriginType.MERGE, List.of(fact));
+        List<ReferenceCreationRequestedEvent> creation = publisher.publishReferenceCreations("task-1", OriginType.CREATION, List.of(fact));
+        List<DanglingReferenceRepairRequestedEvent> repair = publisher.publishReferenceRepairs("round-1", OriginType.MERGE, List.of(fact));
 
         assertEquals(2, published.size());
         assertTrue(published.get(0) instanceof ReferenceCreationRequestedEvent);
@@ -51,9 +51,9 @@ class RelationEventPublisherTest {
 
     @Test
     void publishesAssociationCreationWithoutRevision() {
-        var fact = new AssociationFact("association-7", associationSource(), associationTarget());
+        AssociationFact fact = new AssociationFact("association-7", associationSource(), associationTarget());
 
-        var created = publisher.publishAssociationCreations("task-1", OriginType.EXTENSION, List.of(fact));
+        List<AssociationCreationRequestedEvent> created = publisher.publishAssociationCreations("task-1", OriginType.EXTENSION, List.of(fact));
 
         assertEquals(1, published.size());
         assertTrue(published.getFirst() instanceof AssociationCreationRequestedEvent);

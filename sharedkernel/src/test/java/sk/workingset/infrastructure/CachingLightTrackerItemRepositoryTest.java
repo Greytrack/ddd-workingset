@@ -103,7 +103,7 @@ class CachingLightTrackerItemRepositoryTest {
     @Test
     void rolled_back_write_never_publishes_local_backed_state_to_redis() {
         LocalId id = LocalId.of(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
-        var item = LightTrackerItem.derive(id, C1, T1, WS1, R3, L0);
+        LightTrackerItem item = LightTrackerItem.derive(id, C1, T1, WS1, R3, L0);
         repository.save(item);
         TransactionSynchronizationManager.initSynchronization();
         try {

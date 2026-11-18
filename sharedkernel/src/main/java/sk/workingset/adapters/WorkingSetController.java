@@ -84,7 +84,7 @@ public class WorkingSetController {
     @PostMapping("/{workingSetId}/trackers")
     @ResponseStatus(HttpStatus.CREATED)
     public TrackerView createTracker(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
-        var mode = SharingMode.valueOf(requireText(request.sharingMode(), "sharingMode"));
+        SharingMode mode = SharingMode.valueOf(requireText(request.sharingMode(), "sharingMode"));
         return TrackerView.from(commands.createTracker(WorkingSetId.of(workingSetId),
                 requireText(request.productSpaceId(), "productSpaceId"), requireText(request.name(), "name"),
                 requireText(request.classificationId(), "classificationId"), mode));

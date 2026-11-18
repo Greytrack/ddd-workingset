@@ -96,7 +96,7 @@ public final class JdbcMergeRepository implements MergeRepository {
 
     @Override
     public boolean recordCheckpoint(MergeCheckpoint checkpoint) {
-        var key = checkpoint.key();
+        MergeCheckpoint.Key key = checkpoint.key();
         return jdbc.update("""
                 INSERT INTO merge_checkpoints (checkpoint_id, round_id, tracker_a_id, tracker_b_id, common_id,
                     local_id_a, local_id_b, revision_a, revision_b, change_kind, merge_direction,

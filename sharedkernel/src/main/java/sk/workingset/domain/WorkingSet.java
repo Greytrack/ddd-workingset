@@ -93,7 +93,7 @@ public final class WorkingSet {
     }
 
     public SpaceBinding bindSpace(ProductSpace space, SpaceOrigin origin) {
-        var binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
+        WorkingSet.SpaceBinding binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
         if (spaces.putIfAbsent(space.id(), binding) != null) {
             throw new BindingFailure(Reason.AlreadyBound, space.id());
         }
@@ -101,7 +101,7 @@ public final class WorkingSet {
     }
 
     public TrackerBinding trackerBinding(TrackerId trackerId) {
-        var binding = trackers.get(trackerId);
+        WorkingSet.TrackerBinding binding = trackers.get(trackerId);
         if (binding == null) {
             throw new BindingFailure(Reason.TrackerBindingNotFound, trackerId.value());
         }
@@ -168,8 +168,8 @@ public final class WorkingSet {
         if (trackers.containsKey(tracker.trackerId())) {
             throw new BindingFailure(Reason.TrackerAlreadyBound, tracker.trackerId().value());
         }
-        var origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
-        var binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.id(),
+        WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
+        WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.id(),
                 requestedMode, origin);
         trackers.put(binding.trackerId(), binding);
         return binding;

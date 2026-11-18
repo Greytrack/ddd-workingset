@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.Operation;
 import sk.workingset.application.ReadResult;
 import sk.workingset.application.TrackerItemContent;
 import sk.workingset.application.port.BusinessTrackerItems;
@@ -62,7 +61,7 @@ public class WorkingSetQueryService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<Long> findAncestors(WorkingSetId id) {
         find(id);
-        var ancestors = query.findAncestors(id.numericValue());
+        List<Long> ancestors = query.findAncestors(id.numericValue());
         if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.numericValue().equals(ancestors.getLast())) {
             throw new BindingFailure(Reason.WorkingSetCycle, id.value());
         }

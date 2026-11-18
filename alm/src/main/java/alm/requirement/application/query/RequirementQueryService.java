@@ -32,7 +32,7 @@ public class RequirementQueryService {
 
     @Transactional(readOnly = true)
     public RequirementDetail find(LocalId localId) {
-        var persisted = query.find(localId.numericValue());
+        java.util.Optional<RequirementDetail> persisted = query.find(localId.numericValue());
         if (persisted.isPresent()) {
             if (persisted.get().deleted()) {
                 throw DomainException.withMessage(FailureReason.DELETED, localId.value());
@@ -53,7 +53,7 @@ public class RequirementQueryService {
         if (!source.revision().equals(target.sourceRevision())) {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
-        var identity = target.identity();
+        sk.workingset.application.common.TargetIdentity identity = target.identity();
         return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
                 source.title(), source.description(), identity.revision(), source.version());
     }

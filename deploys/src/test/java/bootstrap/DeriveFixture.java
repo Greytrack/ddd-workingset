@@ -26,8 +26,8 @@ final class DeriveFixture {
 
     static Result derive(JdbcTemplate jdbc, String targetWorkingSet, String sourceTrackerId,
                          String sourceLocalId, Revision revision, CommonId commonId) {
-        var source = tracker(jdbc, sourceTrackerId);
-        var targetParent = jdbc.queryForObject(
+        Map<String,Object> source = tracker(jdbc, sourceTrackerId);
+        String targetParent = jdbc.queryForObject(
                 "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?",
                 String.class, Long.valueOf(targetWorkingSet));
         if (!"1".equals(targetParent) && !exists(jdbc, """
@@ -81,14 +81,14 @@ final class DeriveFixture {
                 Long.valueOf(targetWorkingSet), revision.value(), Long.valueOf(content.localId()),
                 content.revision().value());
 
-        var item = LightTrackerItem.restore(LocalId.of(localId), commonId, TrackerId.of(trackerId),
+        LightTrackerItem item = LightTrackerItem.restore(LocalId.of(localId), commonId, TrackerId.of(trackerId),
                 WorkingSetId.of(targetWorkingSet), revision, LocalId.of(content.localId()),
                 content.revision(), false);
         return new Result(trackerId, sourceTrackerId, item);
     }
 
     private static Map<String, Object> tracker(JdbcTemplate jdbc, String trackerId) {
-        var rows = jdbc.queryForList("""
+        java.util.List<Map<String,Object>> rows = jdbc.queryForList("""
                 SELECT name, source_id, product_space_id, classification_id, sharing_mode
                 FROM trackers WHERE tracker_id = ?
                 """, Long.valueOf(trackerId));
@@ -103,14 +103,14 @@ final class DeriveFixture {
         boolean derived = jdbc.queryForObject("SELECT source_id IS NOT NULL FROM trackers WHERE tracker_id = ?",
                 Boolean.class, Long.valueOf(sourceTrackerId));
         if (derived) {
-            var rows = jdbc.queryForList("""
+            java.util.List<Map<String,Object>> rows = jdbc.queryForList("""
                     SELECT tracker_id, common_id, revision, source_local_id, source_revision, materialized
                     FROM light_tracker_items WHERE local_id = ?
                     """, Long.valueOf(sourceLocalId));
             if (rows.isEmpty()) {
                 throw new BindingFailure(BindingFailure.Reason.SourceItemNotFound, sourceLocalId);
             }
-            var row = rows.getFirst();
+            Map<String,Object> row = rows.getFirst();
             if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                     || !commonId.value().equals(row.get("common_id").toString())
                     || revision.value() != ((Number) row.get("revision")).intValue()) {
@@ -120,13 +120,13 @@ final class DeriveFixture {
             return new Content(materialized ? sourceLocalId : row.get("source_local_id").toString(),
                     Revision.of(((Number) (materialized ? row.get("revision") : row.get("source_revision"))).intValue()));
         }
-        var rows = jdbc.queryForList("""
+        java.util.List<Map<String,Object>> rows = jdbc.queryForList("""
                 SELECT tracker_id, common_id FROM requirements WHERE local_id = ?
                 """, Long.valueOf(sourceLocalId));
         if (rows.isEmpty()) {
             throw new BindingFailure(BindingFailure.Reason.SourceItemNotFound, sourceLocalId);
         }
-        var row = rows.getFirst();
+        Map<String,Object> row = rows.getFirst();
         if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                 || !commonId.value().equals(row.get("common_id").toString())) {
             throw new BindingFailure(BindingFailure.Reason.SourceItemMismatch, sourceLocalId);

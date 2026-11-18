@@ -63,9 +63,9 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<?> handleDomainFailure(DomainException failure) {
-        var resultCode = failure.getResCode();
+        sk.common.error.ResCode resultCode = failure.getResCode();
         String reason = resultCode instanceof Enum<?> value ? value.name() : failure.getType().name();
-        var body = new LinkedHashMap<String, Object>();
+        LinkedHashMap<String,Object> body = new LinkedHashMap<String, Object>();
         body.put("code", failure.getCode());
         body.put("reason", reason);
         body.put("message", failure.getType().httpStatus() >= 500 || failure.getMessage() == null
@@ -78,7 +78,7 @@ public class ApiExceptionHandler {
         if (failure.getFieldViolations().isEmpty()) {
             return ResponseEntity.status(status).body(body);
         }
-        var problem = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status), (String) body.get("message"));
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status), (String) body.get("message"));
         body.forEach(problem::setProperty);
         problem.setProperty("fieldViolations", failure.getFieldViolations().stream()
                 .map(violation -> Map.of("field", violation.field(), "code", violation.code().getCode(),
@@ -89,7 +89,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(APIException.class)
     public ResponseEntity<Map<String, Object>> handleCodedFailure(APIException failure) {
-        var resultCode = failure instanceof AppException app ? app.getResCode() : null;
+        sk.common.error.ResCode resultCode = failure instanceof AppException app ? app.getResCode() : null;
         int status = switch (resultCode) {
             case WorkingsetResultCode.BAD_REQUEST -> 400;
             case WorkingsetResultCode.WORKING_SET_NOT_EXISTS -> 404;

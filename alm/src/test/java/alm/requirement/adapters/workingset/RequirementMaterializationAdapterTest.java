@@ -42,12 +42,12 @@ class RequirementMaterializationAdapterTest {
         assertThrows(DomainException.class,
                 () -> adapter.materialize(request, target));
 
-        var invalid = java.util.List.of(
+        java.util.List<RequirementSnapshot> invalid = java.util.List.of(
                 snapshot("265987761440704", "264220103598016", 3, 1),
                 snapshot("261802623213504", "264220103598016", 4, 1),
                 snapshot("261802623213504", "264220103598016", 3, 2),
                 snapshot("261802623213504", "265987761440704", 3, 1));
-        for (var evidence : invalid) {
+        for (RequirementSnapshot evidence : invalid) {
             when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(evidence));
             assertThrows(DomainException.class,
                     () -> adapter.materialize(request, target));
@@ -58,7 +58,7 @@ class RequirementMaterializationAdapterTest {
     @Test
     void target_identity_must_match_the_request_evidence() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("261802623213504", "264220103598016", 3, 1)));
-        var mismatched = new TargetIdentity(LocalId.of("265987761440704"), request.targetTrackerId(),
+        TargetIdentity mismatched = new TargetIdentity(LocalId.of("265987761440704"), request.targetTrackerId(),
                 request.commonId(), request.targetRevision(), false);
         assertThrows(DomainException.class,
                 () -> adapter.materialize(request, mismatched));

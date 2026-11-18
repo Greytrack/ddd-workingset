@@ -65,9 +65,9 @@ public class WorkingSetCreationService {
     @Transactional
     public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request,
                                         Caller caller) {
-        var existing = store.findByRequest(requestId);
+        java.util.Optional<WorkingSetCreation> existing = store.findByRequest(requestId);
         if (existing.isPresent()) {
-            var task = existing.get();
+            WorkingSetCreation task = existing.get();
             return replay(task, request.apply(task.request().newWorkingSetId()));
         }
         return submit(request.apply(Long.toString(ids.nextId(null).longValue())), caller);
@@ -78,11 +78,11 @@ public class WorkingSetCreationService {
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
         }
-        var target = WorkingSetId.of(request.newWorkingSetId());
+        WorkingSetId target = WorkingSetId.of(request.newWorkingSetId());
         if (WorkingSet.DEFAULT_ID.equals(target)) {
             throw new IllegalArgumentException("The default working set cannot be a creation target");
         }
-        var previous = store.findByTarget(target);
+        java.util.Optional<WorkingSetCreation> previous = store.findByTarget(target);
         if (previous.isPresent()) {
             return replay(previous.orElseThrow(), request);
         }
@@ -90,15 +90,15 @@ public class WorkingSetCreationService {
             throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
-        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
-        var winner = store.findByRequest(request.requestId())
+        WorkingSetCreation winner = store.findByRequest(request.requestId())
                 .or(() -> store.findByTarget(target)).orElseThrow();
-        var normalized = new WorkingSetCreation.Request(request.parentWorkingSetId(), winner.request().newWorkingSetId(),
+        WorkingSetCreation.Request normalized = new WorkingSetCreation.Request(request.parentWorkingSetId(), winner.request().newWorkingSetId(),
                 request.requestId(), request.productSpaceIds(), request.sharedTrackerIds(),
                 request.unsharedParentTrackerIds(), request.name(), request.mode());
         return replay(winner, normalized);
@@ -108,7 +108,7 @@ public class WorkingSetCreationService {
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
                                               List<String> parentTrackerIds, Caller caller) {
-        var active = store.findActiveExtension(target);
+        java.util.Optional<WorkingSetCreation> active = store.findActiveExtension(target);
         if (active.isPresent()) {
             if (active.get().request().requestId().equals(requestId)) {
                 return active.get();
@@ -116,16 +116,16 @@ public class WorkingSetCreationService {
             throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
         workingSets.requireReady(target);
-        var targetSet = workingSets.findWorkingSet(target)
+        WorkingSet targetSet = workingSets.findWorkingSet(target)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, target.value()));
-        var parentId = targetSet.requireParentId();
+        WorkingSetId parentId = targetSet.requireParentId();
         TreeSet<String> requested = new TreeSet<>(parentTrackerIds == null ? List.of() : parentTrackerIds);
-        var spaces = new TreeSet<String>();
-        var shared = new ArrayList<String>();
-        var unshared = new ArrayList<String>();
+        TreeSet<String> spaces = new TreeSet<String>();
+        ArrayList<String> shared = new ArrayList<String>();
+        ArrayList<String> unshared = new ArrayList<String>();
         for (String trackerId : requested) {
-            var id = TrackerId.of(trackerId);
-            var source = trackers.findTracker(id).orElse(null);
+            TrackerId id = TrackerId.of(trackerId);
+            sk.workingset.domain.Tracker source = trackers.findTracker(id).orElse(null);
             if (source != null && source.sharingMode() == SharingMode.SHARED) {
                 if (targetSet.hasTrackerBinding(id)) continue;
                 shared.add(trackerId);
@@ -142,15 +142,15 @@ public class WorkingSetCreationService {
         if (shared.isEmpty() && unshared.isEmpty()) {
             throw new BindingFailure(Reason.NoDerivableTracker, target.value());
         }
-        var request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
+        WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
                 List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
-        var creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
-        var concurrent = store.findActiveExtension(target);
+        java.util.Optional<WorkingSetCreation> concurrent = store.findActiveExtension(target);
         if (concurrent.isPresent()) {
             if (concurrent.get().request().requestId().equals(requestId)) {
                 return concurrent.get();
@@ -174,7 +174,7 @@ public class WorkingSetCreationService {
 
     /** 任务上下文读取创建中的目标工作集；普通查询仍按 Preparing 过滤。 */
     public WorkingSet findTarget(String id) {
-        var creation = find(id);
+        WorkingSetCreation creation = find(id);
         return workingSets.findWorkingSetForCreation(WorkingSetId.of(creation.request().newWorkingSetId()))
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "Working set is not created yet: " + creation.request().newWorkingSetId()));
@@ -182,7 +182,7 @@ public class WorkingSetCreationService {
 
     public void execute(String id) {
         transaction.executeWithoutResult(tx -> {
-            var creation = lock(id);
+            WorkingSetCreation creation = lock(id);
             if (creation.status() == Status.Pending) {
                 store.update(creation.start(Instant.now()));
             }
@@ -190,11 +190,11 @@ public class WorkingSetCreationService {
         boolean running;
         do {
             running = Boolean.TRUE.equals(transaction.execute(tx -> {
-                var creation = lock(id);
+                WorkingSetCreation creation = lock(id);
                 if (creation.status() != Status.Running) {
                     return false;
                 }
-                var updated = creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
+                WorkingSetCreation updated = creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
                         ? indexer.indexBatch(creation, tx) : executeItem(creation);
                 store.update(updated);
                 if (updated.status() != Status.Running && updated.request().mode() == Mode.EXTEND) {
@@ -203,7 +203,7 @@ public class WorkingSetCreationService {
                 }
                 if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
                         && updated.stage() != Stage.INDEX_UNSHARED_TRACKERS) {
-                    var scannedTrackers = updated.indexProgress().values().stream()
+                    List<String> scannedTrackers = updated.indexProgress().values().stream()
                             .map(IndexProgress::scannedChildTrackerId).filter(java.util.Objects::nonNull).sorted().toList();
                     events.publishEvent(new TrackerItemsIndexedEvent(id, updated.request().newWorkingSetId(),
                             scannedTrackers, Instant.now()));
@@ -215,11 +215,11 @@ public class WorkingSetCreationService {
 
     private WorkingSetCreation executeItem(WorkingSetCreation creation) {
         String item = creation.currentItem();
-        var target = WorkingSetId.of(creation.request().newWorkingSetId());
-        var stage = creation.stage();
+        WorkingSetId target = WorkingSetId.of(creation.request().newWorkingSetId());
+        WorkingSetCreation.Stage stage = creation.stage();
         if (stage == Stage.PUBLISH_RELATION_EVENTS) {
-            var originType = creation.request().mode() == Mode.CREATE ? OriginType.CREATION : OriginType.EXTENSION;
-            var result = relationEvents.publish(target, TrackerId.of(item), originType, creation.id());
+            OriginType originType = creation.request().mode() == Mode.CREATE ? OriginType.CREATION : OriginType.EXTENSION;
+            RelationEventStep.StepResult result = relationEvents.publish(target, TrackerId.of(item), originType, creation.id());
             if (result.failed() > 0) {
                 return recordFailure(creation, item, "RELATION_EVENT_FAILED");
             }
@@ -251,7 +251,7 @@ public class WorkingSetCreationService {
         } catch (BindingFailure failure) {
             return recordFailure(creation, item, failure.reason().name());
         } catch (DomainException failure) {
-            var reason = FailureReason.of(failure);
+            FailureReason reason = FailureReason.of(failure);
             if (reason == FailureReason.PREPARING) {
                 throw failure;
             }
@@ -260,7 +260,7 @@ public class WorkingSetCreationService {
     }
 
     private WorkingSetCreation recordFailure(WorkingSetCreation creation, String item, String reason) {
-        var stage = creation.stage();
+        WorkingSetCreation.Stage stage = creation.stage();
         String trackerId = switch (stage) {
             case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
                     PUBLISH_RELATION_EVENTS -> item;
@@ -268,7 +268,7 @@ public class WorkingSetCreationService {
         };
         String spaceId = stage == Stage.BIND_PRODUCT_SPACES ? item
                 : trackerId == null ? null : workingSetService.trackerSpaceForTask(TrackerId.of(trackerId));
-        var now = Instant.now();
+        Instant now = Instant.now();
         return creation.advance(ItemOutcome.Failed, new Failure(stage, spaceId, trackerId, null, reason, now), now);
     }
 

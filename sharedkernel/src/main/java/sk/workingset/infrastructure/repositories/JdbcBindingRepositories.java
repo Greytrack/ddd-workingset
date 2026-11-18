@@ -70,13 +70,13 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
         if (lock) {
             sql += " FOR UPDATE";
         }
-        var rows = jdbc.query(sql,
+        List<String[]> rows = jdbc.query(sql,
                 (rs, row) -> new String[]{rs.getString("parent_working_set_id"), rs.getString("name")},
                 id.numericValue());
         if (rows.isEmpty()) {
             return Optional.empty();
         }
-        var spaces = jdbc.query("""
+        List<WorkingSet.SpaceBinding> spaces = jdbc.query("""
                 SELECT sb.product_space_id, ps.name AS product_space_name, sb.origin, sb.state
                 FROM space_bindings sb
                 LEFT JOIN product_spaces ps ON ps.product_space_id = sb.product_space_id
@@ -85,7 +85,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 rs.getString("product_space_name"),
                 WorkingSet.SpaceOrigin.valueOf(rs.getString("origin")),
                 WorkingSet.SpaceState.valueOf(rs.getString("state"))), id.numericValue());
-        var trackers = jdbc.query("""
+        List<WorkingSet.TrackerBinding> trackers = jdbc.query("""
                 SELECT tracker_id, product_space_id, classification_id, sharing_mode, origin FROM tracker_bindings
                 WHERE working_set_id = ? ORDER BY product_space_id, classification_id
                 """, (rs, row) -> new WorkingSet.TrackerBinding(id, TrackerId.of(rs.getLong("tracker_id")),
@@ -131,7 +131,7 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
 
     @Override
     public List<WorkingSetId> findAncestors(WorkingSetId id) {
-        var ancestors = jdbc.queryForList("""
+        List<Long> ancestors = jdbc.queryForList("""
                 WITH RECURSIVE lineage(working_set_id, parent_working_set_id, distance) AS (
                     SELECT working_set_id, parent_working_set_id, 0
                     FROM working_sets WHERE working_set_id = ?

@@ -37,7 +37,7 @@ public final class RelationEventStep {
     public StepResult publish(WorkingSetId target, TrackerId parent, OriginType originType, String originId) {
         try {
             Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
-            var targetSet = workingSets.findWorkingSetForCreation(target).orElse(null);
+            sk.workingset.domain.WorkingSet targetSet = workingSets.findWorkingSetForCreation(target).orElse(null);
             if (child == null || targetSet == null || !targetSet.hasTrackerBinding(child.trackerId())) {
                 return new StepResult(0, 0, true);
             }
@@ -53,9 +53,9 @@ public final class RelationEventStep {
         int failed = 0;
         for (LightTrackerItem item : indexed) {
             try {
-                var referenceSource = new sk.workingset.domain.event.ReferenceEndpointEvent(target,
+                sk.workingset.domain.event.ReferenceEndpointEvent referenceSource = new sk.workingset.domain.event.ReferenceEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId(), item.revision());
-                var associationSource = new sk.workingset.domain.event.AssociationEndpointEvent(target,
+                sk.workingset.domain.event.AssociationEndpointEvent associationSource = new sk.workingset.domain.event.AssociationEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId());
                 published += publisher.publishReferenceCreations(originId, originType,
                         source.upstreamReferences(referenceSource)).size();

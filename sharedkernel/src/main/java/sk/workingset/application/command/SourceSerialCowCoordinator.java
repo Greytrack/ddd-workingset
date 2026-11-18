@@ -36,7 +36,7 @@ public final class SourceSerialCowCoordinator {
     }
 
     public void runSerial(LocalId sourceLocalId, long sequence, Runnable task) {
-        var completion = new CompletableFuture<Void>();
+        CompletableFuture<Void> completion = new CompletableFuture<Void>();
         boolean drain;
         synchronized (queues) {
             drain = !queues.containsKey(sourceLocalId);
@@ -66,7 +66,7 @@ public final class SourceSerialCowCoordinator {
             Task task;
             long previous;
             synchronized (queues) {
-                var queue = queues.get(source);
+                PriorityQueue<SourceSerialCowCoordinator.Task> queue = queues.get(source);
                 task = queue.peek();
                 if (task == null) {
                     queues.remove(source);

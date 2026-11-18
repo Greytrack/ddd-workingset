@@ -86,12 +86,12 @@ public class MergeExecutionService {
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, Caller caller) {
-        var existing = store.findRoundByRequest(requestId);
+        java.util.Optional<MergeRound> existing = store.findRoundByRequest(requestId);
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
-        var pair = trackerPair(decisions);
-        var prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller.id());
+        MergeCheckpoint.Key pair = trackerPair(decisions);
+        MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller.id());
         MergeRound round;
         try {
             round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
@@ -111,20 +111,20 @@ public class MergeExecutionService {
 
     /** 一页决策必须同属一个 Tracker 分支对；返回规范化后的键。 */
     private static MergeCheckpoint.Key trackerPair(List<EntryRequest> decisions) {
-        var evidence = decisions.getFirst().evidence();
+        Difference evidence = decisions.getFirst().evidence();
         if (evidence == null) {
             throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
         }
-        var pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
+        MergeCheckpoint.Key pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
                 evidence.family());
-        var sourceWorkingSet = evidence.trackers().sourceWorkingSetId();
-        var targetWorkingSet = evidence.trackers().targetWorkingSetId();
-        var mixed = decisions.stream().anyMatch(request -> {
+        WorkingSetId sourceWorkingSet = evidence.trackers().sourceWorkingSetId();
+        WorkingSetId targetWorkingSet = evidence.trackers().targetWorkingSetId();
+        boolean mixed = decisions.stream().anyMatch(request -> {
             if (request.evidence() == null) {
                 return true;
             }
-            var candidate = request.evidence();
-            var other = new MergeCheckpoint.Key(candidate.trackers().source(),
+            Difference candidate = request.evidence();
+            MergeCheckpoint.Key other = new MergeCheckpoint.Key(candidate.trackers().source(),
                     candidate.trackers().target(), candidate.family());
             return !other.a().equals(pair.a()) || !other.b().equals(pair.b())
                     || !candidate.trackers().sourceWorkingSetId().equals(sourceWorkingSet)
@@ -138,15 +138,15 @@ public class MergeExecutionService {
 
     /** 一页决策要么整页登记成功，要么整轮回滚；失败原因决定客户端下一步动作。 */
     private void registerDecisions(MergeRound round, List<EntryRequest> requests) {
-        var caller = Caller.of(round.caller());
-        var candidates = comparisons.candidates(round.source(), round.target());
-        var updated = round;
-        for (var request : requests) {
-            var frozen = request.evidence();
+        Caller caller = Caller.of(round.caller());
+        List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = comparisons.candidates(round.source(), round.target());
+        MergeRound updated = round;
+        for (MergeExecutionService.EntryRequest request : requests) {
+            Difference frozen = request.evidence();
             if (frozen == null) {
                 throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
             }
-            var pair = frozen.trackers();
+            sk.workingset.domain.merge.Comparison.TrackerPair pair = frozen.trackers();
             if (!pair.sourceWorkingSetId().equals(round.source())
                     || !pair.targetWorkingSetId().equals(round.target())) {
                 throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
@@ -155,7 +155,7 @@ public class MergeExecutionService {
                 throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
             lockEvidence(frozen);
-            var current = comparisons.current(frozen, caller);
+            Difference current = comparisons.current(frozen, caller);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
                 throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
@@ -187,7 +187,7 @@ public class MergeExecutionService {
 
     public MergeRound.ApplyResult apply(String id) {
         try {
-            var round = round(id, false);
+            MergeRound round = round(id, false);
             if (round.result() != null) {
                 return round.result();
             }
@@ -201,32 +201,32 @@ public class MergeExecutionService {
 
     private MergeRound.ApplyResult runWithExecutionLock(String id) {
         if (!store.tryLockExecution(id)) {
-            var result = round(id, false).result();
+            MergeRound.ApplyResult result = round(id, false).result();
             if (result != null) {
                 return result;
             }
             throw new MergeFailure(Reason.RoundInProgress, id);
         }
 
-        var round = transaction.execute(status -> startExecution(id));
-        for (var entry : Objects.requireNonNull(round).entries()) {
+        MergeRound round = transaction.execute(status -> startExecution(id));
+        for (MergeRound.Entry entry : Objects.requireNonNull(round).entries()) {
             if (entry.result() == null) {
-                var receipt = executeEntry(round, entry);
+                MergeExecutionService.Execution receipt = executeEntry(round, entry);
                 transaction.executeWithoutResult(status -> recordResult(id, entry, receipt));
             }
         }
-        var completed = transaction.execute(status -> {
-            var current = round(id, true);
+        MergeRound completed = transaction.execute(status -> {
+            MergeRound current = round(id, true);
             if (current.result() != null) {
                 return null;
             }
-            var finished = current.complete(Instant.now());
+            MergeRound finished = current.complete(Instant.now());
             store.updateRound(finished);
             return finished;
         });
         if (completed != null) {
             try {
-                var repair = relationRepair.repair(completed);
+                MergeRelationRepairStep.StepResult repair = relationRepair.repair(completed);
                 if (repair.failed() > 0) {
                     log.warn("Merge {} relation repair had {} failed targets", completed.id(), repair.failed());
                 }
@@ -240,7 +240,7 @@ public class MergeExecutionService {
     }
 
     private MergeRound startExecution(String id) {
-        var round = round(id, true);
+        MergeRound round = round(id, true);
         if (round.state() == State.Preparing) {
             round = round.start();
             store.updateRound(round);
@@ -249,11 +249,11 @@ public class MergeExecutionService {
     }
 
     private void recordResult(String id, Entry entry, Execution execution) {
-        var round = round(id, true);
+        MergeRound round = round(id, true);
         if (recordedResult(round, entry) != null) {
             return;
         }
-        var result = execution.result();
+        MergeRound.ItemResult result = execution.result();
         if (execution.receipt() != null) {
             result = confirm(round, entry, execution.receipt());
         }
@@ -283,13 +283,13 @@ public class MergeExecutionService {
             // The receipt and any event publication commit with the ALM write.
             return transaction.execute(status -> {
                 // Also serialize receipt lookup and writing if a disconnected executor is still unwinding.
-                var current = round(round.id(), true);
-                var recorded = recordedResult(current, entry);
+                MergeRound current = round(round.id(), true);
+                MergeRound.ItemResult recorded = recordedResult(current, entry);
                 if (recorded != null) {
                     return Execution.finished(recorded);
                 }
-                var receipt = store.findCommitReceipt(round.id(), entry.id()).orElseGet(() -> {
-                    var committed = applyDecision(round, entry);
+                MergeCommitReceipt receipt = store.findCommitReceipt(round.id(), entry.id()).orElseGet(() -> {
+                    MergeCommitReceipt committed = applyDecision(round, entry);
                     store.insertCommitReceipt(round.id(), entry.id(), committed);
                     return committed;
                 });
@@ -306,7 +306,7 @@ public class MergeExecutionService {
             return Execution.finished(result(entry, Outcome.Conflict, operation(entry), null, null,
                     "target persistence conflict"));
         } catch (DomainException failure) {
-            var reason = FailureReason.of(failure);
+            FailureReason reason = FailureReason.of(failure);
             if (reason == FailureReason.UNKNOWN) {
                 throw failure;
             }
@@ -319,13 +319,13 @@ public class MergeExecutionService {
     }
 
     private MergeCommitReceipt applyDecision(MergeRound round, Entry entry) {
-        var frozen = entry.evidence();
+        Difference frozen = entry.evidence();
         lockEvidence(frozen);
         if (!comparisons.candidates(round.source(), round.target()).contains(frozen.trackers())) {
             throw new MergeFailure(Reason.StaleEvidence, "tracker scope changed");
         }
-        var caller = Caller.of(round.caller());
-        var current = comparisons.current(frozen, caller);
+        Caller caller = Caller.of(round.caller());
+        Difference current = comparisons.current(frozen, caller);
         if (!frozen.source().sameExecutionShape(current.source())
                 || !frozen.target().sameExecutionShape(current.target())) {
             throw new MergeFailure(Reason.StaleEvidence, "identity, revision, presence or readability changed");
@@ -335,10 +335,10 @@ public class MergeExecutionService {
         Revision targetRevision = current.target().revision();
         LocalId businessRef = null;
         if (!"KEEP_TARGET".equals(operation)) {
-            var target = current.target();
-            var source = current.source();
-            var accepted = acceptedFields(entry, current);
-            var action = Operation.valueOf(operation);
+            sk.workingset.domain.merge.Comparison.Side target = current.target();
+            sk.workingset.domain.merge.Comparison.Side source = current.source();
+            Map<String,Object> accepted = acceptedFields(entry, current);
+            RequirementMergeCommand.Operation action = Operation.valueOf(operation);
             LocalId localId = action == Operation.CREATE
                     ? (WorkingSet.DEFAULT_ID.equals(round.target())
                             ? LocalId.of(current.family().value())
@@ -346,15 +346,14 @@ public class MergeExecutionService {
                     : target.localId();
             boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
             boolean create = action == Operation.CREATE;
-            comparisons.assertWriteCapability(current, create, caller);
-            var committed = writer.applyMerge(new RequirementMergeCommand(round.id(), entry.id(), round.token(), action,
+            RequirementMergeCommand.Result committed = writer.applyMerge(new RequirementMergeCommand(round.id(), entry.id(), round.token(), action,
                     current.trackers().target(), current.family(), localId, create ? source.revision() : target.revision(),
                     inherited || create ? null : target.lockVersion(), create ? source.version() : target.version(),
                     create ? source.fields() : target.fields(), accepted,
                     create && comparisons.isMergeBack(round.source(), round.target())));
             targetRevision = committed.revision();
             businessRef = committed.localId();
-            var mergeTarget = new MergeTargetEvent(businessRef, current.family(), current.trackers().target(),
+            MergeTargetEvent mergeTarget = new MergeTargetEvent(businessRef, current.family(), current.trackers().target(),
                     round.target(), targetRevision, inherited,
                     create && committed.created() && !WorkingSet.DEFAULT_ID.equals(round.target()));
             if (mergeTarget.inherited() || mergeTarget.create()) {
@@ -368,17 +367,17 @@ public class MergeExecutionService {
         String operation = operation(entry);
         String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
         if (entry.decision().markAsMerged()) {
-            var trackers = entry.evidence().trackers();
-            var key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), entry.evidence().family());
+            sk.workingset.domain.merge.Comparison.TrackerPair trackers = entry.evidence().trackers();
+            MergeCheckpoint.Key key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), entry.evidence().family());
             boolean sourceIsA = key.a().equals(trackers.source());
-            var sourceLocal = entry.evidence().source().localId();
-            var targetLocal = receipt.businessRef() != null ? receipt.businessRef()
+            LocalId sourceLocal = entry.evidence().source().localId();
+            LocalId targetLocal = receipt.businessRef() != null ? receipt.businessRef()
                     : entry.evidence().target().localId();
-            var localA = sourceIsA ? sourceLocal : targetLocal;
-            var localB = sourceIsA ? targetLocal : sourceLocal;
-            var revisionA = sourceIsA ? receipt.sourceRevision() : receipt.targetRevision();
-            var revisionB = sourceIsA ? receipt.targetRevision() : receipt.sourceRevision();
-            var direction = sourceIsA ? MergeCheckpoint.Direction.A_TO_B : MergeCheckpoint.Direction.B_TO_A;
+            LocalId localA = sourceIsA ? sourceLocal : targetLocal;
+            LocalId localB = sourceIsA ? targetLocal : sourceLocal;
+            Revision revisionA = sourceIsA ? receipt.sourceRevision() : receipt.targetRevision();
+            Revision revisionB = sourceIsA ? receipt.targetRevision() : receipt.sourceRevision();
+            MergeCheckpoint.Direction direction = sourceIsA ? MergeCheckpoint.Direction.A_TO_B : MergeCheckpoint.Direction.B_TO_A;
             boolean confirmed = store.recordCheckpoint(new MergeCheckpoint(key, entry.decisionVersion(),
                     revisionA, revisionB, localA, localB, round.id(), entry.evidence().kind(), direction, false,
                     round.caller()));
@@ -391,17 +390,17 @@ public class MergeExecutionService {
     private void lockEvidence(Difference difference) {
         Stream.of(difference.trackers().source(), difference.trackers().target()).distinct()
                 .sorted(Comparator.comparing(TrackerId::value)).forEach(trackers::lockTracker);
-        var ids = Stream.of(difference.source().localId(), difference.source().contentId(),
+        List<LocalId> ids = Stream.of(difference.source().localId(), difference.source().contentId(),
                         difference.target().localId(), difference.target().contentId())
                 .filter(Objects::nonNull).distinct().sorted(Comparator.comparing(LocalId::value)).toList();
         writer.lockMergeEvidence(ids);
     }
 
     private static Map<String, Object> acceptedFields(Entry entry, Difference current) {
-        var accepted = new LinkedHashMap<String, Object>();
+        LinkedHashMap<String,Object> accepted = new LinkedHashMap<String, Object>();
         entry.decision().fields().forEach((path, decision) -> {
             if (decision == FieldAction.ACCEPT) {
-                var value = current.source().fields().get(path);
+                Object value = current.source().fields().get(path);
                 if (value == null) {
                     throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, path);
                 }

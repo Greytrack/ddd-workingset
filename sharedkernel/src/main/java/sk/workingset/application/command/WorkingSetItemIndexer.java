@@ -77,17 +77,17 @@ public final class WorkingSetItemIndexer {
      * 不可读的身份仍保留，由索引执行时记录跳过明细。
      */
     public void snapshot(WorkingSetCreation creation) {
-        var parents = creation.request().unsharedParentTrackerIds();
+        List<String> parents = creation.request().unsharedParentTrackerIds();
         if (parents.isEmpty()) {
             snapshots.save(creation.id(), List.of());
             return;
         }
         for (String parent : parents) {
-            var parentTracker = TrackerId.of(parent);
-            var frozen = new ArrayList<WorkingSetCreationSnapshotRepository.Item>();
+            TrackerId parentTracker = TrackerId.of(parent);
+            ArrayList<WorkingSetCreationSnapshotRepository.Item> frozen = new ArrayList<WorkingSetCreationSnapshotRepository.Item>();
             String cursor = "";
             while (true) {
-                var candidates = livePage(parentTracker, cursor);
+                List<WorkingSetItemIndexer.Candidate> candidates = livePage(parentTracker, cursor);
                 for (Candidate candidate : candidates) {
                     if (candidate.lightweight()
                             && (businessItems.isDeleted(candidate.sourceId())
@@ -108,19 +108,19 @@ public final class WorkingSetItemIndexer {
     }
 
     public WorkingSetCreation indexBatch(WorkingSetCreation creation, SavepointManager transaction) {
-        var parent = TrackerId.of(creation.currentItem());
-        var target = WorkingSetId.of(creation.request().newWorkingSetId());
+        TrackerId parent = TrackerId.of(creation.currentItem());
+        WorkingSetId target = WorkingSetId.of(creation.request().newWorkingSetId());
         if (creation.failures().stream().anyMatch(failure -> parent.value().equals(failure.trackerId())
                 && (failure.stage() == Stage.COPY_UNSHARED_TRACKERS || failure.stage() == Stage.BIND_UNSHARED_TRACKERS))) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
-        var child = trackers.findDerivedTracker(target, parent).orElse(null);
-        var targetSet = workingSets.lockWorkingSetForCreation(target).orElseThrow();
+        Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
+        sk.workingset.domain.WorkingSet targetSet = workingSets.lockWorkingSetForCreation(target).orElseThrow();
         if (child == null || !targetSet.hasTrackerBinding(child.trackerId())) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
-        var progress = creation.indexProgress().getOrDefault(parent.value(), IndexProgress.initial());
-        var savepoint = transaction.createSavepoint();
+        WorkingSetCreation.IndexProgress progress = creation.indexProgress().getOrDefault(parent.value(), IndexProgress.initial());
+        Object savepoint = transaction.createSavepoint();
         List<Candidate> page;
         try {
             page = page(creation, parent, progress.afterLocalId());
@@ -131,14 +131,14 @@ public final class WorkingSetItemIndexer {
             transaction.releaseSavepoint(savepoint);
         }
 
-        var failures = new ArrayList<Failure>();
+        ArrayList<WorkingSetCreation.Failure> failures = new ArrayList<Failure>();
         int succeeded = progress.succeeded();
         int skipped = progress.skipped();
         int failed = progress.failed();
         for (Candidate candidate : page) {
-            var itemSavepoint = transaction.createSavepoint();
+            Object itemSavepoint = transaction.createSavepoint();
             try {
-                var outcome = index(parent, child, candidate);
+                WorkingSetItemIndexer.Outcome outcome = index(parent, child, candidate);
                 switch (outcome.result()) {
                     case Indexed -> succeeded++;
                     case Existing -> skipped++;
@@ -171,7 +171,7 @@ public final class WorkingSetItemIndexer {
     }
 
     private List<Candidate> livePage(TrackerId parent, String cursor) {
-        var candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
+        TreeMap<String,WorkingSetItemIndexer.Candidate> candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
         items.pageInTracker(parent, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
         catalog.page(parent, cursor, batchSize).forEach(item ->
@@ -190,11 +190,11 @@ public final class WorkingSetItemIndexer {
         if (!businessItems.lockContentSource(candidate.sourceId())) {
             return skipped(parent, child, candidate, FailureReason.NOT_FOUND);
         }
-        var reader = readPorts.apply(candidate.sourceId());
+        TrackerItemReadPort reader = readPorts.apply(candidate.sourceId());
         try {
             reader.readInheritedAt(candidate.sourceRevision());
         } catch (DomainException failure) {
-            var reason = FailureReason.of(failure);
+            FailureReason reason = FailureReason.of(failure);
             if (reason == FailureReason.DELETED || reason == FailureReason.NOT_FOUND || reason == FailureReason.HISTORY_UNAVAILABLE) {
                 return skipped(parent, child, candidate, reason);
             }
@@ -204,7 +204,7 @@ public final class WorkingSetItemIndexer {
         do {
             id = LocalId.of(Long.toString(ids.nextId(null).longValue()));
         } while (id.value().equals(candidate.commonId().value()) || id.equals(candidate.sourceId()));
-        var item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
+        LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
                 candidate.revision(), candidate.sourceId(), candidate.sourceRevision());
         return items.insertIfFamilyAbsent(item)
                 ? new Outcome(IndexResult.Indexed, null)

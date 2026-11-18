@@ -34,7 +34,7 @@ public class WorkingSetExtensionController {
         if (request.requestId().length() > MAX_REQUEST_ID) {
             throw new IllegalArgumentException("requestId must be at most " + MAX_REQUEST_ID + " characters");
         }
-        var creation = creations.submitExtension(WorkingSetId.of(target), request.requestId(),
+        sk.workingset.domain.WorkingSetCreation creation = creations.submitExtension(WorkingSetId.of(target), request.requestId(),
                 request.trackerIds() == null ? List.of() : request.trackerIds(), Caller.of("web"));
         return ResponseEntity.accepted()
                 .location(URI.create("/api/working-set-creations/" + creation.id()))

@@ -81,7 +81,7 @@ public class ApplicationConfiguration {
 
     @Bean
     public TransactionTemplate newTransactionTemplate(PlatformTransactionManager transactionManager) {
-        var template = new TransactionTemplate(transactionManager);
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
         template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         return template;
     }
@@ -123,7 +123,7 @@ public class ApplicationConfiguration {
                                                                  StringRedisTemplate redis,
                                                                  ObjectMapper objectMapper,
                                                                  @Value("${workingset.item-cache.enabled:true}") boolean cacheEnabled) {
-        var repository = new JdbcLightTrackerItemRepository(jdbc);
+        JdbcLightTrackerItemRepository repository = new JdbcLightTrackerItemRepository(jdbc);
         return cacheEnabled ? new CachingLightTrackerItemRepository(repository, redis, objectMapper) : repository;
     }
 

@@ -59,7 +59,7 @@ public class MergeController {
                                   @RequestParam(defaultValue = "0") int offset,
                                   @RequestParam(defaultValue = "100") int limit) {
         checkPage(offset, limit);
-        var result = comparisons.compare(WorkingSetId.of(source), WorkingSetId.of(target),
+        Comparison result = comparisons.compare(WorkingSetId.of(source), WorkingSetId.of(target),
                 TrackerId.of(sourceTrackerId), TrackerId.of(targetTrackerId), CALLER);
         return page(result, offset, limit);
     }

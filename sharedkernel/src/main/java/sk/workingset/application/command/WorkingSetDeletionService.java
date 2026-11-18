@@ -47,8 +47,8 @@ public class WorkingSetDeletionService {
 
     @Transactional
     public void unbindTracker(WorkingSetId id, TrackerId trackerId) {
-        var workingSet = lockWorkingSet(id);
-        var binding = workingSet.trackerBinding(trackerId);
+        WorkingSet workingSet = lockWorkingSet(id);
+        TrackerBinding binding = workingSet.trackerBinding(trackerId);
         checkUnbind(binding);
         unbind(workingSet, binding);
     }
@@ -60,7 +60,7 @@ public class WorkingSetDeletionService {
 
     @Transactional
     public void deleteTracker(TrackerId id) {
-        var tracker = lockTracker(id);
+        Tracker tracker = lockTracker(id);
         workingSets.requireReady(tracker.workingSetId());
         requireDeletable(tracker);
         workingSets.deleteBindingsToTracker(id);
@@ -83,13 +83,13 @@ public class WorkingSetDeletionService {
     @Transactional
     public void deleteWorkingSet(WorkingSetId id) {
         WorkingSet.requireDeletable(id);
-        var workingSet = lockWorkingSet(id);
+        WorkingSet workingSet = lockWorkingSet(id);
         assertNoChildren(id);
-        var bindings = workingSet.trackers().stream()
+        List<TrackerBinding> bindings = workingSet.trackers().stream()
                 .sorted(Comparator.comparing(binding -> binding.trackerId().value()))
                 .toList();
         Map<String, String> blockers = new LinkedHashMap<>();
-        for (var binding : bindings) {
+        for (TrackerBinding binding : bindings) {
             try {
                 checkUnbind(binding);
             } catch (BindingFailure failure) {
@@ -105,14 +105,14 @@ public class WorkingSetDeletionService {
     }
 
     private void assertNoChildren(WorkingSetId id) {
-        var children = workingSets.findChildren(id).stream().map(WorkingSetId::value).toList();
+        List<String> children = workingSets.findChildren(id).stream().map(WorkingSetId::value).toList();
         if (!children.isEmpty()) {
             throw new BindingFailure(Reason.WorkingSetHasChildren, id.value(), Map.of("childWorkingSetIds", children));
         }
     }
 
     private void checkUnbind(TrackerBinding binding) {
-        var tracker = lockTracker(binding.trackerId());
+        Tracker tracker = lockTracker(binding.trackerId());
         if (binding.sharingMode() == SharingMode.UNSHARED) {
             requireDeletable(tracker);
         }
@@ -132,7 +132,7 @@ public class WorkingSetDeletionService {
     }
 
     private void requireDeletable(Tracker tracker) {
-        var id = tracker.trackerId();
+        TrackerId id = tracker.trackerId();
         tracker.requireDeletable(items.existsInTracker(id) || businessItems.existsInTracker(id),
                 trackers.hasOrgChildren(id), trackers.hasDerivedChildren(id));
     }

@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
@@ -48,13 +47,13 @@ class RelationEventStepTest {
 
     @Test
     void publishesCreationAssociationAndRepairForEveryIndexedItem() {
-        var parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
+        Tracker parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
                 new Classification("266673196957632", SharingMode.UNSHARED), null);
-        var child = Tracker.derived(childId, parent, target, true);
-        var workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
+        Tracker child = Tracker.derived(childId, parent, target, true);
+        WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
-        var item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
+        LightTrackerItem item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
                 LocalId.of("260574482192320"), Revision.of(3));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
@@ -64,9 +63,9 @@ class RelationEventStepTest {
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
         when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
         when(items.findInTracker(childId)).thenReturn(List.of(item));
-        var targetEndpoint = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+        ReferenceEndpointEvent targetEndpoint = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                 CommonId.of("261349487529920"), TrackerId.of("259649290751936"), Revision.of(4));
-        var sourceEndpoint = new ReferenceEndpointEvent(target, item.localId(), item.commonId(), childId, item.revision());
+        ReferenceEndpointEvent sourceEndpoint = new ReferenceEndpointEvent(target, item.localId(), item.commonId(), childId, item.revision());
         when(source.upstreamReferences(any())).thenReturn(List.of(new ReferenceFact("reference-1", sourceEndpoint,
                 targetEndpoint)));
         when(source.upstreamAssociations(any())).thenReturn(List.of(new AssociationFact("association-1",
@@ -76,11 +75,11 @@ class RelationEventStepTest {
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-2", sourceEndpoint,
                 targetEndpoint)));
 
-        var published = new ArrayList<Object>();
-        var publisher = new RelationEventPublisher(published::add, entity -> 10L);
-        var step = new RelationEventStep(trackers, workingSets, items, source, publisher);
+        ArrayList<Object> published = new ArrayList<Object>();
+        sk.workingset.application.command.RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
+        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, items, source, publisher);
 
-        var result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
+        sk.workingset.application.command.RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 
         assertEquals(3, result.published());
         assertEquals(0, result.failed());
@@ -92,13 +91,13 @@ class RelationEventStepTest {
 
     @Test
     void recordsFailureWithoutThrowingWhenRelationSourceFails() {
-        var parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
+        Tracker parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
                 new Classification("266673196957632", SharingMode.UNSHARED), null);
-        var child = Tracker.derived(childId, parent, target, true);
-        var workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
+        Tracker child = Tracker.derived(childId, parent, target, true);
+        WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
-        var item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
+        LightTrackerItem item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
                 LocalId.of("260574482192320"), Revision.of(3));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
@@ -110,10 +109,10 @@ class RelationEventStepTest {
         when(items.findInTracker(childId)).thenReturn(List.of(item));
         when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
 
-        var step = new RelationEventStep(trackers, workingSets, items, source,
+        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, items, source,
                 new RelationEventPublisher(event -> { }, entity -> 1L));
 
-        var result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
+        sk.workingset.application.command.RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 
         assertEquals(0, result.published());
         assertEquals(1, result.failed());

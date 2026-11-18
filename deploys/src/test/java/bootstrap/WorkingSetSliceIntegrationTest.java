@@ -55,7 +55,7 @@ class WorkingSetSliceIntegrationTest {
     void setUp() {
         items = mock(LightTrackerItemRepository.class);
         requirements = mock(RequirementRepository.class);
-        var query = mock(WorkingSetQueryProvider.class);
+        WorkingSetQueryProvider query = mock(WorkingSetQueryProvider.class);
         when(query.isPreparing(org.mockito.ArgumentMatchers.anyLong())).thenReturn(false);
         workingSet = new WorkingSetQueryService(query, items,
                 localId -> new RequirementAdapter(requirements, localId), mock(BusinessTrackerItems.class));

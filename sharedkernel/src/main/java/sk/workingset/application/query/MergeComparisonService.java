@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.Operation;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.application.query.provider.TrackerItemCatalog;
@@ -66,17 +65,17 @@ public class MergeComparisonService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId sourceTracker,
                               TrackerId targetTracker, Caller caller) {
-        var pair = new TrackerPair(source, sourceTracker, target, targetTracker);
+        TrackerPair pair = new TrackerPair(source, sourceTracker, target, targetTracker);
         if (!candidates(source, target).contains(pair)) {
             throw new MergeFailure(Reason.MergeNotAllowed, "trackers must form a direct derivation pair in the supplied working sets");
         }
-        var differences = new ArrayList<Difference>();
-        var sources = familyIds(pair.source());
-        var targets = familyIds(pair.target());
-        var families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
+        ArrayList<Difference> differences = new ArrayList<Difference>();
+        Map<CommonId,LocalId> sources = familyIds(pair.source());
+        Map<CommonId,LocalId> targets = familyIds(pair.target());
+        TreeSet<CommonId> families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
         families.addAll(sources.keySet());
         families.addAll(targets.keySet());
-        for (var family : families) {
+        for (CommonId family : families) {
             Side left = read(sources.get(family), caller);
             Side right = read(targets.get(family), caller);
             if (handled(pair, family, left, right)) {
@@ -85,7 +84,7 @@ public class MergeComparisonService {
             if (left.presence() == Presence.ABSENT && right.presence() == Presence.ABSENT) {
                 continue;
             }
-            var kind = Difference.classify(left, right);
+            ChangeKind kind = Difference.classify(left, right);
             boolean unreadable = left.presence() == Presence.UNREADABLE
                     || right.presence() == Presence.UNREADABLE;
             // 新增/删除只下发存在性差异，不进入字段比较。
@@ -99,10 +98,10 @@ public class MergeComparisonService {
     }
 
     private boolean handled(Comparison.TrackerPair trackers, CommonId family, Side left, Side right) {
-        var key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), family);
+        MergeCheckpoint.Key key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), family);
         boolean leftIsA = key.a().equals(trackers.source());
-        var aRevision = leftIsA ? left.revision() : right.revision();
-        var bRevision = leftIsA ? right.revision() : left.revision();
+        sk.workingset.domain.Revision aRevision = leftIsA ? left.revision() : right.revision();
+        sk.workingset.domain.Revision bRevision = leftIsA ? right.revision() : left.revision();
         return store.findCheckpoint(key)
                 .filter(checkpoint -> !checkpoint.revoked())
                 .filter(checkpoint -> java.util.Objects.equals(checkpoint.revisionA(), aRevision)
@@ -111,9 +110,9 @@ public class MergeComparisonService {
     }
 
     public List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {
-        var left = workingSet(source);
-        var right = workingSet(target);
-        var child = WorkingSetLineagePolicy.childOf(left, right);
+        WorkingSet left = workingSet(source);
+        WorkingSet right = workingSet(target);
+        WorkingSet child = WorkingSetLineagePolicy.childOf(left, right);
         return WorkingSetLineagePolicy.comparableBindings(left, right).stream().flatMap(binding ->
                 trackers.findTracker(binding.trackerId()).stream()
                 // The binding must belong to the direct child Working Set; this rejects cross-level
@@ -149,8 +148,8 @@ public class MergeComparisonService {
     }
 
     public Difference current(Difference original, Caller caller) {
-        var pair = original.trackers();
-        var family = original.family();
+        TrackerPair pair = original.trackers();
+        CommonId family = original.family();
         Side source = read(familyIds(pair.source()).get(family), caller);
         Side target = read(familyIds(pair.target()).get(family), caller);
         return new Difference(family, pair, source, target, differingFields(source, target));
@@ -164,7 +163,7 @@ public class MergeComparisonService {
     }
 
     private static void putFamily(Map<CommonId, LocalId> families, CommonId family, LocalId id) {
-        var previous = families.putIfAbsent(family, id);
+        LocalId previous = families.putIfAbsent(family, id);
         if (previous != null && !previous.equals(id)) {
             throw new MergeFailure(Reason.Conflict, "multiple variants in family " + family.value());
         }
@@ -174,39 +173,27 @@ public class MergeComparisonService {
         if (id == null) {
             return Side.absent();
         }
-        var variant = items.findById(id).orElse(null);
+        sk.workingset.domain.LightTrackerItem variant = items.findById(id).orElse(null);
         LocalId contentId = variant == null ? id : variant.effectiveContentSource();
         boolean inherited = variant != null && !variant.materialized();
-        var port = readPorts.apply(contentId);
+        TrackerItemReadPort port = readPorts.apply(contentId);
         try {
-            if (!port.capabilities().comparable()) {
-                return unreadable(id, FailureReason.CAPABILITY_NOT_SUPPORTED);
-            }
-            var stamp = port.evidence();
-            var revision = variant == null || !inherited ? stamp.revision() : variant.revision();
-            var contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
+            TrackerItemReadPort.ContentEvidence stamp = port.evidence();
+            sk.workingset.domain.Revision revision = variant == null || !inherited ? stamp.revision() : variant.revision();
+            sk.workingset.domain.Revision contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
             if (!inherited && stamp.deleted()) {
                 return Side.absent();
             }
-            var content = inherited ? port.readInheritedAt(contentRevision) : port.readAt(contentRevision);
+            sk.workingset.application.TrackerItemContent content = inherited ? port.readInheritedAt(contentRevision) : port.readAt(contentRevision);
             return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),
                     Presence.PRESENT, null, content.fields());
         } catch (DomainException failure) {
-            var failureReason = FailureReason.of(failure);
-            var reason = inherited && failureReason == FailureReason.NOT_FOUND
+            FailureReason failureReason = FailureReason.of(failure);
+            FailureReason reason = inherited && failureReason == FailureReason.NOT_FOUND
                     ? FailureReason.HISTORY_UNAVAILABLE : failureReason;
             return unreadable(id, reason);
         } catch (UnsupportedOperationException failure) {
             return unreadable(id, FailureReason.CAPABILITY_NOT_SUPPORTED);
-        }
-    }
-
-    public void assertWriteCapability(Difference difference, boolean create, Caller caller) {
-        LocalId capabilityId = create ? difference.source().localId() : difference.target().localId();
-        var port = readPorts.apply(capabilityId);
-        var capability = port.capabilities();
-        if (!capability.mergeable() || (create && !capability.creatable())) {
-            throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED, capabilityId.value());
         }
     }
 
@@ -218,7 +205,7 @@ public class MergeComparisonService {
         if (source.presence() != Presence.PRESENT || target.presence() != Presence.PRESENT) {
             return List.of();
         }
-        var keys = new TreeSet<>(source.fields().keySet());
+        TreeSet<String> keys = new TreeSet<>(source.fields().keySet());
         keys.addAll(target.fields().keySet());
         return keys.stream().filter(key -> !java.util.Objects.equals(source.fields().get(key), target.fields().get(key)))
                 .toList();

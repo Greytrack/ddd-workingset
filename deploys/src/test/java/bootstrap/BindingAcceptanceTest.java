@@ -87,7 +87,7 @@ class BindingAcceptanceTest {
         bindSpace(ws);
         assertFailure(rest.postForEntity(spacePath(ws), null, Map.class), HttpStatus.CONFLICT, "AlreadyBound");
 
-        var result = rest.postForEntity(sharedPath(ws, shared), null, TrackerBindingView.class);
+        ResponseEntity<TrackerBindingView> result = rest.postForEntity(sharedPath(ws, shared), null, TrackerBindingView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         assertEquals(shared, result.getBody().trackerId());
         assertFailure(rest.postForEntity(sharedPath(ws, shared), null, Map.class),
@@ -100,7 +100,7 @@ class BindingAcceptanceTest {
         assertFailure(rest.postForEntity(sharedPath(ws, unshared), null, Map.class),
                 HttpStatus.UNPROCESSABLE_ENTITY, "SharingModeMismatch");
 
-        var bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
         assertTrue(bindings.trackers().stream().anyMatch(binding -> binding.trackerId().equals(shared)));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?", Integer.class, ws));
@@ -160,7 +160,7 @@ class BindingAcceptanceTest {
     void doesNotCreateSecondDerivationForTheSameParentTracker() {
         bindSpace(ws);
         derive(ws, unshared, sourceItem);
-        var failure = assertThrows(BindingFailure.class, () -> derive(ws, unshared, sourceItem));
+        BindingFailure failure = assertThrows(BindingFailure.class, () -> derive(ws, unshared, sourceItem));
         assertEquals(BindingFailure.Reason.TrackerAlreadyBound, failure.reason());
     }
 
@@ -180,7 +180,7 @@ class BindingAcceptanceTest {
 
         bindSpace(ws);
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
-        var sharedAgain = rest.postForEntity(sharedPath(grandchild, shared), null, TrackerBindingView.class);
+        ResponseEntity<TrackerBindingView> sharedAgain = rest.postForEntity(sharedPath(grandchild, shared), null, TrackerBindingView.class);
         assertEquals(HttpStatus.CREATED, sharedAgain.getStatusCode());
         assertEquals(shared, sharedAgain.getBody().trackerId());
 
@@ -204,7 +204,7 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
-        var bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().isEmpty());
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasItems");
@@ -255,7 +255,7 @@ class BindingAcceptanceTest {
         bindSpace(ws);
         bindSpace(other);
         String endpoint = path("1") + "/product-spaces/" + space;
-        var blocked = delete(endpoint);
+        ResponseEntity<Map> blocked = delete(endpoint);
         assertFailure(blocked, HttpStatus.CONFLICT, "SpaceStillBoundInWorkingSet");
         assertEquals(java.util.stream.Stream.of(other, ws).sorted(java.util.Comparator.comparingLong(Long::parseLong))
                 .toList(), blocked.getBody().get("workingSetIds"));
@@ -278,7 +278,7 @@ class BindingAcceptanceTest {
         DeriveFixture.Result target = derive(ws, unshared, sourceItem);
         businessItem(fixtureId("ITEM-" + suffix), shared);
 
-        var blocked = delete(path(ws));
+        ResponseEntity<Map> blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "MemberCannotBeUnbound");
         assertEquals(Map.of(target.trackerId(), "TrackerHasItems"), blocked.getBody().get("members"));
         assertEquals(2, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
@@ -299,12 +299,12 @@ class BindingAcceptanceTest {
         String grandchild = fixtureId("GRAND-" + suffix);
         createChild(ws, grandchild);
 
-        var blocked = delete(path(ws));
+        ResponseEntity<Map> blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "WorkingSetHasChildren");
         assertEquals(List.of(grandchild), blocked.getBody().get("childWorkingSetIds"));
 
         assertEquals(ws, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
-        var bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertEquals(shared, bindings.trackers().getFirst().trackerId());
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
 
@@ -319,18 +319,18 @@ class BindingAcceptanceTest {
     @Test
     void concurrentChildCreationAndParentDeletionCannotLeaveADanglingParent() throws Exception {
         String child = fixtureId("RACE-CHILD-" + suffix);
-        var start = new CyclicBarrier(2);
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var create = executor.submit(() -> {
+        CyclicBarrier start = new CyclicBarrier(2);
+        try (java.util.concurrent.ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            java.util.concurrent.Future<ResponseEntity<Map>> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity(path(ws) + "/children", Map.of("name", "并发创建"), Map.class);
             });
-            var remove = executor.submit(() -> {
+            java.util.concurrent.Future<ResponseEntity<Map>> remove = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return delete(path(ws));
             });
 
-            var createResult = create.get(10, TimeUnit.SECONDS);
+            ResponseEntity<Map> createResult = create.get(10, TimeUnit.SECONDS);
             if (createResult.getStatusCode() == HttpStatus.CREATED) {
                 String createdChild = (String) createResult.getBody().get("workingSetId");
                 worksets.add(createdChild);
@@ -346,15 +346,15 @@ class BindingAcceptanceTest {
 
     @Test
     void concurrentItemCreationAndTrackerDeletionCannotLeaveAnOrphan() throws Exception {
-        var start = new CyclicBarrier(2);
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var create = executor.submit(() -> {
+        CyclicBarrier start = new CyclicBarrier(2);
+        try (java.util.concurrent.ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            java.util.concurrent.Future<org.springframework.http.HttpStatusCode> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
                         "title", "A", "description", "concurrent", "revision", 3), Map.class)
                         .getStatusCode();
             });
-            var remove = executor.submit(() -> {
+            java.util.concurrent.Future<org.springframework.http.HttpStatusCode> remove = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return delete(trackerPath(shared)).getStatusCode();
             });
@@ -417,7 +417,7 @@ class BindingAcceptanceTest {
     }
 
     private static void assertDirectSourceFailure(org.junit.jupiter.api.function.Executable action) {
-        var failure = org.junit.jupiter.api.Assertions.assertThrows(BindingFailure.class, action);
+        BindingFailure failure = org.junit.jupiter.api.Assertions.assertThrows(BindingFailure.class, action);
         assertEquals(BindingFailure.Reason.SourceTrackerNotFound, failure.reason());
     }
 

@@ -99,13 +99,13 @@ class WorkingSetItemIndexerTest {
                 VALUES (?, ?, ?, ?, 3, ?, 3, TRUE)
                 """, fixtureId("existing-" + suffix), family, childTracker, child, fixtureId("existing-" + suffix));
 
-        var request = new WorkingSetCreation.Request(parent, child, "request",
+        WorkingSetCreation.Request request = new WorkingSetCreation.Request(parent, child, "request",
                 List.of(space), List.of(), List.of(parentTracker));
-        var creation = new WorkingSetCreation(Long.valueOf(fixtureId("creation-" + suffix)), request, "test", Status.Running,
+        WorkingSetCreation creation = new WorkingSetCreation(Long.valueOf(fixtureId("creation-" + suffix)), request, "test", Status.Running,
                 Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1), List.of(),
                 Instant.now(), Instant.now(), null,
                 Map.of(Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1)), Map.of());
-        var result = transaction.execute(status -> indexer.indexBatch(creation, status));
+        WorkingSetCreation result = transaction.execute(status -> indexer.indexBatch(creation, status));
 
         assertEquals(1, result.indexProgress().get(parentTracker).skipped());
         assertEquals(0, result.indexProgress().get(parentTracker).failed());

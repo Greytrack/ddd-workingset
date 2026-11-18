@@ -68,18 +68,18 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
                 Integer.class, spaceId));
-        var trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
+        java.util.List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
-        for (var tracker : trackers) {
-            var items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/items",
+        for (TrackerView tracker : trackers) {
+            org.springframework.http.ResponseEntity<String> items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/items",
                     String.class);
             assertEquals(HttpStatus.OK, items.getStatusCode(), items::getBody);
             assertEquals("[]", items.getBody());
         }
 
-        var bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
-        var projectedSpace = bindings.spaces().stream()
+        BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+        sk.workingset.adapters.WorkingSetController.SpaceBindingView projectedSpace = bindings.spaces().stream()
                 .filter(binding -> spaceId.equals(binding.productSpaceId())).findFirst().orElseThrow();
         assertEquals("INITIAL_PROJECTION", projectedSpace.origin());
         assertEquals(trackers.stream().map(TrackerView::trackerId).sorted().toList(),
@@ -87,11 +87,11 @@ class TrackerDefaultAcceptanceTest {
                         .map(binding -> binding.trackerId()).sorted().toList());
 
         String trackerId = trackers.getFirst().trackerId();
-        var item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
+        org.springframework.http.ResponseEntity<RequirementView> item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            var items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
+            LightTrackerItemView[] items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
             assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
         });
     }
@@ -100,18 +100,18 @@ class TrackerDefaultAcceptanceTest {
     void createsAndBindsNamedTrackersUsingClassificationSharingRules() {
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED')", sharedClassification);
         String spaceId = createSpace("1");
-        var classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
+        ClassificationView[] classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
         assertTrue(Arrays.stream(classifications).anyMatch(classification ->
                 sharedClassification.equals(classification.classificationId())
                         && classification.sharingMode() == Classification.SharingMode.SHARED));
 
         String url = "/api/worksets/1/trackers";
-        for (var mode : Classification.SharingMode.values()) {
-            var request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
+        for (Classification.SharingMode mode : Classification.SharingMode.values()) {
+            Map<String,String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
                     "258519859202016", "sharingMode", mode.name());
-            var response = rest.postForEntity(url, request, TrackerView.class);
+            org.springframework.http.ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
-            var tracker = response.getBody();
+            TrackerView tracker = response.getBody();
             assertEquals(mode.name(), tracker.sharingMode());
             assertEquals("项目-" + mode, tracker.name());
             assertFalse(tracker.isDefault());
@@ -129,12 +129,12 @@ class TrackerDefaultAcceptanceTest {
                         request, Map.class).getStatusCode());
             }
         }
-        var allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
+        Map<String,String> allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
                 sharedClassification, "sharingMode", "SHARED");
         assertEquals(HttpStatus.CREATED, rest.postForEntity(url, allowed, TrackerView.class).getStatusCode());
-        var rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
+        Map<String,String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
                 sharedClassification, "sharingMode", "UNSHARED");
-        var refusal = rest.postForEntity(url, rejected, Map.class);
+        org.springframework.http.ResponseEntity<Map> refusal = rest.postForEntity(url, rejected, Map.class);
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, refusal.getStatusCode());
         assertEquals("SharingModeMismatch", refusal.getBody().get("reason"));
     }
@@ -196,18 +196,18 @@ class TrackerDefaultAcceptanceTest {
                 SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = ?
                 """, Integer.class, spaceId, child));
 
-        var defaultBindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+        BindingsView defaultBindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
         assertTrue(defaultBindings.spaces().stream().anyMatch(binding -> spaceId.equals(binding.productSpaceId())),
                 "default working set should own the projected space binding");
-        var childBindings = rest.getForObject("/api/worksets/" + child + "/bindings", BindingsView.class);
+        BindingsView childBindings = rest.getForObject("/api/worksets/" + child + "/bindings", BindingsView.class);
         assertTrue(childBindings.spaces().stream().noneMatch(binding -> spaceId.equals(binding.productSpaceId())),
                 "product space must not be projected into the child working set");
     }
 
     @Test
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
-        var space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
-        var classification = new Classification("258831141156800", Classification.SharingMode.UNSHARED);
+        ProductSpace space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
+        Classification classification = new Classification("258831141156800", Classification.SharingMode.UNSHARED);
         assertThrows(DomainException.class, () -> new Tracker(
                 TrackerId.of(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
                 WorkingSetId.of(child), space.id(), classification.id(), classification.sharingMode(), null, false));
@@ -235,11 +235,11 @@ class TrackerDefaultAcceptanceTest {
     }
 
     private String createSpace(String workingSet) {
-        var response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
+        org.springframework.http.ResponseEntity<sk.workingset.adapters.WorkingSetController.ProductSpaceView> response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
                 Map.of("name", "新空间-" + suffix),
                 sk.workingset.adapters.WorkingSetController.ProductSpaceView.class);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        var id = response.getBody().productSpaceId();
+        String id = response.getBody().productSpaceId();
         testSpaces.add(id);
         return id;
     }

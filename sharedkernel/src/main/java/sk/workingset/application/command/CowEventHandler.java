@@ -50,7 +50,7 @@ public final class CowEventHandler {
             try {
                 transactionTemplate.executeWithoutResult(status -> store.markPending(event.eventId(), target.localId(),
                         event.sourceLocalId(), event.beforeRevision()));
-                var receipt = store.findByEventAndTarget(event.eventId(), target.localId()).orElseThrow();
+                CowMaterializationRepository.Entry receipt = store.findByEventAndTarget(event.eventId(), target.localId()).orElseThrow();
                 attempts = receipt.attempts();
                 if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {
                     continue;
@@ -69,7 +69,7 @@ public final class CowEventHandler {
                 stage = "SWITCH";
                 switchToLocalBacked(event.eventId(), target.localId());
             } catch (RuntimeException error) {
-                var failure = new CowFailureLog.Failure(event.eventId(), target.localId(), event.sourceLocalId(),
+                CowFailureLog.Failure failure = new CowFailureLog.Failure(event.eventId(), target.localId(), event.sourceLocalId(),
                         event.beforeRevision(), event.afterRevision(), event.beforeLockVersion(),
                         event.afterLockVersion(), attempts, stage, error.getClass().getName(),
                         error.getMessage(), Instant.now());
@@ -89,7 +89,7 @@ public final class CowEventHandler {
     }
     private void switchToLocalBacked(long eventId, sk.workingset.domain.LocalId targetId) {
         transactionTemplate.executeWithoutResult(status -> {
-            var receipt = store.lockByEventAndTarget(eventId, targetId)
+            CowMaterializationRepository.Entry receipt = store.lockByEventAndTarget(eventId, targetId)
                     .orElseThrow(() -> sk.common.error.DomainException.withMessage(
                             sk.workingset.error.WorkingsetResultCode.MATERIALIZATION_REJECTED,
                             "COW receipt is missing"));
@@ -101,7 +101,7 @@ public final class CowEventHandler {
                         sk.workingset.error.WorkingsetResultCode.MATERIALIZATION_REJECTED,
                         "Target business save was not confirmed");
             }
-            var target = items.findById(targetId)
+            LightTrackerItem target = items.findById(targetId)
                     .orElseThrow(() -> sk.common.error.DomainException.withMessage(
                             sk.workingset.error.WorkingsetResultCode.MATERIALIZATION_REJECTED,
                             "LightTrackerItem is missing"));

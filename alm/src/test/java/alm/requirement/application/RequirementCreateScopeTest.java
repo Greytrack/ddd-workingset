@@ -52,7 +52,7 @@ class RequirementCreateScopeTest {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
                 new TrackerScope(WorkingSetId.of("1"), SharingMode.UNSHARED)));
 
-        var created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
+        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 
         assertEquals(created.localId().value(), created.commonId().value());
     }
@@ -62,7 +62,7 @@ class RequirementCreateScopeTest {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
                 new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
 
-        var created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
+        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
         assertNotEquals(created.localId().value(), created.commonId().value());
     }
@@ -72,7 +72,7 @@ class RequirementCreateScopeTest {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
                 new TrackerScope(WorkingSetId.of("259712159403968"), SharingMode.UNSHARED)));
 
-        var failure = assertThrows(DomainException.class,
+        DomainException failure = assertThrows(DomainException.class,
                 () -> service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION));
         assertSame(FailureReason.NOT_INCLUDED, FailureReason.of(failure));
         verify(repository, never()).save(any());
@@ -83,7 +83,7 @@ class RequirementCreateScopeTest {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.of(
                 new TrackerScope(WorkingSetId.of("1"), SharingMode.SHARED)));
 
-        var created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
+        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
         assertEquals(created.localId().value(), created.commonId().value());
         verify(repository).save(any());
@@ -93,7 +93,7 @@ class RequirementCreateScopeTest {
     void unknown_tracker_is_left_to_persistence_validation() {
         when(trackerScope.find(TRACKER)).thenReturn(Optional.empty());
 
-        var created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
+        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 
         assertNotEquals(created.localId().value(), created.commonId().value());
         verify(repository).save(any());

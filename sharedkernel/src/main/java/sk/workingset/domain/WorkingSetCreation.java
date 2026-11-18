@@ -151,7 +151,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
     public String id() { return numericId.toString(); }
 
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
-        var initial = firstStage(request);
+        WorkingSetCreation.Stage initial = firstStage(request);
         if (initial == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "working set request has no work");
         }
@@ -203,13 +203,13 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Not indexing");
         }
-        var updatedIndex = new HashMap<>(indexProgress);
+        HashMap<String,WorkingSetCreation.IndexProgress> updatedIndex = new HashMap<>(indexProgress);
         updatedIndex.put(currentItem(), batch);
         if (finished) {
             return advance(batch.failed() == 0 ? ItemOutcome.Succeeded : ItemOutcome.Failed,
                     batchFailures, now, updatedIndex);
         }
-        var updatedFailures = new ArrayList<>(failures);
+        ArrayList<WorkingSetCreation.Failure> updatedFailures = new ArrayList<>(failures);
         updatedFailures.addAll(batchFailures);
         return new WorkingSetCreation(numericId, request, requestedBy, status, stage, progress, updatedFailures,
                 createdAt, startedAt, completedAt, stageProgress, updatedIndex);
@@ -221,16 +221,16 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
 
     private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, Instant now,
                                        Map<String, IndexProgress> updatedIndex) {
-        var updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
+        EnumMap<WorkingSetCreation.Stage,WorkingSetCreation.Progress> updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
         updatedProgress.putAll(stageProgress);
-        var current = updatedProgress.get(stage).record(outcome);
+        WorkingSetCreation.Progress current = updatedProgress.get(stage).record(outcome);
         updatedProgress.put(stage, current);
-        var updatedFailures = new ArrayList<>(failures);
+        ArrayList<WorkingSetCreation.Failure> updatedFailures = new ArrayList<>(failures);
         updatedFailures.addAll(newFailures);
-        var totals = new Progress(progress.succeeded(), progress.failed(), progress.skipped(), total(request))
+        WorkingSetCreation.Progress totals = new Progress(progress.succeeded(), progress.failed(), progress.skipped(), total(request))
                 .record(outcome);
-        var next = stage;
-        var nextStatus = Status.Running;
+        WorkingSetCreation.Stage next = stage;
+        WorkingSetCreation.Status nextStatus = Status.Running;
         if (stage == Stage.CREATE_WORKING_SET && outcome == ItemOutcome.Failed) {
             nextStatus = Status.Failed;
         } else if (current.processed() == current.total()) {

@@ -21,7 +21,7 @@ public record MergeCheckpoint(Key key, long decisionVersion, Revision revisionA,
     public record Key(TrackerId a, TrackerId b, CommonId family) {
         public Key {
             if (a.numericValue() > b.numericValue()) {
-                var low = a;
+                TrackerId low = a;
                 a = b;
                 b = low;
             }

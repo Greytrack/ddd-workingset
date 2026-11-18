@@ -22,7 +22,7 @@ public final class JdbcWorkingSetCreationRepository implements WorkingSetCreatio
 
     @Override
     public boolean insert(WorkingSetCreation creation) {
-        var request = creation.request();
+        WorkingSetCreation.Request request = creation.request();
         return jdbc.update("""
                 INSERT INTO working_set_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)

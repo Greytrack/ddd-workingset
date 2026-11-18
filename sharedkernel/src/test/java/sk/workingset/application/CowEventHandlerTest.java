@@ -39,51 +39,51 @@ import sk.workingset.domain.repository.LightTrackerItemRepository;
 class CowEventHandlerTest {
     @Test
     void an_upgrade_shaped_event_matches_the_before_revision_and_keeps_the_targets_own_revision() {
-        var items = mock(LightTrackerItemRepository.class);
-        var failures = mock(CowFailureLog.class);
-        var source = LocalId.of("261802623213504");
-        var before = Revision.of(3);
-        var after = Revision.of(4);
-        var own = Revision.of(1);
-        var eligible = target("258520000000001", source, own, before);
-        var switched = LightTrackerItem.restore(eligible.localId(), eligible.commonId(), eligible.trackerId(),
+        LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
+        CowFailureLog failures = mock(CowFailureLog.class);
+        LocalId source = LocalId.of("261802623213504");
+        Revision before = Revision.of(3);
+        Revision after = Revision.of(4);
+        Revision own = Revision.of(1);
+        LightTrackerItem eligible = target("258520000000001", source, own, before);
+        LightTrackerItem switched = LightTrackerItem.restore(eligible.localId(), eligible.commonId(), eligible.trackerId(),
                 eligible.workingSetId(), own, eligible.localId(), own, true);
         when(items.findBySource(source, before)).thenReturn(List.of(eligible)).thenReturn(List.of(switched));
         when(items.findById(eligible.localId())).thenReturn(Optional.of(eligible));
-        var event = new BusinessObjectUpdateEvent(42, source, source, before, after,
+        BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(42, source, source, before, after,
                 LockVersion.of(5), LockVersion.of(6), SnapshotRefEvent.of("258782756974528"), Instant.EPOCH);
-        var store = mock(CowMaterializationRepository.class);
-        var pending = new CowMaterializationRepository.Entry(42, eligible.localId(), source, before,
+        CowMaterializationRepository store = mock(CowMaterializationRepository.class);
+        CowMaterializationRepository.Entry pending = new CowMaterializationRepository.Entry(42, eligible.localId(), source, before,
                 CowMaterializationRepository.Status.PENDING, 1, false, null);
         when(store.findByEventAndTarget(42, eligible.localId())).thenReturn(Optional.of(pending));
         when(store.lockByEventAndTarget(42, eligible.localId())).thenReturn(Optional.of(
                 new CowMaterializationRepository.Entry(42, eligible.localId(), source, before,
                         CowMaterializationRepository.Status.MATERIALIZED, 1, true, null)));
-        var lifecycle = mock(TrackerItemLifecyclePort.class);
+        TrackerItemLifecyclePort lifecycle = mock(TrackerItemLifecyclePort.class);
         when(lifecycle.lockMaterializationTarget(eligible.trackerId(), eligible.localId()))
                 .thenReturn(TargetIdentity.of(eligible));
-        var writePort = mock(RequirementWritePort.class);
-        var transaction = mock(TransactionTemplate.class);
+        RequirementWritePort writePort = mock(RequirementWritePort.class);
+        TransactionTemplate transaction = mock(TransactionTemplate.class);
         doAnswer(invocation -> {
             ((java.util.function.Consumer<TransactionStatus>) invocation.getArgument(0)).accept(null);
             return null;
         }).when(transaction).executeWithoutResult(any());
-        var handler = new CowEventHandler(items, lifecycle, writePort, failures, transaction, store);
+        CowEventHandler handler = new CowEventHandler(items, lifecycle, writePort, failures, transaction, store);
 
         handler.onTrackerItemChanged(event);
         handler.onTrackerItemChanged(event);
 
-        var request = ArgumentCaptor.forClass(MaterializeRequest.class);
-        var identity = ArgumentCaptor.forClass(TargetIdentity.class);
+        ArgumentCaptor<MaterializeRequest> request = ArgumentCaptor.forClass(MaterializeRequest.class);
+        ArgumentCaptor<TargetIdentity> identity = ArgumentCaptor.forClass(TargetIdentity.class);
         verify(writePort).materialize(request.capture(), identity.capture());
         assertEquals(before, request.getValue().beforeRevision());
         assertEquals(own, request.getValue().targetRevision());
         assertEquals(eligible.localId(), identity.getValue().localId());
         verify(lifecycle).lockMaterializationTarget(eligible.trackerId(), eligible.localId());
         verify(store).markMaterialized(42, eligible.localId());
-        var saved = ArgumentCaptor.forClass(LightTrackerItem.class);
+        ArgumentCaptor<LightTrackerItem> saved = ArgumentCaptor.forClass(LightTrackerItem.class);
         verify(items).save(saved.capture());
-        var materialized = saved.getValue();
+        LightTrackerItem materialized = saved.getValue();
         assertTrue(materialized.materialized());
         assertEquals(eligible.localId(), materialized.localId());
         assertEquals(eligible.localId(), materialized.sourceLocalId());

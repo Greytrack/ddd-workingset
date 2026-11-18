@@ -6,10 +6,7 @@ import java.util.Objects;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
-import sk.workingset.application.Caller;
-import sk.workingset.application.CapabilitySet;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.Operation;
 import sk.workingset.application.TrackerItemContent;
 import sk.workingset.application.query.provider.TrackerItemReadPort;
 import sk.workingset.domain.LocalId;
@@ -69,11 +66,6 @@ public class RequirementAdapter implements TrackerItemReadPort {
     @Override
     public Revision revision() {
         return find().revision();
-    }
-
-    @Override
-    public CapabilitySet capabilities() {
-        return CapabilitySet.full();
     }
 
     private Requirement find() {

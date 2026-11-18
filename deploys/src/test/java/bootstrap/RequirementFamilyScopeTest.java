@@ -93,7 +93,7 @@ class RequirementFamilyScopeTest {
 
     @Test
     void soft_deleted_row_keeps_family_identity_until_restored_or_purged() {
-        var first = requirement("L1-", t1);
+        Requirement first = requirement("L1-", t1);
         repository.save(first);
         repository.save(first.delete(first.lockVersion()));
         assertThrows(DataIntegrityViolationException.class, () -> repository.save(requirement("L2-", t1)));
@@ -101,7 +101,7 @@ class RequirementFamilyScopeTest {
 
     @Test
     void deleted_requirements_are_excluded_from_tracker_catalog() {
-        var saved = requirement("L1-", t1);
+        Requirement saved = requirement("L1-", t1);
         repository.save(saved);
         repository.save(saved.delete(saved.lockVersion()));
         assertTrue(repository.findIdentitiesByTracker(TrackerId.of(t1)).isEmpty());

@@ -69,7 +69,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         if (state != State.Preparing) {
             throw new MergeFailure(Reason.RoundClosed, id());
         }
-        var updated = new ArrayList<>(entries);
+        ArrayList<MergeRound.Entry> updated = new ArrayList<>(entries);
         updated.add(entry);
         return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
     }
@@ -85,7 +85,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         if (state != State.Running) {
             throw new MergeFailure(Reason.RoundClosed, id());
         }
-        var updated = entries.stream().map(candidate -> candidate.id().equals(entry.id())
+        List<MergeRound.Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entry.id())
                 ? candidate.finish(itemResult) : candidate).toList();
         return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
     }
@@ -94,11 +94,11 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         if (state != State.Running || entries.stream().anyMatch(entry -> entry.result() == null)) {
             throw new MergeFailure(Reason.RoundClosed, id());
         }
-        var results = entries.stream().map(Entry::result).toList();
+        List<MergeRound.ItemResult> results = entries.stream().map(Entry::result).toList();
         long successful = results.stream().filter(ItemResult::succeeded).count();
         State terminal = successful == 0 ? State.Failed
                 : successful == results.size() ? State.Succeeded : State.PartiallySucceeded;
-        var summary = new Summary(count(results, Outcome.Applied), count(results, Outcome.Confirmed),
+        MergeRound.Summary summary = new Summary(count(results, Outcome.Applied), count(results, Outcome.Confirmed),
                 count(results, Outcome.Rejected),
                 count(results, Outcome.Conflict), count(results, Outcome.Deferred), count(results, Outcome.StaleEvidence),
                 count(results, Outcome.Unknown));

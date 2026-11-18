@@ -47,13 +47,13 @@ class WorkingSetLineageAcceptanceTest {
 
     @Test
     void createsEmptyDescendantsAndQueriesDirectChildrenAndOrderedAncestors() {
-        var root = rest.getForObject(path("1"), WorkingSetView.class);
+        WorkingSetView root = rest.getForObject(path("1"), WorkingSetView.class);
         assertTrue(root.defaultWorkingSet());
         assertNull(root.parentWorkingSetId());
 
         String child = create("1", "child");
         String grandchild = create(child, "grandchild");
-        var range = rest.getForObject(path(grandchild) + "/bindings", BindingsView.class);
+        BindingsView range = rest.getForObject(path(grandchild) + "/bindings", BindingsView.class);
         assertTrue(range.spaces().isEmpty());
         assertTrue(range.trackers().isEmpty());
         assertEquals(List.of(grandchild), rest.getForObject(path(child) + "/children", List.class));
@@ -78,8 +78,8 @@ class WorkingSetLineageAcceptanceTest {
 
     @Test
     void persistedEmptyChildHasNoComparableTrackerCandidatesInEitherDirection() {
-        var child = workingSets.findWorkingSet(WorkingSetId.of(create("1", "empty"))).orElseThrow();
-        var root = workingSets.findWorkingSet(WorkingSetId.of("1")).orElseThrow();
+        sk.workingset.domain.WorkingSet child = workingSets.findWorkingSet(WorkingSetId.of(create("1", "empty"))).orElseThrow();
+        sk.workingset.domain.WorkingSet root = workingSets.findWorkingSet(WorkingSetId.of("1")).orElseThrow();
 
         assertTrue(WorkingSetLineagePolicy.comparableBindings(root, child).isEmpty());
         assertTrue(WorkingSetLineagePolicy.comparableBindings(child, root).isEmpty());
@@ -92,14 +92,14 @@ class WorkingSetLineageAcceptanceTest {
      */
     @Test
     void repeatedSchemaInitializationKeepsExplicitParentAndDefaultPreset() throws Exception {
-        try (var connection = dataSource.getConnection()) {
+        try (java.sql.Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
-            try (var sql = connection.createStatement()) {
+            try (java.sql.Statement sql = connection.createStatement()) {
                 String schema = "baseline_" + suffix.replace("-", "");
                 sql.execute("CREATE SCHEMA " + schema);
                 sql.execute("SET LOCAL search_path TO " + schema);
 
-                var schemaScript = new ResourceDatabasePopulator(new ClassPathResource("schema.sql"));
+                ResourceDatabasePopulator schemaScript = new ResourceDatabasePopulator(new ClassPathResource("schema.sql"));
                 schemaScript.populate(connection);
                 sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
                         + " VALUES (258520000000080, 1)");
@@ -107,7 +107,7 @@ class WorkingSetLineageAcceptanceTest {
                         + " VALUES (258520000000081, 258520000000080)");
                 schemaScript.populate(connection);
 
-                try (var rows = sql.executeQuery("""
+                try (java.sql.ResultSet rows = sql.executeQuery("""
                         SELECT working_set_id, parent_working_set_id FROM working_sets ORDER BY working_set_id
                         """)) {
                     assertTrue(rows.next());
@@ -127,7 +127,7 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     private String create(String parent, String label) {
-        var response = rest.postForEntity(path(parent) + "/children", Map.of("name", label),
+        org.springframework.http.ResponseEntity<WorkingSetView> response = rest.postForEntity(path(parent) + "/children", Map.of("name", label),
                 WorkingSetView.class);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         String id = response.getBody().workingSetId();
@@ -137,7 +137,7 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     private void assertCreateFailure(String parent, String child, String reason) {
-        var failure = org.junit.jupiter.api.Assertions.assertThrows(sk.workingset.domain.BindingFailure.class,
+        sk.workingset.domain.BindingFailure failure = org.junit.jupiter.api.Assertions.assertThrows(sk.workingset.domain.BindingFailure.class,
                 () -> commands.createChildWorkingSet(WorkingSetId.of(parent), WorkingSetId.of(child)));
         assertEquals(reason, failure.reason().name());
     }

@@ -18,26 +18,26 @@ class ModuleEntrypointsTest {
 
     @Test
     void deploysDiscoversControllersAndKeepsPersistedListenerIds() throws ClassNotFoundException {
-        var scanner = new ClassPathScanningCandidateComponentProvider(true);
-        var packages = WorkingsetApplication.class.getAnnotation(SpringBootApplication.class).scanBasePackages();
-        var components = Arrays.stream(packages).flatMap(pkg -> scanner.findCandidateComponents(pkg).stream())
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(true);
+        String[] packages = WorkingsetApplication.class.getAnnotation(SpringBootApplication.class).scanBasePackages();
+        Set<String> components = Arrays.stream(packages).flatMap(pkg -> scanner.findCandidateComponents(pkg).stream())
                 .map(BeanDefinition::getBeanClassName).collect(Collectors.toSet());
 
         assertTrue(components.contains("alm.requirement.adapters.RequirementController"));
         assertTrue(components.contains("sk.workingset.adapters.WorkingSetController"));
         assertTrue(components.contains("bootstrap.web.ApiExceptionHandler"));
 
-        var existingListeners = Set.of("MergeRoundSubmittedListener", "RequirementChangedListener",
+        Set<String> existingListeners = Set.of("MergeRoundSubmittedListener", "RequirementChangedListener",
                 "RequirementMergeAppliedListener", "RequirementPurgedListener", "TrackerItemsIndexedListener",
                 "TrackerItemCreatedListener", "WorkingSetCreationSubmittedListener");
-        for (var name : existingListeners) {
-            var className = "sk.workingset.application.eventhandler." + name;
+        for (String name : existingListeners) {
+            String className = "sk.workingset.application.eventhandler." + name;
             assertTrue(components.contains(className));
-            var listener = Class.forName(className);
-            var method = Arrays.stream(listener.getDeclaredMethods())
+            Class<?> listener = Class.forName(className);
+            reflect.Method method = Arrays.stream(listener.getDeclaredMethods())
                     .filter(candidate -> candidate.isAnnotationPresent(ApplicationModuleListener.class))
                     .findFirst().orElseThrow();
-            var adapter = new ApplicationListenerMethodAdapter(name, listener, method);
+            ApplicationListenerMethodAdapter adapter = new ApplicationListenerMethodAdapter(name, listener, method);
             assertEquals("bootstrap." + name + ".on(" + method.getParameterTypes()[0].getName() + ")",
                     adapter.getListenerId());
         }

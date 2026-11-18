@@ -59,7 +59,7 @@ public final class MergeRelationRepairStep {
             if (localId == null) {
                 continue;
             }
-            var target = new ReferenceEndpointEvent(round.target(), localId, entry.evidence().family(),
+            ReferenceEndpointEvent target = new ReferenceEndpointEvent(round.target(), localId, entry.evidence().family(),
                     entry.evidence().trackers().target(), entry.evidence().target().revision());
             targets.put(localId.value(), target);
         }

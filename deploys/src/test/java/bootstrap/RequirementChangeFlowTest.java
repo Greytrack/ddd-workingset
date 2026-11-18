@@ -71,16 +71,16 @@ class RequirementChangeFlowTest {
         assertEquals(LockVersion.of(1), changed.lockVersion());
         verify(requirements).save(changed);
 
-        var events = ArgumentCaptor.forClass(BusinessObjectUpdateEvent.class);
+        ArgumentCaptor<BusinessObjectUpdateEvent> events = ArgumentCaptor.forClass(BusinessObjectUpdateEvent.class);
         verify(publisher).publishEvent(events.capture());
-        var event = events.getValue();
+        BusinessObjectUpdateEvent event = events.getValue();
         assertTrue(event.eventId() > 0);
         assertEquals(L0, event.requirementId());
         assertEquals(L0, event.sourceLocalId());
         assertEvent(event, FIRST, 0, 1);
         assertNotNull(event.occurredAt());
 
-        var captured = ArgumentCaptor.forClass(RequirementSnapshot.class);
+        ArgumentCaptor<RequirementSnapshot> captured = ArgumentCaptor.forClass(RequirementSnapshot.class);
         verify(snapshots).save(captured.capture());
         assertEquals("A", captured.getValue().title());
         assertEquals(R3, captured.getValue().revision());
@@ -94,14 +94,14 @@ class RequirementChangeFlowTest {
 
         Requirement changed = service.changeTitle(L0, "B", LockVersion.of(0));
 
-        var order = inOrder(requirements, publisher);
+        org.mockito.InOrder order = inOrder(requirements, publisher);
         order.verify(requirements).save(changed);
         order.verify(publisher).publishEvent(any(BusinessObjectUpdateEvent.class));
     }
 
     @Test
     void stale_expected_lock_version_is_rejected_without_event_or_snapshot() {
-        var conflict = assertThrows(LockVersionConflictException.class,
+        LockVersionConflictException conflict = assertThrows(LockVersionConflictException.class,
                 () -> service.changeTitle(L0, "B", LockVersion.of(99)));
 
         assertEquals(LockVersion.of(99), conflict.expected());
@@ -118,14 +118,14 @@ class RequirementChangeFlowTest {
         when(requirements.findById(L0)).thenReturn(Optional.of(first));
         Requirement second = service.changeTitle(L0, "C", LockVersion.of(1));
 
-        var captured = ArgumentCaptor.forClass(RequirementSnapshot.class);
+        ArgumentCaptor<RequirementSnapshot> captured = ArgumentCaptor.forClass(RequirementSnapshot.class);
         verify(snapshots, times(2)).save(captured.capture());
         assertEquals("A", captured.getAllValues().get(0).title());
         assertEquals("B", captured.getAllValues().get(1).title());
         assertEquals(LockVersion.of(0), captured.getAllValues().get(0).lockVersion());
         assertEquals(LockVersion.of(1), captured.getAllValues().get(1).lockVersion());
 
-        var events = ArgumentCaptor.forClass(BusinessObjectUpdateEvent.class);
+        ArgumentCaptor<BusinessObjectUpdateEvent> events = ArgumentCaptor.forClass(BusinessObjectUpdateEvent.class);
         verify(publisher, times(2)).publishEvent(events.capture());
         assertEvent(events.getAllValues().get(0), FIRST, 0, 1);
         assertEvent(events.getAllValues().get(1), SECOND, 1, 2);
@@ -138,7 +138,7 @@ class RequirementChangeFlowTest {
     @Test
     void save_failure_does_not_publish_event_or_mutate_the_loaded_requirement() {
         when(snapshots.save(any())).thenReturn(FIRST);
-        var failure = new IllegalStateException("save failed");
+        IllegalStateException failure = new IllegalStateException("save failed");
         doThrow(failure).when(requirements).save(any());
 
         assertEquals(failure, assertThrows(IllegalStateException.class,

@@ -72,8 +72,8 @@ class RequirementAcceptanceTest {
         String trackerId = fixtureId("T-" + UUID.randomUUID());
         fixture = new RootTrackerFixture(jdbc, trackerId);
         fixture.provision();
-        var indexing = new CountDownLatch(1);
-        var release = new CountDownLatch(1);
+        CountDownLatch indexing = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
         doAnswer(call -> {
             indexing.countDown();
             if (!release.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Indexing gate timed out");
@@ -81,7 +81,7 @@ class RequirementAcceptanceTest {
         }).when(items).save(argThat(item -> item != null && item.trackerId().equals(TrackerId.of(trackerId))));
 
         try {
-            var created = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId,
+            ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId,
                     "title", "A", "description", "async index", "revision", 3), Map.class);
             assertEquals(HttpStatus.CREATED, created.getStatusCode(), String.valueOf(created.getBody()));
             localId = String.valueOf(created.getBody().get("localId"));
@@ -94,7 +94,7 @@ class RequirementAcceptanceTest {
 
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 1);
         assertEquals(1, indexedRows());
-        var event = new TrackerItemCreatedEvent(LocalId.of(localId), CommonId.of(localId), TrackerId.of(trackerId),
+        TrackerItemCreatedEvent event = new TrackerItemCreatedEvent(LocalId.of(localId), CommonId.of(localId), TrackerId.of(trackerId),
                 WorkingSet.DEFAULT_ID, Revision.of(3));
         transaction.executeWithoutResult(status -> events.publishEvent(event));
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 2);

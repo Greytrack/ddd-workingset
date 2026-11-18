@@ -31,9 +31,9 @@ public class RequirementLifecycleService {
 
     @Transactional
     public void delete2(LocalId id) {
-        var candidate = requirements.findById(id).orElseThrow(() -> missing(id));
-        var current = requirements.lockById(id).orElseThrow(() -> missing(id));
-        var decision = current.delete2(LifecycleCommand.locked("permanent delete"));
+        alm.requirement.domain.Requirement candidate = requirements.findById(id).orElseThrow(() -> missing(id));
+        alm.requirement.domain.Requirement current = requirements.lockById(id).orElseThrow(() -> missing(id));
+        sk.workingset.domain.LifecycleResult decision = current.delete2(LifecycleCommand.locked("permanent delete"));
         if (!decision.succeeded()) {
             throw DomainException.withMessage(FailureReason.DELETED, id.value());
         }

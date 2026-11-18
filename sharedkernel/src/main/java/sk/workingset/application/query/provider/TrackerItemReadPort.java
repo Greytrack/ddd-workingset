@@ -1,8 +1,5 @@
 package sk.workingset.application.query.provider;
 
-import sk.workingset.application.Caller;
-import sk.workingset.application.CapabilitySet;
-import sk.workingset.application.Operation;
 import sk.workingset.application.TrackerItemContent;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.CommonId;
@@ -30,8 +27,5 @@ public interface TrackerItemReadPort {
 
     /** 当前业务版次。 */
     Revision revision();
-
-    /** 能力声明。 */
-    CapabilitySet capabilities();
 
 }

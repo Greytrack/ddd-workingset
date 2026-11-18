@@ -71,7 +71,7 @@ public class RequirementCommandService {
         if (requestedWorkingSetId != null) {
             trackerScope.requireWorkingSetReady(requestedWorkingSetId);
         }
-        var scope = trackerScope.find(trackerId);
+        java.util.Optional<TrackerScopePort.TrackerScope> scope = trackerScope.find(trackerId);
         if (requestedWorkingSetId != null) {
             scope.ifPresent(current -> {
                 if (current.sharingMode() == SharingMode.UNSHARED
@@ -126,7 +126,7 @@ public class RequirementCommandService {
     }
 
     private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
-        var inherited = lifecycle.lockInheritedEditTarget(localId);
+        java.util.Optional<InheritedEditTarget> inherited = lifecycle.lockInheritedEditTarget(localId);
         Requirement current = inherited.map(target -> {
             trackerScope.requireWorkingSetReady(target.workingSetId());
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
@@ -154,7 +154,7 @@ public class RequirementCommandService {
         if (!source.revision().equals(target.sourceRevision())) {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
-        var identity = target.identity();
+        sk.workingset.application.common.TargetIdentity identity = target.identity();
         return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
                 source.title(), source.description(), identity.revision(), source.version());
     }

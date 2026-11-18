@@ -50,7 +50,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public Optional<InheritedEditTarget> lockInheritedEditTarget(LocalId localId) {
-        var candidate = items.findById(localId).filter(item -> !item.materialized());
+        Optional<LightTrackerItem> candidate = items.findById(localId).filter(item -> !item.materialized());
         if (candidate.isEmpty()) {
             return Optional.empty();
         }
@@ -103,7 +103,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     }
 
     private void switchToLocalContent(LocalId localId, Revision revision) {
-        var item = items.findById(localId)
+        LightTrackerItem item = items.findById(localId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "target variant disappeared: " + localId.value()));
         if (!item.materialized()) {
