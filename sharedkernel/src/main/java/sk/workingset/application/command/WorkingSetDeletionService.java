@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -28,6 +32,9 @@ import sk.workingset.domain.WorkingSetId;
  * <p>删除顺序为 TrackerBinding → SpaceBinding → WorkingSet；能力范围只到 Working Set，
  * 业务对象生命周期由各 BC 负责（D7/D16）。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
@@ -35,15 +42,6 @@ public class WorkingSetDeletionService {
     private final LightTrackerItemRepository items;
     private final BusinessTrackerItems businessItems;
 
-    public WorkingSetDeletionService(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                     ProductSpaceRepository spaces, LightTrackerItemRepository items,
-                                     BusinessTrackerItems businessItems) {
-        this.workingSets = workingSets;
-        this.trackers = trackers;
-        this.spaces = spaces;
-        this.items = items;
-        this.businessItems = businessItems;
-    }
 
     @Transactional
     public void unbindTracker(WorkingSetId id, TrackerId trackerId) {

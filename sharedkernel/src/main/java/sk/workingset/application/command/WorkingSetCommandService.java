@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +27,9 @@ import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
 /** Working Set 命令侧应用服务：谱系、纳入和绑定写入。 */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class WorkingSetCommandService {
 
     private final IdentifierGenerator identifierGenerator;
@@ -30,15 +37,6 @@ public class WorkingSetCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
 
-    public WorkingSetCommandService(IdentifierGenerator identifierGenerator,
-                                    WorkingSetRepository workingSets,
-                                    TrackerRepository trackers,
-                                    ProductSpaceRepository spaces) {
-        this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
-        this.workingSets = Objects.requireNonNull(workingSets, "workingSets");
-        this.trackers = Objects.requireNonNull(trackers, "trackers");
-        this.spaces = Objects.requireNonNull(spaces, "spaces");
-    }
 
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {

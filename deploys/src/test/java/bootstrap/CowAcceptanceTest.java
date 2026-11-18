@@ -24,14 +24,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.application.CowFailureLog;
+import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import alm.requirement.application.command.RequirementCommandService;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
@@ -43,8 +40,7 @@ import sk.workingset.domain.Revision;
 class CowAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
-    @Autowired private StringRedisTemplate redis;
-    @Autowired private CowFailureLog failures;
+    @Autowired private CowFailureLogQueryProvider failures;
     @Autowired private RequirementCommandService requirements;
     @SpyBean private LightTrackerItemRepository items;
 
@@ -67,7 +63,6 @@ class CowAcceptanceTest {
         for (String target : targets) {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + target + "%");
             jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", target);
-            redis.delete("workingset:lti:" + target);
             jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
         }
@@ -236,7 +231,6 @@ class CowAcceptanceTest {
         // 模拟早期数据的家族身份损坏，直接验证 COW 对持久化证据的防护。
         jdbc.update("UPDATE light_tracker_items SET common_id = ? WHERE local_id = ?",
                 fixtureId("INVALID-" + UUID.randomUUID()), invalid.id());
-        redis.delete("workingset:lti:" + invalid.id());
 
         change("B", 0);
 

@@ -1,5 +1,9 @@
 package alm.requirement.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -14,15 +18,13 @@ import sk.workingset.domain.LifecycleCommand;
 import sk.workingset.domain.LifecycleResult;
 import sk.workingset.domain.LocalId;
 
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class RequirementLifecycleService {
     private final RequirementMutationStore requirements;
     private final ApplicationEventPublisher eventPublisher;
 
-    public RequirementLifecycleService(RequirementMutationStore requirements,
-                                       ApplicationEventPublisher eventPublisher) {
-        this.requirements = requirements;
-        this.eventPublisher = eventPublisher;
-    }
 
     @Transactional
     public void delete2(LocalId id) {

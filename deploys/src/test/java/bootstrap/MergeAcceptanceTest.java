@@ -39,7 +39,6 @@ import org.springframework.boot.web.servlet.context.ServletWebServerApplicationC
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -67,7 +66,6 @@ import sk.workingset.domain.merge.MergeRound.State;
 class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
-    @Autowired private StringRedisTemplate redis;
     @SpyBean private MergeRepository store;
     @SpyBean private TrackerItemLifecyclePort lifecycle;
     @Autowired private RequirementCommandService requirements;
@@ -131,7 +129,6 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", local);
             jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", local);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", local);
-            redis.delete("workingset:lti:" + local);
         }
         for (String workset : worksets.reversed()) {
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", workset);
@@ -539,7 +536,6 @@ class MergeAcceptanceTest {
                 """, parentLocal, anchor, childTracker);
         jdbc.update("UPDATE light_tracker_items SET materialized = TRUE, source_local_id = local_id WHERE local_id = ?",
                 parentLocal);
-        redis.delete("workingset:lti:" + parentLocal);
 
         ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
         Difference item = diff(compared, anchor);

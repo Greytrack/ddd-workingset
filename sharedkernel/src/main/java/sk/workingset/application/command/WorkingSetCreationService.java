@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
@@ -36,6 +40,9 @@ import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.TrackerId;
 
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class WorkingSetCreationService {
     private final WorkingSetCreationRepository store;
     private final IdentifierGenerator ids;
@@ -47,20 +54,6 @@ public class WorkingSetCreationService {
     private final WorkingSetItemIndexer indexer;
     private final RelationEventStep relationEvents;
 
-    public WorkingSetCreationService(WorkingSetCreationRepository store, WorkingSetRepository workingSets,
-                                     TrackerRepository trackers, WorkingSetCommandService workingSetService,
-                                     TransactionTemplate transaction, ApplicationEventPublisher events,
-                                     WorkingSetItemIndexer indexer, RelationEventStep relationEvents, IdentifierGenerator ids) {
-        this.ids = ids;
-        this.store = store;
-        this.workingSets = workingSets;
-        this.trackers = trackers;
-        this.workingSetService = workingSetService;
-        this.transaction = transaction;
-        this.events = events;
-        this.indexer = indexer;
-        this.relationEvents = relationEvents;
-    }
 
     @Transactional
     public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request,

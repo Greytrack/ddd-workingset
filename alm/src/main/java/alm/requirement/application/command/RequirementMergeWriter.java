@@ -1,5 +1,9 @@
 package alm.requirement.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.util.Map;
 
 import sk.common.error.DomainException;
@@ -18,17 +22,14 @@ import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 
 /** ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。 */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public final class RequirementMergeWriter {
     private final RequirementMutationStore repository;
     private final RequirementCommandService requirements;
     private final RequirementMergeReceiptStore receipts;
 
-    public RequirementMergeWriter(RequirementMutationStore repository, RequirementCommandService requirements,
-                                  RequirementMergeReceiptStore receipts) {
-        this.repository = repository;
-        this.requirements = requirements;
-        this.receipts = receipts;
-    }
 
     public MergeEntryResolvedEvent apply(MergeEntryApprovedEvent command) {
         java.util.Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());

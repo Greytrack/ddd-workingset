@@ -1,5 +1,8 @@
 package alm.requirement.infrastructure.repositories;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
 import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,12 +14,11 @@ import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 
 /** requirement_merge_receipts 的 JDBC 存储。 */
-public final class JdbcRequirementMergeReceiptStore implements RequirementMergeReceiptStore {
+@Repository
+@RequiredArgsConstructor
+public class JdbcRequirementMergeReceiptStore implements RequirementMergeReceiptStore {
     private final JdbcTemplate jdbc;
 
-    public JdbcRequirementMergeReceiptStore(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     @Override
     public Optional<MergeEntryResolvedEvent> find(String roundId, String entryId) {

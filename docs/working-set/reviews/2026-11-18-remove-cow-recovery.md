@@ -6,7 +6,7 @@
 
 - 删除 `CowRecoveryService`、`CowRecoveryController`、`/api/cow/recover/incomplete` 与 `/api/cow/recover/switch/{eventId}/{targetLocalId}`。
 - COW 失败即终态：记录失败阶段与原因后结束，不重投、不补切换、不执行恢复。
-- `CowFailureLog` 仅保留失败审计，不再提供 `resolve`；`resolved_at` 不再写入。
+- `CowFailureLogQueryProvider` 仅保留失败审计，不再提供 `resolve`；`resolved_at` 不再写入。
 - `CowEventHandler` 不再抛出聚合异常触发 Modulith 重投；当前事件按已处理结束。
 - 正常成功路径的 LTI 切换内联到 `CowEventHandler`，仍使用独立事务。
 

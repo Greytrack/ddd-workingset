@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 
 import java.time.Instant;
 import java.util.List;
@@ -20,14 +24,13 @@ import sk.workingset.application.query.provider.RelationSourceQueryProvider.Refe
  *
  * <p>每个事件独立生成 eventId；{@code originalRelationId} 保留业务关系聚合身份，供消费方回查。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public final class RelationEventPublisher {
     private final ApplicationEventPublisher events;
     private final IdentifierGenerator ids;
 
-    public RelationEventPublisher(ApplicationEventPublisher events, IdentifierGenerator ids) {
-        this.events = events;
-        this.ids = ids;
-    }
 
     public List<ReferenceCreationRequestedEvent> publishReferenceCreations(String originId, OriginType originType,
                                                                      List<ReferenceFact> facts) {

@@ -16,7 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
-
+import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
@@ -34,7 +34,7 @@ class CowEventHandlerTest {
     @Test
     void changed_source_publishes_a_materialization_request_for_each_unmaterialized_target() {
         LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
-        CowFailureLog failures = mock(CowFailureLog.class);
+        CowFailureLogQueryProvider failures = mock(CowFailureLogQueryProvider.class);
         ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
         LocalId source = LocalId.of("261802623213504");
         Revision before = Revision.of(3);

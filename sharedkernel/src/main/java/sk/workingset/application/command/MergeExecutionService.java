@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
@@ -54,6 +58,9 @@ import sk.workingset.domain.merge.Comparison.Side;
  * 自己的事务中应用并发布 {@link MergeEntryResolvedEvent}，SK 监听结果后记录
  * Checkpoint 并完成轮次。LTI 切换仍由 {@link MergeAppliedEvent} 异步执行。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class MergeExecutionService {
     private static final Logger log = LoggerFactory.getLogger(MergeExecutionService.class);
 
@@ -65,17 +72,6 @@ public class MergeExecutionService {
     private final ApplicationEventPublisher events;
     private final MergeRelationRepairStep relationRepair;
 
-    public MergeExecutionService(MergeRepository store, MergeComparisonService comparisons,
-                                 TrackerRepository trackers, IdentifierGenerator ids, TransactionTemplate transaction,
-                                 ApplicationEventPublisher events, MergeRelationRepairStep relationRepair) {
-        this.store = store;
-        this.comparisons = comparisons;
-        this.trackers = trackers;
-        this.ids = ids;
-        this.transaction = transaction;
-        this.events = events;
-        this.relationRepair = relationRepair;
-    }
 
     /** 一页决策只提交 evidence + decision；条目身份由服务端在登记时生成。 */
     public record EntryRequest(Difference evidence, sk.workingset.domain.merge.MergeDecision decision) {}

@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 
@@ -27,18 +31,15 @@ import sk.workingset.domain.TrackerId;
  * <p>Tracker 与 LightTrackerItem 均属 SK；业务 BC 只通过 {@link TrackerItemLifecyclePort}
  * 请求协作，不再直接读写 SK 仓储。永久删除后的 LTI 清理由业务对象删除事件驱动。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
 
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
     private final BusinessTrackerItems businessItems;
 
-    public TrackerItemLifecycleService(TrackerRepository trackers, LightTrackerItemRepository items,
-                                       BusinessTrackerItems businessItems) {
-        this.trackers = trackers;
-        this.items = items;
-        this.businessItems = businessItems;
-    }
 
     @Override
     public Optional<InheritedEditTarget> findInheritedTarget(LocalId localId) {

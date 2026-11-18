@@ -6,6 +6,3 @@ spring:
       mode: always
       schema-locations: classpath:reset-demo-schema.sql,classpath:schema.sql
       data-locations: classpath:demo-data.sql
-workingset:
-  item-cache:
-    enabled: false

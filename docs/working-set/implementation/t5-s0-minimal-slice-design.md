@@ -186,8 +186,8 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 | --- | --- |
 | `WorkingSetApplicationService` | `derive(DeriveCommand)`、`resolve(ResolveQuery)`、`read(ReadQuery)` |
 | `SourceSerialCowCoordinator` | `runSerial(sourceLocalId, sequence, task)`：按来源串行、按 `afterLockVersion` 排序；不拥有线程池 |
-| `CowFailureLog` | 记录 `MATERIALIZE`/`SWITCH` 失败（事件、目标、来源、版次、异常、时间），供 S4 恢复查询 |
-| `CowEventHandler` | `onRequirementChanged(RequirementChanged)`：由 Modulith 异步监听器调用；按 `sourceLocalId + beforeRevision` 定位目标，逐目标调用写入 Port 并切换；失败写 `CowFailureLog` 并抛聚合异常 |
+| `CowFailureLogQueryProvider` | 记录 `MATERIALIZE`/`SWITCH` 失败（事件、目标、来源、版次、异常、时间），供 S4 恢复查询 |
+| `CowEventHandler` | `onRequirementChanged(RequirementChanged)`：由 Modulith 异步监听器调用；按 `sourceLocalId + beforeRevision` 定位目标，逐目标调用写入 Port 并切换；失败写 `CowFailureLogQueryProvider` 并抛聚合异常 |
 | `TrackerItemQueryProvider`（port） | `readAt(Revision)`、`revision()`、`capabilities()`、`authorize(Operation, Caller)` |
 | `RequirementWritePort`（port） | `materialize(MaterializeRequest)`；正常返回表示 BC 已确认有效物化写入 |
 | `MaterializeRequest`（port） | 目标身份、目标版次、来源身份、来源修改前后 Revision/LockVersion、事件身份与快照引用；不建构建器框架 |
@@ -229,7 +229,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 
 | 类型 | 职责 |
 | --- | --- |
-| `JdbcCowFailureLog`（`sk.workingset.infrastructure`） | 将 `CowFailureLog.Failure` 写入 `cow_failures`；`REQUIRES_NEW` 提交，外层回滚不影响失败证据 |
+| `CowFailureLogQueryProviderImpl`（`sk.workingset.infrastructure`） | 将 `CowFailureLogQueryProvider.Failure` 写入 `cow_failures`；`REQUIRES_NEW` 提交，外层回滚不影响失败证据 |
 | `SnowflakeIdGenerator`（`sk.workingset.infrastructure`） | 实现 `IdentifierGenerator`：雪花算法（用户 2026-11-11 决定；去外部日志/异常/静态 holder 依赖） |
 | `IdGeneratorConfig`（`bootstrap.configuration`） | `@Configuration` + `@Bean IdentifierGenerator`；`DATACENTER_ID=1`、workerId 由本机地址哈希取模 |
 | `WorkingsetApplication`（`bootstrap`） | `@SpringBootApplication` 主类（非 web） |

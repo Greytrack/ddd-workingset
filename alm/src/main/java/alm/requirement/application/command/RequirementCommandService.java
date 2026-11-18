@@ -1,5 +1,9 @@
 package alm.requirement.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
@@ -34,6 +38,9 @@ import sk.workingset.domain.WorkingSetId;
 /**
  * ALM Requirement 命令侧应用服务：创建、普通修改（修改前快照 + 保存成功后发布来源事件）。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class RequirementCommandService {
 
     private final RequirementRepository repository;
@@ -44,21 +51,6 @@ public class RequirementCommandService {
     private final WorkingSetRepository workingSets;
     private final TrackerItemLifecyclePort lifecycle;
 
-    public RequirementCommandService(RequirementRepository repository,
-                                          SnapshotRepository snapshotStore,
-                                          IdentifierGenerator identifierGenerator,
-                                          ApplicationEventPublisher eventPublisher,
-                                          TrackerRepository trackers,
-                                          WorkingSetRepository workingSets,
-                                          TrackerItemLifecyclePort lifecycle) {
-        this.repository = Objects.requireNonNull(repository, "repository");
-        this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
-        this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
-        this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
-        this.trackers = Objects.requireNonNull(trackers, "trackers");
-        this.workingSets = Objects.requireNonNull(workingSets, "workingSets");
-        this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
-    }
 
     /**
      * 创建并提交一个 Requirement；服务端按工作集分配身份。

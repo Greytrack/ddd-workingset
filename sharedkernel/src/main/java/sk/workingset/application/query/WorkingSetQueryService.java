@@ -1,5 +1,9 @@
 package sk.workingset.application.query;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -24,17 +28,14 @@ import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
 /** Working Set 查询侧应用服务：读模型优先，不重建聚合，不执行写操作。 */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class WorkingSetQueryService {
     private final WorkingSetQueryProvider query;
     private final LightTrackerItemRepository items;
     private final BusinessTrackerItems businessItems;
 
-    public WorkingSetQueryService(WorkingSetQueryProvider query, LightTrackerItemRepository items,
-                                  BusinessTrackerItems businessItems) {
-        this.query = Objects.requireNonNull(query, "query");
-        this.items = Objects.requireNonNull(items, "items");
-        this.businessItems = Objects.requireNonNull(businessItems, "businessItems");
-    }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public WorkingSetSummary find(WorkingSetId id) {

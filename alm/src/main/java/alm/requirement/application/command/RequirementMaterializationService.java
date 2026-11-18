@@ -1,5 +1,9 @@
 package alm.requirement.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.util.Objects;
 import java.util.Optional;
 
@@ -13,14 +17,13 @@ import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.error.WorkingsetResultCode;
 
 /** ALM 物化服务：只负责业务对象保存与身份校验。 */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public final class RequirementMaterializationService {
     private final RequirementRepository repository;
     private final SnapshotRepository snapshotStore;
 
-    public RequirementMaterializationService(RequirementRepository repository, SnapshotRepository snapshotStore) {
-        this.repository = repository;
-        this.snapshotStore = snapshotStore;
-    }
 
     public void materialize(MaterializeRequest request, TargetIdentity target) {
         RequirementSnapshot snapshot = snapshotStore.find(request.snapshotRef())

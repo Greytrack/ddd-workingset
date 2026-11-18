@@ -1,5 +1,8 @@
 package alm.requirement.infrastructure.repositories;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
 import java.util.Objects;
 import java.util.Optional;
 
@@ -20,6 +23,8 @@ import sk.workingset.domain.Version;
 /**
  * Requirement 修改前快照的 PostgreSQL/Spring JDBC 存储。
  */
+@Repository
+@RequiredArgsConstructor
 public class JdbcSnapshotRepository implements SnapshotRepository {
 
     private static final String INSERT = """
@@ -42,10 +47,6 @@ public class JdbcSnapshotRepository implements SnapshotRepository {
     private final JdbcTemplate jdbc;
     private final IdentifierGenerator identifierGenerator;
 
-    public JdbcSnapshotRepository(JdbcTemplate jdbc, IdentifierGenerator identifierGenerator) {
-        this.jdbc = jdbc;
-        this.identifierGenerator = Objects.requireNonNull(identifierGenerator, "identifierGenerator");
-    }
 
     @Override
     public SnapshotRefEvent save(RequirementSnapshot snapshot) {

@@ -170,7 +170,7 @@ Merge 完成
 ## 6. 已实现的契约骨架
 
 - `RelationSourceQueryProvider`：业务 BC 只读事实端口，提供 `upstreamReferences`、`upstreamAssociations`、`referencesTargeting`、`associationsTargeting` 及 `ReferenceFact`/`AssociationFact`。
-- `EmptyRelationSourcePort`：业务 BC Adapter 尚未接入时的空实现，不伪造事件。
+- `EmptyRelationSourceQueryProviderImpl`：业务 BC Adapter 尚未接入时的空实现，不伪造事件。
 - `RelationEventPublisher`：按 fact 生成 `eventId`，保留业务 `originalRelationId`，发布三类 `...Requested` 事件。
 - `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
 - `T7RelationEventAcceptanceTest` 覆盖创建/扩展 task 实际发布 Reference/Association/Dangling repair 三类事件。

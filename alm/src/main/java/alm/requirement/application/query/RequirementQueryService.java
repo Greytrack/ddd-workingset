@@ -1,5 +1,9 @@
 package alm.requirement.application.query;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,19 +26,15 @@ import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class RequirementQueryService {
     private final RequirementQueryProvider query;
     private final RequirementRepository repository;
     private final TrackerItemLifecyclePort lifecycle;
     private final WorkingSetRepository workingSets;
 
-    public RequirementQueryService(RequirementQueryProvider query, RequirementRepository repository,
-                                   TrackerItemLifecyclePort lifecycle, WorkingSetRepository workingSets) {
-        this.query = Objects.requireNonNull(query, "query");
-        this.repository = Objects.requireNonNull(repository, "repository");
-        this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
-        this.workingSets = Objects.requireNonNull(workingSets, "workingSets");
-    }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public RequirementDetail find(LocalId localId) {

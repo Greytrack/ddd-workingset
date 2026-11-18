@@ -1,4 +1,7 @@
-package sk.workingset.infrastructure;
+package sk.workingset.infrastructure.providers;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -6,22 +9,19 @@ import java.util.List;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
-import sk.workingset.application.CowFailureLog;
+import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 
 /** COW 失败日志的 JDBC 实现；每条失败独立事务写入，避免随业务回滚丢失。 */
-public final class JdbcCowFailureLog implements CowFailureLog {
+@Component
+@RequiredArgsConstructor
+public class CowFailureLogQueryProviderImpl implements CowFailureLogQueryProvider {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate newTransactionTemplate;
     private final IdentifierGenerator ids;
 
-    public JdbcCowFailureLog(JdbcTemplate jdbc, TransactionTemplate newTransactionTemplate, IdentifierGenerator ids) {
-        this.jdbc = jdbc;
-        this.newTransactionTemplate = newTransactionTemplate;
-        this.ids = ids;
-    }
 
     @Override
     public void record(Failure failure) {

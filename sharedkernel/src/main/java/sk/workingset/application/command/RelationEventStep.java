@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 
 import java.util.List;
 
@@ -17,6 +21,9 @@ import sk.workingset.domain.WorkingSetId;
  * T7 创建/扩展索引后的关系事件 step。只发布事件，不写 Reference/Association 聚合。
  * 每个来源 Item 独立尝试；失败累计并交由任务标记，不自动重试。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public final class RelationEventStep {
     private final TrackerRepository trackers;
     private final WorkingSetRepository workingSets;
@@ -24,15 +31,6 @@ public final class RelationEventStep {
     private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
 
-    public RelationEventStep(TrackerRepository trackers, WorkingSetRepository workingSets,
-                             LightTrackerItemRepository items, RelationSourceQueryProvider source,
-                             RelationEventPublisher publisher) {
-        this.trackers = trackers;
-        this.workingSets = workingSets;
-        this.items = items;
-        this.source = source;
-        this.publisher = publisher;
-    }
 
     public StepResult publish(WorkingSetId target, TrackerId parent, OriginType originType, String originId) {
         try {

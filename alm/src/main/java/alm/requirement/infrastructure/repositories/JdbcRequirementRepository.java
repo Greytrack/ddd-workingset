@@ -1,5 +1,8 @@
 package alm.requirement.infrastructure.repositories;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +28,8 @@ import sk.workingset.domain.Version;
  * <p>写入使用 {@code lock_version} 条件更新：只有当前数据库版本等于待写入版本减一才更新；
  * 0 行受影响视为并发冲突，显式抛出 {@link LockVersionConflictException}，不静默覆盖。
  */
+@Repository
+@RequiredArgsConstructor
 public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private static final String INSERT = """
@@ -51,9 +56,6 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private final JdbcTemplate jdbc;
 
-    public JdbcRequirementRepository(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     @Override
     public void save(Requirement requirement) {

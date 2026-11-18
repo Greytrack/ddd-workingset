@@ -1,5 +1,9 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,16 +23,15 @@ import sk.workingset.domain.merge.MergeRound.ItemResult;
  * Merge 完成后的关系修复 step。只对本轮实际成功且改变目标变体的条目发布
  * {@code DanglingReferenceRepairRequestedEvent}；失败只记录，不改变 Merge 终态。
  */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public final class MergeRelationRepairStep {
     private static final Logger log = LoggerFactory.getLogger(MergeRelationRepairStep.class);
 
     private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
 
-    public MergeRelationRepairStep(RelationSourceQueryProvider source, RelationEventPublisher publisher) {
-        this.source = source;
-        this.publisher = publisher;
-    }
 
     public StepResult repair(MergeRound round) {
         int published = 0;

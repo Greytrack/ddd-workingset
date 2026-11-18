@@ -1,32 +1,29 @@
 package sk.workingset.application.command;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 
 import org.springframework.transaction.support.TransactionTemplate;
 
-import sk.workingset.application.CowFailureLog;
+import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.LocalId;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 /** 消费 ALM 的实例化结果：成功则切换 LTI，失败则落失败终态。 */
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public final class CowMaterializationCompletionService {
     private final CowMaterializationRepository store;
     private final LightTrackerItemRepository items;
-    private final CowFailureLog failureLog;
+    private final CowFailureLogQueryProvider failureLog;
     private final TransactionTemplate transaction;
 
-    public CowMaterializationCompletionService(CowMaterializationRepository store,
-                                               LightTrackerItemRepository items,
-                                               CowFailureLog failureLog,
-                                               TransactionTemplate transaction) {
-        this.store = store;
-        this.items = items;
-        this.failureLog = failureLog;
-        this.transaction = transaction;
-    }
 
     public void complete(TrackerItemMaterializationCompletedEvent event) {
         if (event.outcome() == TrackerItemMaterializationCompletedEvent.Outcome.MATERIALIZED) {
@@ -61,7 +58,7 @@ public final class CowMaterializationCompletionService {
                 .orElse(null);
         store.markFailed(event.eventId(), event.targetLocalId(), event.failure());
         if (receipt != null) {
-            failureLog.record(new CowFailureLog.Failure(event.eventId(), event.targetLocalId(),
+            failureLog.record(new CowFailureLogQueryProvider.Failure(event.eventId(), event.targetLocalId(),
                     receipt.sourceLocalId(), receipt.sourceRevision(), receipt.sourceRevision(),
                     event.beforeLockVersion(), event.afterLockVersion(), receipt.attempts(), "MATERIALIZE", "MATERIALIZATION_FAILED",
                     event.failure(), Instant.now()));
