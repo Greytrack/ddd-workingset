@@ -10,7 +10,7 @@
 | T7 创建与扩展 | 范围绑定、受理快照、批量 LTI、任务中心，以及 T7-E 工作集侧关系事件发布 | 真实关系 Adapter/消费服务接入；T7-F 规模、保留和恢复见 [后续计划](t7-implementation-prompt.md) |
 | 当前运行版本 | Maven 多模块；业务 ID 使用 BIGINT，Requirement 同族共享只读编号；默认工作集支持创建 Tracker | 部署与 Demo 见 [README](../../../README.md)，身份/API 见 [T4 §4](../domain/cross-bc-contract-v1.md) |
 
-2026-11-18 全量回归 `mvn -B test` 共 161 项通过。当前实现偏差和待验证项见 [开放问题](../domain/open-questions.md)。
+2026-11-18 全量回归 `mvn -B test` 共 165 项通过。CQRS 查询侧实施见 [CQRS 记录](cqrs-query-side.md)。当前实现偏差和待验证项见 [开放问题](../domain/open-questions.md)。
 
 ## 验收记录
 

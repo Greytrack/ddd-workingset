@@ -1,5 +1,7 @@
 package sk.workingset.application.port;
 
+import sk.workingset.domain.event.MergeTarget;
+
 import java.util.Optional;
 
 import sk.workingset.domain.CommonId;

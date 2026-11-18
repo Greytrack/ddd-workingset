@@ -3,7 +3,7 @@ package sk.workingset.application.eventhandler;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
-import sk.workingset.application.event.RequirementMergeApplied;
+import sk.workingset.domain.event.RequirementMergeApplied;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 
 /**
@@ -20,7 +20,7 @@ public class RequirementMergeAppliedListener {
         this.lifecycle = lifecycle;
     }
 
-    @ApplicationModuleListener(id = "bootstrap.RequirementMergeAppliedListener.on(sk.workingset.application.event.RequirementMergeApplied)")
+    @ApplicationModuleListener(id = "bootstrap.RequirementMergeAppliedListener.on(sk.workingset.domain.event.RequirementMergeApplied)")
     public void on(RequirementMergeApplied event) {
         lifecycle.applyMergeTarget(event.target());
     }

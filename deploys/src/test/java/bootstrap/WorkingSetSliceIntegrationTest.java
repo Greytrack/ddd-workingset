@@ -24,19 +24,16 @@ import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.ReadResult;
-import sk.workingset.application.WorkingSetApplicationService;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.application.port.LightTrackerItemRepository;
-import sk.workingset.application.port.ProductSpaceRepository;
-import sk.workingset.application.port.TrackerRepository;
-import sk.workingset.application.port.WorkingSetRepository;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
-import sk.workingset.infrastructure.SnowflakeIdGenerator;
 
 /** S1 应用层读取/解析测试：不依赖已退役的单 Item 派生入口。 */
 class WorkingSetSliceIntegrationTest {
@@ -52,17 +49,16 @@ class WorkingSetSliceIntegrationTest {
 
     private LightTrackerItemRepository items;
     private RequirementRepository requirements;
-    private WorkingSetApplicationService workingSet;
+    private WorkingSetQueryService workingSet;
 
     @BeforeEach
     void setUp() {
         items = mock(LightTrackerItemRepository.class);
         requirements = mock(RequirementRepository.class);
-        SnowflakeIdGenerator ids = new SnowflakeIdGenerator(1, 1);
-        workingSet = new WorkingSetApplicationService(
-                items, localId -> new RequirementAdapter(requirements, localId), ids,
-                mock(WorkingSetRepository.class), mock(TrackerRepository.class),
-                mock(ProductSpaceRepository.class), mock(BusinessTrackerItems.class));
+        var query = mock(WorkingSetQueryProvider.class);
+        when(query.isPreparing(org.mockito.ArgumentMatchers.anyLong())).thenReturn(false);
+        workingSet = new WorkingSetQueryService(query, items,
+                localId -> new RequirementAdapter(requirements, localId), mock(BusinessTrackerItems.class));
     }
 
     @Test

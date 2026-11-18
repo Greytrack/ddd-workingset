@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import sk.workingset.application.WorkingSetDeletionService;
+import sk.workingset.application.command.WorkingSetDeletionService;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 

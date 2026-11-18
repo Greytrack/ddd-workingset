@@ -5,7 +5,7 @@ import java.util.Objects;
 
 import alm.requirement.application.port.RequirementSnapshot;
 import alm.requirement.application.port.SnapshotStore;
-import alm.requirement.application.RequirementMergeWriter;
+import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.workingset.application.port.MaterializationRejectedException;

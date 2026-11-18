@@ -17,7 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import alm.requirement.domain.Requirement;
-import alm.requirement.infrastructure.JdbcRequirementRepository;
+import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;

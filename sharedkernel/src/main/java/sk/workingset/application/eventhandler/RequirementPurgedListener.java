@@ -3,7 +3,7 @@ package sk.workingset.application.eventhandler;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
-import sk.workingset.application.event.RequirementPurged;
+import sk.workingset.domain.event.RequirementPurged;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 
 /**
@@ -22,7 +22,7 @@ public class RequirementPurgedListener {
         this.lifecycle = lifecycle;
     }
 
-    @ApplicationModuleListener(id = "bootstrap.RequirementPurgedListener.on(sk.workingset.application.event.RequirementPurged)")
+    @ApplicationModuleListener(id = "bootstrap.RequirementPurgedListener.on(sk.workingset.domain.event.RequirementPurged)")
     public void on(RequirementPurged event) {
         lifecycle.removePurged(event.requirementId());
     }

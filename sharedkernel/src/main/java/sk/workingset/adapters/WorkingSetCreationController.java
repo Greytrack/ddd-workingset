@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import sk.workingset.application.Caller;
-import sk.workingset.application.WorkingSetCreationService;
+import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.WorkingSetCreation;
 
 @RestController

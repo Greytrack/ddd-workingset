@@ -1,5 +1,6 @@
 package alm.requirement.adapters;
 
+import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.domain.Requirement;
 
 /** Requirement 的最小读模型。 */
@@ -24,5 +25,18 @@ public record RequirementView(String localId,
                 requirement.revision().value(),
                 requirement.version().value(),
                 requirement.lockVersion().value());
+    }
+
+    public static RequirementView from(RequirementDetail detail) {
+        return new RequirementView(
+                String.valueOf(detail.localId()),
+                String.valueOf(detail.commonId()),
+                String.valueOf(detail.trackerId()),
+                detail.number(),
+                detail.title(),
+                detail.description(),
+                detail.revision(),
+                detail.version(),
+                detail.lockVersion());
     }
 }

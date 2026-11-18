@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.workingset.application.command.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,8 +16,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import sk.workingset.application.event.RequirementChanged;
-import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.application.port.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetIdentity;
@@ -27,7 +29,7 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
-import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 class CowEventHandlerTest {
     @Test

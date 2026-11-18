@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import alm.requirement.application.port.RequirementSnapshot;
 import alm.requirement.domain.Requirement;
-import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;

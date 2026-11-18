@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.workingset.application.command.*;
+
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 

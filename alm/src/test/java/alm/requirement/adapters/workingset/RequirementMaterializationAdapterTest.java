@@ -7,11 +7,11 @@ import java.util.Optional;
 
 import alm.requirement.application.port.RequirementSnapshot;
 import alm.requirement.application.port.SnapshotStore;
-import alm.requirement.application.RequirementMergeWriter;
+import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
-import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.application.port.MaterializeRequest;
 import sk.workingset.application.port.TargetIdentity;

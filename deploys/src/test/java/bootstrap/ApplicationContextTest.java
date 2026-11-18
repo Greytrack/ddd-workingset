@@ -18,9 +18,10 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import alm.requirement.application.RequirementApplicationService;
-import sk.workingset.application.WorkingSetApplicationService;
-import sk.workingset.application.event.RequirementChanged;
+import alm.requirement.application.command.RequirementCommandService;
+import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -38,8 +39,9 @@ class ApplicationContextTest {
     @Test
     void context_loads_without_web_and_exposes_composition_root_beans() {
         try (ConfigurableApplicationContext context = start()) {
-            assertNotNull(context.getBean(WorkingSetApplicationService.class));
-            assertNotNull(context.getBean(RequirementApplicationService.class));
+            assertNotNull(context.getBean(WorkingSetCommandService.class));
+            assertNotNull(context.getBean(WorkingSetQueryService.class));
+            assertNotNull(context.getBean(RequirementCommandService.class));
             assertNotNull(context.getBean(IdentifierGenerator.class));
         }
     }
@@ -51,7 +53,7 @@ class ApplicationContextTest {
             context.addApplicationListener(
                     (ApplicationListener<PayloadApplicationEvent<RequirementChanged>>)
                             event -> received.add(event.getPayload()));
-            RequirementApplicationService service = context.getBean(RequirementApplicationService.class);
+            RequirementCommandService service = context.getBean(RequirementCommandService.class);
             TrackerId trackerId = TrackerId.of(fixtureId("tracker-" + UUID.randomUUID()));
 
             var fixture = new RootTrackerFixture(context.getBean(JdbcTemplate.class), trackerId.value());
@@ -68,7 +70,7 @@ class ApplicationContextTest {
         }
     }
 
-    private LocalId verifyPublishedChange(RequirementApplicationService service, List<RequirementChanged> received,
+    private LocalId verifyPublishedChange(RequirementCommandService service, List<RequirementChanged> received,
                                           TrackerId trackerId) {
         var requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
         var localId = requirement.localId();

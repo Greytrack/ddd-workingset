@@ -21,14 +21,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
-import alm.requirement.application.RequirementApplicationService;
+import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.port.RequirementSnapshot;
 import alm.requirement.application.port.SnapshotStore;
-import sk.workingset.application.event.RequirementChanged;
-import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -48,7 +48,7 @@ class RequirementChangeFlowTest {
     private final RequirementRepository requirements = mock(RequirementRepository.class);
     private final SnapshotStore snapshots = mock(SnapshotStore.class);
     private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
-    private final RequirementApplicationService service = new RequirementApplicationService(
+    private final RequirementCommandService service = new RequirementCommandService(
             requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher,
             mock(sk.workingset.application.port.TrackerScopePort.class),
             mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));

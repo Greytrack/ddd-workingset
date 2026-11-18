@@ -1,5 +1,7 @@
 package sk.workingset.infrastructure;
 
+import sk.workingset.infrastructure.repositories.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,7 +20,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;

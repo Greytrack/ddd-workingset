@@ -175,7 +175,7 @@ Merge 完成
 - `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
 - `T7RelationEventAcceptanceTest` 覆盖创建/扩展 task 实际发布 Reference/Association/Dangling repair 三类事件。
 - T7 创建/扩展已接入 `PUBLISH_RELATION_EVENTS`：索引后逐 Tracker 发布新引用/关联/悬空修复事件；失败记录为任务明细并进入 `PartiallySucceeded`，不自动重试。
-- 全量测试 **161 项通过**。
+- 全量测试 **165 项通过**。
 - Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布 `DanglingReferenceRepairRequested`；失败不改变 Merge 终态、不自动重试。
 
 ## 7. 仍开放

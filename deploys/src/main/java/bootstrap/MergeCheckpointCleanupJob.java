@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import sk.workingset.application.port.MergeStore;
+import sk.workingset.domain.merge.MergeRepository;
 
 /**
  * 定时清理已被更新的合并基准超越的 Checkpoint。
@@ -16,9 +16,9 @@ import sk.workingset.application.port.MergeStore;
 public class MergeCheckpointCleanupJob {
     private static final Logger log = LoggerFactory.getLogger(MergeCheckpointCleanupJob.class);
 
-    private final MergeStore store;
+    private final MergeRepository store;
 
-    public MergeCheckpointCleanupJob(MergeStore store) {
+    public MergeCheckpointCleanupJob(MergeRepository store) {
         this.store = store;
     }
 

@@ -34,4 +34,35 @@ class ArchitectureTest {
             noClasses()
                     .that().resideInAPackage("sk.workingset..")
                     .should().dependOnClassesThat().resideInAPackage("alm.requirement..");
+
+    @ArchTest
+    static final ArchRule query_must_not_depend_on_command =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "sk.workingset.application.query..", "alm.requirement.application.query..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "sk.workingset.application.command..", "alm.requirement.application.command..");
+
+    @ArchTest
+    static final ArchRule command_must_not_depend_on_query =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "sk.workingset.application.command..", "alm.requirement.application.command..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "sk.workingset.application.query..", "alm.requirement.application.query..");
+
+    @ArchTest
+    static final ArchRule query_application_must_not_depend_on_mybatis =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "sk.workingset.application.query..", "alm.requirement.application.query..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "com.baomidou..", "org.apache.ibatis..");
+
+    @ArchTest
+    static final ArchRule domain_must_not_depend_on_persistence_frameworks =
+            noClasses()
+                    .that().resideInAnyPackage("sk.workingset.domain..", "alm.requirement.domain..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "com.baomidou..", "org.apache.ibatis..", "org.springframework.jdbc..");
 }

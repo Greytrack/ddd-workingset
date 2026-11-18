@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.workingset.application.command.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,14 +11,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import sk.workingset.application.event.AssociationCreationRequested;
-import sk.workingset.application.event.DanglingReferenceRepairRequested;
-import sk.workingset.application.event.ReferenceCreationRequested;
-import sk.workingset.application.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.AssociationCreationRequested;
+import sk.workingset.domain.event.DanglingReferenceRepairRequested;
+import sk.workingset.domain.event.ReferenceCreationRequested;
+import sk.workingset.domain.event.RelationEventMetadata.OriginType;
 import sk.workingset.application.port.RelationSourcePort.AssociationFact;
 import sk.workingset.application.port.RelationSourcePort.ReferenceFact;
-import sk.workingset.application.event.AssociationEndpoint;
-import sk.workingset.application.event.ReferenceEndpoint;
+import sk.workingset.domain.event.AssociationEndpoint;
+import sk.workingset.domain.event.ReferenceEndpoint;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;

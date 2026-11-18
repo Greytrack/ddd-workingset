@@ -1,0 +1,15 @@
+package sk.workingset.domain.repository;
+
+import java.util.Optional;
+
+import sk.workingset.domain.WorkingSetCreation;
+import sk.workingset.domain.WorkingSetId;
+
+public interface WorkingSetCreationRepository {
+    boolean insert(WorkingSetCreation creation);
+    Optional<WorkingSetCreation> find(String id, boolean lock);
+    Optional<WorkingSetCreation> findByTarget(WorkingSetId target);
+    Optional<WorkingSetCreation> findByRequest(String requestId);
+    Optional<WorkingSetCreation> findActiveExtension(WorkingSetId target);
+    void update(WorkingSetCreation creation);
+}

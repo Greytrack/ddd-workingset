@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
 import alm.requirement.domain.RequirementRepository;
+import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.application.port.SnapshotStore;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;
@@ -37,7 +38,7 @@ class RequirementCreateScopeTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final TrackerScopePort trackerScope = mock(TrackerScopePort.class);
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
-    private final RequirementApplicationService service = new RequirementApplicationService(
+    private final RequirementCommandService service = new RequirementCommandService(
             repository, mock(SnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackerScope,
             mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
 

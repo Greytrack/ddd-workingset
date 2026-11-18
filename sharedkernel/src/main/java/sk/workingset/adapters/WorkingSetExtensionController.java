@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import sk.workingset.application.Caller;
-import sk.workingset.application.WorkingSetCreationService;
+import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.WorkingSetId;
 
 /** T7-G：对已有子工作集批量纳入直接父 Tracker；任务复用 working-set-creations 轮询。 */

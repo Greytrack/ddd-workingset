@@ -27,6 +27,7 @@
     <spring-modulith.version>1.2.13</spring-modulith.version>
     <commons-lang3.version>3.20.0</commons-lang3.version>
     <commons-collections4.version>4.6.0</commons-collections4.version>
+    <mybatis-plus.version>3.5.9</mybatis-plus.version>
   </properties>
 
   <dependencyManagement>
@@ -60,6 +61,11 @@
         <groupId>com.example</groupId>
         <artifactId>alm</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        <version>${mybatis-plus.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

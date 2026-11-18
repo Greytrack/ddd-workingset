@@ -11,12 +11,12 @@ import java.util.function.Function;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import sk.workingset.application.port.LightTrackerItemRepository;
-import sk.workingset.application.port.MergeStore;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.application.port.RequirementCatalog;
 import sk.workingset.application.port.TrackerItemReadPort;
-import sk.workingset.application.port.TrackerRepository;
-import sk.workingset.application.port.WorkingSetRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Tracker;
@@ -46,11 +46,11 @@ public class MergeComparisonService {
     private final LightTrackerItemRepository items;
     private final RequirementCatalog catalog;
     private final Function<LocalId, TrackerItemReadPort> readPorts;
-    private final MergeStore store;
+    private final MergeRepository store;
 
     public MergeComparisonService(WorkingSetRepository workingSets, TrackerRepository trackers,
                                   LightTrackerItemRepository items, RequirementCatalog catalog,
-                                  Function<LocalId, TrackerItemReadPort> readPorts, MergeStore store) {
+                                  Function<LocalId, TrackerItemReadPort> readPorts, MergeRepository store) {
         this.workingSets = workingSets;
         this.trackers = trackers;
         this.items = items;
@@ -106,7 +106,7 @@ public class MergeComparisonService {
                 .isPresent();
     }
 
-    List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {
+    public List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {
         var left = workingSet(source);
         var right = workingSet(target);
         var child = WorkingSetLineagePolicy.childOf(left, right);
@@ -122,7 +122,7 @@ public class MergeComparisonService {
                         : new TrackerPair(source, tracker.sourceId(), target, tracker.trackerId()))).toList();
     }
 
-    boolean isMergeBack(WorkingSetId source, WorkingSetId target) {
+    public boolean isMergeBack(WorkingSetId source, WorkingSetId target) {
         return target.equals(workingSet(source).parentWorkingSetId());
     }
 
@@ -144,7 +144,7 @@ public class MergeComparisonService {
                 .isPresent();
     }
 
-    Difference current(Difference original, Caller caller) {
+    public Difference current(Difference original, Caller caller) {
         var pair = original.trackers();
         var family = original.family();
         Side source = read(familyIds(pair.source()).get(family), caller);
@@ -199,7 +199,7 @@ public class MergeComparisonService {
         }
     }
 
-    void assertWriteCapability(Difference difference, boolean create, Caller caller) {
+    public void assertWriteCapability(Difference difference, boolean create, Caller caller) {
         LocalId capabilityId = create ? difference.source().localId() : difference.target().localId();
         var port = readPorts.apply(capabilityId);
         if (!port.authorize(Operation.WRITE, caller)) {

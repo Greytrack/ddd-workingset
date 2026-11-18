@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 
-import alm.requirement.application.RequirementApplicationService;
-import alm.requirement.infrastructure.JdbcRequirementRepository;
+import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import sk.workingset.adapters.LightTrackerItemView;
 import sk.workingset.adapters.MergeController.ComparisonPage;
 import alm.requirement.adapters.RequirementView;
@@ -45,7 +45,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.application.port.MergeStore;
+import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
@@ -68,9 +68,9 @@ class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private StringRedisTemplate redis;
-    @SpyBean private MergeStore store;
+    @SpyBean private MergeRepository store;
     @SpyBean private TrackerItemLifecyclePort lifecycle;
-    @Autowired private RequirementApplicationService requirements;
+    @Autowired private RequirementCommandService requirements;
     @Autowired private JdbcRequirementRepository repository;
 
     private final String suffix = UUID.randomUUID().toString();

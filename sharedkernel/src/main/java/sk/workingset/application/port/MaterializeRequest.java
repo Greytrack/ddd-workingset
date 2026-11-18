@@ -1,6 +1,6 @@
 package sk.workingset.application.port;
 
-import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;

@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.workingset.application.command.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,17 +16,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import sk.workingset.application.event.AssociationCreationRequested;
-import sk.workingset.application.event.DanglingReferenceRepairRequested;
-import sk.workingset.application.event.ReferenceCreationRequested;
-import sk.workingset.application.event.ReferenceEndpoint;
-import sk.workingset.application.event.RelationEventMetadata.OriginType;
-import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.domain.event.AssociationCreationRequested;
+import sk.workingset.domain.event.DanglingReferenceRepairRequested;
+import sk.workingset.domain.event.ReferenceCreationRequested;
+import sk.workingset.domain.event.ReferenceEndpoint;
+import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.application.port.RelationSourcePort.AssociationFact;
 import sk.workingset.application.port.RelationSourcePort.ReferenceFact;
-import sk.workingset.application.port.TrackerRepository;
-import sk.workingset.application.port.WorkingSetRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
@@ -68,8 +70,8 @@ class RelationEventStepTest {
         when(source.upstreamReferences(any())).thenReturn(List.of(new ReferenceFact("reference-1", sourceEndpoint,
                 targetEndpoint)));
         when(source.upstreamAssociations(any())).thenReturn(List.of(new AssociationFact("association-1",
-                new sk.workingset.application.event.AssociationEndpoint(target, item.localId(), item.commonId(), childId),
-                new sk.workingset.application.event.AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+                new sk.workingset.domain.event.AssociationEndpoint(target, item.localId(), item.commonId(), childId),
+                new sk.workingset.domain.event.AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                         CommonId.of("261349487529920"), TrackerId.of("259649290751936")))));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-2", sourceEndpoint,
                 targetEndpoint)));

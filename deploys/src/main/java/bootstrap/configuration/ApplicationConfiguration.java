@@ -15,54 +15,62 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import alm.requirement.application.RequirementApplicationService;
-import alm.requirement.application.RequirementLifecycleService;
-import alm.requirement.application.RequirementMergeWriter;
-import alm.requirement.infrastructure.JdbcRequirementRepository;
+import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.application.query.RequirementQueryService;
+import alm.requirement.application.query.provider.RequirementQueryProvider;
+import alm.requirement.application.command.RequirementLifecycleService;
+import alm.requirement.application.command.RequirementMergeWriter;
+import alm.requirement.infrastructure.providers.RequirementQueryAdapter;
+import alm.requirement.infrastructure.providers.mybatis.RequirementQueryMapper;
+import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import alm.requirement.infrastructure.JdbcSnapshotStore;
 import alm.requirement.adapters.workingset.RequirementAdapter;
 import alm.requirement.adapters.workingset.RequirementMaterializationAdapter;
-import sk.workingset.application.CowEventHandler;
+import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.application.CowMaterializationStore;
-import sk.workingset.application.CowRecoveryService;
+import sk.workingset.application.command.CowRecoveryService;
 import sk.workingset.application.MergeComparisonService;
-import sk.workingset.application.MergeExecutionService;
-import sk.workingset.application.MergeRelationRepairStep;
-import sk.workingset.application.RelationEventPublisher;
-import sk.workingset.application.RelationEventStep;
-import sk.workingset.application.TrackerItemLifecycleService;
+import sk.workingset.application.command.MergeExecutionService;
+import sk.workingset.application.command.MergeRelationRepairStep;
+import sk.workingset.application.command.RelationEventPublisher;
+import sk.workingset.application.command.RelationEventStep;
+import sk.workingset.application.command.TrackerItemLifecycleService;
 import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.application.port.RequirementCatalog;
-import sk.workingset.application.port.MergeStore;
-import sk.workingset.infrastructure.JdbcMergeStore;
-import sk.workingset.application.event.RequirementChanged;
-import sk.workingset.application.event.RequirementMergeApplied;
-import sk.workingset.application.event.RequirementPurged;
-import sk.workingset.application.SourceSerialCowCoordinator;
-import sk.workingset.application.WorkingSetApplicationService;
-import sk.workingset.application.WorkingSetDeletionService;
-import sk.workingset.application.WorkingSetCreationService;
-import sk.workingset.application.WorkingSetItemIndexer;
+import sk.workingset.domain.merge.MergeRepository;
+import sk.workingset.infrastructure.repositories.JdbcMergeRepository;
+import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.RequirementMergeApplied;
+import sk.workingset.domain.event.RequirementPurged;
+import sk.workingset.application.command.SourceSerialCowCoordinator;
+import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.application.command.WorkingSetCreationService;
+import sk.workingset.application.command.WorkingSetDeletionService;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.application.query.provider.WorkingSetQueryProvider;
+import sk.workingset.infrastructure.providers.WorkingSetQueryAdapter;
+import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
+import sk.workingset.application.command.WorkingSetItemIndexer;
 import sk.workingset.application.port.TrackerItemCatalog;
 import sk.workingset.application.port.WorkingSetCreationSnapshotStore;
-import sk.workingset.application.port.WorkingSetCreationStore;
+import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.infrastructure.EmptyRelationSourcePort;
 import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotStore;
-import sk.workingset.infrastructure.JdbcWorkingSetCreationStore;
+import sk.workingset.infrastructure.repositories.JdbcWorkingSetCreationRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.IdentifierGenerator;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
-import sk.workingset.application.port.LightTrackerItemRepository;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerScopePort;
-import sk.workingset.infrastructure.CachingLightTrackerItemRepository;
-import sk.workingset.infrastructure.JdbcBindingRepositories;
-import sk.workingset.infrastructure.JdbcLightTrackerItemRepository;
+import sk.workingset.infrastructure.repositories.CachingLightTrackerItemRepository;
+import sk.workingset.infrastructure.repositories.JdbcBindingRepositories;
+import sk.workingset.infrastructure.repositories.JdbcLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcCowFailureLog;
 import sk.workingset.infrastructure.JdbcCowMaterializationStore;
 
@@ -84,7 +92,7 @@ public class ApplicationConfiguration {
 
     @Bean
     public RequirementWritePort requirementWritePort(JdbcRequirementRepository repository,
-            JdbcSnapshotStore snapshots, RequirementApplicationService requirements) {
+            JdbcSnapshotStore snapshots, RequirementCommandService requirements) {
         return new RequirementMaterializationAdapter(repository, snapshots,
                 new RequirementMergeWriter(repository, requirements));
     }
@@ -150,15 +158,27 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public RequirementApplicationService requirementApplicationService(
+    public RequirementCommandService requirementCommandService(
             JdbcRequirementRepository requirements,
             JdbcSnapshotStore snapshotStore,
             IdentifierGenerator identifierGenerator,
             ApplicationEventPublisher eventPublisher,
             TrackerScopePort trackerScopePort,
             TrackerItemLifecyclePort lifecycle) {
-        return new RequirementApplicationService(
+        return new RequirementCommandService(
                 requirements, snapshotStore, identifierGenerator, eventPublisher, trackerScopePort, lifecycle);
+    }
+
+    @Bean
+    public RequirementQueryProvider RequirementQueryProvider(RequirementQueryMapper mapper) {
+        return new RequirementQueryAdapter(mapper);
+    }
+
+    @Bean
+    public RequirementQueryService requirementQueryService(RequirementQueryProvider query,
+            JdbcRequirementRepository repository, TrackerItemLifecyclePort lifecycle,
+            TrackerScopePort trackerScopePort) {
+        return new RequirementQueryService(query, repository, lifecycle, trackerScopePort);
     }
 
     @Bean
@@ -185,8 +205,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public WorkingSetCreationStore workingSetCreationStore(JdbcTemplate jdbc, ObjectMapper mapper) {
-        return new JdbcWorkingSetCreationStore(jdbc, mapper);
+    public WorkingSetCreationRepository WorkingSetCreationRepository(JdbcTemplate jdbc, ObjectMapper mapper) {
+        return new JdbcWorkingSetCreationRepository(jdbc, mapper);
     }
 
     @Bean
@@ -215,8 +235,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public WorkingSetCreationService workingSetCreationService(WorkingSetCreationStore store,
-            JdbcBindingRepositories bindings, WorkingSetApplicationService workingSets,
+    public WorkingSetCreationService workingSetCreationService(WorkingSetCreationRepository store,
+            JdbcBindingRepositories bindings, WorkingSetCommandService workingSets,
             TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events, WorkingSetItemIndexer indexer,
             RelationEventStep relationEventStep, IdentifierGenerator ids) {
         return new WorkingSetCreationService(store, bindings, bindings, workingSets, newTransactionTemplate, events,
@@ -292,13 +312,13 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public MergeStore mergeStore(JdbcTemplate jdbc, ObjectMapper mapper, IdentifierGenerator ids) {
-        return new JdbcMergeStore(jdbc, mapper, ids);
+    public MergeRepository MergeRepository(JdbcTemplate jdbc, ObjectMapper mapper, IdentifierGenerator ids) {
+        return new JdbcMergeRepository(jdbc, mapper, ids);
     }
 
     @Bean
     public MergeComparisonService mergeComparisonService(JdbcBindingRepositories bindings,
-            LightTrackerItemRepository items, JdbcRequirementRepository requirements, MergeStore store) {
+            LightTrackerItemRepository items, JdbcRequirementRepository requirements, MergeRepository store) {
         RequirementCatalog catalog = requirements::findIdentitiesByTracker;
         return new MergeComparisonService(bindings, bindings, items, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
@@ -311,7 +331,7 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public MergeExecutionService mergeExecutionService(MergeStore store, MergeComparisonService comparisons,
+    public MergeExecutionService mergeExecutionService(MergeRepository store, MergeComparisonService comparisons,
             RequirementWritePort writer, JdbcBindingRepositories trackers, IdentifierGenerator ids,
             TransactionTemplate newTransactionTemplate, ApplicationEventPublisher events,
             MergeRelationRepairStep relationRepair) {
@@ -326,16 +346,25 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public WorkingSetApplicationService workingSetApplicationService(
+    public WorkingSetCommandService workingSetCommandService(
+            IdentifierGenerator identifierGenerator,
+            JdbcBindingRepositories bindings) {
+        return new WorkingSetCommandService(identifierGenerator, bindings, bindings, bindings);
+    }
+
+    @Bean
+    public WorkingSetQueryProvider WorkingSetQueryProvider(WorkingSetQueryMapper mapper) {
+        return new WorkingSetQueryAdapter(mapper);
+    }
+
+    @Bean
+    public WorkingSetQueryService workingSetQueryService(
+            WorkingSetQueryProvider query,
             LightTrackerItemRepository items,
             JdbcRequirementRepository requirements,
-            IdentifierGenerator identifierGenerator,
-            JdbcBindingRepositories bindings,
             BusinessTrackerItems businessItems) {
         // SK 只依赖 TrackerItemReadPort 接口；Adapter 由组合根按变体身份构造
-        return new WorkingSetApplicationService(
-                items,
-                localId -> new RequirementAdapter(requirements, localId),
-                identifierGenerator, bindings, bindings, bindings, businessItems);
+        return new WorkingSetQueryService(query, items,
+                localId -> new RequirementAdapter(requirements, localId), businessItems);
     }
 }

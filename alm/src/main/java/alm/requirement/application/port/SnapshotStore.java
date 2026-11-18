@@ -2,7 +2,7 @@ package alm.requirement.application.port;
 
 import java.util.Optional;
 
-import sk.workingset.application.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRef;
 
 /**
  * ALM 自有快照存储：保存「修改前」不可变内容并返回引用；SK 只持有引用。

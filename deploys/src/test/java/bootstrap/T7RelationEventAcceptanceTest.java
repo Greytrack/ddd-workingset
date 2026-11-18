@@ -25,12 +25,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import sk.workingset.application.event.AssociationCreationRequested;
-import sk.workingset.application.event.DanglingReferenceRepairRequested;
-import sk.workingset.application.event.ReferenceCreationRequested;
-import sk.workingset.application.event.ReferenceEndpoint;
-import sk.workingset.application.event.AssociationEndpoint;
-import sk.workingset.application.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.AssociationCreationRequested;
+import sk.workingset.domain.event.DanglingReferenceRepairRequested;
+import sk.workingset.domain.event.ReferenceCreationRequested;
+import sk.workingset.domain.event.ReferenceEndpoint;
+import sk.workingset.domain.event.AssociationEndpoint;
+import sk.workingset.domain.event.RelationEventMetadata.OriginType;
 import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.application.port.RelationSourcePort.AssociationFact;
 import sk.workingset.application.port.RelationSourcePort.ReferenceFact;

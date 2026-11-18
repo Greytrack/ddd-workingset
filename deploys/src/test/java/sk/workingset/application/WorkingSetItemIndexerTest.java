@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.workingset.application.command.*;
+
 import static bootstrap.FixtureIds.fixtureId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

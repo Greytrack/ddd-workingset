@@ -14,7 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import sk.workingset.application.Caller;
 import sk.workingset.application.ReadResult;
-import sk.workingset.application.WorkingSetApplicationService;
+import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.application.query.model.ClassificationSummary;
+import sk.workingset.application.query.model.SpaceBindingSummary;
+import sk.workingset.application.query.model.TrackerBindingSummary;
+import sk.workingset.application.query.model.TrackerSummary;
+import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.LocalId;
@@ -34,54 +40,52 @@ public class WorkingSetController {
 
     private static final Caller WEB_CALLER = Caller.of("web");
 
-    private final WorkingSetApplicationService applicationService;
+    private final WorkingSetCommandService commands;
+    private final WorkingSetQueryService queries;
 
-    public WorkingSetController(WorkingSetApplicationService applicationService) {
-        this.applicationService = applicationService;
+    public WorkingSetController(WorkingSetCommandService commands, WorkingSetQueryService queries) {
+        this.commands = commands;
+        this.queries = queries;
     }
 
     @GetMapping("/{workingSetId}")
     public WorkingSetView find(@PathVariable String workingSetId) {
-        var workingSet = applicationService.findWorkingSet(WorkingSetId.of(workingSetId));
-        return WorkingSetView.from(workingSet);
+        return WorkingSetView.from(queries.find(WorkingSetId.of(workingSetId)));
     }
 
     @PostMapping("/{workingSetId}/children")
     @ResponseStatus(HttpStatus.CREATED)
     public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
-        return WorkingSetView.from(applicationService.createChildWorkingSet(WorkingSetId.of(workingSetId),
+        return WorkingSetView.from(commands.createChildWorkingSet(WorkingSetId.of(workingSetId),
                 request.name()));
     }
 
     @GetMapping("/{workingSetId}/children")
     public List<String> findChildren(@PathVariable String workingSetId) {
-        return applicationService.findChildren(WorkingSetId.of(workingSetId)).stream().map(WorkingSetId::value).toList();
+        return queries.findChildren(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
     }
 
     @GetMapping("/{workingSetId}/ancestors")
     public List<String> findAncestors(@PathVariable String workingSetId) {
-        return applicationService.findAncestors(WorkingSetId.of(workingSetId)).stream().map(WorkingSetId::value).toList();
+        return queries.findAncestors(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
     }
 
     /** 界面只读列表：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。 */
     @GetMapping("/{workingSetId}/trackers")
     public List<TrackerView> findTrackers(@PathVariable String workingSetId) {
-        return applicationService.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
+        return queries.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
     }
 
     @GetMapping("/metadata/classifications")
     public List<ClassificationView> findClassifications() {
-        return applicationService.findClassifications().stream()
-                .map(classification -> new ClassificationView(classification.id(), classification.sharingMode(),
-                        classification.name()))
-                .toList();
+        return queries.findClassifications().stream().map(ClassificationView::from).toList();
     }
 
     @PostMapping("/{workingSetId}/trackers")
     @ResponseStatus(HttpStatus.CREATED)
     public TrackerView createTracker(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
         var mode = SharingMode.valueOf(requireText(request.sharingMode(), "sharingMode"));
-        return TrackerView.from(applicationService.createTracker(WorkingSetId.of(workingSetId),
+        return TrackerView.from(commands.createTracker(WorkingSetId.of(workingSetId),
                 requireText(request.productSpaceId(), "productSpaceId"), requireText(request.name(), "name"),
                 requireText(request.classificationId(), "classificationId"), mode));
     }
@@ -89,21 +93,16 @@ public class WorkingSetController {
     /** 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。 */
     @GetMapping("/{workingSetId}/trackers/{trackerId}/items")
     public List<LightTrackerItemView> findItems(@PathVariable String workingSetId, @PathVariable String trackerId) {
-        return applicationService.findItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
+        return queries.findItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
                 .map(indexed -> LightTrackerItemView.from(indexed.item(), indexed.presentation())).toList();
     }
 
     @GetMapping("/{workingSetId}/bindings")
     public BindingsView listBindings(@PathVariable String workingSetId) {
-        var id = WorkingSetId.of(workingSetId);
-        var workingSet = applicationService.findWorkingSet(id);
-        var visible = applicationService.findTrackers(id).stream().map(Tracker::trackerId)
-                .collect(java.util.stream.Collectors.toSet());
-        return new BindingsView(workingSet.spaces().stream().map(SpaceBindingView::from).toList(),
-                workingSet.trackers().stream()
-                        .filter(binding -> visible.contains(binding.trackerId()))
-                        .map(TrackerBindingView::from).toList());
+        return BindingsView.from(queries.findBindings(WorkingSetId.of(workingSetId)));
     }
+
+    // Query-side model has the same simple name as the REST view; keep the conversion explicit.
 
     /**
      * 创建产品空间。路径中的 {@code workingSetId} 仅是入口占位，不参与目标工作集选择：
@@ -113,35 +112,33 @@ public class WorkingSetController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProductSpaceView createProductSpace(@PathVariable String workingSetId,
                                                @RequestBody CreateProductSpaceRequest request) {
-        return ProductSpaceView.from(applicationService.createProductSpace(requireText(request.name(), "name")));
+        return ProductSpaceView.from(commands.createProductSpace(requireText(request.name(), "name")));
     }
 
     @PostMapping("/{workingSetId}/spaces/{spaceId}")
     @ResponseStatus(HttpStatus.CREATED)
     public SpaceBindingView bindSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
-        return SpaceBindingView.from(applicationService.bindSpace(WorkingSetId.of(workingSetId), spaceId));
+        return SpaceBindingView.from(commands.bindSpace(WorkingSetId.of(workingSetId), spaceId));
     }
 
     @PostMapping("/{workingSetId}/trackers/shared/{trackerId}")
     @ResponseStatus(HttpStatus.CREATED)
     public TrackerBindingView bindTrackerShared(@PathVariable String workingSetId, @PathVariable String trackerId) {
-        return TrackerBindingView.from(applicationService.bindTrackerShared(
+        return TrackerBindingView.from(commands.bindTrackerShared(
                 WorkingSetId.of(workingSetId), TrackerId.of(trackerId)));
     }
 
     @GetMapping("/{workingSetId}/items/{localId}")
     public LightTrackerItemView resolve(@PathVariable("workingSetId") String workingSetId,
                                         @PathVariable("localId") String localId) {
-        LightTrackerItem item = applicationService.resolve(
-                WorkingSetId.of(workingSetId), LocalId.of(localId));
+        LightTrackerItem item = queries.resolve(WorkingSetId.of(workingSetId), LocalId.of(localId));
         return LightTrackerItemView.from(item);
     }
 
     @GetMapping("/{workingSetId}/items/{localId}/content")
     public ReadView read(@PathVariable("workingSetId") String workingSetId,
                          @PathVariable("localId") String localId) {
-        ReadResult result = applicationService.read(
-                WorkingSetId.of(workingSetId), LocalId.of(localId), WEB_CALLER);
+        ReadResult result = queries.read(WorkingSetId.of(workingSetId), LocalId.of(localId), WEB_CALLER);
         return ReadView.from(result);
     }
 
@@ -158,8 +155,6 @@ public class WorkingSetController {
     public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
                                        String sharingMode) {}
 
-    public record ClassificationView(String classificationId, SharingMode sharingMode, String name) {}
-
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
                                  String parentWorkingSetId) {
         static WorkingSetView from(WorkingSet workingSet) {
@@ -168,12 +163,30 @@ public class WorkingSetController {
                     WorkingSet.DEFAULT_ID.equals(workingSet.id()),
                     parentId == null ? null : parentId.value());
         }
+
+        static WorkingSetView from(WorkingSetSummary summary) {
+            return new WorkingSetView(String.valueOf(summary.workingSetId()), summary.name(),
+                    summary.defaultWorkingSet(),
+                    summary.parentWorkingSetId() == null ? null : String.valueOf(summary.parentWorkingSetId()));
+        }
+    }
+
+    public record ClassificationView(String classificationId, SharingMode sharingMode, String name) {
+        static ClassificationView from(ClassificationSummary summary) {
+            return new ClassificationView(String.valueOf(summary.classificationId()),
+                    SharingMode.valueOf(summary.sharingMode()), summary.name());
+        }
     }
 
     public record SpaceBindingView(String productSpaceId, String name, String origin, String state) {
         static SpaceBindingView from(WorkingSet.SpaceBinding binding) {
             return new SpaceBindingView(binding.productSpaceId(), binding.name(),
                     binding.origin().name(), binding.state().name());
+        }
+
+        static SpaceBindingView from(SpaceBindingSummary summary) {
+            return new SpaceBindingView(String.valueOf(summary.productSpaceId()), summary.name(),
+                    summary.origin(), summary.state());
         }
     }
 
@@ -183,9 +196,20 @@ public class WorkingSetController {
             return new TrackerBindingView(binding.trackerId().value(), binding.productSpaceId(),
                     binding.classificationId(), binding.sharingMode().name(), binding.origin().name());
         }
+
+        static TrackerBindingView from(TrackerBindingSummary summary) {
+            return new TrackerBindingView(String.valueOf(summary.trackerId()),
+                    String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
+                    summary.sharingMode(), summary.origin());
+        }
     }
 
-    public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {}
+    public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {
+        static BindingsView from(sk.workingset.application.query.model.BindingsView model) {
+            return new BindingsView(model.spaces().stream().map(SpaceBindingView::from).toList(),
+                    model.trackers().stream().map(TrackerBindingView::from).toList());
+        }
+    }
 
     public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
                               String classificationId, String sharingMode, boolean isDefault) {
@@ -195,6 +219,14 @@ public class WorkingSetController {
                     tracker.sourceId() == null ? null : tracker.sourceId().value(),
                     tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name(),
                     tracker.isDefault());
+        }
+
+        static TrackerView from(TrackerSummary summary) {
+            return new TrackerView(String.valueOf(summary.trackerId()), summary.name(),
+                    summary.parentId() == null ? null : String.valueOf(summary.parentId()),
+                    summary.sourceId() == null ? null : String.valueOf(summary.sourceId()),
+                    String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
+                    summary.sharingMode(), summary.isDefault());
         }
     }
 

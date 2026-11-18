@@ -1,5 +1,7 @@
 package sk.workingset.application;
 
+import sk.workingset.application.command.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -13,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import sk.workingset.application.event.ReferenceEndpoint;
+import sk.workingset.domain.event.ReferenceEndpoint;
 import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.application.port.RelationSourcePort.ReferenceFact;
 import sk.workingset.domain.CommonId;

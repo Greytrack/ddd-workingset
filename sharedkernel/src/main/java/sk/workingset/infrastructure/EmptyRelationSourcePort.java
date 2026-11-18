@@ -2,8 +2,8 @@ package sk.workingset.infrastructure;
 
 import java.util.List;
 
-import sk.workingset.application.event.AssociationEndpoint;
-import sk.workingset.application.event.ReferenceEndpoint;
+import sk.workingset.domain.event.AssociationEndpoint;
+import sk.workingset.domain.event.ReferenceEndpoint;
 import sk.workingset.application.port.RelationSourcePort;
 
 /**

@@ -33,8 +33,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.CowFailureLog;
-import alm.requirement.application.RequirementApplicationService;
-import sk.workingset.application.port.LightTrackerItemRepository;
+import alm.requirement.application.command.RequirementCommandService;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -46,7 +46,7 @@ class CowAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private StringRedisTemplate redis;
     @Autowired private CowFailureLog failures;
-    @Autowired private RequirementApplicationService requirements;
+    @Autowired private RequirementCommandService requirements;
     @SpyBean private LightTrackerItemRepository items;
 
     private final List<String> targets = new ArrayList<>();

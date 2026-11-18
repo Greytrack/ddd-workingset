@@ -3,8 +3,8 @@ package sk.workingset.application.port;
 import java.util.List;
 import java.util.Objects;
 
-import sk.workingset.application.event.AssociationEndpoint;
-import sk.workingset.application.event.ReferenceEndpoint;
+import sk.workingset.domain.event.AssociationEndpoint;
+import sk.workingset.domain.event.ReferenceEndpoint;
 
 /**
  * 业务 BC 向工作集提供上游关系事实。WorkingSet 不拥有关系聚合；本端口只读。

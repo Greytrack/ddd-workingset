@@ -38,4 +38,4 @@
 - [T6-E 规划](../implementation/t6-next-stage-outline.md)
 - [MergeController](../../../sharedkernel/src/main/java/sk/workingset/adapters/MergeController.java)
 - [MergeExecutionService](../../../sharedkernel/src/main/java/sk/workingset/application/MergeExecutionService.java)
-- [MergeStore](../../../sharedkernel/src/main/java/sk/workingset/application/port/MergeStore.java)
+- [MergeRepository](../../../sharedkernel/src/main/java/sk/workingset/domain/merge/MergeRepository.java)

@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import sk.workingset.application.Caller;
 import sk.workingset.application.MergeComparisonService;
-import sk.workingset.application.MergeExecutionService;
-import sk.workingset.application.MergeExecutionService.EntryRequest;
+import sk.workingset.application.command.MergeExecutionService;
+import sk.workingset.application.command.MergeExecutionService.EntryRequest;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;

@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import alm.requirement.application.RequirementApplicationService;
-import alm.requirement.application.RequirementLifecycleService;
+import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.application.query.RequirementQueryService;
+import alm.requirement.application.query.model.RequirementDetail;
+import alm.requirement.application.command.RequirementLifecycleService;
 import alm.requirement.domain.Requirement;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -34,12 +36,14 @@ import sk.workingset.domain.WorkingSetId;
 @RequestMapping("/api/requirements")
 public class RequirementController {
 
-    private final RequirementApplicationService applicationService;
+    private final RequirementCommandService commands;
+    private final RequirementQueryService queries;
     private final RequirementLifecycleService lifecycle;
 
-    public RequirementController(RequirementApplicationService applicationService,
+    public RequirementController(RequirementCommandService commands, RequirementQueryService queries,
                                  RequirementLifecycleService lifecycle) {
-        this.applicationService = applicationService;
+        this.commands = commands;
+        this.queries = queries;
         this.lifecycle = lifecycle;
     }
 
@@ -49,7 +53,7 @@ public class RequirementController {
         String requested = request.workingSetId();
         WorkingSetId requestedWorkingSetId = requested == null || requested.isBlank()
                 ? null : WorkingSetId.of(requested);
-        Requirement created = applicationService.create(
+        Requirement created = commands.create(
                 TrackerId.of(requireText(request.trackerId(), "trackerId")),
                 requestedWorkingSetId,
                 requireText(request.title(), "title"),
@@ -61,7 +65,7 @@ public class RequirementController {
     @PutMapping("/{localId}/title")
     public RequirementView changeTitle(@PathVariable("localId") String localId,
                                        @RequestBody ChangeTitleRequest request) {
-        Requirement changed = applicationService.changeTitle(
+        Requirement changed = commands.changeTitle(
                 LocalId.of(localId),
                 requireText(request.title(), "title"),
                 LockVersion.of(request.expectedLockVersion()));
@@ -72,7 +76,7 @@ public class RequirementController {
     @PutMapping("/{localId}")
     public RequirementView changeContent(@PathVariable("localId") String localId,
                                          @RequestBody ChangeRequirementRequest request) {
-        Requirement changed = applicationService.changeContent(
+        Requirement changed = commands.changeContent(
                 LocalId.of(localId),
                 requireText(request.title(), "title"),
                 Objects.requireNonNull(request.description(), "description"),
@@ -84,13 +88,13 @@ public class RequirementController {
     @DeleteMapping("/{localId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteOne(@PathVariable String localId) {
-        applicationService.delete(LocalId.of(localId));
+        commands.delete(LocalId.of(localId));
     }
 
     @PostMapping("/{localId}/delete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String localId) {
-        applicationService.delete(LocalId.of(localId));
+        commands.delete(LocalId.of(localId));
     }
 
     @PostMapping("/{localId}/delete2")
@@ -102,12 +106,13 @@ public class RequirementController {
     @PostMapping("/{localId}/undelete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void undelete(@PathVariable String localId) {
-        applicationService.undelete(LocalId.of(localId));
+        commands.undelete(LocalId.of(localId));
     }
 
     @GetMapping("/{localId}")
     public RequirementView find(@PathVariable("localId") String localId) {
-        return RequirementView.from(applicationService.find(LocalId.of(localId)));
+        RequirementDetail detail = queries.find(LocalId.of(localId));
+        return RequirementView.from(detail);
     }
 
     private static String requireText(String value, String name) {

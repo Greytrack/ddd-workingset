@@ -22,6 +22,12 @@ workingset:
   cow:
     order-gap-wait: ${COW_ORDER_GAP_WAIT:1s}
 
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
 spring:
   application:
     name: ddd-workingset

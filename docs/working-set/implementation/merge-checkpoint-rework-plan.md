@@ -6,13 +6,13 @@
 
 1. `merge_checkpoints` 重建为 Tracker 分支对身份（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` + `merge_direction` + `revoked` + 审计列），唯一键 `(tracker_a_id, tracker_b_id, common_id)`；
 2. `merge_rounds` 增加 `tracker_a_id`/`tracker_b_id` 与并发闸门索引；
-3. `MergeCheckpoint`、`MergeStore`、`JdbcMergeStore`、`MergeComparisonService`、`MergeExecutionService`、`MergeController`、`MergeFailure` 同步；
+3. `MergeCheckpoint`、`MergeRepository`、`JdbcMergeRepository`、`MergeComparisonService`、`MergeExecutionService`、`MergeController`、`MergeFailure` 同步；
 4. `MergeCheckpointCleanupJob` 定时清理被超越锚点（`workingset.merge.checkpoint-cleanup-cron`，默认每天 03:00）；
 5. 前端 `core.js` 补 `PairMergeInProgress` 文案。
 
 ## 验收
 
-- 全量测试 161 项通过；
+- 全量测试 165 项通过；
 - 新增用例：反向命中、同 Tracker 对并发 409、终态后可再提交、跨 Tracker 对 400、被超越锚点清理；
 - 开发库按 `schema.sql` 重建，`merge_checkpoints` 无 `source_id`/`target_id`。
 
