@@ -54,7 +54,7 @@ public class RequirementQueryService {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
         sk.workingset.application.common.TargetIdentity identity = target.identity();
-        return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
+        return Requirement.inherited(identity.localId(), identity.commonId(), identity.trackerId(),
                 source.title(), source.description(), identity.revision(), source.version());
     }
 
@@ -75,6 +75,6 @@ public class RequirementQueryService {
                 requirement.localId().numericValue(), requirement.commonId().numericValue(),
                 requirement.trackerId().numericValue(), requirement.number(), requirement.title(),
                 requirement.description(), requirement.revision().value(), requirement.version().value(),
-                requirement.lockVersion().value(), requirement.deleted());
+                requirement.lockVersion().value(), requirement.deleted(), requirement.hasMaterialized());
     }
 }

@@ -12,7 +12,7 @@ public interface RequirementQueryMapper {
 
     @Select("""
             SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
-                   lock_version, delete_flag AS deleted
+                   lock_version, delete_flag AS deleted, TRUE AS materialized
             FROM requirements WHERE local_id = #{id}
             """)
     RequirementDetail find(@Param("id") long id);

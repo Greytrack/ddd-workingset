@@ -2,6 +2,7 @@ package alm.requirement.adapters.workingset;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.SnapshotRepository;
@@ -65,9 +66,14 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
             verifyMaterializedTarget(target);
             return;
         }
-        java.util.Optional<Requirement> existing = repository.findById(request.targetLocalId());
+        Optional<Requirement> existing = repository.findById(request.targetLocalId());
         if (existing.isPresent()) {
-            verifyExisting(existing.get(), request, snapshot);
+            Requirement stored = existing.orElseThrow();
+            if (!stored.hasMaterialized()) {
+                throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED,
+                        "Target business object is not materialized");
+            }
+            verifyExisting(stored, request, snapshot);
         } else {
             repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
                     request.targetTrackerId(), snapshot.title(), snapshot.description(),
@@ -79,7 +85,8 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     public void verifyMaterializedTarget(TargetIdentity target) {
         Requirement existing = repository.findById(target.localId())
                 .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business object is missing"));
-        if (!existing.commonId().equals(target.commonId())
+        if (!existing.hasMaterialized()
+                || !existing.commonId().equals(target.commonId())
                 || !existing.trackerId().equals(target.trackerId())
                 || !existing.revision().equals(target.revision())) {
             throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business identity does not match the receipt");

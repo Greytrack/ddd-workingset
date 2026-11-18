@@ -8,7 +8,6 @@ import sk.workingset.domain.TrackerId;
 
 /** 当前业务 Item 的身份与存在性，由组合根接入相应业务 BC。 */
 public interface BusinessTrackerItems {
-    Optional<SourceIdentity> findIdentity(LocalId localId);
 
     boolean existsInTracker(TrackerId trackerId);
     boolean isDeleted(LocalId localId);
@@ -23,5 +22,4 @@ public interface BusinessTrackerItems {
 
     record Presentation(String name, String number) {}
 
-    record SourceIdentity(TrackerId trackerId, CommonId commonId) {}
 }

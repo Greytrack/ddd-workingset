@@ -1,5 +1,6 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -16,6 +17,7 @@ import sk.workingset.domain.Classification.SharingMode;
  * WorkingSet 聚合根：默认根不可删除、单父谱系（{@code parentWorkingSetId}）、
  * TrackerBinding 与 SpaceBinding 的归属与解除规则。
  */
+@AggregateRoot
 public final class WorkingSet {
 
     public static final WorkingSetId DEFAULT_ID = WorkingSetId.of("1");

@@ -12,7 +12,7 @@ public record RequirementView(String localId,
                               String description,
                               int revision,
                               String version,
-                              long lockVersion) {
+                              long lockVersion, boolean materialized) {
 
     public static RequirementView from(Requirement requirement) {
         return new RequirementView(
@@ -24,7 +24,7 @@ public record RequirementView(String localId,
                 requirement.description(),
                 requirement.revision().value(),
                 requirement.version().value(),
-                requirement.lockVersion().value());
+                requirement.lockVersion().value(), requirement.hasMaterialized());
     }
 
     public static RequirementView from(RequirementDetail detail) {
@@ -37,6 +37,6 @@ public record RequirementView(String localId,
                 detail.description(),
                 detail.revision(),
                 detail.version(),
-                detail.lockVersion());
+                detail.lockVersion(), detail.materialized());
     }
 }

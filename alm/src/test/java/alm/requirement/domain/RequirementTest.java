@@ -79,6 +79,18 @@ class RequirementTest {
     }
 
     @Test
+    void materialized_is_decided_at_construction_and_preserved_by_changes() {
+        Requirement created = givenRequirement();
+        Requirement inherited = Requirement.inherited(L0, C1, T0, "A", "source description", R3, Version.none());
+
+        assertTrue(created.hasMaterialized());
+        assertFalse(inherited.hasMaterialized());
+        assertTrue(created.changeTitle("B", LockVersion.of(0)).hasMaterialized());
+        assertTrue(created.delete(LockVersion.of(0)).hasMaterialized());
+        assertFalse(inherited.changeTitle("B", LockVersion.of(0)).hasMaterialized());
+    }
+
+    @Test
     void version_may_be_empty_or_present() {
         assertFalse(Version.none().isPresent());
         assertEquals(null, Version.none().value());

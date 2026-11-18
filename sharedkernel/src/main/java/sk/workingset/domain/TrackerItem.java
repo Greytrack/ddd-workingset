@@ -8,4 +8,7 @@ package sk.workingset.domain;
 public interface TrackerItem extends BusinessObject {
 
     Revision revision();
+
+    boolean hasMaterialized();
+
 }

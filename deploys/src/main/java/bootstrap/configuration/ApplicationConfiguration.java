@@ -264,11 +264,6 @@ public class ApplicationConfiguration {
     @Bean
     public BusinessTrackerItems businessTrackerItems(JdbcRequirementRepository requirements) {
         return new BusinessTrackerItems() {
-            @Override
-            public Optional<SourceIdentity> findIdentity(LocalId localId) {
-                return requirements.findById(localId).filter(item -> !item.deleted())
-                        .map(item -> new SourceIdentity(item.trackerId(), item.commonId()));
-            }
 
             @Override
             public boolean isDeleted(LocalId localId) {
