@@ -1,0 +1,819 @@
+CREATE TABLE "public"."air_inst_workingset" (
+  "id" bigint NOT NULL,
+  "base_class" bigint NOT NULL,
+  "class" bigint,
+  "type" bigint NOT NULL,
+  "number" character varying(255) NOT NULL,
+  "name" character varying(255),
+  "description" character varying(2000),
+  "color" character varying(500),
+  "workingset_id" bigint,
+  "work_space" bigint,
+  "owner" bigint,
+  "instance_id" bigint NOT NULL,
+  "common_id" bigint NOT NULL,
+  "parent_id" bigint,
+  "delete_flag" integer NOT NULL,
+  "flags" character varying(255),
+  "attributes" jsonb,
+  "revision" bigint,
+  "version_type" bigint NOT NULL DEFAULT 10001,
+  "lock_version" bigint NOT NULL,
+  "created_by" character varying(50) NOT NULL,
+  "created_time" bigint NOT NULL,
+  "updated_by" character varying(50) NOT NULL,
+  "updated_time" bigint NOT NULL,
+  "date01" bigint,
+  "date02" bigint,
+  "date03" bigint,
+  "date04" bigint,
+  "date05" bigint,
+  "text01" character varying(150),
+  "text02" character varying(150),
+  "text03" character varying(150),
+  "text04" character varying(150),
+  "text05" character varying(150),
+  "text06" character varying(150),
+  "text07" character varying(150),
+  "text08" character varying(150),
+  "text09" character varying(150),
+  "text10" character varying(150),
+  "list01" bigint,
+  "list02" bigint,
+  "list03" bigint,
+  "list04" bigint,
+  "list05" bigint,
+  "list06" bigint,
+  "list07" bigint,
+  "list08" bigint,
+  "list09" bigint,
+  "list10" bigint,
+  "multilist01" character varying(4000),
+  "multilist02" character varying(4000),
+  "multilist03" character varying(4000),
+  "multilist04" character varying(4000),
+  "multilist05" character varying(4000),
+  "multilist06" character varying(4000),
+  "multilist07" character varying(4000),
+  "multilist08" character varying(4000),
+  "multilist09" character varying(4000),
+  "multilist10" character varying(4000),
+  "numeric01" numeric,
+  "numeric02" numeric,
+  "numeric03" numeric,
+  "numeric04" numeric,
+  "numeric05" numeric,
+  "numeric06" numeric,
+  "numeric07" numeric,
+  "numeric08" numeric,
+  "numeric09" numeric,
+  "numeric10" numeric,
+  "largetext01" character varying(4000),
+  "largetext02" character varying(4000),
+  "largetext03" character varying(4000),
+  "largetext04" character varying(4000),
+  "largetext05" character varying(4000),
+  "compositetext01" character varying(255),
+  "compositetext02" character varying(255),
+  "compositetext03" character varying(255),
+  "compositetext04" character varying(255),
+  "compositetext05" character varying(255),
+  "compositenumber01" character varying(255),
+  "compositenumber02" character varying(255),
+  "compositenumber03" character varying(255),
+  "compositenumber04" character varying(255),
+  "compositenumber05" character varying(255),
+  "startdate01" bigint,
+  "endstartdate01" bigint,
+  "startdate02" bigint,
+  "endstartdate02" bigint,
+  "startdate03" bigint,
+  "endstartdate03" bigint,
+  "startdate04" bigint,
+  "endstartdate04" bigint,
+  "startdate05" bigint,
+  "endstartdate05" bigint,
+  "richtext01" text,
+  "richtext02" text,
+  "richtext03" text,
+  "richtext04" text,
+  "richtext05" text,
+  "date001" bigint,
+  "date002" bigint,
+  "date003" bigint,
+  "date004" bigint,
+  "date005" bigint,
+  "text001" character varying(150),
+  "text002" character varying(150),
+  "text003" character varying(150),
+  "text004" character varying(150),
+  "text005" character varying(150),
+  "text006" character varying(150),
+  "text007" character varying(150),
+  "text008" character varying(150),
+  "text009" character varying(150),
+  "text010" character varying(150),
+  "list001" bigint,
+  "list002" bigint,
+  "list003" bigint,
+  "list004" bigint,
+  "list005" bigint,
+  "list006" bigint,
+  "list007" bigint,
+  "list008" bigint,
+  "list009" bigint,
+  "list010" bigint,
+  "multilist001" character varying(4000),
+  "multilist002" character varying(4000),
+  "multilist003" character varying(4000),
+  "multilist004" character varying(4000),
+  "multilist005" character varying(4000),
+  "multilist006" character varying(4000),
+  "multilist007" character varying(4000),
+  "multilist008" character varying(4000),
+  "multilist009" character varying(4000),
+  "multilist010" character varying(4000),
+  "numeric001" numeric,
+  "numeric002" numeric,
+  "numeric003" numeric,
+  "numeric004" numeric,
+  "numeric005" numeric,
+  "numeric006" numeric,
+  "numeric007" numeric,
+  "numeric008" numeric,
+  "numeric009" numeric,
+  "numeric010" numeric,
+  "largetext001" character varying(4000),
+  "largetext002" character varying(4000),
+  "largetext003" character varying(4000),
+  "largetext004" character varying(4000),
+  "largetext005" character varying(4000),
+  "compositetext001" character varying(255),
+  "compositetext002" character varying(255),
+  "compositetext003" character varying(255),
+  "compositetext004" character varying(255),
+  "compositetext005" character varying(255),
+  "compositenumber001" character varying(255),
+  "compositenumber002" character varying(255),
+  "compositenumber003" character varying(255),
+  "compositenumber004" character varying(255),
+  "compositenumber005" character varying(255),
+  "startdate001" bigint,
+  "endstartdate001" bigint,
+  "startdate002" bigint,
+  "endstartdate002" bigint,
+  "startdate003" bigint,
+  "endstartdate003" bigint,
+  "startdate004" bigint,
+  "endstartdate004" bigint,
+  "startdate005" bigint,
+  "endstartdate005" bigint,
+  "richtext001" text,
+  "richtext002" text,
+  "richtext003" text,
+  "richtext004" text,
+  "richtext005" text,
+  "tracker" bigint,
+  "workingset_scop" bigint DEFAULT 0,
+  PRIMARY KEY ("id")
+);
+
+COMMENT ON COLUMN "public"."air_inst_workingset"."id" IS '主键id';
+COMMENT ON COLUMN "public"."air_inst_workingset"."base_class" IS '基类';
+COMMENT ON COLUMN "public"."air_inst_workingset"."class" IS '类';
+COMMENT ON COLUMN "public"."air_inst_workingset"."type" IS '子类';
+COMMENT ON COLUMN "public"."air_inst_workingset"."number" IS '编号';
+COMMENT ON COLUMN "public"."air_inst_workingset"."name" IS '名称/描述';
+COMMENT ON COLUMN "public"."air_inst_workingset"."color" IS '颜色';
+COMMENT ON COLUMN "public"."air_inst_workingset"."work_space" IS '工作空间';
+COMMENT ON COLUMN "public"."air_inst_workingset"."delete_flag" IS '回收站标识';
+COMMENT ON COLUMN "public"."air_inst_workingset"."flags" IS '多版本对象';
+COMMENT ON COLUMN "public"."air_inst_workingset"."attributes" IS '自定义属性集合';
+COMMENT ON COLUMN "public"."air_inst_workingset"."revision" IS '修订版本号';
+COMMENT ON COLUMN "public"."air_inst_workingset"."lock_version" IS '乐观锁';
+COMMENT ON COLUMN "public"."air_inst_workingset"."created_by" IS '创建人';
+COMMENT ON COLUMN "public"."air_inst_workingset"."created_time" IS '创建时间';
+COMMENT ON COLUMN "public"."air_inst_workingset"."updated_by" IS '修改人';
+COMMENT ON COLUMN "public"."air_inst_workingset"."updated_time" IS '修改时间';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date01" IS '日期字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date02" IS '日期字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date03" IS '日期字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date04" IS '日期字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date05" IS '日期字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text01" IS '文本字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text02" IS '文本字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text03" IS '文本字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text04" IS '文本字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text05" IS '文本字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text06" IS '文本字段06';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text07" IS '文本字段07';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text08" IS '文本字段08';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text09" IS '文本字段09';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text10" IS '文本字段10';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list01" IS '列表字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list02" IS '列表字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list03" IS '列表字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list04" IS '列表字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list05" IS '列表字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list06" IS '列表字段06';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list07" IS '列表字段07';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list08" IS '列表字段08';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list09" IS '列表字段09';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list10" IS '列表字段10';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist01" IS '多选列表字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist02" IS '多选列表字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist03" IS '多选列表字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist04" IS '多选列表字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist05" IS '多选列表字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist06" IS '多选列表字段06';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist07" IS '多选列表字段07';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist08" IS '多选列表字段08';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist09" IS '多选列表字段09';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist10" IS '多选列表字段10';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric01" IS '数值字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric02" IS '数值字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric03" IS '数值字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric04" IS '数值字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric05" IS '数值字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric06" IS '数值字段06';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric07" IS '数值字段07';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric08" IS '数值字段08';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric09" IS '数值字段09';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric10" IS '数值字段10';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext01" IS '大文本字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext02" IS '大文本字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext03" IS '大文本字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext04" IS '大文本字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext05" IS '大文本字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext01" IS '复合文本字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext02" IS '复合文本字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext03" IS '复合文本字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext04" IS '复合文本字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext05" IS '复合文本字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber01" IS '复合数值字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber02" IS '复合数值字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber03" IS '复合数值字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber04" IS '复合数值字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber05" IS '复合数值字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate01" IS '起始日期01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate01" IS '结束日期01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate02" IS '起始日期02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate02" IS '结束日期02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate03" IS '起始日期03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate03" IS '结束日期03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate04" IS '起始日期04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate04" IS '结束日期04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate05" IS '起始日期05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate05" IS '结束日期05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext01" IS '富文本字段01';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext02" IS '富文本字段02';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext03" IS '富文本字段03';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext04" IS '富文本字段04';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext05" IS '富文本字段05';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date001" IS '扩展日期字段001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date002" IS '扩展日期字段002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date003" IS '扩展日期字段003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date004" IS '扩展日期字段004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."date005" IS '扩展日期字段005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text001" IS '扩展文本001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text002" IS '扩展文本002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text003" IS '扩展文本003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text004" IS '扩展文本004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text005" IS '扩展文本005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text006" IS '扩展文本006';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text007" IS '扩展文本007';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text008" IS '扩展文本008';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text009" IS '扩展文本009';
+COMMENT ON COLUMN "public"."air_inst_workingset"."text010" IS '扩展文本010';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list001" IS '扩展列表字段001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list002" IS '扩展列表字段002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list003" IS '扩展列表字段003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list004" IS '扩展列表字段004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list005" IS '扩展列表字段005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list006" IS '扩展列表字段006';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list007" IS '扩展列表字段007';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list008" IS '扩展列表字段008';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list009" IS '扩展列表字段009';
+COMMENT ON COLUMN "public"."air_inst_workingset"."list010" IS '扩展列表字段010';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist001" IS '扩展多选列表001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist002" IS '扩展多选列表002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist003" IS '扩展多选列表003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist004" IS '扩展多选列表004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist005" IS '扩展多选列表005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist006" IS '扩展多选列表006';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist007" IS '扩展多选列表007';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist008" IS '扩展多选列表008';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist009" IS '扩展多选列表009';
+COMMENT ON COLUMN "public"."air_inst_workingset"."multilist010" IS '扩展多选列表010';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric001" IS '扩展数值001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric002" IS '扩展数值002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric003" IS '扩展数值003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric004" IS '扩展数值004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric005" IS '扩展数值005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric006" IS '扩展数值006';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric007" IS '扩展数值007';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric008" IS '扩展数值008';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric009" IS '扩展数值009';
+COMMENT ON COLUMN "public"."air_inst_workingset"."numeric010" IS '扩展数值010';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext001" IS '扩展大文本001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext002" IS '扩展大文本002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext003" IS '扩展大文本003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext004" IS '扩展大文本004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."largetext005" IS '扩展大文本005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext001" IS '扩展复合文本001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext002" IS '扩展复合文本002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext003" IS '扩展复合文本003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext004" IS '扩展复合文本004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositetext005" IS '扩展复合文本005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber001" IS '扩展复合数值001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber002" IS '扩展复合数值002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber003" IS '扩展复合数值003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber004" IS '扩展复合数值004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."compositenumber005" IS '扩展复合数值005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate001" IS '扩展起始日期001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate001" IS '扩展结束日期001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate002" IS '扩展起始日期002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate002" IS '扩展结束日期002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate003" IS '扩展起始日期003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate003" IS '扩展结束日期003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate004" IS '扩展起始日期004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate004" IS '扩展结束日期004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."startdate005" IS '扩展起始日期005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."endstartdate005" IS '扩展结束日期005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext001" IS '扩展富文本001';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext002" IS '扩展富文本002';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext003" IS '扩展富文本003';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext004" IS '扩展富文本004';
+COMMENT ON COLUMN "public"."air_inst_workingset"."richtext005" IS '扩展富文本005';
+COMMENT ON COLUMN "public"."air_inst_workingset"."tracker" IS '所属tracker';
+COMMENT ON COLUMN "public"."air_inst_workingset"."workingset_scop" IS '工作集作用域：ALM、PLM，0代表全部';
+
+CREATE TABLE "public"."air_inst_tracker_rev" (
+  "id" bigint NOT NULL,
+  "base_class" bigint NOT NULL,
+  "class" bigint,
+  "type" bigint NOT NULL,
+  "name" character varying(2000),
+  "work_space" bigint,
+  "delete_flag" integer NOT NULL,
+  "number" character varying(255) NOT NULL,
+  "flags" character varying(255),
+  "attributes" jsonb,
+  "revision_id" bigint,
+  "revision" bigint,
+  "description" text,
+  "tracker_class" bigint NOT NULL,
+  "default_layout" bigint NOT NULL DEFAULT '584532998805760'::bigint,
+  "share" bigint,
+  "owner" bigint NOT NULL,
+  "tracker" bigint,
+  "life_cycle_phase" bigint,
+  "checked_out" integer,
+  "instance_id" bigint,
+  "version_type" bigint NOT NULL DEFAULT 10001,
+  "common_id" bigint,
+  "workingset_id" bigint,
+  "parent_id" bigint,
+  "related_instance_id" bigint,
+  "related_type" bigint,
+  "lock_version" bigint NOT NULL,
+  "created_by" character varying(50) NOT NULL,
+  "created_time" bigint NOT NULL,
+  "updated_by" character varying(50) NOT NULL,
+  "updated_time" bigint NOT NULL,
+  "date01" bigint,
+  "date02" bigint,
+  "date03" bigint,
+  "date04" bigint,
+  "date05" bigint,
+  "text01" character varying(150),
+  "text02" character varying(150),
+  "text03" character varying(150),
+  "text04" character varying(150),
+  "text05" character varying(150),
+  "text06" character varying(150),
+  "text07" character varying(150),
+  "text08" character varying(150),
+  "text09" character varying(150),
+  "text10" character varying(150),
+  "list01" bigint,
+  "list02" bigint,
+  "list03" bigint,
+  "list04" bigint,
+  "list05" bigint,
+  "list06" bigint,
+  "list07" bigint,
+  "list08" bigint,
+  "list09" bigint,
+  "list10" bigint,
+  "multilist01" character varying(4000),
+  "multilist02" character varying(4000),
+  "multilist03" character varying(4000),
+  "multilist04" character varying(4000),
+  "multilist05" character varying(4000),
+  "multilist06" character varying(4000),
+  "multilist07" character varying(4000),
+  "multilist08" character varying(4000),
+  "multilist09" character varying(4000),
+  "multilist10" character varying(4000),
+  "numeric01" numeric,
+  "numeric02" numeric,
+  "numeric03" numeric,
+  "numeric04" numeric,
+  "numeric05" numeric,
+  "numeric06" numeric,
+  "numeric07" numeric,
+  "numeric08" numeric,
+  "numeric09" numeric,
+  "numeric10" numeric,
+  "largetext01" character varying(4000),
+  "largetext02" character varying(4000),
+  "largetext03" character varying(4000),
+  "largetext04" character varying(4000),
+  "largetext05" character varying(4000),
+  "compositetext01" character varying(255),
+  "compositetext02" character varying(255),
+  "compositetext03" character varying(255),
+  "compositetext04" character varying(255),
+  "compositetext05" character varying(255),
+  "compositenumber01" character varying(255),
+  "compositenumber02" character varying(255),
+  "compositenumber03" character varying(255),
+  "compositenumber04" character varying(255),
+  "compositenumber05" character varying(255),
+  "startdate01" bigint,
+  "endstartdate01" bigint,
+  "startdate02" bigint,
+  "endstartdate02" bigint,
+  "startdate03" bigint,
+  "endstartdate03" bigint,
+  "startdate04" bigint,
+  "endstartdate04" bigint,
+  "startdate05" bigint,
+  "endstartdate05" bigint,
+  "richtext01" text,
+  "richtext02" text,
+  "richtext03" text,
+  "richtext04" text,
+  "richtext05" text,
+  "date001" bigint,
+  "date002" bigint,
+  "date003" bigint,
+  "date004" bigint,
+  "date005" bigint,
+  "text001" character varying(150),
+  "text002" character varying(150),
+  "text003" character varying(150),
+  "text004" character varying(150),
+  "text005" character varying(150),
+  "text006" character varying(150),
+  "text007" character varying(150),
+  "text008" character varying(150),
+  "text009" character varying(150),
+  "text010" character varying(150),
+  "list001" bigint,
+  "list002" bigint,
+  "list003" bigint,
+  "list004" bigint,
+  "list005" bigint,
+  "list006" bigint,
+  "list007" bigint,
+  "list008" bigint,
+  "list009" bigint,
+  "list010" bigint,
+  "multilist001" character varying(4000),
+  "multilist002" character varying(4000),
+  "multilist003" character varying(4000),
+  "multilist004" character varying(4000),
+  "multilist005" character varying(4000),
+  "multilist006" character varying(4000),
+  "multilist007" character varying(4000),
+  "multilist008" character varying(4000),
+  "multilist009" character varying(4000),
+  "multilist010" character varying(4000),
+  "numeric001" numeric,
+  "numeric002" numeric,
+  "numeric003" numeric,
+  "numeric004" numeric,
+  "numeric005" numeric,
+  "numeric006" numeric,
+  "numeric007" numeric,
+  "numeric008" numeric,
+  "numeric009" numeric,
+  "numeric010" numeric,
+  "largetext001" character varying(4000),
+  "largetext002" character varying(4000),
+  "largetext003" character varying(4000),
+  "largetext004" character varying(4000),
+  "largetext005" character varying(4000),
+  "compositetext001" character varying(255),
+  "compositetext002" character varying(255),
+  "compositetext003" character varying(255),
+  "compositetext004" character varying(255),
+  "compositetext005" character varying(255),
+  "compositenumber001" character varying(255),
+  "compositenumber002" character varying(255),
+  "compositenumber003" character varying(255),
+  "compositenumber004" character varying(255),
+  "compositenumber005" character varying(255),
+  "startdate001" bigint,
+  "endstartdate001" bigint,
+  "startdate002" bigint,
+  "endstartdate002" bigint,
+  "startdate003" bigint,
+  "endstartdate003" bigint,
+  "startdate004" bigint,
+  "endstartdate004" bigint,
+  "startdate005" bigint,
+  "endstartdate005" bigint,
+  "richtext001" text,
+  "richtext002" text,
+  "richtext003" text,
+  "richtext004" text,
+  "richtext005" text,
+  "instance_tree_show_content" character varying(20) DEFAULT '1'::character varying,
+  "reference1" bigint,
+  "reference01" bigint,
+  "reference001" bigint,
+  "rank" character varying(64),
+  "source_branch_id" bigint,
+  "color" character varying(255),
+  "visible" smallint DEFAULT 1,
+  "locked" smallint DEFAULT 0,
+  "is_default" smallint DEFAULT 0,
+  "instance_type" bigint NOT NULL DEFAULT 0,
+  "tab_id" bigint,
+  "revision_in" bigint,
+  "revision_out" bigint,
+  "edit_row" bigint,
+  "checkout_user" character varying(50),
+  "checkout_time" bigint,
+  "checkin_user" character varying(50),
+  "checkin_time" bigint,
+  "release_time" bigint,
+  "version" character varying(50),
+  "main_version" character varying(50),
+  "small_version" integer,
+  "last_revision_id" bigint,
+  "last_version_id" bigint,
+  "related_common_id" bigint,
+  "related_workingset_id" bigint,
+  "related_work_space" bigint,
+  "is_global" smallint,
+  "version_rule_id" bigint,
+  "version_number" character varying(500),
+  "instance_baseline" bigint,
+  PRIMARY KEY ("id")
+);
+
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."id" IS '主键id';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."base_class" IS '基类';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."class" IS '类';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."type" IS '子类';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."name" IS '名称/描述';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."work_space" IS '工作空间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."delete_flag" IS '回收站标识';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."number" IS '编号';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."flags" IS '多版本对象';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."attributes" IS '自定义属性集合';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."revision_id" IS '修订版本标识ID';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."revision" IS '修订版本号';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."description" IS '描述';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."tracker_class" IS '所属分类';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."default_layout" IS '默认布局';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."share" IS '是否共享';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."owner" IS '所有者';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."tracker" IS '跟踪分类';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."life_cycle_phase" IS '生命周期阶段';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."checked_out" IS '签出状态';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."lock_version" IS '乐观锁';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."created_by" IS '创建人';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."created_time" IS '创建时间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."updated_by" IS '修改人';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."updated_time" IS '修改时间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date01" IS '日期字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date02" IS '日期字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date03" IS '日期字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date04" IS '日期字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date05" IS '日期字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text01" IS '文本字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text02" IS '文本字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text03" IS '文本字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text04" IS '文本字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text05" IS '文本字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text06" IS '文本字段06';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text07" IS '文本字段07';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text08" IS '文本字段08';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text09" IS '文本字段09';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text10" IS '文本字段10';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list01" IS '列表字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list02" IS '列表字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list03" IS '列表字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list04" IS '列表字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list05" IS '列表字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list06" IS '列表字段06';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list07" IS '列表字段07';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list08" IS '列表字段08';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list09" IS '列表字段09';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list10" IS '列表字段10';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist01" IS '多选列表字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist02" IS '多选列表字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist03" IS '多选列表字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist04" IS '多选列表字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist05" IS '多选列表字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist06" IS '多选列表字段06';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist07" IS '多选列表字段07';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist08" IS '多选列表字段08';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist09" IS '多选列表字段09';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist10" IS '多选列表字段10';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric01" IS '数值字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric02" IS '数值字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric03" IS '数值字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric04" IS '数值字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric05" IS '数值字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric06" IS '数值字段06';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric07" IS '数值字段07';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric08" IS '数值字段08';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric09" IS '数值字段09';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric10" IS '数值字段10';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext01" IS '大文本字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext02" IS '大文本字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext03" IS '大文本字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext04" IS '大文本字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext05" IS '大文本字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext01" IS '复合文本字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext02" IS '复合文本字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext03" IS '复合文本字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext04" IS '复合文本字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext05" IS '复合文本字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber01" IS '复合数值字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber02" IS '复合数值字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber03" IS '复合数值字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber04" IS '复合数值字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber05" IS '复合数值字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate01" IS '起始日期01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate01" IS '结束日期01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate02" IS '起始日期02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate02" IS '结束日期02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate03" IS '起始日期03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate03" IS '结束日期03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate04" IS '起始日期04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate04" IS '结束日期04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate05" IS '起始日期05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate05" IS '结束日期05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext01" IS '富文本字段01';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext02" IS '富文本字段02';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext03" IS '富文本字段03';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext04" IS '富文本字段04';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext05" IS '富文本字段05';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date001" IS '扩展日期字段001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date002" IS '扩展日期字段002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date003" IS '扩展日期字段003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date004" IS '扩展日期字段004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."date005" IS '扩展日期字段005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text001" IS '扩展文本001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text002" IS '扩展文本002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text003" IS '扩展文本003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text004" IS '扩展文本004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text005" IS '扩展文本005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text006" IS '扩展文本006';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text007" IS '扩展文本007';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text008" IS '扩展文本008';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text009" IS '扩展文本009';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."text010" IS '扩展文本010';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list001" IS '扩展列表字段001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list002" IS '扩展列表字段002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list003" IS '扩展列表字段003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list004" IS '扩展列表字段004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list005" IS '扩展列表字段005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list006" IS '扩展列表字段006';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list007" IS '扩展列表字段007';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list008" IS '扩展列表字段008';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list009" IS '扩展列表字段009';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."list010" IS '扩展列表字段010';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist001" IS '扩展多选列表001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist002" IS '扩展多选列表002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist003" IS '扩展多选列表003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist004" IS '扩展多选列表004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist005" IS '扩展多选列表005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist006" IS '扩展多选列表006';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist007" IS '扩展多选列表007';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist008" IS '扩展多选列表008';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist009" IS '扩展多选列表009';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."multilist010" IS '扩展多选列表010';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric001" IS '扩展数值001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric002" IS '扩展数值002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric003" IS '扩展数值003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric004" IS '扩展数值004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric005" IS '扩展数值005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric006" IS '扩展数值006';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric007" IS '扩展数值007';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric008" IS '扩展数值008';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric009" IS '扩展数值009';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."numeric010" IS '扩展数值010';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext001" IS '扩展大文本001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext002" IS '扩展大文本002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext003" IS '扩展大文本003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext004" IS '扩展大文本004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."largetext005" IS '扩展大文本005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext001" IS '扩展复合文本001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext002" IS '扩展复合文本002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext003" IS '扩展复合文本003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext004" IS '扩展复合文本004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositetext005" IS '扩展复合文本005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber001" IS '扩展复合数值001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber002" IS '扩展复合数值002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber003" IS '扩展复合数值003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber004" IS '扩展复合数值004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."compositenumber005" IS '扩展复合数值005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate001" IS '扩展起始日期001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate001" IS '扩展结束日期001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate002" IS '扩展起始日期002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate002" IS '扩展结束日期002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate003" IS '扩展起始日期003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate003" IS '扩展结束日期003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate004" IS '扩展起始日期004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate004" IS '扩展结束日期004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."startdate005" IS '扩展起始日期005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."endstartdate005" IS '扩展结束日期005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext001" IS '扩展富文本001';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext002" IS '扩展富文本002';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext003" IS '扩展富文本003';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext004" IS '扩展富文本004';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."richtext005" IS '扩展富文本005';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."instance_tree_show_content" IS '实例树展示的内容，1：名称，2：编号，3：章节号，4：子项数量，多个","隔开';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."source_branch_id" IS '来源分支ID（从air_ws_tracker迁移）';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."color" IS '颜色（从air_ws_tracker迁移）';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."visible" IS '是否可见（从air_ws_tracker迁移）';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."locked" IS '是否锁定（从air_ws_tracker迁移）';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."is_default" IS '是否默认分支（从air_ws_tracker迁移）';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."instance_type" IS '实例类型';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."tab_id" IS '选项卡ID';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."revision_in" IS '版本入点';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."revision_out" IS '版本出点';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."edit_row" IS '编辑行';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."checkout_user" IS '签出用户';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."checkout_time" IS '签出时间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."checkin_user" IS '签入用户';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."checkin_time" IS '签入时间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."release_time" IS '发布时间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."version" IS '版本号';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."main_version" IS '主版本号';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."small_version" IS '小版本号';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."last_revision_id" IS '上一修订版ID';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."last_version_id" IS '上一版本ID';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."related_common_id" IS '关联公共ID';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."related_workingset_id" IS '关联工作集ID';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."related_work_space" IS '关联工作空间';
+COMMENT ON COLUMN "public"."air_inst_tracker_rev"."is_global" IS '是否是全局tracker';
+CREATE INDEX "idx_tracker_instance_type" ON "public"."air_inst_tracker_rev" USING btree ("instance_type" ASC NULLS LAST);
+CREATE INDEX "idx_tracker_revision" ON "public"."air_inst_tracker_rev" USING btree ("revision" ASC NULLS LAST);
+CREATE INDEX "idx_tracker_version" ON "public"."air_inst_tracker_rev" USING btree ("version" ASC NULLS LAST);
+CREATE INDEX "tracker_number_test_index" ON "public"."air_inst_tracker_rev" USING btree ("number" ASC NULLS LAST);
+CREATE INDEX "tracker_number_ws_test_index" ON "public"."air_inst_tracker_rev" USING btree ("number" ASC NULLS LAST, "workingset_id" ASC NULLS LAST);
+
+
+CREATE TABLE "public"."air_ws_tracker" (
+  "id" bigint NOT NULL,
+  "parent_id" bigint,
+  "number" character varying(500),
+  "name" character varying(500),
+  "description" character varying(1000),
+  "color" character varying(255),
+  "workingset_id" bigint NOT NULL,
+  "sub_class_id" bigint NOT NULL,
+  "source_branch_id" bigint,
+  "visible" smallint,
+  "locked" smallint,
+  "shared" integer,
+  "is_default" smallint,
+  "attributes" jsonb,
+  "delete_flag" integer,
+  "lock_version" bigint,
+  "created_by" character varying(50),
+  "created_time" bigint,
+  "updated_by" character varying(50),
+  "updated_time" bigint,
+  PRIMARY KEY ("id")
+);
+
+COMMENT ON TABLE "public"."air_ws_tracker" IS 'tracker以及tracker分支表';
+COMMENT ON COLUMN "public"."air_ws_tracker"."id" IS '主键,TrackerId，分支branchId';
+COMMENT ON COLUMN "public"."air_ws_tracker"."parent_id" IS 'tracker父级ID: 0 或者 空代表是顶级';
+COMMENT ON COLUMN "public"."air_ws_tracker"."name" IS '名称';
+COMMENT ON COLUMN "public"."air_ws_tracker"."description" IS '描述';
+COMMENT ON COLUMN "public"."air_ws_tracker"."color" IS '颜色';
+COMMENT ON COLUMN "public"."air_ws_tracker"."workingset_id" IS '工作集';
+COMMENT ON COLUMN "public"."air_ws_tracker"."sub_class_id" IS '主分支ID（原始子类ID）';
+COMMENT ON COLUMN "public"."air_ws_tracker"."source_branch_id" IS '父级分支ID(tracker)';
+COMMENT ON COLUMN "public"."air_ws_tracker"."visible" IS '是否可见';
+COMMENT ON COLUMN "public"."air_ws_tracker"."locked" IS '是否锁定';
+COMMENT ON COLUMN "public"."air_ws_tracker"."shared" IS '工作集中是否是共享的：1是0否，默认是';
+COMMENT ON COLUMN "public"."air_ws_tracker"."is_default" IS '0非默认1默认:有且仅有一个默认tracker';
+COMMENT ON COLUMN "public"."air_ws_tracker"."attributes" IS 'json属性：自定义属性信息';
+COMMENT ON COLUMN "public"."air_ws_tracker"."delete_flag" IS '是否删除：0否1是';
+COMMENT ON COLUMN "public"."air_ws_tracker"."lock_version" IS '版本锁';
+COMMENT ON COLUMN "public"."air_ws_tracker"."created_by" IS '创建人';
+COMMENT ON COLUMN "public"."air_ws_tracker"."created_time" IS '创建时间';
+COMMENT ON COLUMN "public"."air_ws_tracker"."updated_by" IS '更新人';
+COMMENT ON COLUMN "public"."air_ws_tracker"."updated_time" IS '更新时间';
