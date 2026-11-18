@@ -97,8 +97,9 @@ public interface WorkingSetQueryMapper {
     List<TrackerBindingSummary> findTrackerBindings(@Param("id") long id);
 
     @Select("""
-            SELECT 1 FROM tracker_bindings
-            WHERE working_set_id = #{workingSetId} AND tracker_id = #{trackerId}
+            SELECT EXISTS (
+                SELECT 1 FROM tracker_bindings
+                WHERE working_set_id = #{workingSetId} AND tracker_id = #{trackerId})
             """)
-    Integer findTrackerBinding(@Param("workingSetId") long workingSetId, @Param("trackerId") long trackerId);
+    boolean hasTrackerBinding(@Param("workingSetId") long workingSetId, @Param("trackerId") long trackerId);
 }

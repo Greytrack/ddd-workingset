@@ -20,15 +20,12 @@ public interface RequirementQueryMapper {
     RequirementDetail find(@Param("id") long id);
 
     @Select("""
-            <script>
             SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
                    lock_version, delete_flag AS deleted, TRUE AS materialized
             FROM requirements
-            WHERE tracker_id = #{trackerId} AND NOT delete_flag
-            <if test="workingSetId != null">AND working_set_id = #{workingSetId}</if>
+            WHERE tracker_id = #{trackerId} AND working_set_id = #{workingSetId} AND NOT delete_flag
             ORDER BY local_id
-            </script>
             """)
     List<RequirementDetail> findByTracker(@Param("trackerId") long trackerId,
-                                          @Param("workingSetId") Long workingSetId);
+                                         @Param("workingSetId") long workingSetId);
 }

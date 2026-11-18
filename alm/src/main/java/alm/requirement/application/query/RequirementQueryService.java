@@ -1,7 +1,10 @@
 package alm.requirement.application.query;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import alm.requirement.application.query.model.RequirementDetail;
@@ -10,10 +13,13 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.common.InheritedEditTarget;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.application.common.TargetIdentity;
+import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.repository.WorkingSetRepository;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
 public class RequirementQueryService {
@@ -30,57 +36,47 @@ public class RequirementQueryService {
         this.workingSets = Objects.requireNonNull(workingSets, "workingSets");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public RequirementDetail find(LocalId localId) {
-        java.util.Optional<RequirementDetail> persisted = query.find(localId.numericValue());
-        if (persisted.isPresent()) {
-            if (persisted.get().deleted()) {
-                throw DomainException.withMessage(FailureReason.DELETED, localId.value());
-            }
-            return persisted.get();
+        Optional<RequirementDetail> persisted = query.find(localId.numericValue());
+        if (persisted.isEmpty()) {
+            return findInherited(localId);
         }
-        return lifecycle.findInheritedTarget(localId)
-                .map(target -> {
-                    workingSets.requireReady(target.workingSetId());
-                    return detail(rebuildInherited(target));
-                })
-                .orElseGet(() -> detail(load(localId)));
+        RequirementDetail detail = persisted.get();
+        if (detail.deleted()) {
+            throw DomainException.withMessage(FailureReason.DELETED, localId.value());
+        }
+        return detail;
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<RequirementDetail> findByTracker(sk.workingset.domain.WorkingSetId workingSetId,
-                                                           sk.workingset.domain.TrackerId trackerId) {
+    public List<RequirementDetail> findByTracker(WorkingSetId workingSetId, TrackerId trackerId) {
         return query.findByTracker(trackerId.numericValue(), workingSetId.numericValue());
     }
 
-    private Requirement rebuildInherited(InheritedEditTarget target) {
-        Requirement source = load(target.sourceLocalId());
-        requireActive(source);
+    private RequirementDetail findInherited(LocalId localId) {
+        InheritedEditTarget target = lifecycle.findInheritedTarget(localId)
+                .orElseThrow(() -> notFound(localId));
+        workingSets.requireReady(target.workingSetId());
+        Requirement source = repository.findById(target.sourceLocalId())
+                .orElseThrow(() -> notFound(target.sourceLocalId()));
+        if (source.deleted()) {
+            throw DomainException.withMessage(FailureReason.DELETED, source.localId().value());
+        }
         if (!source.revision().equals(target.sourceRevision())) {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
-        sk.workingset.application.common.TargetIdentity identity = target.identity();
-        return Requirement.inherited(identity.localId(), identity.commonId(), identity.trackerId(),
+        TargetIdentity identity = target.identity();
+        Requirement requirement = Requirement.inherited(identity.localId(), identity.commonId(), identity.trackerId(),
                 source.title(), source.description(), identity.revision(), source.version());
-    }
-
-    private Requirement load(LocalId localId) {
-        return repository.findById(localId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "requirement not found: " + localId.value()));
-    }
-
-    private static void requireActive(Requirement requirement) {
-        if (requirement.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, requirement.localId().value());
-        }
-    }
-
-    private static RequirementDetail detail(Requirement requirement) {
         return new RequirementDetail(
                 requirement.localId().numericValue(), requirement.commonId().numericValue(),
                 requirement.trackerId().numericValue(), requirement.number(), requirement.title(),
                 requirement.description(), requirement.revision().value(), requirement.version().value(),
                 requirement.lockVersion().value(), requirement.deleted(), requirement.hasMaterialized());
+    }
+
+    private static DomainException notFound(LocalId localId) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value());
     }
 }

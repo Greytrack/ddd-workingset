@@ -20,7 +20,7 @@ public final class RequirementQueryProviderImpl implements RequirementQueryProvi
     }
 
     @Override
-    public List<RequirementDetail> findByTracker(long trackerId, Long workingSetId) {
+    public List<RequirementDetail> findByTracker(long trackerId, long workingSetId) {
         return mapper.findByTracker(trackerId, workingSetId);
     }
 }

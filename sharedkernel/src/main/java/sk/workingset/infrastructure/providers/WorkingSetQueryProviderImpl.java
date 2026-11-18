@@ -57,6 +57,6 @@ public final class WorkingSetQueryProviderImpl implements WorkingSetQueryProvide
 
     @Override
     public boolean hasTrackerBinding(long workingSetId, long trackerId) {
-        return mapper.findTrackerBinding(workingSetId, trackerId) != null;
+        return mapper.hasTrackerBinding(workingSetId, trackerId);
     }
 }

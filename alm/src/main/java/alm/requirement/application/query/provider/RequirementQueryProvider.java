@@ -9,5 +9,5 @@ import alm.requirement.application.query.model.RequirementDetail;
 public interface RequirementQueryProvider {
     Optional<RequirementDetail> find(long localId);
 
-    List<RequirementDetail> findByTracker(long trackerId, Long workingSetId);
+    List<RequirementDetail> findByTracker(long trackerId, long workingSetId);
 }
