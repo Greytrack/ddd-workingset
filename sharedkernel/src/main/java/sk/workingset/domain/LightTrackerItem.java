@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.AggregateRoot;
+
+
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -17,6 +20,7 @@ import java.util.Objects;
  * </ul>
  * 三字段只在 {@link #switchToLocalBacked(Revision)} 中一次更新；不提供单独 setter。
  */
+@AggregateRoot
 public final class LightTrackerItem {
 
     private final LocalId localId;

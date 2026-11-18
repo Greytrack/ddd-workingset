@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -8,6 +10,7 @@ import java.util.Objects;
 /**
  * 家族身份：同一 Item 家族在派生链中保持不变（FACT-005、INV-040）。
  */
+@ValueObject
 public record CommonId(@JsonProperty("value") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericValue) {
 
     public CommonId {

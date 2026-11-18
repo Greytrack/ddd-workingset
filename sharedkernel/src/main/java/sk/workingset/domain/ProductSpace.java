@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.AggregateRoot;
+
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -9,6 +11,7 @@ import sk.workingset.error.WorkingsetResultCode;
  * <p>产品空间只能归属默认工作集；其创建入口中的工作集参数不参与归属选择，
  * 空间绑定与默认 Tracker 投影由默认工作集维护。name 仅用于界面可读展示。
  */
+@AggregateRoot
 public record ProductSpace(Long numericId, String name) {
     public ProductSpace(String id) {
         this(id, null);

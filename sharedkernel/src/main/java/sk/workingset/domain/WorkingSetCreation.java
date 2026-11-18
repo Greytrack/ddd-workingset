@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.AggregateRoot;
+
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -14,6 +16,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Durable execution of a working-set materialization request: create a child or extend an existing child. */
+@AggregateRoot
 public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING)
                                  Long numericId, Request request, String requestedBy, Status status,
                                  Stage stage, Progress progress, List<Failure> failures,

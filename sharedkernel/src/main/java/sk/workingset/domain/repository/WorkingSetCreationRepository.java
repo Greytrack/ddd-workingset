@@ -1,10 +1,13 @@
 package sk.workingset.domain.repository;
 
+import org.jmolecules.ddd.annotation.Repository;
+
 import java.util.Optional;
 
 import sk.workingset.domain.WorkingSetCreation;
 import sk.workingset.domain.WorkingSetId;
 
+@Repository
 public interface WorkingSetCreationRepository {
     boolean insert(WorkingSetCreation creation);
     Optional<WorkingSetCreation> find(String id, boolean lock);

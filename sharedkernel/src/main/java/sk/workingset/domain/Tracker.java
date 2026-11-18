@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.AggregateRoot;
+
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -15,6 +17,7 @@ import sk.workingset.domain.Classification.SharingMode;
  * 只能从直属父工作集纳入 Shared Tracker 或派生非共享 Tracker。名称唯一约束只作用于
  * 业务原生 Tracker，因此实际等价于（产品空间，分类）内唯一。
  */
+@AggregateRoot
 public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
                       Long numericProductSpaceId, Long numericClassificationId, SharingMode sharingMode, TrackerId parentId,
                       boolean isDefault) {

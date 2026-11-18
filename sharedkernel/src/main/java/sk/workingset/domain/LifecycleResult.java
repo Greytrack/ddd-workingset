@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import java.util.Objects;
 
 /**
@@ -9,6 +11,7 @@ import java.util.Objects;
  * @param reason 拒绝/冲突原因；成功时为空
  * @param object 成功时的变换后对象；{@code delete2} 返回当前对象表示“允许由应用服务编排永久删除”
  */
+@ValueObject
 public record LifecycleResult(Status status, String reason, BusinessObject object) {
 
     public enum Status { Applied, Rejected, Conflict }

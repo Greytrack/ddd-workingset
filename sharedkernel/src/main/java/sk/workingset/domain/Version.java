@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -10,6 +12,7 @@ import sk.workingset.error.WorkingsetResultCode;
  * <p>与 {@link Revision}（手动触发的递增版次）和 {@link LockVersion}（乐观锁）严格区分：
  * 普通修改不改 {@code version}，也不自行产生大版本。
  */
+@ValueObject
 public record Version(String value) {
 
     public Version {

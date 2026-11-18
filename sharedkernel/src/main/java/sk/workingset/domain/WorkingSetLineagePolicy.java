@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.Service;
+
 import java.util.List;
 
 import sk.workingset.domain.BindingFailure.Reason;
@@ -7,6 +9,7 @@ import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
 
 /** Compare/Merge 的谱系准入。业务能力与比较证据由 T1 执行入口另行校验。 */
+@Service
 public final class WorkingSetLineagePolicy {
 
     private WorkingSetLineagePolicy() {}

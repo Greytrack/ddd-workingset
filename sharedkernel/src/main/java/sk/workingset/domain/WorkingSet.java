@@ -1,6 +1,7 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
+import org.jmolecules.ddd.annotation.Entity;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -26,6 +27,7 @@ public final class WorkingSet {
     public enum SpaceState { ACTIVE }
     public enum TrackerOrigin { SHARED_REUSE, UNSHARED_DERIVATION }
 
+    @Entity
     public record SpaceBinding(WorkingSetId workingSetId, Long numericProductSpaceId, String name,
                                SpaceOrigin origin, SpaceState state) {
         public SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
@@ -39,6 +41,7 @@ public final class WorkingSet {
         public String productSpaceId() { return numericProductSpaceId.toString(); }
     }
 
+    @Entity
     public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
                                  Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
         public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,

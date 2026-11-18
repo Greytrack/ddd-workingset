@@ -1,5 +1,7 @@
 package sk.workingset.domain.repository;
 
+import org.jmolecules.ddd.annotation.Repository;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +15,7 @@ import sk.workingset.domain.WorkingSetId;
 /**
  * LightTrackerItem 聚合的命令侧存取（T3）。
  */
+@Repository
 public interface LightTrackerItemRepository {
 
     void save(LightTrackerItem item);

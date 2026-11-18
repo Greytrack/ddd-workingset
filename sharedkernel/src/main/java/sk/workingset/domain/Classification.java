@@ -1,11 +1,14 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;
 
 /** 最小分类元数据。共享策略由分类初始化时确定。 */
+@ValueObject
 public record Classification(Long numericId, SharingMode sharingMode, String name) {
     public Classification(String id, SharingMode sharingMode) {
         this(Long.valueOf(id), sharingMode, null);

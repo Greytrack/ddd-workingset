@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import java.util.Objects;
 
 /**
@@ -10,6 +12,7 @@ import java.util.Objects;
  * @param expectedLockVersion 期望的并发版本；{@code null} 表示调用方已持有该对象的锁
  * @param reason              业务原因，可为空
  */
+@ValueObject
 public record LifecycleCommand(LockVersion expectedLockVersion, String reason) {
 
     public LifecycleCommand {

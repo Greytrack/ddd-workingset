@@ -1,5 +1,7 @@
 package sk.workingset.domain.merge;
 
+import org.jmolecules.ddd.annotation.Repository;
+
 import java.util.Optional;
 
 import sk.workingset.domain.TrackerId;
@@ -11,6 +13,7 @@ import sk.workingset.domain.merge.MergeRound;
  *
  * <p>Compare 结果是瞬时展示数据，不写入本端口；MergeRound 保存用户决策及其所选差异证据。
  */
+@Repository
 public interface MergeRepository {
     /** 插入新轮次（带本轮 Tracker 分支对）；`requestId` 已存在时返回已有轮次，保持幂等。 */
     Optional<MergeRound> insertOrFindRound(MergeRound round, TrackerId trackerA, TrackerId trackerB);

@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -8,6 +10,7 @@ import java.util.Objects;
 /**
  * Working Set 身份。
  */
+@ValueObject
 public record WorkingSetId(@JsonProperty("value") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericValue) {
 
     public WorkingSetId {

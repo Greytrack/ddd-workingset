@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import org.jmolecules.ddd.annotation.ValueObject;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -10,6 +12,7 @@ import java.util.Objects;
  * <p>由 {@code IdentifierGenerator} 以雪花 ID 产生（FACT-005）；派生时预分配，首次 COW 复用，
  * COW 前后不变（T3/A2、INV-040）。
  */
+@ValueObject
 public record LocalId(@JsonProperty("value") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericValue) {
 
     public LocalId {
