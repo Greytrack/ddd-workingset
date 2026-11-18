@@ -12,7 +12,6 @@ D4 选择方案 A：把 LightTrackerItem 的校验与移除**移回 SK**；跨�
 
 | 关注点 | 归属 | 入口 |
 | --- | --- | --- |
-| Tracker 锁定、目标变体读取 | SK | `TrackerItemLifecycleService.lockMaterializationTarget` |
 | 内容是否仍被 COW 依赖 | SK | `TrackerItemLifecycleService.assertPurgeable` |
 | LTI 移除 | SK | `TrackerItemLifecycleService.removePurged` |
 | 业务对象的创建/校验/提交 | ALM | `RequirementWritePort.materialize` / `verifyMaterializedTarget` |

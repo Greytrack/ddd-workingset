@@ -27,15 +27,4 @@ public interface TrackerItemLifecyclePort {
     /** 用户首次编辑保存成功后，在调用方事务内切换到本地内容。 */
     void completeInheritedEdit(LocalId localId, Revision revision);
 
-    /**
-     * 在调用方事务内锁定 Tracker 并读取物化目标变体的身份证据。
-     *
-     * @throws sk.common.error.DomainException 目标变体不存在（MATERIALIZATION_REJECTED）
-     */
-    TargetIdentity lockMaterializationTarget(TrackerId trackerId, LocalId targetLocalId);
-
-    /**
-     * 业务 Merge 写入提交后切换/创建目标变体（D15-B，独立事务、幂等）。
-     */
-    void applyMergeTarget(MergeTargetEvent target);
 }

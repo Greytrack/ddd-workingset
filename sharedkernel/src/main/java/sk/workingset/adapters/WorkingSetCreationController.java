@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import sk.workingset.application.Caller;
 import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.WorkingSetCreation;
 
@@ -28,7 +27,7 @@ public class WorkingSetCreationController {
 
     @PostMapping
     public ResponseEntity<CreationView> submit(@RequestBody CreateWorkingSetRequest request) {
-        WorkingSetCreation creation = creations.submitNew(request.requestId(), request::toDomainRequest, Caller.of("web"));
+        WorkingSetCreation creation = creations.submitNew(request.requestId(), request::toDomainRequest, "web");
         return ResponseEntity.accepted().location(URI.create("/api/working-set-creations/" + creation.id()))
                 .body(CreationView.from(creation));
     }

@@ -65,15 +65,6 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
         switchToLocalContent(localId, revision);
     }
 
-    @Override
-    @Transactional
-    public TargetIdentity lockMaterializationTarget(TrackerId trackerId, LocalId targetLocalId) {
-        trackers.lockTracker(trackerId);
-        return items.findById(targetLocalId)
-                .map(TargetIdentity::of)
-                .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target variant is missing"));
-    }
-
     @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);
@@ -90,7 +81,6 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
                 event.workingSetId(), event.revision()));
     }
 
-    @Override
     @Transactional
     public void applyMergeTarget(MergeTargetEvent target) {
         if (target.inherited()) {

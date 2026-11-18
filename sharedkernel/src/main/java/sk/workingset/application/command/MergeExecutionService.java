@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.common.error.DomainException;
-import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.merge.MergeComparisonService;
 
@@ -14,8 +13,6 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +42,6 @@ import sk.workingset.domain.merge.MergeRound.State;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.Difference;
@@ -78,13 +74,13 @@ public class MergeExecutionService {
 
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
-                             List<EntryRequest> decisions, Caller caller) {
+                             List<EntryRequest> decisions, String caller) {
         java.util.Optional<MergeRound> existing = store.findRoundByRequest(requestId);
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
         MergeCheckpoint.Key pair = trackerPair(decisions);
-        MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller.id());
+        MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
         MergeRound round;
         try {
             round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
@@ -128,7 +124,6 @@ public class MergeExecutionService {
 
     /** 一页决策要么整页登记成功，要么整轮回滚。 */
     private void registerDecisions(MergeRound round, List<EntryRequest> requests) {
-        Caller caller = Caller.of(round.caller());
         List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = comparisons.candidates(round.source(), round.target());
         MergeRound updated = round;
         for (EntryRequest request : requests) {
@@ -144,7 +139,7 @@ public class MergeExecutionService {
             if (!candidates.contains(pair)) {
                 throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
-            Difference current = comparisons.current(frozen, caller);
+            Difference current = comparisons.current(frozen);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
                 throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
             }
@@ -193,7 +188,6 @@ public class MergeExecutionService {
             round = round.start();
             store.updateRound(round);
         }
-        Caller caller = Caller.of(round.caller());
         for (Entry entry : round.entries()) {
             if (entry.result() != null || entry.requested()) {
                 continue;
@@ -203,7 +197,7 @@ public class MergeExecutionService {
                 store.updateRound(round);
                 continue;
             }
-            Difference current = comparisons.current(entry.evidence(), caller);
+            Difference current = comparisons.current(entry.evidence());
             verifyCurrent(entry, current);
             String operation = operation(entry);
             if ("KEEP_TARGET".equals(operation)) {

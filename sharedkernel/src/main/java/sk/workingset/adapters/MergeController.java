@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import sk.workingset.application.Caller;
 import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeExecutionService.EntryRequest;
@@ -37,7 +36,6 @@ import sk.workingset.domain.merge.MergeRound;
 @RestController
 @RequestMapping("/api")
 public class MergeController {
-    private static final Caller CALLER = Caller.of("web");
     /** UI 一页差异约 20–50 条；超出应重新 compare 分页，而不是提交一轮更大的决策。 */
     private static final int MAX_DECISIONS = 50;
     private static final int MAX_REQUEST_ID = 128;
@@ -60,7 +58,7 @@ public class MergeController {
                                   @RequestParam(defaultValue = "100") int limit) {
         checkPage(offset, limit);
         Comparison result = comparisons.compare(WorkingSetId.of(source), WorkingSetId.of(target),
-                TrackerId.of(sourceTrackerId), TrackerId.of(targetTrackerId), CALLER);
+                TrackerId.of(sourceTrackerId), TrackerId.of(targetTrackerId));
         return page(result, offset, limit);
     }
 
@@ -83,7 +81,7 @@ public class MergeController {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "decisions must contain at most " + MAX_DECISIONS + " entries");
         }
         return rounds.submit(WorkingSetId.of(target), WorkingSetId.of(request.sourceWorkingSetId()),
-                request.requestId(), List.copyOf(request.decisions()), CALLER);
+                request.requestId(), List.copyOf(request.decisions()), "web");
     }
 
     @PostMapping("/merge-rounds/{id}/apply")

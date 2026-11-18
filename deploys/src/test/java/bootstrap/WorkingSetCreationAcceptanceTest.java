@@ -36,7 +36,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.application.command.WorkingSetCreationService;
-import sk.workingset.application.Caller;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.Revision;
@@ -245,7 +244,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", child);
         sk.workingset.domain.BindingFailure failure = assertThrows(sk.workingset.domain.BindingFailure.class, () ->
                 creations.submit(new Request("1", child, "existing-target", List.of(), List.of(), List.of()),
-                        Caller.of("test")));
+                        "test"));
         assertEquals("WorkingSetAlreadyExists", failure.reason().name());
         assertEquals(HttpStatus.OK, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
     }
@@ -603,7 +602,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private String submit(Request request) {
-        return creations.submit(request, Caller.of("test")).id();
+        return creations.submit(request, "test").id();
     }
 
     private List<String> orderedFamilies() {

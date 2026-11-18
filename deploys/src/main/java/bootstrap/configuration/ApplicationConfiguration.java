@@ -20,6 +20,7 @@ import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.infrastructure.repositories.JdbcBindingRepositoriesImpl;
@@ -98,9 +99,11 @@ public class ApplicationConfiguration {
 
     @Bean
     public MergeComparisonService mergeComparisonService(
-            JdbcBindingRepositoriesImpl bindings, LightTrackerItemRepository items,
-            TrackerItemCatalogQueryProvider catalog, JdbcRequirementRepository requirements,
-            sk.workingset.domain.merge.MergeRepository store) {
+            JdbcBindingRepositoriesImpl bindings,
+            LightTrackerItemRepository items,
+            TrackerItemCatalogQueryProvider catalog,
+            JdbcRequirementRepository requirements,
+            MergeRepository store) {
         return new MergeComparisonService(bindings, bindings, items, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
     }

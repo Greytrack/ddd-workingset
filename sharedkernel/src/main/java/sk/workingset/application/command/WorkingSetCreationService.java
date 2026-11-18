@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.common.error.DomainException;
-import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 
 import java.time.Instant;
@@ -57,7 +56,7 @@ public class WorkingSetCreationService {
 
     @Transactional
     public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request,
-                                        Caller caller) {
+                                        String caller) {
         java.util.Optional<WorkingSetCreation> existing = store.findByRequest(requestId);
         if (existing.isPresent()) {
             WorkingSetCreation task = existing.get();
@@ -67,7 +66,7 @@ public class WorkingSetCreationService {
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public WorkingSetCreation submit(WorkingSetCreation.Request request, Caller caller) {
+    public WorkingSetCreation submit(WorkingSetCreation.Request request, String caller) {
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
         }
@@ -83,7 +82,7 @@ public class WorkingSetCreationService {
             throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
-        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller, Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
@@ -100,7 +99,7 @@ public class WorkingSetCreationService {
     /** 扩展已有子工作集：复用共享 Tracker 或派生非共享 Tracker，跳过已纳入的来源。 */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
-                                              List<String> parentTrackerIds, Caller caller) {
+                                              List<String> parentTrackerIds, String caller) {
         java.util.Optional<WorkingSetCreation> active = store.findActiveExtension(target);
         if (active.isPresent()) {
             if (active.get().request().requestId().equals(requestId)) {
@@ -137,7 +136,7 @@ public class WorkingSetCreationService {
         }
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
                 List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
-        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller, Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));

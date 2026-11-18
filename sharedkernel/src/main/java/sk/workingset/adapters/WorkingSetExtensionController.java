@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import sk.workingset.application.Caller;
 import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.WorkingSetId;
 
@@ -35,7 +34,7 @@ public class WorkingSetExtensionController {
             throw new IllegalArgumentException("requestId must be at most " + MAX_REQUEST_ID + " characters");
         }
         sk.workingset.domain.WorkingSetCreation creation = creations.submitExtension(WorkingSetId.of(target), request.requestId(),
-                request.trackerIds() == null ? List.of() : request.trackerIds(), Caller.of("web"));
+                request.trackerIds() == null ? List.of() : request.trackerIds(), "web");
         return ResponseEntity.accepted()
                 .location(URI.create("/api/working-set-creations/" + creation.id()))
                 .body(WorkingSetCreationController.CreationView.from(creation));

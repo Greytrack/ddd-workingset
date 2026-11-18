@@ -2,7 +2,7 @@ package sk.workingset.application.eventhandler;
 
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
+import sk.workingset.application.command.TrackerItemLifecycleService;
 import sk.workingset.domain.event.MergeAppliedEvent;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 
@@ -14,9 +14,9 @@ import sk.workingset.application.port.TrackerItemLifecyclePort;
 @Component
 public class MergeAppliedListener {
 
-    private final TrackerItemLifecyclePort lifecycle;
+    private final TrackerItemLifecycleService lifecycle;
 
-    public MergeAppliedListener(TrackerItemLifecyclePort lifecycle) {
+    public MergeAppliedListener(TrackerItemLifecycleService lifecycle) {
         this.lifecycle = lifecycle;
     }
 

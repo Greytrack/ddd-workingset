@@ -12,7 +12,6 @@ import java.util.function.Function;
 
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.merge.MergeRepository;
@@ -64,7 +63,7 @@ public class MergeComparisonService {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId sourceTracker,
-                              TrackerId targetTracker, Caller caller) {
+                              TrackerId targetTracker) {
         TrackerPair pair = new TrackerPair(source, sourceTracker, target, targetTracker);
         if (!candidates(source, target).contains(pair)) {
             throw new MergeFailure(Reason.MergeNotAllowed, "trackers must form a direct derivation pair in the supplied working sets");
@@ -76,8 +75,8 @@ public class MergeComparisonService {
         families.addAll(sources.keySet());
         families.addAll(targets.keySet());
         for (CommonId family : families) {
-            Side left = read(sources.get(family), caller);
-            Side right = read(targets.get(family), caller);
+            Side left = read(sources.get(family));
+            Side right = read(targets.get(family));
             if (handled(pair, family, left, right)) {
                 continue;
             }
@@ -147,11 +146,11 @@ public class MergeComparisonService {
                 .isPresent();
     }
 
-    public Difference current(Difference original, Caller caller) {
+    public Difference current(Difference original) {
         TrackerPair pair = original.trackers();
         CommonId family = original.family();
-        Side source = read(familyIds(pair.source()).get(family), caller);
-        Side target = read(familyIds(pair.target()).get(family), caller);
+        Side source = read(familyIds(pair.source()).get(family));
+        Side target = read(familyIds(pair.target()).get(family));
         return new Difference(family, pair, source, target, differingFields(source, target));
     }
 
@@ -169,7 +168,7 @@ public class MergeComparisonService {
         }
     }
 
-    private Side read(LocalId id, Caller caller) {
+    private Side read(LocalId id) {
         if (id == null) {
             return Side.absent();
         }
