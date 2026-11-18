@@ -17,13 +17,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import alm.requirement.adapters.workingset.RequirementAdapter;
-import alm.requirement.domain.Requirement;
-import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
-import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.ReadResult;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.application.port.BusinessTrackerItems;
@@ -45,20 +40,16 @@ class WorkingSetSliceIntegrationTest {
     private static final CommonId C1 = CommonId.of("265506033508288");
     private static final TrackerId T0 = TrackerId.of("264905365135296");
     private static final Revision R3 = Revision.of(3);
-    private static final Caller CALLER = Caller.of("tester");
 
     private LightTrackerItemRepository items;
-    private RequirementRepository requirements;
     private WorkingSetQueryService workingSet;
 
     @BeforeEach
     void setUp() {
         items = mock(LightTrackerItemRepository.class);
-        requirements = mock(RequirementRepository.class);
         WorkingSetQueryProvider query = mock(WorkingSetQueryProvider.class);
         when(query.isPreparing(org.mockito.ArgumentMatchers.anyLong())).thenReturn(false);
-        workingSet = new WorkingSetQueryService(query, items,
-                localId -> new RequirementAdapter(requirements, localId), mock(BusinessTrackerItems.class));
+        workingSet = new WorkingSetQueryService(query, items, mock(BusinessTrackerItems.class));
     }
 
     @Test
@@ -69,25 +60,6 @@ class WorkingSetSliceIntegrationTest {
         assertEquals(L0, item.sourceLocalId(), "初始来源应指向来源变体");
         assertEquals(R3, item.sourceRevision());
         assertFalse(item.materialized(), "派生初始为 Source-backed");
-        verify(requirements, never()).save(any());
-    }
-
-    @Test
-    void source_backed_read_resolves_source_content() {
-        LightTrackerItem item = derivedItem();
-        when(items.findById(item.localId())).thenReturn(Optional.of(item));
-        when(requirements.findById(L0)).thenReturn(Optional.of(
-                Requirement.create(L0, C1, T0, "A", "source description", R3)));
-
-        ReadResult result = workingSet.read(WS1, item.localId(), CALLER);
-
-        assertEquals("A", result.content().fields().get("title"));
-        assertEquals(R3, result.content().revision());
-        assertFalse(result.materialized(), "读取不得产生物化副作用");
-        assertEquals(L0, result.contentLocalId(), "Source-backed 读取应定位来源变体");
-        assertEquals(R3, result.contentRevision());
-        verify(requirements).findById(L0);
-        verify(requirements, never()).save(any());
     }
 
     @Test

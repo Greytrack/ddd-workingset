@@ -276,11 +276,6 @@ public class ApplicationConfiguration {
             }
 
             @Override
-            public Optional<Presentation> presentation(LocalId localId) {
-                return requirements.findPresentation(localId);
-            }
-
-            @Override
             public boolean existsInTracker(TrackerId trackerId) {
                 return requirements.existsInTracker(trackerId);
             }
@@ -337,10 +332,7 @@ public class ApplicationConfiguration {
     public WorkingSetQueryService workingSetQueryService(
             WorkingSetQueryProvider query,
             LightTrackerItemRepository items,
-            JdbcRequirementRepository requirements,
             BusinessTrackerItems businessItems) {
-        // SK 只依赖 TrackerItemReadPort 接口；Adapter 由组合根按变体身份构造
-        return new WorkingSetQueryService(query, items,
-                localId -> new RequirementAdapter(requirements, localId), businessItems);
+        return new WorkingSetQueryService(query, items, businessItems);
     }
 }

@@ -1,5 +1,6 @@
 package alm.requirement.infrastructure.providers;
 
+import java.util.List;
 import java.util.Optional;
 
 import alm.requirement.application.query.model.RequirementDetail;
@@ -16,5 +17,10 @@ public final class RequirementQueryProviderImpl implements RequirementQueryProvi
     @Override
     public Optional<RequirementDetail> find(long localId) {
         return Optional.ofNullable(mapper.find(localId));
+    }
+
+    @Override
+    public List<RequirementDetail> findByTracker(long trackerId, Long workingSetId) {
+        return mapper.findByTracker(trackerId, workingSetId);
     }
 }

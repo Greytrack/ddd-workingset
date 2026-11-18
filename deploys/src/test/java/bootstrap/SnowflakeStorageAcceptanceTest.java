@@ -67,11 +67,10 @@ class SnowflakeStorageAcceptanceTest {
                             + task.creationId(), CreationView.class).status()));
 
             TrackerView tracker = rest.getForObject("/api/worksets/" + targetId + "/trackers", TrackerView[].class)[0];
-            LightTrackerItemView item = rest.getForObject("/api/worksets/" + targetId + "/trackers/" + tracker.trackerId() + "/items",
+            LightTrackerItemView item = rest.getForObject("/api/worksets/" + targetId + "/trackers/" + tracker.trackerId() + "/light-tracker-items",
                     LightTrackerItemView[].class)[0];
             assertNotEquals(requirement.localId(), item.localId());
             assertEquals(requirement.commonId(), item.commonId());
-            assertEquals(requirement.number(), item.number());
             org.springframework.http.ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + item.localId() + "/title", HttpMethod.PUT,
                     new HttpEntity<>(Map.of("title", "编号修订", "expectedLockVersion", 0)), RequirementView.class);
             assertEquals(HttpStatus.OK, edited.getStatusCode());

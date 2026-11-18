@@ -72,7 +72,7 @@ class TrackerDefaultAcceptanceTest {
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
         for (TrackerView tracker : trackers) {
-            org.springframework.http.ResponseEntity<String> items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/items",
+            org.springframework.http.ResponseEntity<String> items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/light-tracker-items",
                     String.class);
             assertEquals(HttpStatus.OK, items.getStatusCode(), items::getBody);
             assertEquals("[]", items.getBody());
@@ -91,7 +91,7 @@ class TrackerDefaultAcceptanceTest {
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            LightTrackerItemView[] items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
+            LightTrackerItemView[] items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/light-tracker-items", LightTrackerItemView[].class);
             assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
         });
     }
@@ -115,7 +115,7 @@ class TrackerDefaultAcceptanceTest {
             assertEquals(mode.name(), tracker.sharingMode());
             assertEquals("项目-" + mode, tracker.name());
             assertFalse(tracker.isDefault());
-            assertEquals(HttpStatus.OK, rest.getForEntity(url + "/" + tracker.trackerId() + "/items",
+            assertEquals(HttpStatus.OK, rest.getForEntity(url + "/" + tracker.trackerId() + "/light-tracker-items",
                     String.class).getStatusCode());
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
 

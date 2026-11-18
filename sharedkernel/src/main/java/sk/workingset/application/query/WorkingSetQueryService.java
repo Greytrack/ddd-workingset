@@ -2,19 +2,14 @@ package sk.workingset.application.query;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
 
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import sk.common.error.DomainException;
-import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.ReadResult;
-import sk.workingset.application.TrackerItemContent;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.query.provider.TrackerItemReadPort;
 import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
@@ -24,7 +19,6 @@ import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
@@ -33,15 +27,12 @@ import sk.workingset.domain.WorkingSetId;
 public class WorkingSetQueryService {
     private final WorkingSetQueryProvider query;
     private final LightTrackerItemRepository items;
-    private final Function<LocalId, TrackerItemReadPort> readPorts;
     private final BusinessTrackerItems businessItems;
 
     public WorkingSetQueryService(WorkingSetQueryProvider query, LightTrackerItemRepository items,
-                                  Function<LocalId, TrackerItemReadPort> readPorts,
                                   BusinessTrackerItems businessItems) {
         this.query = Objects.requireNonNull(query, "query");
         this.items = Objects.requireNonNull(items, "items");
-        this.readPorts = Objects.requireNonNull(readPorts, "readPorts");
         this.businessItems = Objects.requireNonNull(businessItems, "businessItems");
     }
 
@@ -85,20 +76,15 @@ public class WorkingSetQueryService {
         return query.findBindings(id.numericValue());
     }
 
+    /** 工作集只返回自己的 LightTrackerItem 索引，不桥接业务 BC 的展示内容。 */
     @Transactional(readOnly = true)
-    public List<IndexedItem> findItems(WorkingSetId workingSetId, TrackerId trackerId) {
+    public List<LightTrackerItem> findLightTrackerItems(WorkingSetId workingSetId, TrackerId trackerId) {
         find(workingSetId);
         if (!query.hasTrackerBinding(workingSetId.numericValue(), trackerId.numericValue())) {
             throw DomainException.withMessage(FailureReason.NOT_INCLUDED, trackerId.value());
         }
-        return items.findInTracker(trackerId).stream()
-                .filter(item -> !businessItems.isDeleted(item.effectiveContentSource()))
-                .map(item -> new IndexedItem(item,
-                        businessItems.presentation(item.effectiveContentSource()).orElse(null)))
-                .toList();
+        return items.findInTracker(trackerId);
     }
-
-    public record IndexedItem(LightTrackerItem item, BusinessTrackerItems.Presentation presentation) {}
 
     /** 按工作集 + 变体身份解析；未命中 → NotFound；存在但不在该工作集 → NotIncluded。 */
     public LightTrackerItem resolve(WorkingSetId workingSetId, LocalId localId) {
@@ -114,18 +100,6 @@ public class WorkingSetQueryService {
             throw DomainException.withMessage(FailureReason.DELETED, localId.value());
         }
         return item;
-    }
-
-    /** 读取有效内容：Source-backed 沿来源定位；Local-backed 读本地。 */
-    public ReadResult read(WorkingSetId workingSetId, LocalId localId, Caller caller) {
-        Objects.requireNonNull(caller, "caller");
-        LightTrackerItem item = resolve(workingSetId, localId);
-        LocalId contentLocalId = item.effectiveContentSource();
-        Revision contentRevision = item.effectiveContentRevision();
-        TrackerItemReadPort port = readPorts.apply(contentLocalId);
-        TrackerItemContent content = item.materialized() ? port.readAt(contentRevision)
-                : port.readInheritedAt(contentRevision);
-        return new ReadResult(content, item.materialized(), contentLocalId, contentRevision);
     }
 
     private void requireReady(WorkingSetId id) {

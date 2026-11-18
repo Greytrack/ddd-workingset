@@ -91,10 +91,11 @@ public class WorkingSetController {
     }
 
     /** 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。 */
-    @GetMapping("/{workingSetId}/trackers/{trackerId}/items")
-    public List<LightTrackerItemView> findItems(@PathVariable String workingSetId, @PathVariable String trackerId) {
-        return queries.findItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
-                .map(indexed -> LightTrackerItemView.from(indexed.item(), indexed.presentation())).toList();
+    @GetMapping("/{workingSetId}/trackers/{trackerId}/light-tracker-items")
+    public List<LightTrackerItemView> findLightTrackerItems(@PathVariable String workingSetId,
+                                                            @PathVariable String trackerId) {
+        return queries.findLightTrackerItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
+                .map(LightTrackerItemView::from).toList();
     }
 
     @GetMapping("/{workingSetId}/bindings")
@@ -133,13 +134,6 @@ public class WorkingSetController {
                                         @PathVariable("localId") String localId) {
         LightTrackerItem item = queries.resolve(WorkingSetId.of(workingSetId), LocalId.of(localId));
         return LightTrackerItemView.from(item);
-    }
-
-    @GetMapping("/{workingSetId}/items/{localId}/content")
-    public ReadView read(@PathVariable("workingSetId") String workingSetId,
-                         @PathVariable("localId") String localId) {
-        ReadResult result = queries.read(WorkingSetId.of(workingSetId), LocalId.of(localId), WEB_CALLER);
-        return ReadView.from(result);
     }
 
     public record CreateProductSpaceRequest(String name) {}

@@ -3,6 +3,7 @@ package alm.requirement.adapters;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -60,6 +62,14 @@ public class RequirementController {
                 Objects.requireNonNull(request.description(), "description"),
                 Revision.of(request.revision()));
         return RequirementView.from(created);
+    }
+
+    /** ALM 场景查询需求列表；工作集只通过 LightTrackerItem 列表与本接口组合展示。 */
+    @GetMapping
+    public List<RequirementView> list(@RequestParam String trackerId,
+                                      @RequestParam String workingSetId) {
+        return queries.findByTracker(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
+                .map(RequirementView::from).toList();
     }
 
     @PutMapping("/{localId}/title")

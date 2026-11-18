@@ -302,10 +302,23 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
   renderItems();
   setStatus('加载 跟踪分类 Item…');
   try {
-    const items = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
-      '/trackers/' + encodeURIComponent(trackerId) + '/items') || [];
+    const [indexed, requirements] = await Promise.all([
+      api('/api/worksets/' + encodeURIComponent(workingSetId) +
+        '/trackers/' + encodeURIComponent(trackerId) + '/light-tracker-items') || [],
+      api('/api/requirements?trackerId=' + encodeURIComponent(trackerId) +
+        '&workingSetId=' + encodeURIComponent(workingSetId)) || []
+    ]);
     if (request !== trackerRequest) return;
-    state.items = items;
+    const byLocalId = new Map((requirements || []).map((requirement) => [requirement.localId, requirement]));
+    state.items = (indexed || []).map((item) => {
+      const requirement = byLocalId.get(item.localId);
+      return {
+        ...item,
+        name: requirement?.title,
+        number: requirement?.number,
+        requirement
+      };
+    });
     setStatus('已加载 ' + state.items.length + ' 个 Item', 'ok');
   } catch (error) {
     if (request !== trackerRequest) return;
@@ -444,9 +457,16 @@ async function loadContent(localId, workingSetId) {
   state.contentLoading = true;
   renderItemDetail();
   try {
-    const content = await api('/api/worksets/' + encodeURIComponent(workingSetId) +
-      '/items/' + encodeURIComponent(localId) + '/content');
-    if (request === contentRequest) state.content = content;
+    const requirement = await api('/api/requirements/' + encodeURIComponent(localId));
+    const item = state.selectedItem;
+    if (request === contentRequest) {
+      state.content = {
+        fields: { title: requirement.title, description: requirement.description },
+        materialized: requirement.materialized,
+        contentLocalId: requirement.materialized ? localId : (item?.sourceLocalId || localId),
+        contentRevision: requirement.materialized ? requirement.revision : (item?.sourceRevision ?? requirement.revision)
+      };
+    }
   } catch (error) {
     if (request === contentRequest) state.contentError = reasonText(error.body) || error.message;
   } finally {

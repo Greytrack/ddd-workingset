@@ -47,6 +47,12 @@ public class RequirementQueryService {
                 .orElseGet(() -> detail(load(localId)));
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<RequirementDetail> findByTracker(sk.workingset.domain.WorkingSetId workingSetId,
+                                                           sk.workingset.domain.TrackerId trackerId) {
+        return query.findByTracker(trackerId.numericValue(), workingSetId.numericValue());
+    }
+
     private Requirement rebuildInherited(InheritedEditTarget target) {
         Requirement source = load(target.sourceLocalId());
         requireActive(source);

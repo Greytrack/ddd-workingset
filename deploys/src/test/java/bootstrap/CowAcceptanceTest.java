@@ -123,12 +123,16 @@ class CowAcceptanceTest {
                         "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, changed.getStatusCode(), String.valueOf(changed.getBody()));
-        LightTrackerItemView[] listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/items",
+        LightTrackerItemView[] listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/light-tracker-items",
                 LightTrackerItemView[].class);
         assertEquals(1, listed.length);
         assertEquals(child.id(), listed[0].localId());
-        assertEquals("Child edit", listed[0].name());
-        ReadView content = read(child);
+        RequirementView[] requirements = rest.getForObject("/api/requirements?trackerId=" + child.trackerId()
+                + "&workingSetId=" + child.ws(), RequirementView[].class);
+        assertTrue(java.util.Arrays.stream(requirements)
+                .anyMatch(requirement -> child.id().equals(requirement.localId())
+                        && "Child edit".equals(requirement.title())));
+        ReadContent content = read(child);
         assertTrue(content.materialized());
         assertEquals(child.id(), content.contentLocalId());
         assertEquals(Map.of("title", "Child edit", "description", "Child description"), content.fields());
@@ -143,14 +147,14 @@ class CowAcceptanceTest {
     void editingOnlyTheTitleOfAnInheritedChildPreservesItsDescription() {
         createSource();
         Target child = derive();
-        ReadView inherited = read(child);
+        ReadContent inherited = read(child);
         assertFalse(inherited.materialized());
 
         org.springframework.http.ResponseEntity<RequirementView> response = rest.exchange("/api/requirements/" + child.id() + "/title", HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child title", "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        ReadView edited = read(child);
+        ReadContent edited = read(child);
         assertTrue(edited.materialized());
         assertEquals(child.id(), edited.contentLocalId());
         assertEquals("Child title", edited.fields().get("title"));
@@ -197,7 +201,7 @@ class CowAcceptanceTest {
         assertTrue(response.getStatusCode().is5xxServerError());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
                 Integer.class, child.id()));
-        ReadView content = read(child);
+        ReadContent content = read(child);
         assertFalse(content.materialized());
         assertEquals(source, content.contentLocalId());
         assertEquals("A", content.fields().get("title"));
@@ -333,13 +337,23 @@ class CowAcceptanceTest {
         return "%" + source + "%";
     }
 
-    private ReadView read(Target target) {
-        return rest.getForObject("/api/worksets/" + target.ws() + "/items/" + target.id() + "/content",
-                ReadView.class);
+    private ReadContent read(Target target) {
+        RequirementView requirement = rest.getForObject("/api/requirements/" + target.id(), RequirementView.class);
+        LightTrackerItemView item = rest.getForObject("/api/worksets/" + target.ws() + "/items/" + target.id(),
+                LightTrackerItemView.class);
+        boolean materialized = item.materialized();
+        return new ReadContent(
+                Map.<String, Object>of("title", requirement.title(), "description", requirement.description()),
+                materialized ? item.revision() : item.sourceRevision(),
+                materialized ? target.id() : item.sourceLocalId(),
+                materialized);
     }
 
+    private record ReadContent(Map<String, Object> fields, int contentRevision, String contentLocalId,
+                               boolean materialized) {}
+
     private void assertLocalContent(Target target, String title) {
-        ReadView content = read(target);
+        ReadContent content = read(target);
         assertTrue(content.materialized());
         assertEquals(target.id(), content.contentLocalId());
         assertEquals(title, content.fields().get("title"));
