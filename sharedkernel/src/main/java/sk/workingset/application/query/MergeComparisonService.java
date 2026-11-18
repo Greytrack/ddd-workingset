@@ -1,4 +1,4 @@
-package sk.workingset.application;
+package sk.workingset.application.query;
 
 import sk.common.error.DomainException;
 
@@ -12,7 +12,9 @@ import java.util.function.Function;
 
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-
+import sk.workingset.application.Caller;
+import sk.workingset.application.FailureReason;
+import sk.workingset.application.Operation;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.application.port.TrackerItemCatalog;

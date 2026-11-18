@@ -1,6 +1,7 @@
 package bootstrap;
 
 import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
 
 import sk.common.error.DomainException;
 
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
@@ -88,8 +90,10 @@ class TrackerDefaultAcceptanceTest {
         var item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
-        var items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
-        assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            var items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/items", LightTrackerItemView[].class);
+            assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
+        });
     }
 
     @Test

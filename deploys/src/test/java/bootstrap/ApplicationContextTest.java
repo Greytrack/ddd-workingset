@@ -1,11 +1,13 @@
 package bootstrap;
 
 import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -51,16 +53,26 @@ class ApplicationContextTest {
         try (ConfigurableApplicationContext context = start()) {
             List<RequirementChanged> received = new CopyOnWriteArrayList<>();
             context.addApplicationListener(
-                    (ApplicationListener<PayloadApplicationEvent<RequirementChanged>>)
-                            event -> received.add(event.getPayload()));
+                    (ApplicationListener<PayloadApplicationEvent<?>>) event -> {
+                        if (event.getPayload() instanceof RequirementChanged changed) received.add(changed);
+                    });
             RequirementCommandService service = context.getBean(RequirementCommandService.class);
             TrackerId trackerId = TrackerId.of(fixtureId("tracker-" + UUID.randomUUID()));
 
-            var fixture = new RootTrackerFixture(context.getBean(JdbcTemplate.class), trackerId.value());
+            var jdbc = context.getBean(JdbcTemplate.class);
+            var fixture = new RootTrackerFixture(jdbc, trackerId.value());
             fixture.provision();
             LocalId created = null;
             try {
-                created = verifyPublishedChange(service, received, trackerId);
+                var requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
+                created = requirement.localId();
+                await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject("""
+                        SELECT EXISTS (SELECT 1 FROM event_publication WHERE event_type LIKE '%.TrackerItemCreated'
+                        AND serialized_event LIKE ? AND completion_date IS NOT NULL)
+                        """, Boolean.class, "%" + requirement.localId().value() + "%")));
+                assertEquals(created.value(), requirement.commonId().value(),
+                        "默认工作集创建时 CommonId 与 LocalId 必须相等");
+                verifyPublishedChange(service, received, created);
             } finally {
                 if (created != null) {
                     fixture.removeRequirement(created.value());
@@ -70,13 +82,9 @@ class ApplicationContextTest {
         }
     }
 
-    private LocalId verifyPublishedChange(RequirementCommandService service, List<RequirementChanged> received,
-                                          TrackerId trackerId) {
-        var requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
-        var localId = requirement.localId();
+    private void verifyPublishedChange(RequirementCommandService service, List<RequirementChanged> received,
+                                       LocalId localId) {
         service.changeTitle(localId, "B", LockVersion.of(0));
-        assertEquals(localId.value(), requirement.commonId().value(),
-                "默认工作集创建时 CommonId 与 LocalId 必须相等");
 
         assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
         RequirementChanged event = received.getFirst();
@@ -89,7 +97,6 @@ class ApplicationContextTest {
         assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
         assertNotNull(event.snapshotRef());
         assertNotNull(event.occurredAt());
-        return localId;
     }
 
     private ConfigurableApplicationContext start() {

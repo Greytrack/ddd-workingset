@@ -13,7 +13,7 @@ import sk.workingset.domain.LocalId;
  * COW 恢复与未完成事件重投入口。
  *
  * <p>可重试“已保存业务对象但未切换 LTI”的物化收据，并重投 Modulith 未完成事件
- * （RequirementChanged / RequirementPurged / RequirementMergeApplied）。
+ * （TrackerItemCreated / RequirementChanged / RequirementPurged / RequirementMergeApplied）。
  */
 @RestController
 @RequestMapping("/api/cow/recover")

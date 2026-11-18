@@ -3,7 +3,7 @@ package sk.workingset.application.eventhandler;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
-import sk.workingset.domain.event.RequirementPurged;
+import sk.workingset.domain.event.CompleteDeleteEvent;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 
 /**
@@ -14,16 +14,16 @@ import sk.workingset.application.port.TrackerItemLifecyclePort;
  * 处理本身幂等（无对应 LTI 为空操作）。
  */
 @Component
-public class RequirementPurgedListener {
+public class TrackerItemCompleteDeteleListener {
 
     private final TrackerItemLifecyclePort lifecycle;
 
-    public RequirementPurgedListener(TrackerItemLifecyclePort lifecycle) {
+    public TrackerItemCompleteDeteleListener(TrackerItemLifecyclePort lifecycle) {
         this.lifecycle = lifecycle;
     }
 
     @ApplicationModuleListener(id = "bootstrap.RequirementPurgedListener.on(sk.workingset.domain.event.RequirementPurged)")
-    public void on(RequirementPurged event) {
+    public void on(CompleteDeleteEvent event) {
         lifecycle.removePurged(event.requirementId());
     }
 }

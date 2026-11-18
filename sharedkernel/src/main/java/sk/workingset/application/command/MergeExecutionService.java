@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.common.error.DomainException;
 import sk.workingset.application.Caller;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.MergeComparisonService;
+import sk.workingset.application.query.MergeComparisonService;
 
 import java.time.Instant;
 import java.util.Comparator;

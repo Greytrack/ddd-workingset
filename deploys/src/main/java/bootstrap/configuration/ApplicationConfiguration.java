@@ -31,7 +31,7 @@ import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.application.command.CowRecoveryService;
-import sk.workingset.application.MergeComparisonService;
+import sk.workingset.application.query.MergeComparisonService;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeRelationRepairStep;
 import sk.workingset.application.command.RelationEventPublisher;
@@ -42,7 +42,7 @@ import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.infrastructure.repositories.JdbcMergeRepository;
 import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.event.RequirementMergeApplied;
-import sk.workingset.domain.event.RequirementPurged;
+import sk.workingset.domain.event.CompleteDeleteEvent;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.command.WorkingSetCreationService;
@@ -120,7 +120,7 @@ public class ApplicationConfiguration {
         return new CowRecoveryService(store, items, writePort, failureLog, newTransactionTemplate,
                 () -> publications.resubmitIncompletePublications(p ->
                         p.getEvent() instanceof RequirementChanged
-                                || p.getEvent() instanceof RequirementPurged
+                                || p.getEvent() instanceof CompleteDeleteEvent
                                 || p.getEvent() instanceof RequirementMergeApplied));
     }
 
@@ -274,9 +274,9 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public TrackerItemLifecyclePort trackerItemLifecyclePort(JdbcBindingRepositories trackers,
-            LightTrackerItemRepository items) {
-        return new TrackerItemLifecycleService(trackers, items);
+    public TrackerItemLifecycleService trackerItemLifecyclePort(JdbcBindingRepositories trackers,
+            LightTrackerItemRepository items, BusinessTrackerItems businessItems) {
+        return new TrackerItemLifecycleService(trackers, items, businessItems);
     }
 
     @Bean

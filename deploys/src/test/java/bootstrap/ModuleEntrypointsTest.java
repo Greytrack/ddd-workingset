@@ -29,7 +29,7 @@ class ModuleEntrypointsTest {
 
         var existingListeners = Set.of("MergeRoundSubmittedListener", "RequirementChangedListener",
                 "RequirementMergeAppliedListener", "RequirementPurgedListener", "TrackerItemsIndexedListener",
-                "WorkingSetCreationSubmittedListener");
+                "TrackerItemCreatedListener", "WorkingSetCreationSubmittedListener");
         for (var name : existingListeners) {
             var className = "sk.workingset.application.eventhandler." + name;
             assertTrue(components.contains(className));

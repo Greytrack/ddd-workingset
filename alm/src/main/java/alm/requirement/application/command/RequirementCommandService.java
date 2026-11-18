@@ -16,6 +16,7 @@ import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.TrackerItemCreated;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.port.TrackerItemLifecyclePort.InheritedEditTarget;
 import sk.workingset.application.port.TrackerScopePort;
@@ -91,9 +92,9 @@ public class RequirementCommandService {
                 LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
                 trackerId, title, description, revision);
         repository.save(requirement);
-        scope.ifPresent(current -> lifecycle.indexLocal(
-                trackerId, requirement.localId(), requirement.commonId(),
-                current.workingSetId(), requirement.revision()));
+        scope.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreated(
+                requirement.localId(), requirement.commonId(), trackerId,
+                current.workingSetId(), requirement.revision())));
         return requirement;
     }
 

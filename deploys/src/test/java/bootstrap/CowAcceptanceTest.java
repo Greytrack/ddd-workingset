@@ -373,6 +373,8 @@ class CowAcceptanceTest {
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         source = result.getBody().localId();
         common = result.getBody().commonId();
+        await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE local_id = ?)", Boolean.class, source)));
     }
 
     private Target derive() {
@@ -402,7 +404,8 @@ class CowAcceptanceTest {
 
     private int completedEvents() {
         return jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE serialized_event LIKE ?"
-                + " AND completion_date IS NOT NULL", Integer.class, eventPattern());
+                + " AND event_type LIKE '%.RequirementChanged' AND completion_date IS NOT NULL",
+                Integer.class, eventPattern());
     }
 
     private String eventPattern() {

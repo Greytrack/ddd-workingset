@@ -16,9 +16,9 @@ import sk.workingset.domain.TrackerId;
  * @param trackerId     删除时所属 Tracker
  * @param occurredAt    事件发生时间
  */
-public record RequirementPurged(LocalId requirementId, TrackerId trackerId, Instant occurredAt) {
+public record CompleteDeleteEvent(LocalId requirementId, TrackerId trackerId, Instant occurredAt) {
 
-    public RequirementPurged {
+    public CompleteDeleteEvent {
         Objects.requireNonNull(requirementId, "requirementId");
         Objects.requireNonNull(trackerId, "trackerId");
         Objects.requireNonNull(occurredAt, "occurredAt");

@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import alm.requirement.application.port.RequirementMutationStore;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.domain.event.RequirementPurged;
+import sk.workingset.domain.event.CompleteDeleteEvent;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.LifecycleCommand;
 import sk.workingset.domain.LocalId;
@@ -17,7 +17,7 @@ import sk.workingset.domain.LocalId;
  * 协调永久删除与仍依赖该内容的工作集变体。
  *
  * <p>D4 方案 A：Tracker 锁定、COW 依赖判定与 LTI 移除均由 SK 承担（{@link TrackerItemLifecyclePort}）；
- * 本服务只删除业务对象，并在提交后通过 {@link RequirementPurged} 事件通知 SK 清理 LTI。
+ * 本服务只删除业务对象，并在提交后通过 {@link CompleteDeleteEvent} 事件通知 SK 清理 LTI。
  */
 public class RequirementLifecycleService {
     private final RequirementMutationStore requirements;
@@ -42,7 +42,7 @@ public class RequirementLifecycleService {
             throw DomainException.withMessage(FailureReason.DELETED, id.value());
         }
         requirements.purge(current);
-        eventPublisher.publishEvent(new RequirementPurged(id, candidate.trackerId(), Instant.now()));
+        eventPublisher.publishEvent(new CompleteDeleteEvent(id, candidate.trackerId(), Instant.now()));
     }
 
     private static DomainException missing(LocalId id) {

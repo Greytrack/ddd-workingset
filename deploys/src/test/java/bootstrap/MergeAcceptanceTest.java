@@ -397,6 +397,9 @@ class MergeAcceptanceTest {
                 "trackerId", tracker, "title", title, "description", "description", "revision", 3),
                 RequirementView.class);
         assertStatus(HttpStatus.CREATED, response);
+        await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE local_id = ?)",
+                Boolean.class, response.getBody().localId())));
         return response.getBody();
     }
 

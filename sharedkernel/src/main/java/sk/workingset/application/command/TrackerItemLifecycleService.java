@@ -9,13 +9,13 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.domain.event.MergeTarget;
+import sk.workingset.domain.event.TrackerItemCreated;
 import sk.workingset.application.common.TargetIdentity;
+import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -32,10 +32,13 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
 
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
+    private final BusinessTrackerItems businessItems;
 
-    public TrackerItemLifecycleService(TrackerRepository trackers, LightTrackerItemRepository items) {
+    public TrackerItemLifecycleService(TrackerRepository trackers, LightTrackerItemRepository items,
+                                       BusinessTrackerItems businessItems) {
         this.trackers = trackers;
         this.items = items;
+        this.businessItems = businessItems;
     }
 
     @Override
@@ -88,14 +91,15 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
         items.remove(localId);
     }
 
-    @Override
-    @Transactional
-    public void indexLocal(TrackerId trackerId, LocalId localId, CommonId commonId,
-                           WorkingSetId workingSetId, Revision revision) {
-        if (items.findById(localId).isPresent()) {
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registerCreated(TrackerItemCreated event) {
+        // Match delete2's lock order so a late creation event cannot restore a purged index.
+        trackers.lockTracker(event.trackerId());
+        if (!businessItems.lockContentSource(event.localId()) || items.findById(event.localId()).isPresent()) {
             return;
         }
-        items.save(LightTrackerItem.local(localId, commonId, trackerId, workingSetId, revision));
+        items.save(LightTrackerItem.local(event.localId(), event.commonId(), event.trackerId(),
+                event.workingSetId(), event.revision()));
     }
 
     @Override
