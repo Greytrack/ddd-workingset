@@ -27,8 +27,8 @@
 | 层 | 修改及新增文件 |
 | --- | --- |
 | ALM | `Requirement`、`RequirementApplicationService`、`RequirementMaterializationAdapter` |
-| SK 应用 | `CowEventHandler`、`CowFailureLog`、`SourceSerialCowCoordinator`、`RequirementWritePort`，新增 `CowMaterializationStore` 与 `CowRecoveryService` |
-| SK 基础设施 | `InMemoryLightTrackerItemRepository`、`CachingLightTrackerItemRepository`、`JdbcCowFailureLog`，新增 `JdbcCowMaterializationStore` |
+| SK 应用 | `CowEventHandler`、`CowFailureLog`、`SourceSerialCowCoordinator`、`RequirementWritePort`，新增 `CowMaterializationRepository` 与 `CowRecoveryService` |
+| SK 基础设施 | `InMemoryLightTrackerItemRepository`、`CachingLightTrackerItemRepository`、`JdbcCowFailureLog`，新增 `JdbcCowMaterializationRepository` |
 | 入口与配置 | `ApplicationConfiguration`、新增 `CowRecoveryController`、`application.yml`、`schema.sql` |
 | 测试 | `CowAcceptanceTest`、`WorkingSetSliceIntegrationTest`、`CowEventHandlerTest`、`SourceSerialCowCoordinatorTest` |
 

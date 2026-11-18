@@ -2,7 +2,7 @@ package sk.workingset.application.command;
 
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.application.CowMaterializationFailedException;
-import sk.workingset.application.CowMaterializationStore;
+import sk.workingset.domain.repository.CowMaterializationRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -10,7 +10,7 @@ import java.util.List;
 
 import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.port.MaterializeRequest;
+import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
@@ -28,13 +28,13 @@ public final class CowEventHandler {
     private final RequirementWritePort writePort;
     private final CowFailureLog failureLog;
     private final TargetTransactionRunner transactionRunner;
-    private final CowMaterializationStore store;
+    private final CowMaterializationRepository store;
     private final CowRecoveryService recovery;
 
     public CowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
                            RequirementWritePort writePort,
                            CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
-                           CowMaterializationStore store, CowRecoveryService recovery) {
+                           CowMaterializationRepository store, CowRecoveryService recovery) {
         this.items = items;
         this.lifecycle = lifecycle;
         this.writePort = writePort;
@@ -58,7 +58,7 @@ public final class CowEventHandler {
                         event.sourceLocalId(), event.beforeRevision()));
                 var receipt = store.findByEventAndTarget(event.eventId(), target.localId()).orElseThrow();
                 attempts = receipt.attempts();
-                if (receipt.status() == CowMaterializationStore.Status.SWITCHED) {
+                if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {
                     continue;
                 }
                 if (!receipt.businessSaved()) {

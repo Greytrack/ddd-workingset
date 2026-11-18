@@ -1,4 +1,4 @@
-package sk.workingset.application.port;
+package sk.workingset.application.common;
 
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;

@@ -28,7 +28,7 @@ import alm.requirement.adapters.workingset.RequirementAdapter;
 import alm.requirement.adapters.workingset.RequirementMaterializationAdapter;
 import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.application.CowFailureLog;
-import sk.workingset.application.CowMaterializationStore;
+import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.application.command.CowRecoveryService;
 import sk.workingset.application.MergeComparisonService;
 import sk.workingset.application.command.MergeExecutionService;
@@ -49,14 +49,14 @@ import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.application.command.WorkingSetDeletionService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.infrastructure.providers.WorkingSetQueryAdapter;
+import sk.workingset.infrastructure.providers.WorkingSetQueryProviderImpl;
 import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
 import sk.workingset.application.command.WorkingSetItemIndexer;
 import sk.workingset.application.port.TrackerItemCatalog;
-import sk.workingset.application.port.WorkingSetCreationSnapshotStore;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.infrastructure.EmptyRelationSourcePort;
-import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotStore;
+import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotRepository;
 import sk.workingset.infrastructure.repositories.JdbcWorkingSetCreationRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.IdentifierGenerator;
@@ -72,7 +72,7 @@ import sk.workingset.infrastructure.repositories.CachingLightTrackerItemReposito
 import sk.workingset.infrastructure.repositories.JdbcBindingRepositories;
 import sk.workingset.infrastructure.repositories.JdbcLightTrackerItemRepository;
 import sk.workingset.infrastructure.JdbcCowFailureLog;
-import sk.workingset.infrastructure.JdbcCowMaterializationStore;
+import sk.workingset.infrastructure.repositories.JdbcCowMaterializationRepository;
 
 /**
  * 组合根（Composition Root）：唯一允许同时引用 SK 与 ALM 实现的位置（A1）。
@@ -115,14 +115,14 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public CowMaterializationStore cowMaterializationStore(JdbcTemplate jdbc) {
-        return new JdbcCowMaterializationStore(jdbc);
+    public CowMaterializationRepository cowMaterializationStore(JdbcTemplate jdbc) {
+        return new JdbcCowMaterializationRepository(jdbc);
     }
 
     @Bean
-    public CowRecoveryService cowRecoveryService(CowMaterializationStore store, LightTrackerItemRepository items,
-            RequirementWritePort writePort, CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
-            IncompleteEventPublications publications) {
+    public CowRecoveryService cowRecoveryService(CowMaterializationRepository store, LightTrackerItemRepository items,
+                                                 RequirementWritePort writePort, CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+                                                 IncompleteEventPublications publications) {
         return new CowRecoveryService(store, items, writePort, failureLog, transactionRunner,
                 () -> publications.resubmitIncompletePublications(p ->
                         p.getEvent() instanceof RequirementChanged
@@ -132,9 +132,9 @@ public class ApplicationConfiguration {
 
     @Bean
     public CowEventHandler cowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
-            RequirementWritePort writePort,
-            CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
-            CowMaterializationStore store, CowRecoveryService recovery) {
+                                           RequirementWritePort writePort,
+                                           CowFailureLog failureLog, TargetTransactionRunner transactionRunner,
+                                           CowMaterializationRepository store, CowRecoveryService recovery) {
         return new CowEventHandler(items, lifecycle, writePort, failureLog, transactionRunner, store, recovery);
     }
 
@@ -210,8 +210,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public WorkingSetCreationSnapshotStore workingSetCreationSnapshotStore(JdbcTemplate jdbc) {
-        return new JdbcWorkingSetCreationSnapshotStore(jdbc);
+    public WorkingSetCreationSnapshotRepository workingSetCreationSnapshotStore(JdbcTemplate jdbc) {
+        return new JdbcWorkingSetCreationSnapshotRepository(jdbc);
     }
 
     @Bean
@@ -260,10 +260,10 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetItemIndexer workingSetItemIndexer(JdbcBindingRepositories bindings,
-            LightTrackerItemRepository items, TrackerItemCatalog catalog,
-            WorkingSetCreationSnapshotStore snapshots, BusinessTrackerItems businessItems,
-            JdbcRequirementRepository requirements, IdentifierGenerator ids,
-            @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
+                                                       LightTrackerItemRepository items, TrackerItemCatalog catalog,
+                                                       WorkingSetCreationSnapshotRepository snapshots, BusinessTrackerItems businessItems,
+                                                       JdbcRequirementRepository requirements, IdentifierGenerator ids,
+                                                       @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
         return new WorkingSetItemIndexer(bindings, bindings, items, catalog, snapshots, businessItems,
                 id -> new RequirementAdapter(requirements, id), ids, batchSize);
     }
@@ -354,7 +354,7 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetQueryProvider WorkingSetQueryProvider(WorkingSetQueryMapper mapper) {
-        return new WorkingSetQueryAdapter(mapper);
+        return new WorkingSetQueryProviderImpl(mapper);
     }
 
     @Bean

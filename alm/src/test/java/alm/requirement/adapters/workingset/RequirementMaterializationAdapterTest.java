@@ -5,16 +5,16 @@ import static org.mockito.Mockito.*;
 
 import java.util.Optional;
 
-import alm.requirement.application.port.RequirementSnapshot;
+import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.application.port.SnapshotStore;
 import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
 import sk.workingset.domain.event.SnapshotRef;
-import sk.workingset.application.port.MaterializationRejectedException;
-import sk.workingset.application.port.MaterializeRequest;
-import sk.workingset.application.port.TargetIdentity;
+import sk.workingset.application.common.MaterializationRejectedException;
+import sk.workingset.application.command.dto.MaterializeRequest;
+import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;

@@ -1,12 +1,12 @@
 package sk.workingset.application.command;
 
 import sk.workingset.application.CowFailureLog;
-import sk.workingset.application.CowMaterializationStore;
+import sk.workingset.domain.repository.CowMaterializationRepository;
 
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.port.MaterializationRejectedException;
+import sk.workingset.application.common.MaterializationRejectedException;
 import sk.workingset.application.port.RequirementWritePort;
-import sk.workingset.application.port.TargetIdentity;
+import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.application.port.TargetTransactionRunner;
 import sk.workingset.domain.LocalId;
 
@@ -16,14 +16,14 @@ import sk.workingset.domain.LocalId;
  * <p>切换动作幂等；业务保存凭据缺失时拒绝继续，避免伪造完成。
  */
 public final class CowRecoveryService {
-    private final CowMaterializationStore store;
+    private final CowMaterializationRepository store;
     private final LightTrackerItemRepository items;
     private final RequirementWritePort writePort;
     private final CowFailureLog failures;
     private final TargetTransactionRunner transactions;
     private final Runnable resubmit;
 
-    public CowRecoveryService(CowMaterializationStore store, LightTrackerItemRepository items,
+    public CowRecoveryService(CowMaterializationRepository store, LightTrackerItemRepository items,
                               RequirementWritePort writePort, CowFailureLog failures,
                               TargetTransactionRunner transactions, Runnable resubmit) {
         this.store = store;
@@ -42,7 +42,7 @@ public final class CowRecoveryService {
         transactions.inNewTransaction(() -> {
             var receipt = store.lockByEventAndTarget(eventId, targetId)
                     .orElseThrow(() -> new MaterializationRejectedException("COW receipt is missing"));
-            if (receipt.status() == CowMaterializationStore.Status.SWITCHED) {
+            if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {
                 return;
             }
             if (!receipt.businessSaved()) {

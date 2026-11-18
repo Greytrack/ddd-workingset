@@ -2,6 +2,7 @@ package alm.requirement.application.port;
 
 import java.util.Optional;
 
+import alm.requirement.application.command.RequirementSnapshot;
 import sk.workingset.domain.event.SnapshotRef;
 
 /**

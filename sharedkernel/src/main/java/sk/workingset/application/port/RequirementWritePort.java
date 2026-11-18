@@ -1,5 +1,9 @@
 package sk.workingset.application.port;
 
+import sk.workingset.application.command.dto.MaterializeRequest;
+import sk.workingset.application.command.dto.RequirementMergeCommand;
+import sk.workingset.application.common.TargetIdentity;
+
 import java.util.List;
 
 import sk.workingset.domain.LocalId;

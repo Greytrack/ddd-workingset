@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.application.port.RequirementSnapshot;
 import alm.requirement.application.port.SnapshotStore;
 import sk.workingset.application.ApplicationFailure;
 import sk.workingset.application.FailureReason;

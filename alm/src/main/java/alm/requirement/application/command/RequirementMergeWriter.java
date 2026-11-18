@@ -9,7 +9,7 @@ import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.application.port.RequirementMutationStore;
-import sk.workingset.application.port.RequirementMergeCommand;
+import sk.workingset.application.command.dto.RequirementMergeCommand;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Version;

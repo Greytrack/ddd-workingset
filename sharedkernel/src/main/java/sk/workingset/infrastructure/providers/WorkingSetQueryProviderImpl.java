@@ -1,5 +1,7 @@
 package sk.workingset.infrastructure.providers;
 
+import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -8,13 +10,12 @@ import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
 
 /** MyBatis-Plus 查询适配器；只读，不重建 WorkingSet 聚合。 */
-public final class WorkingSetQueryAdapter implements WorkingSetQueryProvider {
+public final class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
     private final WorkingSetQueryMapper mapper;
 
-    public WorkingSetQueryAdapter(WorkingSetQueryMapper mapper) {
+    public WorkingSetQueryProviderImpl(WorkingSetQueryMapper mapper) {
         this.mapper = mapper;
     }
 

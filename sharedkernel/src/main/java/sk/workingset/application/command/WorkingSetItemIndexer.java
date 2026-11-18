@@ -21,7 +21,7 @@ import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.port.TrackerItemCatalog;
 import sk.workingset.application.port.TrackerItemReadPort;
 import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.application.port.WorkingSetCreationSnapshotStore;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
@@ -47,17 +47,17 @@ public final class WorkingSetItemIndexer {
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
     private final TrackerItemCatalog catalog;
-    private final WorkingSetCreationSnapshotStore snapshots;
+    private final WorkingSetCreationSnapshotRepository snapshots;
     private final BusinessTrackerItems businessItems;
     private final Function<LocalId, TrackerItemReadPort> readPorts;
     private final IdentifierGenerator ids;
     private final int batchSize;
 
     public WorkingSetItemIndexer(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                  LightTrackerItemRepository items, TrackerItemCatalog catalog,
-                                  WorkingSetCreationSnapshotStore snapshots, BusinessTrackerItems businessItems,
-                                  Function<LocalId, TrackerItemReadPort> readPorts,
-                                  IdentifierGenerator ids, int batchSize) {
+                                 LightTrackerItemRepository items, TrackerItemCatalog catalog,
+                                 WorkingSetCreationSnapshotRepository snapshots, BusinessTrackerItems businessItems,
+                                 Function<LocalId, TrackerItemReadPort> readPorts,
+                                 IdentifierGenerator ids, int batchSize) {
         if (batchSize < 1) {
             throw new IllegalArgumentException("Index batch size must be positive");
         }
@@ -84,7 +84,7 @@ public final class WorkingSetItemIndexer {
         }
         for (String parent : parents) {
             var parentTracker = TrackerId.of(parent);
-            var frozen = new ArrayList<WorkingSetCreationSnapshotStore.Item>();
+            var frozen = new ArrayList<WorkingSetCreationSnapshotRepository.Item>();
             String cursor = "";
             while (true) {
                 var candidates = livePage(parentTracker, cursor);
@@ -94,7 +94,7 @@ public final class WorkingSetItemIndexer {
                             || catalog.hasActiveFamily(parentTracker, candidate.commonId()))) {
                         continue;
                     }
-                    frozen.add(new WorkingSetCreationSnapshotStore.Item(parent, candidate.localId(),
+                    frozen.add(new WorkingSetCreationSnapshotRepository.Item(parent, candidate.localId(),
                             candidate.commonId(), candidate.revision(), candidate.sourceId(),
                             candidate.sourceRevision()));
                 }
@@ -245,7 +245,7 @@ public final class WorkingSetItemIndexer {
             return new Candidate(item.localId(), item.commonId(), item.revision(), item.localId(), item.revision(), false);
         }
 
-        static Candidate from(WorkingSetCreationSnapshotStore.Item item) {
+        static Candidate from(WorkingSetCreationSnapshotRepository.Item item) {
             return new Candidate(item.localId(), item.commonId(), item.revision(),
                     item.sourceLocalId(), item.sourceRevision(), false);
         }

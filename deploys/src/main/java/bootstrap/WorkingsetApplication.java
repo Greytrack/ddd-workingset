@@ -15,8 +15,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         "sk.workingset.adapters", "sk.workingset.application.eventhandler"
 })
 @MapperScan({
-        "sk.workingset.infrastructure.providers.mybatis",
-        "alm.requirement.infrastructure.providers.mybatis"
+        "sk.workingset.infrastructure.providers",
+        "alm.requirement.infrastructure.providers"
 })
 public class WorkingsetApplication {
 

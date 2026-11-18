@@ -1,4 +1,4 @@
-package sk.workingset.application;
+package sk.workingset.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,7 +9,7 @@ import sk.workingset.domain.Revision;
  * COW 物化收据存储端口：按 {@code eventId + targetLocalId} 记录 PENDING/MATERIALIZED/SWITCHED/FAILED、
  * 尝试次数与是否已保存业务对象，支撑幂等与“切换补偿”。
  */
-public interface CowMaterializationStore {
+public interface CowMaterializationRepository {
     enum Status { PENDING, MATERIALIZED, SWITCHED, FAILED }
 
     record Entry(long eventId, LocalId targetLocalId, LocalId sourceLocalId, Revision sourceRevision,

@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import sk.workingset.domain.event.RequirementChanged;
 import sk.workingset.domain.event.SnapshotRef;
-import sk.workingset.application.port.MaterializeRequest;
+import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
-import sk.workingset.application.port.TargetIdentity;
+import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;
@@ -29,6 +29,7 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 class CowEventHandlerTest {
@@ -47,13 +48,13 @@ class CowEventHandlerTest {
         when(items.findById(eligible.localId())).thenReturn(Optional.of(eligible));
         var event = new RequirementChanged(42, source, source, before, after,
                 LockVersion.of(5), LockVersion.of(6), SnapshotRef.of("258782756974528"), Instant.EPOCH);
-        var store = mock(CowMaterializationStore.class);
-        var pending = new CowMaterializationStore.Entry(42, eligible.localId(), source, before,
-                CowMaterializationStore.Status.PENDING, 1, false, null);
+        var store = mock(CowMaterializationRepository.class);
+        var pending = new CowMaterializationRepository.Entry(42, eligible.localId(), source, before,
+                CowMaterializationRepository.Status.PENDING, 1, false, null);
         when(store.findByEventAndTarget(42, eligible.localId())).thenReturn(Optional.of(pending));
         when(store.lockByEventAndTarget(42, eligible.localId())).thenReturn(Optional.of(
-                new CowMaterializationStore.Entry(42, eligible.localId(), source, before,
-                        CowMaterializationStore.Status.MATERIALIZED, 1, true, null)));
+                new CowMaterializationRepository.Entry(42, eligible.localId(), source, before,
+                        CowMaterializationRepository.Status.MATERIALIZED, 1, true, null)));
         var lifecycle = mock(TrackerItemLifecyclePort.class);
         when(lifecycle.lockMaterializationTarget(eligible.trackerId(), eligible.localId()))
                 .thenReturn(TargetIdentity.of(eligible));

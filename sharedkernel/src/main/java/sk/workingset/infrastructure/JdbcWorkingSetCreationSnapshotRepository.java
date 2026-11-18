@@ -6,13 +6,13 @@ import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import sk.workingset.application.port.WorkingSetCreationSnapshotStore;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 
 /** 创建任务受理时冻结的父 Item 身份快照（PostgreSQL）。 */
-public final class JdbcWorkingSetCreationSnapshotStore implements WorkingSetCreationSnapshotStore {
+public final class JdbcWorkingSetCreationSnapshotRepository implements WorkingSetCreationSnapshotRepository {
     private final JdbcTemplate jdbc;
 
-    public JdbcWorkingSetCreationSnapshotStore(JdbcTemplate jdbc) {
+    public JdbcWorkingSetCreationSnapshotRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 

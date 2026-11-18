@@ -9,9 +9,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.port.MaterializationRejectedException;
+import sk.workingset.application.common.MaterializationRejectedException;
 import sk.workingset.domain.event.MergeTarget;
-import sk.workingset.application.port.TargetIdentity;
+import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.CommonId;

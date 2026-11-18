@@ -1,4 +1,4 @@
-package sk.workingset.application.port;
+package sk.workingset.application.common;
 
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;

@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
-import alm.requirement.application.port.RequirementSnapshot;
+import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.application.port.SnapshotStore;
 import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.application.port.IdentifierGenerator;

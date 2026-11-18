@@ -1,15 +1,15 @@
-package sk.workingset.infrastructure;
+package sk.workingset.infrastructure.repositories;
 
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import sk.workingset.application.CowMaterializationStore;
+import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
 /** COW 物化收据的 JDBC 实现：按事件与目标变体做幂等 upsert 与状态推进。 */
-public final class JdbcCowMaterializationStore implements CowMaterializationStore {
+public final class JdbcCowMaterializationRepository implements CowMaterializationRepository {
     private static final String FIND = "SELECT * FROM cow_materializations WHERE event_id = ? AND target_local_id = ?";
     private static final RowMapper<Entry> ENTRY = (row, number) -> new Entry(row.getLong("event_id"),
             LocalId.of(row.getLong("target_local_id")), LocalId.of(row.getLong("source_local_id")),
@@ -18,7 +18,7 @@ public final class JdbcCowMaterializationStore implements CowMaterializationStor
 
     private final JdbcTemplate jdbc;
 
-    public JdbcCowMaterializationStore(JdbcTemplate jdbc) {
+    public JdbcCowMaterializationRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
