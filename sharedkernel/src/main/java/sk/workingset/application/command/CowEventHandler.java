@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
@@ -45,7 +45,7 @@ public final class CowEventHandler {
         this.recovery = recovery;
     }
 
-    public void onRequirementChanged(RequirementChanged event) {
+    public void onTrackerItemChanged(BusinessObjectUpdateEvent event) {
         List<CowFailureLog.Failure> failures = new ArrayList<>();
         List<RuntimeException> causes = new ArrayList<>();
         for (LightTrackerItem target : items.findBySource(event.sourceLocalId(), event.beforeRevision())) {

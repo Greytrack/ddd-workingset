@@ -14,7 +14,7 @@ import alm.requirement.domain.RequirementRepository;
 import alm.requirement.domain.SnapshotRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.domain.event.TrackerItemCreated;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
@@ -108,7 +108,7 @@ public class RequirementCommandService {
 
     /**
      * 普通修改标题：先以 {@code expectedLockVersion} 判乐观锁（冲突即失败，不产生快照或事件），
-     * 再捕获修改前完整快照，保存成功后发布 {@link RequirementChanged}。
+     * 再捕获修改前完整快照，保存成功后发布 {@link BusinessObjectUpdateEvent}。
      *
      * <p>业务 {@code revision} 不升级；发布大版本 {@code version} 不变；仅乐观锁自动 +1。
      */
@@ -197,7 +197,7 @@ public class RequirementCommandService {
 
         repository.save(changed);
 
-        RequirementChanged event = new RequirementChanged(
+        BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(
                 identifierGenerator.nextId(null).longValue(),
                 changed.localId(),
                 changed.localId(),

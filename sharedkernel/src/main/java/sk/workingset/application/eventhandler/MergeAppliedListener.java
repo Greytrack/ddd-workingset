@@ -12,11 +12,11 @@ import sk.workingset.application.port.TrackerItemLifecyclePort;
  * <p>处理幂等；失败保留为 Modulith 未完成事件，可经 `/api/cow/recover/incomplete` 重投。
  */
 @Component
-public class RequirementMergeAppliedListener {
+public class MergeAppliedListener {
 
     private final TrackerItemLifecyclePort lifecycle;
 
-    public RequirementMergeAppliedListener(TrackerItemLifecyclePort lifecycle) {
+    public MergeAppliedListener(TrackerItemLifecyclePort lifecycle) {
         this.lifecycle = lifecycle;
     }
 

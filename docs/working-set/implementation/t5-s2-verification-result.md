@@ -23,7 +23,7 @@ BUILD SUCCESS
 | 连续修改：事件有序、每次捕获修改前快照 | 同上 `#consecutive_changes_publish_ordered_events_and_capture_each_pre_change_snapshot` | ✅ |
 | 保存失败不发布事件 | 同上 `#save_failure_does_not_publish_event_or_change_stored_content` | ✅ |
 | Spring Boot 非 web 上下文可加载 | `bootstrap.ApplicationContextTest#context_loads_without_web_and_exposes_composition_root_beans` | ✅ |
-| `RequirementChanged` 经 Spring Event 同步派发 | 同上 `#requirement_changed_is_delivered_through_spring_event_synchronously` | ✅ |
+| `BusinessObjectUpdateEvent` 经 Spring Event 同步派发 | 同上 `#requirement_changed_is_delivered_through_spring_event_synchronously` | ✅ |
 | 雪花 ID 唯一性、位段、时钟回拨 | `sk.workingset.infrastructure.SnowflakeIdGeneratorTest`（5 项） | ✅ |
 | 派生 LocalId/TrackerId 为雪花值（非 UUID） | Historical：原 `derived_local_id_is_a_snowflake_value_not_uuid` 已随单 Item 派生入口删除；雪花身份由现有 ID/存储测试覆盖 | ✅（当时） |
 | changeTitle 不可变、version 可空与 lock_version 自动递增 | `alm.requirement.domain.RequirementTest`（6 项） | ✅ |
@@ -35,7 +35,7 @@ BUILD SUCCESS
 | 层 | 包 | 内容 |
 | --- | --- | --- |
 | SK 应用端口 | `sk.workingset.application.port` | `IdentifierGenerator`（`long nextId()`） |
-| SK 事件信封 | `sk.workingset.application.event` | `RequirementChanged`（`eventId`/`requirementId`/`sourceLocalId`/`revision`/`snapshotRef`/`occurredAt`）、`SnapshotRef` |
+| SK 事件信封 | `sk.workingset.application.event` | `BusinessObjectUpdateEvent`（`eventId`/`requirementId`/`sourceLocalId`/`revision`/`snapshotRef`/`occurredAt`）、`SnapshotRef` |
 | SK 基础设施 | `sk.workingset.infrastructure` | `SnowflakeIdGenerator`（3/3/5 位宽、2020-01-01 纪元、回拨拒绝、`synchronized`） |
 | ALM 领域 | `alm.requirement.domain` | `Requirement.changeTitle(String, LockVersion)`（不可变、`lock_version` 自动 +1、`revision`/`version` 不变）、`LockVersionConflictException` |
 | ALM 应用 | `alm.requirement.application` | `RequirementApplicationService.changeTitle`（并发校验 → 修改前快照 → 保存 → 发布事件） |

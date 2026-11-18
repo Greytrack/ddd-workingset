@@ -83,7 +83,7 @@ ttl     workingset:lti:443628229325089 -> 30
 
 ## 5. 事件发布证据（Spring Modulith Event Publication Registry）
 
-- `RequirementApplicationService.changeTitle` 使用 `@Transactional`，保存成功后发布 `RequirementChanged`。
+- `RequirementApplicationService.changeTitle` 使用 `@Transactional`，保存成功后发布 `BusinessObjectUpdateEvent`。
 - `bootstrap.RequirementChangedListener` 使用 `@ApplicationModuleListener` 接收事件，并交给 `CowEventHandler` / `SourceSerialCowCoordinator`；S3 已接入首次 COW，证据见 [S3 验证](t5-s3-verification-result.md)。
 - **业务事务内写入事件记录**：`@Transactional` 覆盖业务保存、快照写入与 Modulith 的 `event_publication` 记录；业务回滚时事件记录一并回滚（应用内 Outbox 风格原子性，不是外部 Outbox/MQ）。
 - **提交后独立事务消费**：`@ApplicationModuleListener` 组合 `@TransactionalEventListener(AFTER_COMMIT)`、`@Async` 与新事务；监听器在业务提交后由异步线程执行，失败不回滚业务事务，记录保持未完成，可通过 `IncompleteEventPublications.resubmitIncompletePublications(...)` 或启动时自动重提恢复。

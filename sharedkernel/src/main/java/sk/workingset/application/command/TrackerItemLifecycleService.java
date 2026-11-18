@@ -20,7 +20,6 @@ import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 
 /**
  * SK 拥有的 LTI 生命周期协作实现（D4 方案 A）。
@@ -74,18 +73,6 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
                 .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target variant is missing"));
     }
 
-    @Override
-    @Transactional
-    public void assertPurgeable(TrackerId trackerId, LocalId localId) {
-        trackers.lockTracker(trackerId);
-        if (items.hasSourceBackedDependents(localId)
-                || items.findById(localId).filter(item -> !item.materialized()).isPresent()) {
-            throw DomainException.withMessage(FailureReason.DEPENDENCY_UNAVAILABLE,
-                    "Requirement content is still needed by COW");
-        }
-    }
-
-    @Override
     @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);

@@ -23,7 +23,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import alm.requirement.application.command.RequirementCommandService;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
-import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -51,10 +51,10 @@ class ApplicationContextTest {
     @Test
     void requirement_changed_is_published_and_visible_to_synchronous_listeners() {
         try (ConfigurableApplicationContext context = start()) {
-            List<RequirementChanged> received = new CopyOnWriteArrayList<>();
+            List<BusinessObjectUpdateEvent> received = new CopyOnWriteArrayList<>();
             context.addApplicationListener(
                     (ApplicationListener<PayloadApplicationEvent<?>>) event -> {
-                        if (event.getPayload() instanceof RequirementChanged changed) received.add(changed);
+                        if (event.getPayload() instanceof BusinessObjectUpdateEvent changed) received.add(changed);
                     });
             RequirementCommandService service = context.getBean(RequirementCommandService.class);
             TrackerId trackerId = TrackerId.of(fixtureId("tracker-" + UUID.randomUUID()));
@@ -82,12 +82,12 @@ class ApplicationContextTest {
         }
     }
 
-    private void verifyPublishedChange(RequirementCommandService service, List<RequirementChanged> received,
+    private void verifyPublishedChange(RequirementCommandService service, List<BusinessObjectUpdateEvent> received,
                                        LocalId localId) {
         service.changeTitle(localId, "B", LockVersion.of(0));
 
         assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
-        RequirementChanged event = received.getFirst();
+        BusinessObjectUpdateEvent event = received.getFirst();
         assertEquals(localId, event.requirementId());
         assertEquals(localId, event.sourceLocalId());
         assertEquals(R3, event.beforeRevision());

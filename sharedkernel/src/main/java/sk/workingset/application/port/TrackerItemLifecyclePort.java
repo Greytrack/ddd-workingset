@@ -38,16 +38,6 @@ public interface TrackerItemLifecyclePort {
     TargetIdentity lockMaterializationTarget(TrackerId trackerId, LocalId targetLocalId);
 
     /**
-     * 永久删除业务对象前的前置校验：内容仍被未物化变体依赖时拒绝。
-     *
-     * <p>在调用方事务内锁定 Tracker，保证判定与业务删除处于同一事务边界。
-     */
-    void assertPurgeable(TrackerId trackerId, LocalId localId);
-
-    /** 幂等移除业务对象对应的 LTI；由业务对象永久删除事件驱动。 */
-    void removePurged(LocalId localId);
-
-    /**
      * 业务 Merge 写入提交后切换/创建目标变体（D15-B，独立事务、幂等）。
      */
     void applyMergeTarget(MergeTarget target);

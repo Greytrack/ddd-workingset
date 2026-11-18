@@ -212,7 +212,7 @@ SourceSerialCowCoordinator 按 sourceLocalId 串行（跨来源可并行）
 
 | 类型 | 职责 |
 | --- | --- |
-| `RequirementChanged` | 公共信封：`eventId`、`requirementId`、`sourceLocalId`、`beforeRevision`、`afterRevision`、`beforeLockVersion`、`afterLockVersion`、`snapshotRef`、`occurredAt`；普通修改两版次相等，显式升级可不同 |
+| `BusinessObjectUpdateEvent` | 公共信封：`eventId`、`requirementId`、`sourceLocalId`、`beforeRevision`、`afterRevision`、`beforeLockVersion`、`afterLockVersion`、`snapshotRef`、`occurredAt`；普通修改两版次相等，显式升级可不同 |
 | `SnapshotRef` | 不可变快照引用 |
 
 **辅助类型（最小集，不扩展为通用框架）**

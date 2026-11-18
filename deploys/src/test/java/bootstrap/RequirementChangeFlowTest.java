@@ -27,7 +27,7 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.SnapshotRepository;
-import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRef;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
@@ -72,7 +72,7 @@ class RequirementChangeFlowTest {
         assertEquals(LockVersion.of(1), changed.lockVersion());
         verify(requirements).save(changed);
 
-        var events = ArgumentCaptor.forClass(RequirementChanged.class);
+        var events = ArgumentCaptor.forClass(BusinessObjectUpdateEvent.class);
         verify(publisher).publishEvent(events.capture());
         var event = events.getValue();
         assertTrue(event.eventId() > 0);
@@ -97,7 +97,7 @@ class RequirementChangeFlowTest {
 
         var order = inOrder(requirements, publisher);
         order.verify(requirements).save(changed);
-        order.verify(publisher).publishEvent(any(RequirementChanged.class));
+        order.verify(publisher).publishEvent(any(BusinessObjectUpdateEvent.class));
     }
 
     @Test
@@ -126,7 +126,7 @@ class RequirementChangeFlowTest {
         assertEquals(LockVersion.of(0), captured.getAllValues().get(0).lockVersion());
         assertEquals(LockVersion.of(1), captured.getAllValues().get(1).lockVersion());
 
-        var events = ArgumentCaptor.forClass(RequirementChanged.class);
+        var events = ArgumentCaptor.forClass(BusinessObjectUpdateEvent.class);
         verify(publisher, times(2)).publishEvent(events.capture());
         assertEvent(events.getAllValues().get(0), FIRST, 0, 1);
         assertEvent(events.getAllValues().get(1), SECOND, 1, 2);
@@ -151,7 +151,7 @@ class RequirementChangeFlowTest {
         assertEquals(LockVersion.of(0), before.lockVersion());
     }
 
-    private static void assertEvent(RequirementChanged event, SnapshotRef ref, long beforeLock, long afterLock) {
+    private static void assertEvent(BusinessObjectUpdateEvent event, SnapshotRef ref, long beforeLock, long afterLock) {
         assertEquals(R3, event.beforeRevision());
         assertEquals(R3, event.afterRevision());
         assertEquals(LockVersion.of(beforeLock), event.beforeLockVersion());

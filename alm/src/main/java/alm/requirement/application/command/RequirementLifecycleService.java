@@ -21,21 +21,17 @@ import sk.workingset.domain.LocalId;
  */
 public class RequirementLifecycleService {
     private final RequirementMutationStore requirements;
-    private final TrackerItemLifecyclePort lifecycle;
     private final ApplicationEventPublisher eventPublisher;
 
     public RequirementLifecycleService(RequirementMutationStore requirements,
-                                       TrackerItemLifecyclePort lifecycle,
                                        ApplicationEventPublisher eventPublisher) {
         this.requirements = requirements;
-        this.lifecycle = lifecycle;
         this.eventPublisher = eventPublisher;
     }
 
     @Transactional
     public void delete2(LocalId id) {
         var candidate = requirements.findById(id).orElseThrow(() -> missing(id));
-        lifecycle.assertPurgeable(candidate.trackerId(), id);
         var current = requirements.lockById(id).orElseThrow(() -> missing(id));
         var decision = current.delete2(LifecycleCommand.locked("permanent delete"));
         if (!decision.succeeded()) {

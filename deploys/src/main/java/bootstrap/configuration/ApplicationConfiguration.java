@@ -40,7 +40,7 @@ import sk.workingset.application.command.TrackerItemLifecycleService;
 import sk.workingset.application.port.RelationSourcePort;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.infrastructure.repositories.JdbcMergeRepository;
-import sk.workingset.domain.event.RequirementChanged;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.RequirementMergeApplied;
 import sk.workingset.domain.event.CompleteDeleteEvent;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
@@ -119,7 +119,7 @@ public class ApplicationConfiguration {
                                                  IncompleteEventPublications publications) {
         return new CowRecoveryService(store, items, writePort, failureLog, newTransactionTemplate,
                 () -> publications.resubmitIncompletePublications(p ->
-                        p.getEvent() instanceof RequirementChanged
+                        p.getEvent() instanceof BusinessObjectUpdateEvent
                                 || p.getEvent() instanceof CompleteDeleteEvent
                                 || p.getEvent() instanceof RequirementMergeApplied));
     }
@@ -268,9 +268,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public RequirementLifecycleService requirementLifecycleService(JdbcRequirementRepository requirements,
-            TrackerItemLifecyclePort lifecycle, ApplicationEventPublisher events) {
-        return new RequirementLifecycleService(requirements, lifecycle, events);
+    public RequirementLifecycleService requirementLifecycleService(JdbcRequirementRepository requirements, ApplicationEventPublisher events) {
+        return new RequirementLifecycleService(requirements, events);
     }
 
     @Bean

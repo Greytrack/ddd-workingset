@@ -23,17 +23,17 @@ import sk.workingset.domain.Revision;
  * @param snapshotRef    修改前不可变快照引用
  * @param occurredAt     事件发生时间
  */
-public record RequirementChanged(long eventId,
-                                 LocalId requirementId,
-                                 LocalId sourceLocalId,
-                                 Revision beforeRevision,
-                                 Revision afterRevision,
-                                 LockVersion beforeLockVersion,
-                                 LockVersion afterLockVersion,
-                                 SnapshotRef snapshotRef,
-                                 Instant occurredAt) {
+public record BusinessObjectUpdateEvent(long eventId,
+                                        LocalId requirementId,
+                                        LocalId sourceLocalId,
+                                        Revision beforeRevision,
+                                        Revision afterRevision,
+                                        LockVersion beforeLockVersion,
+                                        LockVersion afterLockVersion,
+                                        SnapshotRef snapshotRef,
+                                        Instant occurredAt) {
 
-    public RequirementChanged {
+    public BusinessObjectUpdateEvent {
         Objects.requireNonNull(requirementId, "requirementId");
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
         Objects.requireNonNull(beforeRevision, "beforeRevision");

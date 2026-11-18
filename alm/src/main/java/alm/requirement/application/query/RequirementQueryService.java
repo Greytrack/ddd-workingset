@@ -39,13 +39,12 @@ public class RequirementQueryService {
             }
             return persisted.get();
         }
-        var inherited = lifecycle.findInheritedTarget(localId)
+        return lifecycle.findInheritedTarget(localId)
                 .map(target -> {
                     trackerScope.requireWorkingSetReady(target.workingSetId());
                     return detail(rebuildInherited(target));
                 })
                 .orElseGet(() -> detail(load(localId)));
-        return inherited;
     }
 
     private Requirement rebuildInherited(InheritedEditTarget target) {
