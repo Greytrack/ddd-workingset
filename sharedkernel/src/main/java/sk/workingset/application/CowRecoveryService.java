@@ -1,6 +1,5 @@
 package sk.workingset.application;
 
-import java.util.List;
 import sk.workingset.application.port.LightTrackerItemRepository;
 import sk.workingset.application.port.MaterializationRejectedException;
 import sk.workingset.application.port.RequirementWritePort;
@@ -62,10 +61,4 @@ public final class CowRecoveryService {
         });
     }
 
-    public RecoveryDetails listFailures(LocalId source) {
-        return new RecoveryDetails(failures.findBySource(source), store.findBySource(source));
-    }
-
-    public record RecoveryDetails(List<CowFailureLog.Failure> failures,
-                                  List<CowMaterializationStore.Entry> materializations) {}
 }

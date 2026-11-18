@@ -19,7 +19,7 @@
 | **MergeCheckpoint** | 独立聚合根 | 规范化 Tracker 对 + `CommonId` | 确认/撤销因果单调；方向只是属性；WorkingSet 不参与；不证明内容相等 | 按 Tracker 对/家族/双侧版次关联 MergeRound |
 | **TrackerItem** | 公共契约（非聚合） | 无 | 公共身份、Revision 与生命周期能力声明 | 业务 BC 聚合实现 |
 | **BusinessObject** | 公共能力接口（非聚合） | 无 | `delete/undelete/delete2` 能力声明；实际规则由 BC 拥有 | `TrackerItem` 继承 |
-| **Reference／Association** | 关系模型候选 | 各自关系身份 | 端点意图、钉版、有效性、修复；不参与 Compare/Merge | 引用业务对象/变体 |
+| **Reference／Association** | SK 关系聚合（WorkingSet 不拥有；本轮只发事件） | 业务关系聚合 ID | 端点意图、钉版、有效性、修复；不参与 Compare/Merge | 关系服务消费事件；引用业务对象/变体 |
 | **WorkingSetCreation** | LRO 载体聚合 | `creationId`；`requestId` 幂等 | 任务状态机、范围快照、部分成功明细；不拥有 WorkingSet/Tracker/LTI | ID 引用父/目标 WS |
 
 完整业务内容与状态机由各业务 BC 的聚合负责。Working Set 的聚合之间按身份引用。跨 BC 写入见 [T4](cross-bc-contract-v1.md)。
@@ -36,5 +36,5 @@
 | 项 | 现状 | 影响 | 关联 |
 | --- | --- | --- | --- |
 | WorkingSet/Binding 规模与并发上限 | 未采样；当前单聚合装载全部绑定 | 可能否定当前聚合装载假设，触发 Manifest/分片方案 | `QUESTION-012` |
-| Reference/Association 的聚合归属 | QUESTION-010 C 已定端点身份；关系归属/删除守卫未定 | T7-E 表与端口 | `QUESTION-010` |
+| Reference/Association 的消费与守卫 | WorkingSet 侧事件已实现；关系服务归属/消费守卫未定 | T7-E 表与端口 | `QUESTION-010` |
 | 创建任务收尾 | 保留、取消与补齐待定 | 终态后的任务治理 | `QUESTION-017` |

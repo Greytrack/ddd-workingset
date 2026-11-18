@@ -202,7 +202,7 @@ public class WorkingSetCreationService {
                     var scannedTrackers = updated.indexProgress().values().stream()
                             .map(IndexProgress::scannedChildTrackerId).filter(java.util.Objects::nonNull).sorted().toList();
                     events.publishEvent(new TrackerItemsIndexed(id, updated.request().newWorkingSetId(),
-                            scannedTrackers, updated.completedAt()));
+                            scannedTrackers, Instant.now()));
                 }
                 return updated.status() == Status.Running;
             }));

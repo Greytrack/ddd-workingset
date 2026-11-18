@@ -1,7 +1,7 @@
 package sk.workingset.application.event;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
@@ -31,7 +31,7 @@ class RelationEventContractTest {
         assertEquals(source, event.source());
         assertEquals(target, event.target());
         assertEquals("reference-1", event.metadata().originalRelationId());
-        assertFalse(target.isResolved());
+        assertNull(target.localId());
     }
 
     @Test

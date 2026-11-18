@@ -1,6 +1,6 @@
 # T5-S1 验证结果
 
-**状态：Verified（S1 完成，2026-11-11）**
+**状态：Historical（T5 首切片验收记录；当前实现以 T6/T7 为准）**
 
 - 范围：工程骨架与派生/查询链路（AT-01、AT-02、AC-01、AC-02 的 S1 适用部分）
 - 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)

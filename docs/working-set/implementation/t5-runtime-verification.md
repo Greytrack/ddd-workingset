@@ -1,6 +1,6 @@
 # T5 运行时骨架验证结果（PostgreSQL + Redis + Web + Modulith 事件）
 
-**状态：Verified（2026-11-12）**
+**状态：Historical（T5 首切片验收记录；当前实现以 T6/T7 为准）**
 
 - 范围：把首切片从纯内存单元验证推进到可启动的 Web 运行时：Spring Boot 内嵌 Tomcat、PostgreSQL/Spring JDBC 持久化、Redis 缓存、Spring Modulith 事件发布注册表、yml 配置与最小 REST API
 - 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[S2 验证结果](t5-s2-verification-result.md)、[S3 验证结果](t5-s3-verification-result.md)

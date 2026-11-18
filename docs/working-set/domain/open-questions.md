@@ -54,10 +54,7 @@
 | T6-F | Shared 允许悬挂；同槽多 Tracker（独立分类投影）+ `is_default`；`sourceId` 不可变；派生链 1:1；完成即可见 | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
 | Checkpoint | 身份 = 两侧 Tracker 分支 + 家族；方向只是属性；WorkingSet 不参与；同一 Tracker 对禁止并发合并 | [Checkpoint 修正](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md) |
 
-## 实现偏差
 
-- **扩展期间已有范围**：[T7 §12A](working-set-creation-lro-design.md) 约定保持可见可操作，当前 [JDBC 查询门禁](../../../sharedkernel/src/main/java/sk/workingset/infrastructure/JdbcBindingRepositories.java#L101) 仍拦截以同一工作集为目标的所有运行中任务。后续应区分创建与扩展，并验收扩展期间已有范围可读写、新派生 Tracker 到终态才可见。
-- **索引完成事件的发生时间**：[任务执行器](../../../sharedkernel/src/main/java/sk/workingset/application/WorkingSetCreationService.java#L200) 在退出索引阶段发布事件，但使用任务的 `completedAt`。进入关系发布步骤时任务仍可为 `Running`，事件因此可能没有时间戳。后续应以索引完成时点填充并验收。
 
 ## 历史入口
 

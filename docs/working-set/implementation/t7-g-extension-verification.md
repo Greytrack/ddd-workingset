@@ -43,7 +43,7 @@
 - `rejectsAnotherExtensionWhileOneIsUnfinished`
   - 存在未终态扩展任务时，新请求返回 409 `Preparing`。
 
-`mvn -B test`：**159 项通过，0 失败、0 错误、0 跳过**。
+`mvn -B test`：**161 项通过，0 失败、0 错误、0 跳过**。
 `WorkingSetCreationAcceptanceTest`：17 项通过。
 
 Chrome（Playwright 模拟接口）验证默认与子工作集入口切换、已纳入项展示和禁用、按源 ID 提交多选结果，以及任务终态后的范围刷新。

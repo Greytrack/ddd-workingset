@@ -1,6 +1,6 @@
 # T7-E 关系事件契约（2026-11-17 最新业务决策）
 
-**状态：Draft（待用户确认）**。范围：T7-E 在创建/扩展工作集和 Merge 完成后的**关系事件发布**；WorkingSet 不操作 Reference/Association 聚合。
+**状态：Reviewed（2026-11-18；工作集侧事件契约与发布已实现，关系消费守卫仍开放）**。范围：T7-E 在创建/扩展工作集和 Merge 完成后的**关系事件发布**；WorkingSet 不操作 Reference/Association 聚合。
 
 ## 1. 职责边界
 
@@ -175,13 +175,13 @@ Merge 完成
 - `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
 - `T7RelationEventAcceptanceTest` 覆盖创建/扩展 task 实际发布 Reference/Association/Dangling repair 三类事件。
 - T7 创建/扩展已接入 `PUBLISH_RELATION_EVENTS`：索引后逐 Tracker 发布新引用/关联/悬空修复事件；失败记录为任务明细并进入 `PartiallySucceeded`，不自动重试。
-- 全量测试 **150 项通过**。
+- 全量测试 **161 项通过**。
 - Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布 `DanglingReferenceRepairRequested`；失败不改变 Merge 终态、不自动重试。
 
-## 7. 待确认
+## 7. 仍开放
 
-1. `originalRelationId` 是业务关系聚合 ID，还是 WorkingSet 侧生成的关联事件 ID？建议使用业务关系聚合 ID。
-2. `targetWorkingSetId` 悬空时也必填；`targetLocalId` 允许为空。此条已确认。
-3. `PUBLISH_RELATION_EVENTS` 是否进入 T7 任务 stage/终态，还是独立关系构建记录；建议进入 stage 但不阻塞主流程。
-4. Merge 后关系修复是独立 step，还是由 Merge 事件触发关系服务自行处理；建议独立 step + 事件。
-5. 事件命名是否采用 `...Requested`（推荐，因为 WorkingSet 不拥有关系聚合）还是 `...Created`。
+1. 关系消费方与真实业务 BC `RelationSourcePort` Adapter 尚未接入；五类守卫由消费方实现（QUESTION-010）。
+2. 关系请求事件当前经 Spring `ApplicationEventPublisher` 发布，尚无 Modulith 消费者/outbox 持久化；需保证事件不因进程退出丢失，或明确降级语义。
+3. Merge 关系修复失败目前只记日志，未持久化独立状态；是否补修复状态/重试按 QUESTION-018 裁定。
+4. Merge 后仅修复 Reference；Association 的缺失意图恢复是否进入首版仍开放。
+5. T7 关系发布 step 的失败已进入任务明细；消费侧失败记录与关系进度视图待接入。

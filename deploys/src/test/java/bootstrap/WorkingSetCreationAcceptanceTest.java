@@ -417,6 +417,7 @@ class WorkingSetCreationAcceptanceTest {
             assertNotNull(event);
             assertEquals(id, event.creationId());
             assertEquals(List.of(copied), event.trackerIds());
+            assertNotNull(event.occurredAt());
         });
         String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
                 String.class, child, nativeId);
@@ -506,6 +507,30 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals("NoDerivableTracker", duplicate.getBody().get("reason"));
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
+    }
+
+    @Test
+    void extensionKeepsExistingWorkingSetVisibleWhileTaskRuns() throws Exception {
+        seedRange();
+        createTarget();
+        seedItem(unshared, fixtureId("extension-visible-" + child), fixtureId("extension-visible-" + child), false);
+        String id;
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.prepareStatement(
+                    "SELECT working_set_id FROM working_sets WHERE working_set_id = ? FOR UPDATE")) {
+                statement.setLong(1, Long.parseLong(child));
+                statement.executeQuery().close();
+                id = extension(List.of(unshared));
+                await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                        assertEquals(Stage.BIND_PRODUCT_SPACES, task(id).stage()));
+                var visible = rest.getForEntity("/api/worksets/" + child, Map.class);
+                assertEquals(HttpStatus.OK, visible.getStatusCode());
+            } finally {
+                connection.rollback();
+            }
+        }
+        awaitStatus(id, Status.Succeeded);
     }
 
     @Test

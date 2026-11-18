@@ -83,12 +83,11 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 | 状态 | 含义 | 可迁移到 |
 | --- | --- | --- |
-| `Compared` | Diff 已产生、决定未提交 | 随一页决策提交进入 `Decided` |
 | `Decided` | 决定已登记，等待执行 | `Applying`、`StaleEvidence`、`Deferred` |
 | `Applying` | 已提交业务 BC，等待结果 | `Applied`、`Rejected` |
 | `Applied` | 业务操作成功（含 `KEEP_TARGET` 的无写入） | `Confirmed`（markAsMerged=true） |
 | `Rejected` | 业务 BC 校验拒绝 | 终态（重做须新建 MergeRound） |
-| `StaleEvidence` | 提交依据已过期 | 终态；须重新 `compare` 产生新 token，并新建 MergeRound |
+| `StaleEvidence` | 提交依据已过期 | 终态；须重新 `compare` 并新建 MergeRound |
 | `Deferred` | 用户显式延迟 | 终态（本轮不可完成，进入后续新轮次） |
 | `Confirmed` | 已记录 Checkpoint | 终态 |
 
@@ -97,7 +96,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 - `Deferred` **不得**迁移到 `Confirmed`（INV-008）；
 - `StaleEvidence` 不得直接执行，必须先重新比较；
 - `Applied` 是业务事实，`Confirmed` 是处理事实，两者分离（FACT-008）；
-- 条目终态后不可再次执行；**跨轮次重做必须新建 MergeRound**（新 `mergeRoundId`、有效 token），原结果保留可追溯（Q4）。
+- 条目终态后不可再次执行；**跨轮次重做必须新建 MergeRound**（新 `mergeRoundId`），原结果保留可追溯（Q4）。
 
 ## 6. MergeCheckpoint 主要领域行为与不变量
 

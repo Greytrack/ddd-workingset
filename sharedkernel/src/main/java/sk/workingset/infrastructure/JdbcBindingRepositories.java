@@ -101,7 +101,8 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
     public void requireReady(WorkingSetId id) {
         boolean preparing = Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM working_set_creations
-                    WHERE new_working_set_id = ? AND status IN ('Pending', 'Running'))
+                    WHERE new_working_set_id = ? AND status IN ('Pending', 'Running')
+                      AND COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE')
                 """, Boolean.class, id.numericValue()));
         if (preparing) {
             throw new ApplicationFailure(FailureReason.PREPARING, id.value());
@@ -122,7 +123,8 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 SELECT w.working_set_id FROM working_sets w
                 WHERE parent_working_set_id = ? AND NOT EXISTS (
                     SELECT 1 FROM working_set_creations c WHERE c.new_working_set_id = w.working_set_id
-                    AND c.status IN ('Pending', 'Running'))
+                    AND c.status IN ('Pending', 'Running')
+                    AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')
                 ORDER BY w.working_set_id
                 """, Long.class, id.numericValue()).stream().map(WorkingSetId::of).toList();
     }
@@ -141,7 +143,8 @@ public final class JdbcBindingRepositories implements WorkingSetRepository, Trac
                 WHERE distance > 0 AND NOT EXISTS (
                     SELECT 1 FROM working_set_creations c
                     WHERE c.new_working_set_id = lineage.working_set_id
-                    AND c.status IN ('Pending', 'Running'))
+                    AND c.status IN ('Pending', 'Running')
+                    AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')
                 ORDER BY distance
                 """, Long.class, id.numericValue());
         if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.numericValue().equals(ancestors.getLast())) {

@@ -1,9 +1,7 @@
 package sk.workingset.application;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
@@ -38,8 +36,9 @@ import sk.workingset.domain.WorkingSetId;
 /** Indexes the frozen parent-item snapshot under the creation task's transaction. */
 public final class WorkingSetItemIndexer {
     private static final Logger log = LoggerFactory.getLogger(WorkingSetItemIndexer.class);
-    private static final Comparator<String> LOCAL_ID_ORDER = (left, right) ->
-            Arrays.compareUnsigned(left.getBytes(StandardCharsets.UTF_8), right.getBytes(StandardCharsets.UTF_8));
+    // IDs are positive Snowflake longs; SQL snapshots and catalog pages use numeric order.
+    private static final Comparator<String> LOCAL_ID_ORDER =
+            Comparator.comparingLong(Long::parseLong);
 
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;

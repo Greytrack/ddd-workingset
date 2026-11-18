@@ -14,8 +14,4 @@ public record CapabilitySet(boolean comparable,
         return new CapabilitySet(true, true, true, true, false);
     }
 
-    /** Part/DQA 类共享查看对象：不参与派生/比对/合并。 */
-    public static CapabilitySet readOnly() {
-        return new CapabilitySet(false, false, false, false, true);
-    }
 }

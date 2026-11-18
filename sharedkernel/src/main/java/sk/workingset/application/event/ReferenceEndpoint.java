@@ -21,7 +21,4 @@ public record ReferenceEndpoint(WorkingSetId workingSetId, LocalId localId, Comm
         Objects.requireNonNull(trackerId, "trackerId");
     }
 
-    public boolean isResolved() {
-        return workingSetId != null && localId != null;
-    }
 }

@@ -1,6 +1,6 @@
 # BusinessObject 生命周期能力设计
 
-**状态：Reviewed（2026-11-12；D1 用户裁定已记录，D14 已落地实现；不构成基线发布）**
+**状态：Historical（2026-11-12 记录；公共生命周期能力已并入 [T4](cross-bc-contract-v1.md)，当前以 T4 为准）**
 
 - 依据：[T4 跨 BC 公共契约](cross-bc-contract-v1.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[S7 验证](../implementation/t5-s7-verification-result.md)
 - 范围：`BusinessObject` / `TrackerItem` 的公共生命周期能力声明
