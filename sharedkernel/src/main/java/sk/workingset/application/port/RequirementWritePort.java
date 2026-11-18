@@ -1,7 +1,7 @@
 package sk.workingset.application.port;
 
 import sk.workingset.application.command.dto.MaterializeRequest;
-import sk.workingset.application.command.dto.RequirementMergeCommand;
+import sk.workingset.application.command.dto.MergeCommand;
 import sk.workingset.application.common.TargetIdentity;
 
 import java.util.List;
@@ -21,5 +21,5 @@ public interface RequirementWritePort {
 
     void lockMergeEvidence(List<LocalId> ids);
 
-    RequirementMergeCommand.Result applyMerge(RequirementMergeCommand command);
+    MergeCommand.Result applyMerge(MergeCommand command);
 }

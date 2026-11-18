@@ -28,8 +28,8 @@ import sk.workingset.domain.event.MergeRoundSubmittedEvent;
 import sk.workingset.domain.merge.MergeCommitReceipt;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.event.MergeTargetEvent;
-import sk.workingset.application.command.dto.RequirementMergeCommand;
-import sk.workingset.application.command.dto.RequirementMergeCommand.Operation;
+import sk.workingset.application.command.dto.MergeCommand;
+import sk.workingset.application.command.dto.MergeCommand.Operation;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.LocalId;
@@ -338,7 +338,7 @@ public class MergeExecutionService {
             sk.workingset.domain.merge.Comparison.Side target = current.target();
             sk.workingset.domain.merge.Comparison.Side source = current.source();
             Map<String,Object> accepted = acceptedFields(entry, current);
-            RequirementMergeCommand.Operation action = Operation.valueOf(operation);
+            MergeCommand.Operation action = Operation.valueOf(operation);
             LocalId localId = action == Operation.CREATE
                     ? (WorkingSet.DEFAULT_ID.equals(round.target())
                             ? LocalId.of(current.family().value())
@@ -346,7 +346,7 @@ public class MergeExecutionService {
                     : target.localId();
             boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
             boolean create = action == Operation.CREATE;
-            RequirementMergeCommand.Result committed = writer.applyMerge(new RequirementMergeCommand(round.id(), entry.id(), round.token(), action,
+            MergeCommand.Result committed = writer.applyMerge(new MergeCommand(round.id(), entry.id(), round.token(), action,
                     current.trackers().target(), current.family(), localId, create ? source.revision() : target.revision(),
                     inherited || create ? null : target.lockVersion(), create ? source.version() : target.version(),
                     create ? source.fields() : target.fields(), accepted,

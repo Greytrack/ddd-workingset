@@ -12,7 +12,7 @@ import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 import sk.workingset.application.command.dto.MaterializeRequest;
-import sk.workingset.application.command.dto.RequirementMergeCommand;
+import sk.workingset.application.command.dto.MergeCommand;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.domain.LocalId;
@@ -42,7 +42,7 @@ public final class RequirementMaterializationAdapter implements RequirementWrite
     }
 
     @Override
-    public RequirementMergeCommand.Result applyMerge(RequirementMergeCommand command) {
+    public MergeCommand.Result applyMerge(MergeCommand command) {
         return mergeWriter.apply(command);
     }
 
