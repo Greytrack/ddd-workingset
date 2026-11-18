@@ -1,0 +1,144 @@
+package sk.workingset.infrastructure.repositories;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.WorkingSetId;
+
+/**
+ * LightTrackerItem 的 PostgreSQL/Spring JDBC 仓储。
+ *
+ * <p>聚合级保存使用整行 upsert；三字段一致性由 {@link LightTrackerItem} 聚合行为保证。
+ */
+@Slf4j
+@Repository
+@RequiredArgsConstructor
+public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepository {
+
+    private static final String UPSERT = """
+            INSERT INTO light_tracker_items
+                (local_id, common_id, tracker_id, working_set_id, revision,
+                 source_local_id, source_revision, materialized)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (local_id) DO UPDATE SET
+                common_id = EXCLUDED.common_id,
+                tracker_id = EXCLUDED.tracker_id,
+                working_set_id = EXCLUDED.working_set_id,
+                revision = EXCLUDED.revision,
+                source_local_id = EXCLUDED.source_local_id,
+                source_revision = EXCLUDED.source_revision,
+                materialized = EXCLUDED.materialized
+            """;
+
+    private static final String COLUMNS =
+            "local_id, common_id, tracker_id, working_set_id, revision, "
+                    + "source_local_id, source_revision, materialized";
+
+    private static final RowMapper<LightTrackerItem> MAPPER = (rs, rowNum) -> LightTrackerItem.restore(
+            LocalId.of(rs.getLong("local_id")),
+            CommonId.of(rs.getLong("common_id")),
+            TrackerId.of(rs.getLong("tracker_id")),
+            WorkingSetId.of(rs.getLong("working_set_id")),
+            Revision.of(rs.getInt("revision")),
+            LocalId.of(rs.getLong("source_local_id")),
+            Revision.of(rs.getInt("source_revision")),
+            rs.getBoolean("materialized"));
+
+    private final JdbcTemplate jdbc;
+
+
+    @Override
+    public void save(LightTrackerItem item) {
+        jdbc.update(UPSERT,
+                item.localId().numericValue(),
+                item.commonId().numericValue(),
+                item.trackerId().numericValue(),
+                item.workingSetId().numericValue(),
+                item.revision().value(),
+                item.sourceLocalId().numericValue(),
+                item.sourceRevision().value(),
+                item.materialized());
+    }
+
+    @Override
+    public Optional<LightTrackerItem> findById(LocalId localId) {
+        return jdbc.query(
+                "SELECT " + COLUMNS + " FROM light_tracker_items WHERE local_id = ?",
+                MAPPER,
+                localId.numericValue()).stream().findFirst();
+    }
+
+    @Override
+    public List<LightTrackerItem> findInTracker(TrackerId trackerId) {
+        return jdbc.query("SELECT " + COLUMNS + " FROM light_tracker_items WHERE tracker_id = ? ORDER BY local_id",
+                MAPPER, trackerId.numericValue());
+    }
+
+    @Override
+    public List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
+        return jdbc.query("SELECT " + COLUMNS + " FROM light_tracker_items WHERE tracker_id = ? "
+                        + "AND local_id > ? ORDER BY local_id LIMIT ?",
+                MAPPER, trackerId.numericValue(), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
+    }
+
+    @Override
+    public boolean insertIfFamilyAbsent(LightTrackerItem item) {
+        return jdbc.update("""
+                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
+                    source_local_id, source_revision, materialized)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (working_set_id, common_id) DO NOTHING
+                """, item.localId().numericValue(), item.commonId().numericValue(), item.trackerId().numericValue(),
+                item.workingSetId().numericValue(), item.revision().value(), item.sourceLocalId().numericValue(),
+                item.sourceRevision().value(), item.materialized()) == 1;
+    }
+
+    @Override
+    public boolean hasFamily(WorkingSetId workingSetId, CommonId commonId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?)
+                """, Boolean.class, workingSetId.numericValue(), commonId.numericValue()));
+    }
+
+    @Override
+    public boolean hasSourceBackedDependents(LocalId id) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE source_local_id = ? AND NOT materialized)
+                """, Boolean.class, id.numericValue()));
+    }
+
+    @Override
+    public void remove(LocalId id) {
+        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", id.numericValue());
+    }
+
+    @Override
+    public boolean existsInTracker(TrackerId trackerId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE tracker_id = ?)", Boolean.class, trackerId.numericValue()));
+    }
+
+    @Override
+    public List<LightTrackerItem> findBySource(LocalId sourceLocalId, Revision sourceRevision) {
+        return jdbc.query(
+                "SELECT " + COLUMNS + " FROM light_tracker_items "
+                        + "WHERE source_local_id = ? AND source_revision = ?",
+                MAPPER,
+                sourceLocalId.numericValue(),
+                sourceRevision.value());
+    }
+}
