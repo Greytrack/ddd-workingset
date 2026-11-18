@@ -45,18 +45,9 @@ public final class JdbcCowFailureLog implements CowFailureLog {
                 new Revision(row.getInt("before_revision")), new Revision(row.getInt("after_revision")),
                 lockVersion(row.getObject("before_lock_version", Long.class)),
                 lockVersion(row.getObject("after_lock_version", Long.class)),
-                row.getInt("attempts"), row.getTimestamp("resolved_at") == null ? null
-                        : row.getTimestamp("resolved_at").toInstant(),
+                row.getInt("attempts"),
                 row.getString("stage"), row.getString("error_type"), row.getString("message"),
                 row.getTimestamp("occurred_at").toInstant()), sourceLocalId.numericValue());
-    }
-
-    @Override
-    public void resolve(long eventId, LocalId target) {
-        jdbc.update("""
-                UPDATE cow_failures SET resolved_at = now()
-                WHERE event_id = ? AND target_local_id = ? AND resolved_at IS NULL
-                """, eventId, target.numericValue());
     }
 
     private static LockVersion lockVersion(Long value) {

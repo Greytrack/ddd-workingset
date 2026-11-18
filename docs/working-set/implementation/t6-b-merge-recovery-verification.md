@@ -1,3 +1,5 @@
+> 2026-11-18 用户裁定移除 COW Recovery；本文中依赖 /api/cow/recover 的验证记录保留为历史证据，不再代表当前实现。
+
 # T6-B Merge 并发与恢复验证
 
 **状态：Reviewed（2026-11-13，实施证据）**
@@ -8,7 +10,7 @@
 
 - `GET /api/merge-rounds/{id}` 查询 `Running` 或终态。若 Apply 返回 409 `RoundInProgress`，由调用者稍后查询进度或重提同一轮次。
 - `POST /api/merge-rounds/{id}/apply` 可在原执行者释放执行权后接续。返回 503 `UNKNOWN` 时，使用同一轮次 ID 查询或接续，避免创建新轮次重写已有业务提交。已终态的业务失败沿用 Q4。
-- `POST /api/cow/recover/incomplete` 重投未完成的 `RequirementMergeApplied`。轮次终态依据业务提交，LTI 可独立收敛。
+- `POST /api/cow/recover/incomplete` 重投未完成的 `RequirementMergeAppliedEvent`。轮次终态依据业务提交，LTI 可独立收敛。
 
 ## 一致性与升级
 

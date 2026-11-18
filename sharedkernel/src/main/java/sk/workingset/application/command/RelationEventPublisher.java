@@ -7,11 +7,11 @@ import java.util.List;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.ApplicationEventPublisher;
 
-import sk.workingset.domain.event.AssociationCreationRequested;
-import sk.workingset.domain.event.DanglingReferenceRepairRequested;
-import sk.workingset.domain.event.ReferenceCreationRequested;
-import sk.workingset.domain.event.RelationEventMetadata;
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.AssociationCreationRequestedEvent;
+import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
+import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.RelationSourcePort.AssociationFact;
 import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
 
@@ -29,29 +29,29 @@ public final class RelationEventPublisher {
         this.ids = ids;
     }
 
-    public List<ReferenceCreationRequested> publishReferenceCreations(String originId, OriginType originType,
+    public List<ReferenceCreationRequestedEvent> publishReferenceCreations(String originId, OriginType originType,
                                                                      List<ReferenceFact> facts) {
-        return facts.stream().map(fact -> new ReferenceCreationRequested(
+        return facts.stream().map(fact -> new ReferenceCreationRequestedEvent(
                         metadata(fact.originalRelationId(), originId, originType), fact.source(), fact.target()))
                 .peek(events::publishEvent).toList();
     }
 
-    public List<DanglingReferenceRepairRequested> publishReferenceRepairs(String originId, OriginType originType,
+    public List<DanglingReferenceRepairRequestedEvent> publishReferenceRepairs(String originId, OriginType originType,
                                                                            List<ReferenceFact> facts) {
-        return facts.stream().map(fact -> new DanglingReferenceRepairRequested(
+        return facts.stream().map(fact -> new DanglingReferenceRepairRequestedEvent(
                         metadata(fact.originalRelationId(), originId, originType), fact.source(), fact.target()))
                 .peek(events::publishEvent).toList();
     }
 
-    public List<AssociationCreationRequested> publishAssociationCreations(String originId, OriginType originType,
+    public List<AssociationCreationRequestedEvent> publishAssociationCreations(String originId, OriginType originType,
                                                                           List<AssociationFact> facts) {
-        return facts.stream().map(fact -> new AssociationCreationRequested(
+        return facts.stream().map(fact -> new AssociationCreationRequestedEvent(
                         metadata(fact.originalRelationId(), originId, originType), fact.source(), fact.target()))
                 .peek(events::publishEvent).toList();
     }
 
-    private RelationEventMetadata metadata(String originalRelationId, String originId, OriginType originType) {
-        return new RelationEventMetadata(Long.toString(ids.nextId(null).longValue()), originalRelationId, originId, originType,
+    private RelationEventMetadataEvent metadata(String originalRelationId, String originId, OriginType originType) {
+        return new RelationEventMetadataEvent(Long.toString(ids.nextId(null).longValue()), originalRelationId, originId, originType,
                 Instant.now());
     }
 }

@@ -76,7 +76,7 @@
 | 2026-11-16 | 文档收敛：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；不改变业务语义。见 [收敛记录](reviews/2026-11-16-doc-consolidation.md)。 |
 | 2026-11-17 | T4 §5.4 登记数值错误码与响应结构为 API 契约 v1：码段、九分类映射、只增不改与版本化规则；实现枚举见 `sk.common.error.WorkingsetResultCode`。 |
 | 2026-11-17 | 废弃 `Difference.key`：compare 不再生成客户端 key，Merge 决策只提交 evidence + decision；条目身份改为 `MergeRound.Entry.id`。`TrackerPair` 扩展为有向四元组（左右 WorkingSet + Tracker），跨轮次审计使用完整 evidence。候选配对只按直接 `sourceId`，不允许跨级/派生兄弟互配/同槽全组合。旧数据处理见 [Merge 实施记录](implementation/merge-checkpoint-rework-plan.md)。裁定见 [T6-F §4.1/§4.2](reviews/2026-11-16-t6-f-lineage-constraints.md#41-实现含义)。 |
-| 2026-11-14 | T7-D：受理时冻结父 Item 快照、批量 LTI 索引与 `TrackerItemsIndexed`；见 [T7 设计](domain/working-set-creation-lro-design.md) 与 [T7-D 验收](implementation/t7-d-index-verification.md)。 |
+| 2026-11-14 | T7-D：受理时冻结父 Item 快照、批量 LTI 索引与 `TrackerItemsIndexedEvent`；见 [T7 设计](domain/working-set-creation-lro-design.md) 与 [T7-D 验收](implementation/t7-d-index-verification.md)。 |
 | 2026-11-15 | QUESTION-010 裁定 C：Reference 使用逻辑 Family + 可选钉版/物理定位，Association 使用具体 Variant 端点；T7-E 只做构建/修复，见 [裁定记录](reviews/2026-11-15-question-010-relation-identity-decision.md)。 |
 | 2026-11-15 | Compare 不持久化：比较结果仅瞬时展示，不保存 `merge_comparisons`/JSONB；用户决策与所选差异证据随 MergeRound 持久化，MergeRound 以异步 LRO 轮询推进，apply 按轮次决策范围执行；见 [裁定记录](reviews/2026-11-15-compare-not-persisted-decision.md)。 |
 | 2026-11-16 | T6-E 收敛：Merge 只保留整页决策提交（1–50 条、`requestId` 必填幂等、空决策与超限 400），删除空轮次/分批登记、`ComparisonAlreadyUsed` 与 legacy 轮次兼容；规模压测与保留转独立专题，回填取消；见 [T6-E 验收](implementation/t6-e-merge-round-verification.md) 与[规模压测与保留专题](implementation/performance-testing.md)。 |

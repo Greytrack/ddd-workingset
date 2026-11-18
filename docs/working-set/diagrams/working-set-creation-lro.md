@@ -1,6 +1,6 @@
 # 工作集创建与扩展任务
 
-**状态：Reviewed**。步骤、空范围和失败语义见 [T7 设计](../domain/working-set-creation-lro-design.md)。受理时冻结父 Item 身份，索引结束时登记 `TrackerItemsIndexed`；关系请求在后续独立步骤发布。
+**状态：Reviewed**。步骤、空范围和失败语义见 [T7 设计](../domain/working-set-creation-lro-design.md)。受理时冻结父 Item 身份，索引结束时登记 `TrackerItemsIndexedEvent`；关系请求在后续独立步骤发布。
 
 ```mermaid
 stateDiagram-v2

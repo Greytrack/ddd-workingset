@@ -11,7 +11,7 @@ import alm.requirement.application.command.RequirementMergeWriter;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
-import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.common.error.DomainException;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.common.TargetIdentity;
@@ -31,7 +31,7 @@ class RequirementMaterializationAdapterTest {
     private final MaterializeRequest request = new MaterializeRequest(
             LocalId.of("260939964213184"), TrackerId.of("263244057497536"), CommonId.of("264220103598016"), LocalId.of("261802623213504"),
             Revision.of(3), Revision.of(4), LockVersion.of(1), LockVersion.of(2), Revision.of(1),
-            10, SnapshotRef.of("258519900000001"));
+            10, SnapshotRefEvent.of("258519900000001"));
 
     private final TargetIdentity target = new TargetIdentity(request.targetLocalId(), request.targetTrackerId(),
             request.commonId(), request.targetRevision(), false);

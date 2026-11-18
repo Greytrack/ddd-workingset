@@ -4,7 +4,7 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 import sk.workingset.application.command.TrackerItemLifecycleService;
-import sk.workingset.domain.event.TrackerItemCreated;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
 
 @Component
 public class TrackerItemCreatedListener {
@@ -15,8 +15,8 @@ public class TrackerItemCreatedListener {
         this.lifecycle = lifecycle;
     }
 
-    @ApplicationModuleListener(id = "bootstrap.TrackerItemCreatedListener.on(sk.workingset.domain.event.TrackerItemCreated)")
-    public void on(TrackerItemCreated event) {
+    @ApplicationModuleListener(id = "bootstrap.TrackerItemCreatedListener.on(sk.workingset.domain.event.TrackerItemCreatedEvent)")
+    public void on(TrackerItemCreatedEvent event) {
         lifecycle.registerCreated(event);
     }
 }

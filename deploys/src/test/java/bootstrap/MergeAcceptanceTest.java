@@ -545,40 +545,10 @@ class MergeAcceptanceTest {
         assertTrue(checkpoint.revisionA().value() == 3 || checkpoint.revisionB().value() == 3);
     }
 
-    @Test
-    void replayCompletesMergeTargetAfterListenerFailureWithoutApplyingBusinessWriteAgain() {
-        String family = id("replay");
-        seed(rootTracker, family, "copied once");
-        var comparison = compare("1", child);
-
-        var attempted = new CountDownLatch(1);
-        doAnswer(call -> {
-            attempted.countDown();
-            throw new IllegalStateException("simulated LTI listener failure");
-        }).doCallRealMethod().when(lifecycle).applyMergeTarget(argThat(target -> family.equals(target.commonId().value())));
-
-        String round = submit(child, comparison, existence(diff(comparison, family), "CREATE"));
-        var result = awaitResult(round);
-        assertEquals(State.Succeeded, result.state());
-        String localId = result.itemResults().getFirst().businessRef();
-        await().atMost(Duration.ofSeconds(8)).until(() -> attempted.getCount() == 0);
-        assertEquals("copied once", requirement(localId).title());
-        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM light_tracker_items WHERE local_id = ?",
-                Integer.class, localId));
-        await().atMost(Duration.ofSeconds(8)).until(() -> pendingMergePublications(localId) == 1);
-
-        assertStatus(HttpStatus.ACCEPTED, rest.postForEntity("/api/cow/recover/incomplete", null, Void.class));
-        await().atMost(Duration.ofSeconds(8)).until(() -> pendingMergePublications(localId) == 0
-                && Boolean.TRUE.equals(jdbc.queryForObject(
-                        "SELECT materialized FROM light_tracker_items WHERE local_id = ?", Boolean.class, localId)));
-        assertEquals(result, apply(round));
-        assertEquals(0, requirement(localId).lockVersion());
-    }
-
     private int pendingMergePublications(String localId) {
         return jdbc.queryForObject("""
                 SELECT COUNT(*) FROM event_publication
-                WHERE event_type LIKE '%RequirementMergeApplied' AND serialized_event LIKE ?
+                WHERE event_type LIKE '%RequirementMergeAppliedEvent' AND serialized_event LIKE ?
                 AND completion_date IS NULL
                 """, Integer.class, "%" + localId + "%");
     }

@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.Requirement;
-import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -45,7 +45,7 @@ class JdbcSnapshotStoreTest {
     void captured_snapshot_keeps_pre_change_content_and_full_fields() {
         Requirement before = Requirement.create(localId, C1, T0, "A", "source description", R3);
 
-        SnapshotRef ref = store.save(RequirementSnapshot.of(before));
+        SnapshotRefEvent ref = store.save(RequirementSnapshot.of(before));
         RequirementSnapshot snapshot = store.find(ref).orElseThrow();
 
         assertTrue(ref.id().matches("\\d+"), "快照引用应为雪花 ID: " + ref.id());
@@ -71,7 +71,7 @@ class JdbcSnapshotStoreTest {
     @Test
     void snapshot_is_not_affected_by_later_business_change() {
         Requirement before = Requirement.create(localId, C1, T0, "A", "source description", R3);
-        SnapshotRef ref = store.save(RequirementSnapshot.of(before));
+        SnapshotRefEvent ref = store.save(RequirementSnapshot.of(before));
 
         Requirement after = before.changeTitle("B", LockVersion.of(0));
 
@@ -83,6 +83,6 @@ class JdbcSnapshotStoreTest {
 
     @Test
     void unknown_snapshot_ref_returns_empty() {
-        assertTrue(store.find(SnapshotRef.of(Long.toString(ids.nextId(null).longValue()))).isEmpty());
+        assertTrue(store.find(SnapshotRefEvent.of(Long.toString(ids.nextId(null).longValue()))).isEmpty());
     }
 }

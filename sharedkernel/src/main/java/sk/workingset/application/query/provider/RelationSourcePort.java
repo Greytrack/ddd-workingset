@@ -3,8 +3,8 @@ package sk.workingset.application.query.provider;
 import java.util.List;
 import java.util.Objects;
 
-import sk.workingset.domain.event.AssociationEndpoint;
-import sk.workingset.domain.event.ReferenceEndpoint;
+import sk.workingset.domain.event.AssociationEndpointEvent;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
 
 /**
  * 业务 BC 向工作集提供上游关系事实。WorkingSet 不拥有关系聚合；本端口只读。
@@ -13,17 +13,17 @@ import sk.workingset.domain.event.ReferenceEndpoint;
  */
 public interface RelationSourcePort {
 
-    List<ReferenceFact> upstreamReferences(ReferenceEndpoint source);
+    List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source);
 
-    List<AssociationFact> upstreamAssociations(AssociationEndpoint source);
+    List<AssociationFact> upstreamAssociations(AssociationEndpointEvent source);
 
     /** Merge 后按变化的目标端点定位需要修复的引用。 */
-    List<ReferenceFact> referencesTargeting(ReferenceEndpoint target);
+    List<ReferenceFact> referencesTargeting(ReferenceEndpointEvent target);
 
     /** Merge 后按变化的目标端点定位需要修复的关联。 */
-    List<AssociationFact> associationsTargeting(AssociationEndpoint target);
+    List<AssociationFact> associationsTargeting(AssociationEndpointEvent target);
 
-    record ReferenceFact(String originalRelationId, ReferenceEndpoint source, ReferenceEndpoint target) {
+    record ReferenceFact(String originalRelationId, ReferenceEndpointEvent source, ReferenceEndpointEvent target) {
         public ReferenceFact {
             requireText(originalRelationId, "originalRelationId");
             Objects.requireNonNull(source, "source");
@@ -31,7 +31,7 @@ public interface RelationSourcePort {
         }
     }
 
-    record AssociationFact(String originalRelationId, AssociationEndpoint source, AssociationEndpoint target) {
+    record AssociationFact(String originalRelationId, AssociationEndpointEvent source, AssociationEndpointEvent target) {
         public AssociationFact {
             requireText(originalRelationId, "originalRelationId");
             Objects.requireNonNull(source, "source");

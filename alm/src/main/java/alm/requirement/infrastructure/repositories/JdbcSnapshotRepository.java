@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.RowMapper;
 
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.SnapshotRepository;
-import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
@@ -48,8 +48,8 @@ public class JdbcSnapshotRepository implements SnapshotRepository {
     }
 
     @Override
-    public SnapshotRef save(RequirementSnapshot snapshot) {
-        SnapshotRef ref = SnapshotRef.of(String.valueOf(identifierGenerator.nextId(null).longValue()));
+    public SnapshotRefEvent save(RequirementSnapshot snapshot) {
+        SnapshotRefEvent ref = SnapshotRefEvent.of(String.valueOf(identifierGenerator.nextId(null).longValue()));
         jdbc.update(INSERT,
                 ref.numericId(),
                 snapshot.localId().numericValue(),
@@ -64,7 +64,7 @@ public class JdbcSnapshotRepository implements SnapshotRepository {
     }
 
     @Override
-    public Optional<RequirementSnapshot> find(SnapshotRef ref) {
+    public Optional<RequirementSnapshot> find(SnapshotRefEvent ref) {
         return jdbc.query(
                 "SELECT snapshot_ref, local_id, common_id, tracker_id, title, description, "
                         + "revision, version, lock_version FROM requirement_snapshots WHERE snapshot_ref = ?",

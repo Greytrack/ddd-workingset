@@ -34,7 +34,7 @@ sequenceDiagram
     U->>R: submitDecisions requestId + 1..50 条 evidence/decision
     R->>R: 校验证据、同一 Tracker 对、活跃轮次
     R-->>U: MergeRoundId 状态 Preparing
-    R-)R: 发布 MergeRoundSubmitted（提交后异步）
+    R-)R: 发布 MergeRoundSubmittedEvent（提交后异步）
 
     R->>R: apply 取得执行权，状态 Running
     loop 每个未完成条目
@@ -58,7 +58,7 @@ sequenceDiagram
                     end
                     R->>E: 记录单项结果
                 and LTI 独立收敛（仅适用的业务写入）
-                    BC--)H: RequirementMergeApplied（业务提交后异步投递）
+                    BC--)H: RequirementMergeAppliedEvent（业务提交后异步投递）
                     H->>L: 在 SK 独立事务中维护 LTI
                 end
             end

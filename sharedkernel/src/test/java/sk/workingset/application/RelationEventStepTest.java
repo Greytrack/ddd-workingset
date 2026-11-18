@@ -16,11 +16,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import sk.workingset.domain.event.AssociationCreationRequested;
-import sk.workingset.domain.event.DanglingReferenceRepairRequested;
-import sk.workingset.domain.event.ReferenceCreationRequested;
-import sk.workingset.domain.event.ReferenceEndpoint;
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.AssociationCreationRequestedEvent;
+import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
+import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.application.query.provider.RelationSourcePort.AssociationFact;
@@ -64,14 +64,14 @@ class RelationEventStepTest {
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
         when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
         when(items.findInTracker(childId)).thenReturn(List.of(item));
-        var targetEndpoint = new ReferenceEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+        var targetEndpoint = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                 CommonId.of("261349487529920"), TrackerId.of("259649290751936"), Revision.of(4));
-        var sourceEndpoint = new ReferenceEndpoint(target, item.localId(), item.commonId(), childId, item.revision());
+        var sourceEndpoint = new ReferenceEndpointEvent(target, item.localId(), item.commonId(), childId, item.revision());
         when(source.upstreamReferences(any())).thenReturn(List.of(new ReferenceFact("reference-1", sourceEndpoint,
                 targetEndpoint)));
         when(source.upstreamAssociations(any())).thenReturn(List.of(new AssociationFact("association-1",
-                new sk.workingset.domain.event.AssociationEndpoint(target, item.localId(), item.commonId(), childId),
-                new sk.workingset.domain.event.AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+                new sk.workingset.domain.event.AssociationEndpointEvent(target, item.localId(), item.commonId(), childId),
+                new sk.workingset.domain.event.AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                         CommonId.of("261349487529920"), TrackerId.of("259649290751936")))));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-2", sourceEndpoint,
                 targetEndpoint)));
@@ -85,9 +85,9 @@ class RelationEventStepTest {
         assertEquals(3, result.published());
         assertEquals(0, result.failed());
         assertEquals(3, published.size());
-        assertTrue(published.get(0) instanceof ReferenceCreationRequested);
-        assertTrue(published.get(1) instanceof AssociationCreationRequested);
-        assertTrue(published.get(2) instanceof DanglingReferenceRepairRequested);
+        assertTrue(published.get(0) instanceof ReferenceCreationRequestedEvent);
+        assertTrue(published.get(1) instanceof AssociationCreationRequestedEvent);
+        assertTrue(published.get(2) instanceof DanglingReferenceRepairRequestedEvent);
     }
 
     @Test

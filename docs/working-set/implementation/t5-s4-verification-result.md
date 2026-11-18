@@ -1,3 +1,5 @@
+> 2026-11-18 用户裁定移除 COW Recovery；本文中依赖 /api/cow/recover 的验证记录保留为历史证据，不再代表当前实现。
+
 # T5-S4 一致性恢复与回归
 
 **状态：Reviewed。2026-11-12，本机 PostgreSQL、Redis 与内嵌 Tomcat。**

@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import sk.workingset.infrastructure.SnowflakeIdGenerator;
+import bootstrap.SnowflakeIdGenerator;
 
 /**
  * 雪花 ID 装配（P1）：数据中心固定为 1，机器号由本机地址哈希取模（用户给定逻辑）。

@@ -3,7 +3,7 @@ package sk.workingset.application.command;
 
 import java.util.List;
 
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.domain.repository.TrackerRepository;
@@ -53,9 +53,9 @@ public final class RelationEventStep {
         int failed = 0;
         for (LightTrackerItem item : indexed) {
             try {
-                var referenceSource = new sk.workingset.domain.event.ReferenceEndpoint(target,
+                var referenceSource = new sk.workingset.domain.event.ReferenceEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId(), item.revision());
-                var associationSource = new sk.workingset.domain.event.AssociationEndpoint(target,
+                var associationSource = new sk.workingset.domain.event.AssociationEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId());
                 published += publisher.publishReferenceCreations(originId, originType,
                         source.upstreamReferences(referenceSource)).size();

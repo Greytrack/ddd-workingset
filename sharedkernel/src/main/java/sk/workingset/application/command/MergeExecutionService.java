@@ -23,11 +23,11 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import sk.workingset.domain.event.RequirementMergeApplied;
-import sk.workingset.domain.event.MergeRoundSubmitted;
+import sk.workingset.domain.event.MergeAppliedEvent;
+import sk.workingset.domain.event.MergeRoundSubmittedEvent;
 import sk.workingset.domain.merge.MergeCommitReceipt;
 import sk.workingset.domain.merge.MergeRepository;
-import sk.workingset.domain.event.MergeTarget;
+import sk.workingset.domain.event.MergeTargetEvent;
 import sk.workingset.application.command.dto.RequirementMergeCommand;
 import sk.workingset.application.command.dto.RequirementMergeCommand.Operation;
 import sk.workingset.application.port.RequirementWritePort;
@@ -53,7 +53,7 @@ import sk.workingset.domain.merge.MergeRound.State;
  * Merge 轮次执行：逐条应用决定、记录结果与终态。
  *
  * <p>D15-B：条目业务 apply 在独立事务提交；目标变体切换/创建由
- * {@code RequirementMergeApplied} 事件在 SK 独立事务完成，二者不共用条目事务。
+ * {@code RequirementMergeAppliedEvent} 事件在 SK 独立事务完成，二者不共用条目事务。
  * 条目失败按 Rejected/Conflict/StaleEvidence 记录，不影响已成功条目。
  */
 public class MergeExecutionService {
@@ -105,7 +105,7 @@ public class MergeExecutionService {
             return matching(round, source, target);
         }
         registerDecisions(round, decisions);
-        events.publishEvent(new MergeRoundSubmitted(round.id()));
+        events.publishEvent(new MergeRoundSubmittedEvent(round.id()));
         return round(round.id(), false);
     }
 
@@ -354,11 +354,11 @@ public class MergeExecutionService {
                     create && comparisons.isMergeBack(round.source(), round.target())));
             targetRevision = committed.revision();
             businessRef = committed.localId();
-            var mergeTarget = new MergeTarget(businessRef, current.family(), current.trackers().target(),
+            var mergeTarget = new MergeTargetEvent(businessRef, current.family(), current.trackers().target(),
                     round.target(), targetRevision, inherited,
                     create && committed.created() && !WorkingSet.DEFAULT_ID.equals(round.target()));
             if (mergeTarget.inherited() || mergeTarget.create()) {
-                events.publishEvent(new RequirementMergeApplied(mergeTarget, Instant.now()));
+                events.publishEvent(new MergeAppliedEvent(mergeTarget, Instant.now()));
             }
         }
         return new MergeCommitReceipt(businessRef, current.source().revision(), targetRevision);

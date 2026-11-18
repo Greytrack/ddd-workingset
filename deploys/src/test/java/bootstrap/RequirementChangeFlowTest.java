@@ -28,22 +28,21 @@ import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.SnapshotRepository;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.Version;
-import sk.workingset.infrastructure.SnowflakeIdGenerator;
 
 /** 验证来源修改命令与仓储、快照和发布端口的协作。 */
 class RequirementChangeFlowTest {
 
     private static final LocalId L0 = LocalId.of("260574482192320");
     private static final Revision R3 = Revision.of(3);
-    private static final SnapshotRef FIRST = SnapshotRef.of("264246849363904");
-    private static final SnapshotRef SECOND = SnapshotRef.of("258985471651776");
+    private static final SnapshotRefEvent FIRST = SnapshotRefEvent.of("264246849363904");
+    private static final SnapshotRefEvent SECOND = SnapshotRefEvent.of("258985471651776");
 
     private final RequirementRepository requirements = mock(RequirementRepository.class);
     private final SnapshotRepository snapshots = mock(SnapshotRepository.class);
@@ -151,7 +150,7 @@ class RequirementChangeFlowTest {
         assertEquals(LockVersion.of(0), before.lockVersion());
     }
 
-    private static void assertEvent(BusinessObjectUpdateEvent event, SnapshotRef ref, long beforeLock, long afterLock) {
+    private static void assertEvent(BusinessObjectUpdateEvent event, SnapshotRefEvent ref, long beforeLock, long afterLock) {
         assertEquals(R3, event.beforeRevision());
         assertEquals(R3, event.afterRevision());
         assertEquals(LockVersion.of(beforeLock), event.beforeLockVersion());

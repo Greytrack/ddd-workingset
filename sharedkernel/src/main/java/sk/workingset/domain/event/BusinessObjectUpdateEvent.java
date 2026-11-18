@@ -30,7 +30,7 @@ public record BusinessObjectUpdateEvent(long eventId,
                                         Revision afterRevision,
                                         LockVersion beforeLockVersion,
                                         LockVersion afterLockVersion,
-                                        SnapshotRef snapshotRef,
+                                        SnapshotRefEvent snapshotRef,
                                         Instant occurredAt) {
 
     public BusinessObjectUpdateEvent {

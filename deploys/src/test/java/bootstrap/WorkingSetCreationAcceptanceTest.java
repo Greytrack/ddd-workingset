@@ -34,10 +34,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
-import sk.workingset.domain.event.TrackerItemsIndexed;
+import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.application.Caller;
-import sk.workingset.domain.event.WorkingSetCreationSubmitted;
+import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.WorkingSetCreation;
@@ -171,10 +171,10 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
                 Integer.class, child));
         assertEquals(id, submit(request));
-        transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmitted(id)));
+        transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmittedEvent(id)));
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertEquals(2, jdbc.queryForObject("""
                 SELECT count(*) FROM event_publication WHERE serialized_event LIKE ? AND completion_date IS NOT NULL
-                    AND event_type LIKE '%WorkingSetCreationSubmitted'
+                    AND event_type LIKE '%WorkingSetCreationSubmittedEvent'
                 """, Integer.class, "%" + id + "%")));
         assertEquals(completed, task(id));
         assertEquals(bindings, bindings());
@@ -455,7 +455,7 @@ class WorkingSetCreationAcceptanceTest {
                         INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                             source_local_id, source_revision, materialized) VALUES (?, ?, ?, ?, 3, ?, 3, false)
                         """, fixtureId("existing-" + child), last, tracker, child, last);
-                transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmitted(id)));
+                transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmittedEvent(id)));
             } finally {
                 connection.rollback();
             }
@@ -633,9 +633,9 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     static class IndexEvents {
-        private final Map<String, TrackerItemsIndexed> byWorkingSet = new java.util.concurrent.ConcurrentHashMap<>();
+        private final Map<String, TrackerItemsIndexedEvent> byWorkingSet = new java.util.concurrent.ConcurrentHashMap<>();
 
-        public TrackerItemsIndexed find(String workingSetId) {
+        public TrackerItemsIndexedEvent find(String workingSetId) {
             return byWorkingSet.get(workingSetId);
         }
 
@@ -644,7 +644,7 @@ class WorkingSetCreationAcceptanceTest {
         }
 
         @ApplicationModuleListener
-        public void on(TrackerItemsIndexed event) {
+        public void on(TrackerItemsIndexedEvent event) {
             byWorkingSet.put(event.workingSetId(), event);
         }
     }

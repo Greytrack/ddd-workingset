@@ -7,12 +7,12 @@ import java.util.Objects;
  * 关系事件的公共元数据。Working Set 不拥有 Reference/Association 聚合，只发布事件；
  * {@code originalRelationId} 用于消费方回查原始关系的传播怀疑、类型、方向等信息。
  */
-public record RelationEventMetadata(String eventId, String originalRelationId, String originId,
+public record RelationEventMetadataEvent(String eventId, String originalRelationId, String originId,
                                     OriginType originType, Instant occurredAt) {
 
     public enum OriginType { CREATION, EXTENSION, MERGE }
 
-    public RelationEventMetadata {
+    public RelationEventMetadataEvent {
         requireText(eventId, "eventId");
         requireText(originalRelationId, "originalRelationId");
         requireText(originId, "originId");

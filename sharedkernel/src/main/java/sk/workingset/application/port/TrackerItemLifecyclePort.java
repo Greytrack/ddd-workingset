@@ -3,7 +3,7 @@ package sk.workingset.application.port;
 import sk.workingset.application.common.InheritedEditTarget;
 import sk.workingset.application.common.TargetIdentity;
 
-import sk.workingset.domain.event.MergeTarget;
+import sk.workingset.domain.event.MergeTargetEvent;
 
 import java.util.Optional;
 
@@ -37,5 +37,5 @@ public interface TrackerItemLifecyclePort {
     /**
      * 业务 Merge 写入提交后切换/创建目标变体（D15-B，独立事务、幂等）。
      */
-    void applyMergeTarget(MergeTarget target);
+    void applyMergeTarget(MergeTargetEvent target);
 }

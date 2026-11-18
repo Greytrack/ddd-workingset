@@ -1,4 +1,4 @@
-package sk.workingset.infrastructure;
+package sk.workingset.infrastructure.repositories;
 
 import java.sql.Timestamp;
 import java.time.Instant;

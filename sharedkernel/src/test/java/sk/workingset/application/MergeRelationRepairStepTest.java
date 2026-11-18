@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import sk.workingset.domain.event.ReferenceEndpoint;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
 import sk.workingset.domain.CommonId;
@@ -76,10 +76,10 @@ class MergeRelationRepairStepTest {
                 .complete(Instant.now());
 
         RelationSourcePort source = mock(RelationSourcePort.class);
-        var changedTarget = new ReferenceEndpoint(targetWorkingSet, LocalId.of("265864557082560"), CommonId.of("265506033508288"),
+        var changedTarget = new ReferenceEndpointEvent(targetWorkingSet, LocalId.of("265864557082560"), CommonId.of("265506033508288"),
                 TrackerId.of("261538396602304"), Revision.of(4));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-1",
-                new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+                new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("261158455371712"), CommonId.of("265506033508288"),
                         TrackerId.of("265625955250112"), Revision.of(3)), changedTarget)));
 
         var published = new ArrayList<Object>();

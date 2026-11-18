@@ -1,6 +1,6 @@
 package sk.workingset.infrastructure.repositories;
 
-import sk.workingset.infrastructure.CachedLightTrackerItem;
+import sk.workingset.infrastructure.po.CachedLightTrackerItem;
 
 import java.time.Duration;
 import java.util.List;

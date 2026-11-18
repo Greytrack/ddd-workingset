@@ -17,7 +17,7 @@ import sk.workingset.domain.WorkingSetId;
  * @param inherited       目标原本是继承变体，需要切换为本地物化
  * @param create          需要在目标工作集新建本地 LightTrackerItem
  */
-public record MergeTarget(LocalId localId, CommonId commonId, TrackerId trackerId,
+public record MergeTargetEvent(LocalId localId, CommonId commonId, TrackerId trackerId,
                           WorkingSetId workingSetId, Revision revision,
                           boolean inherited, boolean create) {
 }

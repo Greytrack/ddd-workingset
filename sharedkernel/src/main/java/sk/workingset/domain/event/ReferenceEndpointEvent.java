@@ -4,17 +4,21 @@ import java.util.Objects;
 
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
-/** Association 端点：具体 Variant，不固定版次。 */
-public record AssociationEndpoint(WorkingSetId workingSetId, LocalId localId, CommonId commonId,
-                                  TrackerId trackerId) {
+/**
+ * Reference 端点。source 端必须完整；target 的 local/workingSet/revision 可为空，
+ * 表示目标尚未纳入或悬空引用。
+ */
+public record ReferenceEndpointEvent(WorkingSetId workingSetId, LocalId localId, CommonId commonId,
+                                TrackerId trackerId, Revision revision) {
 
-    public AssociationEndpoint {
+    public ReferenceEndpointEvent {
         Objects.requireNonNull(workingSetId, "workingSetId");
-        Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
     }
+
 }

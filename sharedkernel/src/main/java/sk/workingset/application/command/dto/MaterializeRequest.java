@@ -1,6 +1,6 @@
 package sk.workingset.application.command.dto;
 
-import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -12,4 +12,4 @@ public record MaterializeRequest(LocalId targetLocalId, TrackerId targetTrackerI
                                  CommonId commonId, LocalId sourceLocalId,
                                  Revision beforeRevision, Revision afterRevision,
                                  LockVersion beforeLockVersion, LockVersion afterLockVersion,
-                                 Revision targetRevision, long eventId, SnapshotRef snapshotRef) {}
+                                 Revision targetRevision, long eventId, SnapshotRefEvent snapshotRef) {}

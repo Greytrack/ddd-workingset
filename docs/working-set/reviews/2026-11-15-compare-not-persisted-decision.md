@@ -8,7 +8,7 @@
 - **compare + merge 是一个整体用例，但 compare 只作参考**：用户基于比较结果作出接收、忽略、字段级决定等选择。
 - **用户决策随 MergeRound 持久化**：每个选中的差异携带其比较证据（双侧身份、presence、revision、字段与失败状态）和决定；MergeRound 保存这些证据与决定，作为后续 apply 的唯一决策范围。
 - **apply 只执行 MergeRound 中的决策范围**：不重新读取比较 token，不扩大到未登记的差异；仍按 T1 的当前状态校验处理过期证据。
-- **MergeRound 采用异步 LRO**：提交决策后返回可轮询任务；`MergeRoundSubmitted` 事件驱动消费者逐条执行新增、删除、更新，`GET /merge-rounds/{id}` 轮询至终态；`apply` 仅保留为幂等触发器。
+- **MergeRound 采用异步 LRO**：提交决策后返回可轮询任务；`MergeRoundSubmittedEvent` 事件驱动消费者逐条执行新增、删除、更新，`GET /merge-rounds/{id}` 轮询至终态；`apply` 仅保留为幂等触发器。
 - **MergeRound 规模边界**：一轮对应 UI 一页约 20–50 条决策；`GET /merge-rounds/{id}` 完整返回 entries/result，不做条目页；当前整份 state JSONB 写入在该规模可接受。`jsonb_set` 语法上可局部替换，但 PostgreSQL JSONB 不可变，仍会写新元组/TOAST；规模明显增大时再规范化 entries/results。
 - **提交幂等**：决策提交必须携带 `requestId`；同一 requestId 返回同一 MergeRound，不重复创建或重复发布异步执行事件；不同 source/target 使用同一 requestId 返回冲突。
 - **Compare 只下发差异**：一致项不返回；差异分为 `ADDED`、`MODIFIED`、`DELETED`。新增/删除不比较字段；`MODIFIED` 才比较属性。

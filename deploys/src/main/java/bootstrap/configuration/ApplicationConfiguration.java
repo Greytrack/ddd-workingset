@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.modulith.events.IncompleteEventPublications;
 import java.time.Duration;
 import java.util.Optional;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -30,7 +29,6 @@ import alm.requirement.adapters.workingset.RequirementMaterializationAdapter;
 import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.application.CowFailureLog;
 import sk.workingset.domain.repository.CowMaterializationRepository;
-import sk.workingset.application.command.CowRecoveryService;
 import sk.workingset.application.query.MergeComparisonService;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeRelationRepairStep;
@@ -41,7 +39,7 @@ import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.infrastructure.repositories.JdbcMergeRepository;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import sk.workingset.domain.event.RequirementMergeApplied;
+import sk.workingset.domain.event.MergeAppliedEvent;
 import sk.workingset.domain.event.CompleteDeleteEvent;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
 import sk.workingset.application.command.WorkingSetCommandService;
@@ -55,8 +53,8 @@ import sk.workingset.application.command.WorkingSetItemIndexer;
 import sk.workingset.application.query.provider.TrackerItemCatalog;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
-import sk.workingset.infrastructure.EmptyRelationSourcePort;
-import sk.workingset.infrastructure.JdbcWorkingSetCreationSnapshotRepository;
+import sk.workingset.infrastructure.providers.EmptyRelationSourcePort;
+import sk.workingset.infrastructure.repositories.JdbcWorkingSetCreationSnapshotRepository;
 import sk.workingset.infrastructure.repositories.JdbcWorkingSetCreationRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.LocalId;
@@ -113,23 +111,11 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public CowRecoveryService cowRecoveryService(CowMaterializationRepository store, LightTrackerItemRepository items,
-                                                 RequirementWritePort writePort, CowFailureLog failureLog,
-                                                 TransactionTemplate newTransactionTemplate,
-                                                 IncompleteEventPublications publications) {
-        return new CowRecoveryService(store, items, writePort, failureLog, newTransactionTemplate,
-                () -> publications.resubmitIncompletePublications(p ->
-                        p.getEvent() instanceof BusinessObjectUpdateEvent
-                                || p.getEvent() instanceof CompleteDeleteEvent
-                                || p.getEvent() instanceof RequirementMergeApplied));
-    }
-
-    @Bean
     public CowEventHandler cowEventHandler(LightTrackerItemRepository items, TrackerItemLifecyclePort lifecycle,
                                            RequirementWritePort writePort,
                                            CowFailureLog failureLog, TransactionTemplate newTransactionTemplate,
-                                           CowMaterializationRepository store, CowRecoveryService recovery) {
-        return new CowEventHandler(items, lifecycle, writePort, failureLog, newTransactionTemplate, store, recovery);
+                                           CowMaterializationRepository store) {
+        return new CowEventHandler(items, lifecycle, writePort, failureLog, newTransactionTemplate, store);
     }
 
     @Bean

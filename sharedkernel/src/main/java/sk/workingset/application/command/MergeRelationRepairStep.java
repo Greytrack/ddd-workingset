@@ -7,8 +7,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sk.workingset.domain.event.ReferenceEndpoint;
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.merge.MergeRound;
@@ -17,7 +17,7 @@ import sk.workingset.domain.merge.MergeRound.ItemResult;
 
 /**
  * Merge 完成后的关系修复 step。只对本轮实际成功且改变目标变体的条目发布
- * {@code DanglingReferenceRepairRequested}；失败只记录，不改变 Merge 终态。
+ * {@code DanglingReferenceRepairRequestedEvent}；失败只记录，不改变 Merge 终态。
  */
 public final class MergeRelationRepairStep {
     private static final Logger log = LoggerFactory.getLogger(MergeRelationRepairStep.class);
@@ -33,7 +33,7 @@ public final class MergeRelationRepairStep {
     public StepResult repair(MergeRound round) {
         int published = 0;
         int failed = 0;
-        for (ReferenceEndpoint target : changedTargets(round).values()) {
+        for (ReferenceEndpointEvent target : changedTargets(round).values()) {
             try {
                 published += publisher.publishReferenceRepairs(round.id(), OriginType.MERGE,
                         source.referencesTargeting(target)).size();
@@ -46,8 +46,8 @@ public final class MergeRelationRepairStep {
         return new StepResult(published, failed);
     }
 
-    public Map<String, ReferenceEndpoint> changedTargets(MergeRound round) {
-        Map<String, ReferenceEndpoint> targets = new LinkedHashMap<>();
+    public Map<String, ReferenceEndpointEvent> changedTargets(MergeRound round) {
+        Map<String, ReferenceEndpointEvent> targets = new LinkedHashMap<>();
         for (Entry entry : round.entries()) {
             ItemResult result = entry.result();
             if (result == null || !result.succeeded() || !changesTarget(result.operation())) {
@@ -59,7 +59,7 @@ public final class MergeRelationRepairStep {
             if (localId == null) {
                 continue;
             }
-            var target = new ReferenceEndpoint(round.target(), localId, entry.evidence().family(),
+            var target = new ReferenceEndpointEvent(round.target(), localId, entry.evidence().family(),
                     entry.evidence().trackers().target(), entry.evidence().target().revision());
             targets.put(localId.value(), target);
         }

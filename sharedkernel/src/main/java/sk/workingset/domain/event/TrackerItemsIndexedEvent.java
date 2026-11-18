@@ -4,8 +4,8 @@ import java.time.Instant;
 import java.util.List;
 
 /** Child trackers whose indexing scan reached its end. */
-public record TrackerItemsIndexed(String creationId, String workingSetId, List<String> trackerIds, Instant occurredAt) {
-    public TrackerItemsIndexed {
+public record TrackerItemsIndexedEvent(String creationId, String workingSetId, List<String> trackerIds, Instant occurredAt) {
+    public TrackerItemsIndexedEvent {
         trackerIds = List.copyOf(trackerIds);
     }
 }

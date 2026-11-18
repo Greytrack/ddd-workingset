@@ -64,7 +64,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | `reportProgress` | `MergeRoundId` | `RoundProgress`（各状态计数与条目摘要） | 只读 | — |
 | `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态或显式结束）；轮次非终态 | 不存在未终态条目时方可结束；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
 
-**异步 LRO（2026-11-16 收敛）**：`startRound` 即「提交一页决策」：`decisions` 必填 1–50 条、`requestId` 必填且不超过 128 字符，空决策、缺键或超限直接拒绝；**不再提供空轮次与分批登记入口**，一页决策要么整页登记成功、要么整轮回滚。服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmitted`，由异步消费者逐条执行。同一 requestId 返回原轮次，不同 source/target 返回 `Conflict`。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 是幂等触发器，重复调用返回原 `ApplyResult`。
+**异步 LRO（2026-11-16 收敛）**：`startRound` 即「提交一页决策」：`decisions` 必填 1–50 条、`requestId` 必填且不超过 128 字符，空决策、缺键或超限直接拒绝；**不再提供空轮次与分批登记入口**，一页决策要么整页登记成功、要么整轮回滚。服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmittedEvent`，由异步消费者逐条执行。同一 requestId 返回原轮次，不同 source/target 返回 `Conflict`。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 是幂等触发器，重复调用返回原 `ApplyResult`。
 
 `executeEntry` 的内部步骤（一次执行的完整行为契约）：
 
@@ -77,7 +77,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 ## 5. MergeEntry 生命周期
 
-**D15-B（2026-11-13 用户裁定，已落地）**：条目业务应用由目标 BC 在**独立事务**提交；目标变体的切换/创建由 `RequirementMergeApplied` 事件在 SK 独立事务完成（异步、幂等，失败可由 Modulith 未完成事件重投）。两者不再共用条目事务，`ApplyResult` 仍以业务 apply 的结果为准。
+**D15-B（2026-11-13 用户裁定，已落地）**：条目业务应用由目标 BC 在**独立事务**提交；目标变体的切换/创建由 `RequirementMergeAppliedEvent` 事件在 SK 独立事务完成（异步、幂等，失败可由 Modulith 未完成事件重投）。两者不再共用条目事务，`ApplyResult` 仍以业务 apply 的结果为准。
 
 状态（Entity 内的状态机，候选）：
 
@@ -175,9 +175,9 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 - 同一轮次只允许一个 Apply 请求推进。执行权仍被持有时，其他 Apply 返回 HTTP 409 `RoundInProgress`（T1 轮次冲突）。终态重提返回原 `ApplyResult`。
 - Apply 受理后先持久化 `Running`。执行者退出后，调用者可用原轮次 ID 再次 Apply，接续已受理的同一次执行。恢复跳过已记录结果的条目。
-- 以轮次 ID 和条目 ID 查询业务提交凭据。业务提交、凭据和适用的 `RequirementMergeApplied` 发布记录同事务落库。若凭据已存在，只补 Checkpoint 和条目结果，即使比较后的业务内容已经改变。若事务未提交且没有凭据，则在原决定下执行尚未完成的条目。
+- 以轮次 ID 和条目 ID 查询业务提交凭据。业务提交、凭据和适用的 `RequirementMergeAppliedEvent` 发布记录同事务落库。若凭据已存在，只补 Checkpoint 和条目结果，即使比较后的业务内容已经改变。若事务未提交且没有凭据，则在原决定下执行尚未完成的条目。
 - 已受理的轮次在提交或结果暂时无法确认时保留 `Running`，按 T4 返回 `Unknown`。恢复以持久化凭据判定，业务拒绝等已记录结果遵循 Q4。旧版未终态轮次缺少提交凭据，须先核对已有业务事实。
-- LTI 切换仍按 D15-B 独立收敛。未完成事件经 `POST /api/cow/recover/incomplete` 重投。轮次结果以业务提交事实为准。
+- LTI 切换仍按 D15-B 独立异步收敛。2026-11-18 用户裁定移除 `/api/cow/recover/incomplete`；切换失败不再提供恢复入口。轮次结果以业务提交事实为准。
 
 ## 9. 与 LightTrackerItem 和业务 BC 的边界
 

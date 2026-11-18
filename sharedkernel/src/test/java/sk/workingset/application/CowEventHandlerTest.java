@@ -21,7 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.mockito.ArgumentCaptor;
 import sk.workingset.application.command.CowEventHandler;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import sk.workingset.domain.event.SnapshotRef;
+import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.port.RequirementWritePort;
 import sk.workingset.application.common.TargetIdentity;
@@ -51,7 +51,7 @@ class CowEventHandlerTest {
         when(items.findBySource(source, before)).thenReturn(List.of(eligible)).thenReturn(List.of(switched));
         when(items.findById(eligible.localId())).thenReturn(Optional.of(eligible));
         var event = new BusinessObjectUpdateEvent(42, source, source, before, after,
-                LockVersion.of(5), LockVersion.of(6), SnapshotRef.of("258782756974528"), Instant.EPOCH);
+                LockVersion.of(5), LockVersion.of(6), SnapshotRefEvent.of("258782756974528"), Instant.EPOCH);
         var store = mock(CowMaterializationRepository.class);
         var pending = new CowMaterializationRepository.Entry(42, eligible.localId(), source, before,
                 CowMaterializationRepository.Status.PENDING, 1, false, null);
@@ -68,8 +68,7 @@ class CowEventHandlerTest {
             ((java.util.function.Consumer<TransactionStatus>) invocation.getArgument(0)).accept(null);
             return null;
         }).when(transaction).executeWithoutResult(any());
-        var recovery = new CowRecoveryService(store, items, writePort, failures, transaction, () -> {});
-        var handler = new CowEventHandler(items, lifecycle, writePort, failures, transaction, store, recovery);
+        var handler = new CowEventHandler(items, lifecycle, writePort, failures, transaction, store);
 
         handler.onTrackerItemChanged(event);
         handler.onTrackerItemChanged(event);

@@ -75,8 +75,8 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 参见 [跨 BC 依赖图](../diagrams/cross-bc-contract.md)。
 
-- **D3-B（2026-11-12 用户裁定）**：COW 物化的业务保存由业务 BC **独立提交**；SK 的物化凭据与 LightTrackerItem 切换在独立事务中进行，**不要求跨 BC 同事务**。未完成的凭据/切换通过 Modulith 未完成事件重投收敛（D13）；业务保存按目标身份与快照证据幂等。
-- **D15-B（2026-11-13 用户裁定）**：Merge 的条目应用同样独立提交；目标变体切换/创建由 `RequirementMergeApplied` 事件在 SK 独立事务完成，与 COW 采用同一模式（异步、幂等、可重投）。
+- **D3-B（2026-11-12 用户裁定）**：COW 物化的业务保存由业务 BC **独立提交**；SK 的物化凭据与 LightTrackerItem 切换在独立事务中进行，**不要求跨 BC 同事务**。**2026-11-18 用户裁定**：移除 COW Recovery；凭据/切换失败即终态，不重投、不补切换，业务保存按目标身份与快照证据幂等。
+- **D15-B（2026-11-13 用户裁定）**：Merge 的条目应用同样独立提交；目标变体切换/创建由 `RequirementMergeAppliedEvent` 事件在 SK 独立事务完成，与 COW 采用同一异步模式；LTI 切换失败不再提供恢复入口。
 - **未物化子需求的直接编辑（用户确认）**：调用者以子变体的 `LocalId` 提交标题，或同时提交标题和描述。业务 BC 以来源 ID 和版次取得初始内容并保存到子变体，SK 在同一事务内将其切换为本地内容；更新成功后，工作集列表和详情即可读到新值，来源变体不被修改。来源变更触发的 COW 和 Merge 仍按 D3-B／D15-B 异步收敛。
 - Merge 执行中断的业务提交凭据和恢复结果见 [T1 §8.1](merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b)。返回值与失败语义沿用 §5。
 
@@ -123,7 +123,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 **工作集入口（D10，2026-11-13 已实现）**：`CreateRequirementRequest` 增加 `workingSetId`（为空时默认默认工作集）；共享 Tracker 实际归属默认工作集、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建，否则返回 `NotIncluded`。业务 BC 通过 SK 的 `TrackerScopePort` 解析归属，不直接访问 SK 仓储；实际 `working_set_id` 仍由 Tracker 派生。
 
-**原生创建的 LTI 登记**：业务 BC 在保存事务中发布 `TrackerItemCreated`，Modulith 持久化投递记录。业务提交后，SK 在独立事务中幂等登记 Local-backed LTI；失败可重投，业务对象已永久删除时跳过。创建返回成功表示业务对象已提交，依赖 LTI 的工作集读取在登记后可见。
+**原生创建的 LTI 登记**：业务 BC 在保存事务中发布 `TrackerItemCreatedEvent`，Modulith 持久化投递记录。业务提交后，SK 在独立事务中幂等登记 Local-backed LTI；失败可重投，业务对象已永久删除时跳过。创建返回成功表示业务对象已提交，依赖 LTI 的工作集读取在登记后可见。
 
 **身份分配（T6-C，2026-11-13 用户确认）**：创建请求不携带 CommonId，由服务端按工作集分配——默认工作集生成一个雪花 ID 同时作为 LocalId 与 CommonId；非默认工作集生成两个不相等的雪花 ID。派生沿用来源 CommonId，LocalId 由服务端生成且与 CommonId 不等。同族唯一冲突（含软删占键）统一返回 409 `DATA_INTEGRITY_CONFLICT`，不新增失败分类。
 

@@ -4,7 +4,7 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 import sk.workingset.application.command.WorkingSetCreationService;
-import sk.workingset.domain.event.WorkingSetCreationSubmitted;
+import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 
 @Component
 public class WorkingSetCreationSubmittedListener {
@@ -14,8 +14,8 @@ public class WorkingSetCreationSubmittedListener {
         this.creations = creations;
     }
 
-    @ApplicationModuleListener(id = "bootstrap.WorkingSetCreationSubmittedListener.on(sk.workingset.domain.event.WorkingSetCreationSubmitted)")
-    public void on(WorkingSetCreationSubmitted event) {
+    @ApplicationModuleListener(id = "bootstrap.WorkingSetCreationSubmittedListener.on(sk.workingset.domain.event.WorkingSetCreationSubmittedEvent)")
+    public void on(WorkingSetCreationSubmittedEvent event) {
         creations.execute(event.creationId());
     }
 }

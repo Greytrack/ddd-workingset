@@ -10,9 +10,9 @@ import java.util.Objects;
  * <p>SK 据此在独立事务中完成目标变体切换/创建；事件处理幂等，
  * 未完成时由 Modulith 事件发布记录重投。
  */
-public record RequirementMergeApplied(MergeTarget target, Instant occurredAt) {
+public record MergeAppliedEvent(MergeTargetEvent target, Instant occurredAt) {
 
-    public RequirementMergeApplied {
+    public MergeAppliedEvent {
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(occurredAt, "occurredAt");
     }

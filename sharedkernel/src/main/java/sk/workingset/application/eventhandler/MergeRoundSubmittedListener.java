@@ -6,7 +6,7 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 import sk.workingset.application.command.MergeExecutionService;
-import sk.workingset.domain.event.MergeRoundSubmitted;
+import sk.workingset.domain.event.MergeRoundSubmittedEvent;
 import sk.workingset.domain.merge.MergeFailure;
 
 /** Merge LRO 的异步执行入口：提交决策后由事件驱动逐条推进。 */
@@ -20,8 +20,8 @@ public class MergeRoundSubmittedListener {
         this.rounds = rounds;
     }
 
-    @ApplicationModuleListener(id = "bootstrap.MergeRoundSubmittedListener.on(sk.workingset.domain.event.MergeRoundSubmitted)")
-    public void on(MergeRoundSubmitted event) {
+    @ApplicationModuleListener(id = "bootstrap.MergeRoundSubmittedListener.on(sk.workingset.domain.event.MergeRoundSubmittedEvent)")
+    public void on(MergeRoundSubmittedEvent event) {
         try {
             rounds.apply(event.roundId());
         } catch (MergeFailure failure) {

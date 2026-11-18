@@ -30,7 +30,7 @@
 - [2026-11-12 多级 WorkingSet 谱系评审](2026-11-12-working-set-lineage-review.md)：FACT-028 用户裁定落地（单父、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 删除约束）；设计 Draft，开放问题见记录。WorkingSet/Tracker 不存在“停用”生命周期（2026-11-12 裁定），本记录中的停用表述为历史记录。
 - [2026-11-12 S7 Merge 实施裁定](2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界、普通字段决策优先、Requirement `delete`/`undelete`/`delete2` 最小生命周期；S7 验证 76 项通过（后续 D2/D5 回归为 77 项）。
 - 2026-11-12 收尾裁定（D4/D5/D8/D9/D11）：不存在“停用”概念，相关表述与 `assertDisableAllowed` 已清除；[QUESTION-001](../domain/open-questions.md) 按工作视图/范围清单关闭；QUESTION-008 已实现部分关闭，剩余转 `QUESTION-008.a`；D4 把 LTI 校验与移除移回 SK、跨聚合用 `CompleteDeleteEvent` 事件；D11 现阶段不接入权限、待权限模型完成后接入。登记见 [BASELINE](../BASELINE.md)。
-- [2026-11-17 T7-E 关系事件契约](2026-11-17-t7-e-relation-guards-decision.md)：Draft；SK 拥有独立关系聚合，WorkingSet 不操作关系聚合，只发布 `ReferenceCreationRequested`、`DanglingReferenceRepairRequested`、`AssociationCreationRequested`；常规业务 BC 修改/删除由 BC 维护；权限跳过；列出关系事件、Step 与失败边界。
+- [2026-11-17 T7-E 关系事件契约](2026-11-17-t7-e-relation-guards-decision.md)：Draft；SK 拥有独立关系聚合，WorkingSet 不操作关系聚合，只发布 `ReferenceCreationRequestedEvent`、`DanglingReferenceRepairRequestedEvent`、`AssociationCreationRequestedEvent`；常规业务 BC 修改/删除由 BC 维护；权限跳过；列出关系事件、Step 与失败边界。
 - [2026-11-16 T6-F 谱系裁定](2026-11-16-t6-f-lineage-constraints.md)：Shared 允许悬挂；同槽多 Tracker（独立分类投影）允许并引入 `is_default`；`sourceId` 不可变；派生链 1:1；完成即可见。多 Tracker/默认/名称唯一/直接 `sourceId` 配对已实施；复合条目身份改为 `Entry.id` + evidence，Shared 默认语义见记录。
 - [2026-11-16 Merge Checkpoint 对齐](2026-11-16-merge-checkpoint-legacy-alignment.md)：吸收旧 `merge_index` 的“参考坐标系”定位；方向不进唯一键、不新增工作集 ID 列；命中按（Tracker 对，家族，双侧版次）；同一 Tracker 对禁止并发合并。
 - [2026-11-16 文档收敛与降噪](2026-11-16-doc-consolidation.md)：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；未改变业务语义。

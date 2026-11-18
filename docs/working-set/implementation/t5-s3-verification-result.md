@@ -1,3 +1,5 @@
+> 2026-11-18 用户裁定移除 COW Recovery；本文异常重投记录保留为历史证据。
+
 # T5-S3 首次 COW 验证结果
 
 **状态：Reviewed。2026-11-12 在本机 PostgreSQL、Redis 与内嵌 Tomcat 上验证。**

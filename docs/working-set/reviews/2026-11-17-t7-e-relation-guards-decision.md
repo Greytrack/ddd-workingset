@@ -47,8 +47,8 @@ flowchart LR
         S["sourceWorkingSetId<br/>sourceLocalId<br/>sourceCommonId<br/>sourceTrackerId<br/>sourceRevision?"]
     end
     subgraph EVT["SK 关系事件（WorkingSet 只发布）"]
-        R["ReferenceCreationRequested<br/>DanglingReferenceRepairRequested"]
-        A["AssociationCreationRequested"]
+        R["ReferenceCreationRequestedEvent<br/>DanglingReferenceRepairRequestedEvent"]
+        A["AssociationCreationRequestedEvent"]
     end
     subgraph TGT["Target / 目标端"]
         T["targetWorkingSetId<br/>targetLocalId?<br/>targetCommonId<br/>targetTrackerId<br/>targetRevision?"]
@@ -75,31 +75,31 @@ originType         CREATION / EXTENSION / MERGE
 occurredAt         事件发生时间
 ```
 
-### 3.1 `ReferenceCreationRequested`
+### 3.1 `ReferenceCreationRequestedEvent`
 
 用途：创建/扩展时发现新的上游引用，请求关系服务建立 Reference。
 
 载荷：
 
 - 元数据；
-- `ReferenceEndpoint source`；
-- `ReferenceEndpoint target`（`targetWorkingSetId` 必填，`targetLocalId` 可空）。
+- `ReferenceEndpointEvent source`；
+- `ReferenceEndpointEvent target`（`targetWorkingSetId` 必填，`targetLocalId` 可空）。
 
-### 3.2 `DanglingReferenceRepairRequested`
+### 3.2 `DanglingReferenceRepairRequestedEvent`
 
 用途：目标后续被纳入/变得可解析时，请求关系服务修复同一 Reference。
 
-载荷同 `ReferenceCreationRequested`，但 `originalRelationId` 必须是已有 Reference 聚合 ID；不得新建另一条引用。
+载荷同 `ReferenceCreationRequestedEvent`，但 `originalRelationId` 必须是已有 Reference 聚合 ID；不得新建另一条引用。
 
-### 3.3 `AssociationCreationRequested`
+### 3.3 `AssociationCreationRequestedEvent`
 
 用途：创建/扩展时发现新的上游关联，请求关系服务建立 Association。
 
 载荷：
 
 - 元数据；
-- `AssociationEndpoint source`；
-- `AssociationEndpoint target`（无 revision）。
+- `AssociationEndpointEvent source`；
+- `AssociationEndpointEvent target`（无 revision）。
 
 ### 3.4 消费方回查
 
@@ -129,9 +129,9 @@ occurredAt         事件发生时间
 
 - `PUBLISH_RELATION_EVENTS` 在索引完成后执行；
 - 只发布：
-  - `ReferenceCreationRequested`（新引用）；
-  - `DanglingReferenceRepairRequested`（目标已可解析的既有悬空引用）；
-  - `AssociationCreationRequested`（新关联）。
+  - `ReferenceCreationRequestedEvent`（新引用）；
+  - `DanglingReferenceRepairRequestedEvent`（目标已可解析的既有悬空引用）；
+  - `AssociationCreationRequestedEvent`（新关联）。
 - 下游引用/关联不发布事件。
 - 不执行关系聚合写操作。
 
@@ -142,7 +142,7 @@ Merge 完成
 → PUBLISH_RELATION_REPAIR_EVENTS（独立 step）
 ```
 
-- Merge 成功后，按本轮实际变化的目标变体发布 `DanglingReferenceRepairRequested`；
+- Merge 成功后，按本轮实际变化的目标变体发布 `DanglingReferenceRepairRequestedEvent`；
 - 需要新建的引用/关联按 Merge 决策结果发布对应创建事件；
 - 关系修复不参与 Merge 成功判定。
 
@@ -176,7 +176,7 @@ Merge 完成
 - `T7RelationEventAcceptanceTest` 覆盖创建/扩展 task 实际发布 Reference/Association/Dangling repair 三类事件。
 - T7 创建/扩展已接入 `PUBLISH_RELATION_EVENTS`：索引后逐 Tracker 发布新引用/关联/悬空修复事件；失败记录为任务明细并进入 `PartiallySucceeded`，不自动重试。
 - 全量测试 **165 项通过**。
-- Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布 `DanglingReferenceRepairRequested`；失败不改变 Merge 终态、不自动重试。
+- Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布 `DanglingReferenceRepairRequestedEvent`；失败不改变 Merge 终态、不自动重试。
 
 ## 7. 仍开放
 

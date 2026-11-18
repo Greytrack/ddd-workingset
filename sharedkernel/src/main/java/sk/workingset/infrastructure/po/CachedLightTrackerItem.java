@@ -1,4 +1,4 @@
-package sk.workingset.infrastructure;
+package sk.workingset.infrastructure.po;
 
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LightTrackerItem;

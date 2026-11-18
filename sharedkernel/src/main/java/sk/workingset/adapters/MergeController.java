@@ -31,7 +31,7 @@ import sk.workingset.domain.merge.MergeRound;
  * Compare / Merge 的 HTTP 入口。
  *
  * <p>Compare 只读瞬时，按 offset/limit 分页，不承诺跨请求冻结。Merge 只接受一页决策的整页提交：
- * requestId 是幂等键，同键返回原轮次、同键换方向返回冲突；轮次由 {@code MergeRoundSubmitted}
+ * requestId 是幂等键，同键返回原轮次、同键换方向返回冲突；轮次由 {@code MergeRoundSubmittedEvent}
  * 异步执行，客户端轮询 {@code GET /api/merge-rounds/{id}} 至终态。
  */
 @RestController

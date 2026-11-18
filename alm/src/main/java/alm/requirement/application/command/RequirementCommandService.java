@@ -15,8 +15,8 @@ import alm.requirement.domain.SnapshotRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import sk.workingset.domain.event.SnapshotRef;
-import sk.workingset.domain.event.TrackerItemCreated;
+import sk.workingset.domain.event.SnapshotRefEvent;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.application.common.InheritedEditTarget;
 import sk.workingset.application.query.provider.TrackerScopePort;
@@ -92,7 +92,7 @@ public class RequirementCommandService {
                 LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
                 trackerId, title, description, revision);
         repository.save(requirement);
-        scope.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreated(
+        scope.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
                 requirement.localId(), requirement.commonId(), trackerId,
                 current.workingSetId(), requirement.revision())));
         return requirement;
@@ -193,7 +193,7 @@ public class RequirementCommandService {
 
     public Requirement saveChange(Requirement current, Requirement changed) {
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
-        SnapshotRef snapshotRef = snapshotStore.save(snapshot);
+        SnapshotRefEvent snapshotRef = snapshotStore.save(snapshot);
 
         repository.save(changed);
 

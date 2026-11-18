@@ -89,7 +89,7 @@ ttl     workingset:lti:443628229325089 -> 30
 - **提交后独立事务消费**：`@ApplicationModuleListener` 组合 `@TransactionalEventListener(AFTER_COMMIT)`、`@Async` 与新事务；监听器在业务提交后由异步线程执行，失败不回滚业务事务，记录保持未完成，可通过 `IncompleteEventPublications.resubmitIncompletePublications(...)` 或启动时自动重提恢复。
 - `@ApplicationModuleListener` 默认异步执行；验收测试使用 Awaitility 等待 `completion_date` 更新，避免竞态。
 - **不再手写 `JdbcRequirementEventStore`**；事件持久化完全由 Modulith 注册表负责。
-- S3 的失败注入场景会让 `@ApplicationModuleListener` 抛出 `CowMaterializationFailedException`，测试日志出现 `SimpleAsyncUncaughtExceptionHandler` ERROR 属预期；事件保留未完成，见 [S3 验证](t5-s3-verification-result.md)。
+- S3 的失败注入场景在 2026-11-18 后改为记录失败并结束当前事件，不再抛出 `CowMaterializationFailedException`；旧验证记录见 [S3 验证](t5-s3-verification-result.md)。
 
 实测 `event_publication`：
 

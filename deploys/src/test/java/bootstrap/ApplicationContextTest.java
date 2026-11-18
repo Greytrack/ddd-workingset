@@ -67,7 +67,7 @@ class ApplicationContextTest {
                 var requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
                 created = requirement.localId();
                 await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject("""
-                        SELECT EXISTS (SELECT 1 FROM event_publication WHERE event_type LIKE '%.TrackerItemCreated'
+                        SELECT EXISTS (SELECT 1 FROM event_publication WHERE event_type LIKE '%.TrackerItemCreatedEvent'
                         AND serialized_event LIKE ? AND completion_date IS NOT NULL)
                         """, Boolean.class, "%" + requirement.localId().value() + "%")));
                 assertEquals(created.value(), requirement.commonId().value(),

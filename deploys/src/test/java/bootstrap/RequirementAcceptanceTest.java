@@ -34,7 +34,7 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.event.TrackerItemCreated;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 /**
@@ -92,19 +92,19 @@ class RequirementAcceptanceTest {
             release.countDown();
         }
 
-        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreated") == 1);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 1);
         assertEquals(1, indexedRows());
-        var event = new TrackerItemCreated(LocalId.of(localId), CommonId.of(localId), TrackerId.of(trackerId),
+        var event = new TrackerItemCreatedEvent(LocalId.of(localId), CommonId.of(localId), TrackerId.of(trackerId),
                 WorkingSet.DEFAULT_ID, Revision.of(3));
         transaction.executeWithoutResult(status -> events.publishEvent(event));
-        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreated") == 2);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 2);
         assertEquals(1, indexedRows());
 
         assertEquals(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + localId + "/delete2", null, Void.class).getStatusCode());
         await().atMost(Duration.ofSeconds(8)).until(() -> indexedRows() == 0);
         transaction.executeWithoutResult(status -> events.publishEvent(event));
-        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreated") == 3);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 3);
         assertEquals(0, indexedRows());
     }
 

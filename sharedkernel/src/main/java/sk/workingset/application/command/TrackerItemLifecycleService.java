@@ -10,8 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import sk.workingset.application.common.InheritedEditTarget;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.error.WorkingsetResultCode;
-import sk.workingset.domain.event.MergeTarget;
-import sk.workingset.domain.event.TrackerItemCreated;
+import sk.workingset.domain.event.MergeTargetEvent;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.TrackerItemLifecyclePort;
@@ -79,7 +79,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void registerCreated(TrackerItemCreated event) {
+    public void registerCreated(TrackerItemCreatedEvent event) {
         // Match delete2's lock order so a late creation event cannot restore a purged index.
         trackers.lockTracker(event.trackerId());
         if (!businessItems.lockContentSource(event.localId()) || items.findById(event.localId()).isPresent()) {
@@ -91,7 +91,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
 
     @Override
     @Transactional
-    public void applyMergeTarget(MergeTarget target) {
+    public void applyMergeTarget(MergeTargetEvent target) {
         if (target.inherited()) {
             switchToLocalContent(target.localId(), target.revision());
             return;

@@ -1,4 +1,4 @@
-package sk.workingset.infrastructure;
+package bootstrap;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 

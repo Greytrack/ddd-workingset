@@ -1,0 +1,33 @@
+package sk.workingset.infrastructure.providers;
+
+import java.util.List;
+
+import sk.workingset.domain.event.AssociationEndpointEvent;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
+import sk.workingset.application.query.provider.RelationSourcePort;
+
+/**
+ * 过渡实现：业务 BC 尚未提供关系事实时为空。接入真实关系事实后替换为 BC Adapter。
+ */
+public final class EmptyRelationSourcePort implements RelationSourcePort {
+
+    @Override
+    public List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source) {
+        return List.of();
+    }
+
+    @Override
+    public List<AssociationFact> upstreamAssociations(AssociationEndpointEvent source) {
+        return List.of();
+    }
+
+    @Override
+    public List<ReferenceFact> referencesTargeting(ReferenceEndpointEvent target) {
+        return List.of();
+    }
+
+    @Override
+    public List<AssociationFact> associationsTargeting(AssociationEndpointEvent target) {
+        return List.of();
+    }
+}

@@ -9,9 +9,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * <p>快照内容由事件来源 BC 自行定义与保存；SK 在消费时凭该引用获取「修改前」内容。
  */
-public record SnapshotRef(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId) {
+public record SnapshotRefEvent(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId) {
 
-    public SnapshotRef {
+    public SnapshotRefEvent {
         Objects.requireNonNull(numericId, "snapshotRef.id");
         if (numericId <= 0) {
             throw new IllegalArgumentException("snapshotRef.id must be positive");
@@ -20,7 +20,7 @@ public record SnapshotRef(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Sha
 
     public String id() { return numericId.toString(); }
 
-    public static SnapshotRef of(String id) {
-        return new SnapshotRef(Long.valueOf(id));
+    public static SnapshotRefEvent of(String id) {
+        return new SnapshotRefEvent(Long.valueOf(id));
     }
 }

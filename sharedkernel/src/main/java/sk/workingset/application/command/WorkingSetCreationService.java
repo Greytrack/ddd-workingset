@@ -16,8 +16,8 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import sk.workingset.domain.event.WorkingSetCreationSubmitted;
-import sk.workingset.domain.event.TrackerItemsIndexed;
+import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
+import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
@@ -33,7 +33,7 @@ import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.WorkingSetCreation.Status;
 import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.TrackerId;
 
 public class WorkingSetCreationService {
@@ -93,7 +93,7 @@ public class WorkingSetCreationService {
         var creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
-            events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
+            events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
         var winner = store.findByRequest(request.requestId())
@@ -147,7 +147,7 @@ public class WorkingSetCreationService {
         var creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller.id(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
-            events.publishEvent(new WorkingSetCreationSubmitted(creation.id()));
+            events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
         var concurrent = store.findActiveExtension(target);
@@ -205,7 +205,7 @@ public class WorkingSetCreationService {
                         && updated.stage() != Stage.INDEX_UNSHARED_TRACKERS) {
                     var scannedTrackers = updated.indexProgress().values().stream()
                             .map(IndexProgress::scannedChildTrackerId).filter(java.util.Objects::nonNull).sorted().toList();
-                    events.publishEvent(new TrackerItemsIndexed(id, updated.request().newWorkingSetId(),
+                    events.publishEvent(new TrackerItemsIndexedEvent(id, updated.request().newWorkingSetId(),
                             scannedTrackers, Instant.now()));
                 }
                 return updated.status() == Status.Running;

@@ -11,14 +11,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import sk.workingset.domain.event.AssociationCreationRequested;
-import sk.workingset.domain.event.DanglingReferenceRepairRequested;
-import sk.workingset.domain.event.ReferenceCreationRequested;
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.AssociationCreationRequestedEvent;
+import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
+import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.RelationSourcePort.AssociationFact;
 import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
-import sk.workingset.domain.event.AssociationEndpoint;
-import sk.workingset.domain.event.ReferenceEndpoint;
+import sk.workingset.domain.event.AssociationEndpointEvent;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -39,8 +39,8 @@ class RelationEventPublisherTest {
         var repair = publisher.publishReferenceRepairs("round-1", OriginType.MERGE, List.of(fact));
 
         assertEquals(2, published.size());
-        assertTrue(published.get(0) instanceof ReferenceCreationRequested);
-        assertTrue(published.get(1) instanceof DanglingReferenceRepairRequested);
+        assertTrue(published.get(0) instanceof ReferenceCreationRequestedEvent);
+        assertTrue(published.get(1) instanceof DanglingReferenceRepairRequestedEvent);
         assertEquals("reference-42", creation.getFirst().metadata().originalRelationId());
         assertEquals("task-1", creation.getFirst().metadata().originId());
         assertEquals(OriginType.CREATION, creation.getFirst().metadata().originType());
@@ -56,29 +56,29 @@ class RelationEventPublisherTest {
         var created = publisher.publishAssociationCreations("task-1", OriginType.EXTENSION, List.of(fact));
 
         assertEquals(1, published.size());
-        assertTrue(published.getFirst() instanceof AssociationCreationRequested);
+        assertTrue(published.getFirst() instanceof AssociationCreationRequestedEvent);
         assertEquals("association-7", created.getFirst().metadata().originalRelationId());
         assertEquals("265625955250112", created.getFirst().source().trackerId().value());
         assertEquals("261538396602304", created.getFirst().target().trackerId().value());
     }
 
-    private static ReferenceEndpoint source() {
-        return new ReferenceEndpoint(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+    private static ReferenceEndpointEvent source() {
+        return new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
                 TrackerId.of("265625955250112"), Revision.of(3));
     }
 
-    private static ReferenceEndpoint target() {
-        return new ReferenceEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
+    private static ReferenceEndpointEvent target() {
+        return new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
                 TrackerId.of("261538396602304"), Revision.of(4));
     }
 
-    private static AssociationEndpoint associationSource() {
-        return new AssociationEndpoint(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
+    private static AssociationEndpointEvent associationSource() {
+        return new AssociationEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
                 TrackerId.of("265625955250112"));
     }
 
-    private static AssociationEndpoint associationTarget() {
-        return new AssociationEndpoint(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
+    private static AssociationEndpointEvent associationTarget() {
+        return new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
                 TrackerId.of("261538396602304"));
     }
 }

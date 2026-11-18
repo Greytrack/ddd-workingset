@@ -21,11 +21,11 @@ D4 选择方案 A：把 LightTrackerItem 的校验与移除**移回 SK**；跨�
 
 - 业务 BC 不再接收 SK 聚合对象：物化时 SK 传入值对象 `TargetIdentity`（localId / trackerId / commonId / revision / materialized）。
 - 业务 BC 不再注入 SK 仓储：ALM 侧只依赖自身 `RequirementRepository`、`SnapshotRepository` 与 SK 定义的协作端口。
-- 物化事务边界（D3-B，2026-11-12 用户裁定）：`CowEventHandler` 以三段独立事务执行——① SK 锁定 Tracker 并读取目标变体；② ALM 独立提交业务保存；③ SK 记录物化凭据，随后在独立事务切换 LTI。业务保存与 SK 凭据/切换**不再要求同一数据库事务**；凭据或切换未完成时由 Modulith 未完成事件重投收敛（D13），业务保存本身按 `verifyExisting` 幂等。
+- 物化事务边界（D3-B，2026-11-12 用户裁定）：`CowEventHandler` 以三段独立事务执行——① SK 锁定 Tracker 并读取目标变体；② ALM 独立提交业务保存；③ SK 记录物化凭据，随后在独立事务切换 LTI。业务保存与 SK 凭据/切换**不再要求同一数据库事务**；**2026-11-18 用户裁定**：移除 COW Recovery；凭据或切换失败即终态，不重投、不补切换，失败记录仅供审计。业务保存本身仍按 `verifyExisting` 幂等。
 
 ## 3. 事件契约
 
-`RequirementPurged(requirementId, trackerId, occurredAt)` 由 SK 定义、ALM 在永久删除提交后发布；`bootstrap.RequirementPurgedListener` 以 `@ApplicationModuleListener` 消费并调用 `removePurged`（D13：失败保留为未完成事件，可经 `/api/cow/recover/incomplete` 重投，处理幂等）。业务行删除与 LTI 清理因此不在同一数据库事务内，这是 D4“跨聚合用事件交互”的直接结果。
+`RequirementPurged(requirementId, trackerId, occurredAt)` 由 SK 定义、ALM 在永久删除提交后发布；`bootstrap.RequirementPurgedListener` 以 `@ApplicationModuleListener` 消费并调用 `removePurged`（失败按当前事件处理结果结束，不提供 `/api/cow/recover/incomplete` 恢复入口）。业务行删除与 LTI 清理因此不在同一数据库事务内，这是 D4“跨聚合用事件交互”的直接结果。
 
 ## 4. 验证
 
@@ -39,5 +39,5 @@ D4 选择方案 A：把 LightTrackerItem 的校验与移除**移回 SK**；跨�
 
 - 删除与 COW 事件交错时的并发收敛。
 - 其余 BC 的写入 Port 适配（当前仅有 ALM Requirement）。
-- LTI 清理失败后的重试由 Modulith 未完成事件记录 + `/api/cow/recover/incomplete` 重投（D13），不额外引入对账任务；事件处理保持幂等。
-- Merge 路径的“条目应用 + LTI 切换”已按 D15-B 拆分：业务 apply 独立提交，LTI 切换由 `RequirementMergeApplied` 事件在 SK 独立事务完成（D15-B 覆盖 COW 物化与 Merge 两条链路）。
+- LTI 清理失败不再通过 COW Recovery 入口重投；失败保留为审计事实，不额外引入对账任务。
+- Merge 路径的“条目应用 + LTI 切换”已按 D15-B 拆分：业务 apply 独立提交，LTI 切换由 `RequirementMergeAppliedEvent` 事件在 SK 独立事务完成（D15-B 覆盖 COW 物化与 Merge 两条链路）。

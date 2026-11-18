@@ -25,12 +25,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import sk.workingset.domain.event.AssociationCreationRequested;
-import sk.workingset.domain.event.DanglingReferenceRepairRequested;
-import sk.workingset.domain.event.ReferenceCreationRequested;
-import sk.workingset.domain.event.ReferenceEndpoint;
-import sk.workingset.domain.event.AssociationEndpoint;
-import sk.workingset.domain.event.RelationEventMetadata.OriginType;
+import sk.workingset.domain.event.AssociationCreationRequestedEvent;
+import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
+import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
+import sk.workingset.domain.event.AssociationEndpointEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.RelationSourcePort;
 import sk.workingset.application.query.provider.RelationSourcePort.AssociationFact;
 import sk.workingset.application.query.provider.RelationSourcePort.ReferenceFact;
@@ -115,39 +115,39 @@ class T7RelationEventAcceptanceTest {
         RelationSourcePort relationSource() {
             return new RelationSourcePort() {
                 @Override
-                public List<ReferenceFact> upstreamReferences(ReferenceEndpoint source) {
+                public List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source) {
                     return List.of(new ReferenceFact("reference-" + source.commonId().value(), source, target()));
                 }
 
                 @Override
-                public List<AssociationFact> upstreamAssociations(AssociationEndpoint source) {
+                public List<AssociationFact> upstreamAssociations(AssociationEndpointEvent source) {
                     return List.of(new AssociationFact("association-" + source.commonId().value(), source,
                             associationTarget()));
                 }
 
                 @Override
-                public List<ReferenceFact> referencesTargeting(ReferenceEndpoint target) {
+                public List<ReferenceFact> referencesTargeting(ReferenceEndpointEvent target) {
                     return List.of(new ReferenceFact("repair-" + target.commonId().value(),
                             referenceSource(), target));
                 }
 
                 @Override
-                public List<AssociationFact> associationsTargeting(AssociationEndpoint target) {
+                public List<AssociationFact> associationsTargeting(AssociationEndpointEvent target) {
                     return List.of();
                 }
 
-                private ReferenceEndpoint target() {
-                    return new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
+                private ReferenceEndpointEvent target() {
+                    return new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
                             CommonId.of("263710506950592"), TrackerId.of("263244057497536"), Revision.of(4));
                 }
 
-                private AssociationEndpoint associationTarget() {
-                    return new AssociationEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
+                private AssociationEndpointEvent associationTarget() {
+                    return new AssociationEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
                             CommonId.of("263710506950592"), TrackerId.of("263244057497536"));
                 }
 
-                private ReferenceEndpoint referenceSource() {
-                    return new ReferenceEndpoint(WorkingSet.DEFAULT_ID, LocalId.of("267169595373504"),
+                private ReferenceEndpointEvent referenceSource() {
+                    return new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("267169595373504"),
                             CommonId.of("260782703683520"), TrackerId.of("266102343897024"), Revision.of(1));
                 }
             };
@@ -160,34 +160,34 @@ class T7RelationEventAcceptanceTest {
     }
 
     static class RelationEvents {
-        private final List<ReferenceCreationRequested> references = new CopyOnWriteArrayList<>();
-        private final List<AssociationCreationRequested> associations = new CopyOnWriteArrayList<>();
-        private final List<DanglingReferenceRepairRequested> repairs = new CopyOnWriteArrayList<>();
+        private final List<ReferenceCreationRequestedEvent> references = new CopyOnWriteArrayList<>();
+        private final List<AssociationCreationRequestedEvent> associations = new CopyOnWriteArrayList<>();
+        private final List<DanglingReferenceRepairRequestedEvent> repairs = new CopyOnWriteArrayList<>();
 
         @EventListener
-        public void on(ReferenceCreationRequested event) {
+        public void on(ReferenceCreationRequestedEvent event) {
             references.add(event);
         }
 
         @EventListener
-        public void on(AssociationCreationRequested event) {
+        public void on(AssociationCreationRequestedEvent event) {
             associations.add(event);
         }
 
         @EventListener
-        public void on(DanglingReferenceRepairRequested event) {
+        public void on(DanglingReferenceRepairRequestedEvent event) {
             repairs.add(event);
         }
 
-        List<ReferenceCreationRequested> references() {
+        List<ReferenceCreationRequestedEvent> references() {
             return references;
         }
 
-        List<AssociationCreationRequested> associations() {
+        List<AssociationCreationRequestedEvent> associations() {
             return associations;
         }
 
-        List<DanglingReferenceRepairRequested> repairs() {
+        List<DanglingReferenceRepairRequestedEvent> repairs() {
             return repairs;
         }
 

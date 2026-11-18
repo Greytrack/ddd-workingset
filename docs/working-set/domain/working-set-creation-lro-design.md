@@ -51,7 +51,7 @@
 | `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
 | `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
 | `INDEX_UNSHARED_TRACKERS`（T7-D 已实现） | 对每个绑定成功的非共享子 Tracker，按父 Tracker 的有效 Item 创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
-| `PUBLISH_RELATION_EVENTS`（T7-E 已实现） | 索引完成后发布 `ReferenceCreationRequested`、`DanglingReferenceRepairRequested`、`AssociationCreationRequested`；不操作关系聚合 | 索引 | 记录事件发布失败；不阻断主流程，不自动重试 |
+| `PUBLISH_RELATION_EVENTS`（T7-E 已实现） | 索引完成后发布 `ReferenceCreationRequestedEvent`、`DanglingReferenceRepairRequestedEvent`、`AssociationCreationRequestedEvent`；不操作关系聚合 | 索引 | 记录事件发布失败；不阻断主流程，不自动重试 |
 
 - 步骤内逐项失败**不中断**同步骤其他项；步骤间按依赖继续可执行步骤。
 - 复制与绑定分别提交。复制失败时跳过该 Tracker 的绑定，复制成功而绑定失败时保留副本并记录绑定阶段的失败。轮询的 `progress` 是任务汇总，`stageProgress` 分阶段记录成功、失败、跳过和总数。
@@ -87,7 +87,7 @@
 
 ### 4.6 关系事件发布
 
-索引阶段结束时登记 `TrackerItemsIndexed`，提交后交付。扫描完成的 Tracker 可以含单项失败或带明细的跳过。关系请求由后续独立步骤 `PUBLISH_RELATION_EVENTS` 发布。事件字段、Merge 修复时点与失败边界统一见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
+索引阶段结束时登记 `TrackerItemsIndexedEvent`，提交后交付。扫描完成的 Tracker 可以含单项失败或带明细的跳过。关系请求由后续独立步骤 `PUBLISH_RELATION_EVENTS` 发布。事件字段、Merge 修复时点与失败边界统一见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 
 ## 5. 事务、事件与一致性
 
@@ -148,7 +148,7 @@
 | T7-B | LRO 骨架：任务表、创建/轮询 REST、状态推进、幂等 | T7-A | HTTP 创建返回任务；轮询状态；重复提交返回原任务 |
 | T7-C | 范围复制与绑定：子 WS 本体、非共享 Tracker copy、共享/空间绑定 | T7-B、S6 | 副本/绑定正确；非法范围记录失败明细 |
 | T7-D | 批量 LTI 索引：分页端口、软删剔除、分批创建、部分成功明细 | T7-C、T3 | 批量索引成功/部分成功；软删剔除；重复执行幂等 |
-| T7-E | 关系事件发布：索引完成后发 `ReferenceCreationRequested`/`DanglingReferenceRepairRequested`/`AssociationCreationRequested`；Merge 后发修复事件 | T7-D、QUESTION-010（已裁定 C） | 事件触发；WorkingSet 不操作关系聚合；失败不阻塞、不自动重试；不参与 Compare/Merge |
+| T7-E | 关系事件发布：索引完成后发 `ReferenceCreationRequestedEvent`/`DanglingReferenceRepairRequestedEvent`/`AssociationCreationRequestedEvent`；Merge 后发修复事件 | T7-D、QUESTION-010（已裁定 C） | 事件触发；WorkingSet 不操作关系聚合；失败不阻塞、不自动重试；不参与 Compare/Merge |
 | T7-F | 规模与恢复：批大小、分页、结果保留、压测 | T7-E | 规模数据、失败明细可读、连接池可承受 |
 
 ## 12A. T7-G 扩展已有工作集（Implemented，2026-11-17）
