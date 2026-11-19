@@ -48,19 +48,7 @@ public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
                         item.sourceLocalId(), item.sourceRevision()));
     }
 
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public Optional<InheritedEditTarget> lockInheritedEditTarget(LocalId localId) {
-        Optional<LightTrackerItem> candidate = items.findById(localId).filter(item -> !item.materialized());
-        if (candidate.isEmpty()) {
-            return Optional.empty();
-        }
-        trackers.lockTracker(candidate.orElseThrow().trackerId());
-        return findInheritedTarget(localId);
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Transactional
     public void completeInheritedEdit(LocalId localId, Revision revision) {
         switchToLocalContent(localId, revision);
     }

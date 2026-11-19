@@ -8,7 +8,6 @@ import sk.workingset.domain.event.MergeTargetEvent;
 import java.util.Optional;
 
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
 
 /**
@@ -20,11 +19,5 @@ public interface TrackerItemLifecyclePort {
 
     /** 读取未物化变体的身份和内容来源，不锁定也不切换索引。 */
     Optional<InheritedEditTarget> findInheritedTarget(LocalId localId);
-
-    /** 锁定仍在继承内容的目标，供调用方在同一事务内完成用户首次编辑。 */
-    Optional<InheritedEditTarget> lockInheritedEditTarget(LocalId localId);
-
-    /** 用户首次编辑保存成功后，在调用方事务内切换到本地内容。 */
-    void completeInheritedEdit(LocalId localId, Revision revision);
 
 }

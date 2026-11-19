@@ -168,6 +168,7 @@ class RequirementAcceptanceTest {
         Map<String, Object> event = jdbc.queryForMap(
                 "SELECT listener_id, event_type, publication_date, completion_date, serialized_event "
                         + "FROM event_publication WHERE serialized_event LIKE ? AND event_type LIKE '%.BusinessObjectUpdateEvent' "
+                        + "AND listener_id LIKE '%RequirementChangedListener%' "
                         + "ORDER BY publication_date DESC LIMIT 1",
                 "%" + localId + "%");
 

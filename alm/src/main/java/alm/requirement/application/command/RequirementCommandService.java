@@ -124,17 +124,13 @@ public class RequirementCommandService {
     }
 
     private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
-        java.util.Optional<InheritedEditTarget> inherited = lifecycle.lockInheritedEditTarget(localId);
+        java.util.Optional<InheritedEditTarget> inherited = lifecycle.findInheritedTarget(localId);
         Requirement current = inherited.map(target -> {
             workingSets.requireReady(target.workingSetId());
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
         }).orElseGet(() -> load(localId));
         requireActive(current);
-        Requirement changed = saveChange(current, change.apply(current));
-        if (inherited.isPresent()) {
-            lifecycle.completeInheritedEdit(localId, changed.revision());
-        }
-        return changed;
+        return saveChange(current, change.apply(current));
     }
 
     private Requirement createEditBase(InheritedEditTarget target, LockVersion expectedLockVersion) {

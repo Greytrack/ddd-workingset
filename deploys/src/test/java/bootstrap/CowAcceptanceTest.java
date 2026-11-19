@@ -117,6 +117,7 @@ class CowAcceptanceTest {
                         "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, changed.getStatusCode(), String.valueOf(changed.getBody()));
+        await().atMost(Duration.ofSeconds(8)).until(() -> read(child).materialized());
         LightTrackerItemView[] listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/light-tracker-items",
                 LightTrackerItemView[].class);
         assertEquals(1, listed.length);
@@ -148,6 +149,7 @@ class CowAcceptanceTest {
                 new HttpEntity<>(Map.of("title", "Child title", "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).until(() -> read(child).materialized());
         ReadContent edited = read(child);
         assertTrue(edited.materialized());
         assertEquals(child.id(), edited.contentLocalId());
@@ -183,7 +185,7 @@ class CowAcceptanceTest {
     }
 
     @Test
-    void firstEditRollsBackIfSwitchToLocalContentFails() {
+    void firstEditCommitsBusinessObjectBeforeAsynchronousSwitch() {
         createSource();
         Target child = derive();
         failNextSwitch(child);
@@ -192,13 +194,14 @@ class CowAcceptanceTest {
                 new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
                         "expectedLockVersion", 0)), String.class);
 
-        assertTrue(response.getStatusCode().is5xxServerError());
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
                 Integer.class, child.id()));
         ReadContent content = read(child);
         assertFalse(content.materialized());
         assertEquals(source, content.contentLocalId());
-        assertEquals("A", content.fields().get("title"));
+        assertEquals("Child edit", content.fields().get("title"));
+        assertEquals("Child description", content.fields().get("description"));
     }
 
     @Test
@@ -322,7 +325,8 @@ class CowAcceptanceTest {
 
     private int completedEvents() {
         return jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE serialized_event LIKE ?"
-                + " AND event_type LIKE '%.BusinessObjectUpdateEvent' AND completion_date IS NOT NULL",
+                + " AND event_type LIKE '%.BusinessObjectUpdateEvent' AND completion_date IS NOT NULL"
+                + " AND listener_id LIKE '%RequirementChangedListener%'",
                 Integer.class, eventPattern());
     }
 
