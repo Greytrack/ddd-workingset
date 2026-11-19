@@ -29,6 +29,8 @@ flowchart LR
 
 聚合实现领域公共接口，适配器实现只读契约；消息不传聚合实例。实现差距见 [当前实现边界](../implementation/current-boundaries.md)。
 
+**2026-11-19 读取边界补充**：图中 `TrackerItemQueryProvider` 表达集合查询和读模型契约，不是唯一读取方式。业务 BC 也可只读使用 SK 的共享聚合与聚合仓储完成按 ID 的身份/来源校验；但不得调用保存、删除或修改 SK 聚合，跨聚合写入仍只走事件。单个查询方法不再新增同步 Port。该补充不改变 K1″/K2″。
+
 ## 2. 能力声明
 
 | 标记 | Part / DQA | ALM / GateFlow | 不支持时的契约行为 |

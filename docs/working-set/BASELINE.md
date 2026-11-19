@@ -12,6 +12,8 @@
 
 事实与政策主题、首版领域模型候选及 ADR-0001～0005 已接受。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
 
+2026-11-19 的模块拆分、直接只读边界和事件协作澄清登记为 **Reviewed 实现边界**，不是新的 Accepted 业务基线；其权威说明见[当前实现边界](implementation/current-boundaries.md)与[对齐记录](reviews/2026-11-19-doc-alignment-after-code-evolution.md)。
+
 ## 候选基线（用户已接受，未正式发布）
 
 用户于 2026-11-10 接受[首版领域模型基线候选 v1](domain/model-baseline-candidate-v1.md)的批准清单：D-001～D-019、核心聚合、ProductSpace、业务 BC 聚合、TrackerItem 契约及阶段 4 补充。确认依据见[阶段 3 决策包](reviews/2026-11-09-stage-3-architecture-review.md)与[阶段 4 评审](reviews/2026-11-10-stage-4-productspace-classification-review.md)。
@@ -75,6 +77,7 @@
 
 | 日期 | 变更主题与依据 |
 | --- | --- |
+| 2026-11-19 | 实现边界与文档对齐：登记 `businessframework`/`tracker`/`productspace`/`workingset` 模块边界；明确业务 BC 可只读使用 SK 共享聚合/仓储、写入仍走事件；移除 `TrackerItemLifecyclePort`、`Caller`、`RequirementWritePort` 和 LightTrackerItem 缓存等过时声明；继承编辑改为 `BusinessObjectUpdateEvent` 异步切换。该批次不改变既有业务接受范围，只更新 Reviewed 边界与历史指向。见 [对齐记录](reviews/2026-11-19-doc-alignment-after-code-evolution.md) 与 [当前实现边界](implementation/current-boundaries.md)。 |
 | 2026-11-16 | 文档收敛：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；不改变业务语义。见 [收敛记录](reviews/2026-11-16-doc-consolidation.md)。 |
 | 2026-11-17 | T4 §5.4 登记数值错误码与响应结构为 API 契约 v1：码段、九分类映射、只增不改与版本化规则；实现枚举见 `sk.common.error.WorkingsetResultCode`。 |
 | 2026-11-17 | 废弃 `Difference.key`：compare 不再生成客户端 key，Merge 决策只提交 evidence + decision；条目身份改为 `MergeRound.Entry.id`。`TrackerPair` 扩展为有向四元组（左右 WorkingSet + Tracker），跨轮次审计使用完整 evidence。候选配对只按直接 `sourceId`，不允许跨级/派生兄弟互配/同槽全组合。旧数据处理见 [Merge 实施记录](implementation/merge-checkpoint-rework-plan.md)。裁定见 [T6-F §4.1/§4.2](reviews/2026-11-16-t6-f-lineage-constraints.md#41-实现含义)。 |

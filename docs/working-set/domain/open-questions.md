@@ -40,7 +40,7 @@
 | `QUESTION-002.i` | 原“批量派生整批原子”；已由 `QUESTION-002.l` 取代为 T7 创建/扩展部分成功 | T6-F（2026-11-16）、T7-G（2026-11-17） |
 | `QUESTION-002.j` | Compare/Merge 候选对按 Tracker 的直接 `sourceId` 派生关系确定：只允许直属派生父子，不允许跨级，不允许派生兄弟节点互配，不做同槽全组合 | 2026-11-17 用户裁定 |
 | `QUESTION-002.l` | 创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO，独立批量派生入口另行定义 | 2026-11-17 用户裁定 |
-| `QUESTION-003` | 现阶段不接入权限；`Caller`/`authorize` 保持占位，待权限模型完成后接入 | D11（2026-11-12） |
+| `QUESTION-003` | 现阶段不接入权限；`Caller`/`authorize` 占位已于 2026-11-19 移除，待权限模型完成后重新设计接入边界 | D11（2026-11-12）；2026-11-19 实现清理 |
 | `QUESTION-005` | 原生新建 Item 由服务端分配身份；回并经直属父子 Merge CREATE 承载 | D10、T6-C、T6-D |
 | `QUESTION-007` | Compare/Merge 只允许直属父子双向，兄弟/跨代拒绝 | POL-004、FACT-007 |
 | `QUESTION-008` | 字段级 Merge 的执行部分已由 S7 落地；剩余并发恢复转 `QUESTION-008.a` | [S7 验证](../implementation/t5-s7-verification-result.md) |

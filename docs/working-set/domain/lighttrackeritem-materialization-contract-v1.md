@@ -105,8 +105,8 @@ LightTrackerItem 与业务聚合是**双事实**：前者持身份/来源/物化
 ## 8. 与 Merge（T1）和绑定（T2）的衔接
 
 - **未物化目标参与 Diff**：不要求先物化（D-019）。
-- **Merge 修改未物化目标**：业务 BC 构建目标聚合并正常 Save（D-019、INV-062），保存成功后通过**同一状态切换行为**更新 LightTrackerItem（`materialized`、`sourceLocalId`、`sourceRevision` 同步切换）。
-- **Merge 不直接写** `materialized`、`sourceLocalId`、`sourceRevision`、`revision`：只能经由既有 COW/同步机制。
+- **Merge 修改未物化目标**：业务 BC 构建目标聚合并正常 Save（D-019、INV-062），保存成功后发布结果事件；SK 消费 `MergeAppliedEvent` 后在**独立事务**按既有 COW 状态切换行为更新 LightTrackerItem（`materialized`、`sourceLocalId`、`sourceRevision` 同步切换）。
+- **Merge 不直接写** `materialized`、`sourceLocalId`、`sourceRevision`、`revision`：只能经由既有 COW/`MergeAppliedEvent` 事件机制；不同聚合不共享写事务。
 - **MergeCheckpoint 不以 `materialized` 作为确认依据**：仍使用既定的双侧比较证据与业务 Revision 语义（T1 CK-3/CK-4）。
 - **Tracker 删除**继续检查关联 TrackerItem（T2、POL-014），不因状态字段改变生命周期政策；绑定移除不影响变体身份与来源字段。
 

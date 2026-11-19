@@ -67,6 +67,8 @@ DQA 拥有其质量业务对象的模型及业务逻辑。Working Set 仅纳入�
 
 限界上下文不自动等于 Java 模块或微服务。企业 Shared Kernel 也不自动等于一个聚合或一个部署单元。`CTX-001/002/003` 可以先在 Working Set 能力内部保持模型边界；`CTX-009` 是应用编排角色。是否拆服务需要团队、可用性、吞吐和发布耦合证据，本阶段不决定。
 
+**2026-11-19 实现边界补充**：当前 `sharedkernel` 源码拆为 `sk.businessframework`（通用业务对象/版次能力）、`sk.tracker`、`sk.productspace`、`sk.workingset` 四个内部包。该拆分是代码组织与待验证的模块边界，不证明 `CTX-001/002/003` 已升格为独立 BC；当前模块间仍有同进程依赖和 TC-002 整改项，详见[当前实现边界](../implementation/current-boundaries.md)。
+
 ## 阶段 3 收敛建议
 
 依据 [边界比较](shared-kernel-boundary.md) 和 [边界场景](../scenarios/shared-kernel-boundary-scenarios.md)，暂推荐一个 Working Set 模型边界内保留多个模型区域，不把 CTX 编号当作已成立的 BC：

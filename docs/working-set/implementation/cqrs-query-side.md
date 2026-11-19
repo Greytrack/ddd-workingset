@@ -19,10 +19,10 @@ alm.requirement.application.query
 - 查询服务：`WorkingSetQueryService`、`RequirementQueryService`。
 - 查询模型 ID 使用 `Long`；Controller 继续输出字符串 ID，保持现有 JSON 契约。
 - 事件定义已迁移到 `domain/event`；事件监听器仍在 `application/eventhandler`。
-- 查询端口改为 `application/query/provider`；`TrackerItemCatalogQueryProvider`、`TrackerItemQueryProvider`、`RelationSourceQueryProvider` 等负责应用读取。
+- 查询端口改为 `application/query/provider`；`TrackerItemCatalogQueryProvider`、`TrackerItemQueryProvider`、`TrackerQueryProvider`、`LightTrackerItemQueryProvider`、`ClassificationCatalog`、`CowFailureLogQueryProvider`、`RelationSourceQueryProvider` 等负责应用读取。
 - 查询 Provider 实现位于 `infrastructure/providers` 与 `infrastructure/providers/mybatis`。
 - Provider 实现可以复用聚合 Repository、写自定义 SQL，或使用 MyBatis-Plus Lambda；查询模型不受聚合装载方式限制。
-- 聚合 Repository 接口声明在 domain；Jdbc/缓存实现在 `infrastructure/repositories`。
+- 聚合 Repository 接口声明在 domain；当前命令侧实现位于 `infrastructure/repositories`，不提供 LightTrackerItem 查询缓存。
 - 当前查询已迁移：
   - WorkingSet 摘要、子级/祖先、Tracker 列表、Classification、Bindings；
   - Requirement 详情：持久化记录与未物化继承目标在同一读快照内依次解析，不再以聚合仓储重复查找同一详情 ID；仅继承路径读取来源，仍校验来源版次。
@@ -39,11 +39,11 @@ alm.requirement.application.query
 
 ## 后续
 
-- LTI 横向扫描已由 `LightTrackerItemQueryProvider` 承接；`resolve` 仍可按 ID 装载身份聚合。工作区的 `TrackerQueryProvider` 属待验证接线。
+- LTI 横向扫描已由 `LightTrackerItemQueryProvider` 承接；`resolve` 仍可按 ID 装载身份聚合。Tracker 集合读取由 `TrackerQueryProvider` 承接，Tracker 创建/改名命令使用该只读 Provider 判定可见性。
 - Creation/Merge 查询迁移到查询端口。
 - Controller 按 command/query 拆成独立入口。
 - 关系事件 outbox/消费方仍按 T7-E 开放项处理。
 
 ## 验证
 
-`mvn -B test`：**165 项通过，0 失败、0 错误、0 跳过**；ArchUnit 增加 query→command、command→query、application→MyBatis 和 domain→持久化框架规则。
+最近一次可复现的完整记录为 **160 项通过**（2026-11-19，在后续工作区新增 `businessframework`/`RequestThreadHolder` 之前）；当前工作区尚未重跑全量测试。ArchUnit 规则覆盖 query→command、command→query、application→MyBatis 和 domain→持久化框架边界。测试状态与未验证项见 [当前实现边界](current-boundaries.md)。

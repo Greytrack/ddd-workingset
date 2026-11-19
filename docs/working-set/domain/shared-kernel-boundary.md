@@ -14,6 +14,19 @@
 
 > Working Set Shared Kernel 管理跨四个业务 BC 共同成立的工作集语义和通用机制；业务对象的专有状态机、字段规则和整体合法性仍由对应业务 BC 拥有。
 
+### SK 内部模块（实现边界）
+
+当前 `sharedkernel` 源码按以下包组织。它们是 Shared Kernel 的内部模块，不自动升级为独立限界上下文或微服务，也不改变 `AC-001` 的企业边界：
+
+| 包 | 地位 | 当前约束 |
+| --- | --- | --- |
+| `sk.businessframework` | Shared Kernel 的通用业务对象/版次/属性能力 | 不是 Working Set 业务模型，不得反向依赖各 BC；`validation` 子包存在迁移期旧栈依赖例外。 |
+| `sk.tracker` | Tracker 聚合及其命令/查询/事件处理 | Tracker 是独立聚合；当前仍使用 `sk.workingset` 的 WorkingSet/Classification 类型，包拆分不等于已完成跨 BC 契约收敛。 |
+| `sk.productspace` | ProductSpace 聚合及其命令/仓储 | ProductSpace 是独立聚合；产品空间创建的默认工作集初始化仍存在跨聚合同事务，见[实现边界](../implementation/current-boundaries.md)。 |
+| `sk.workingset` | WorkingSet、LightTrackerItem、COW、创建 LRO、Compare/Merge、关系与查询 Provider | Working Set 核心能力；命令仓储与查询 Provider 分开。 |
+
+**读取与写入**：业务 BC 可以只读使用 SK 共享聚合/仓储完成身份和来源校验；不得直接保存、删除或修改 SK 聚合。跨聚合状态变化通过可靠事件和独立事务完成（TC-002）。单个查询方法不再新增同步 Port，集合读取使用 `application/query/provider`。详见 [T4 D4](cross-bc-contract-v1.md) 和[当前实现边界](../implementation/current-boundaries.md)。
+
 <a id="plm-part-的接入范围用户已确认"></a>
 ## PLM Part（已确认）
 
@@ -76,7 +89,7 @@ Shared Tracker 从子工作集移除仅解除 TrackerBinding，聚合保留；�
 
 | 主题 | 状态 | 入口 |
 | --- | --- | --- |
-| 权限接入 | 现阶段不接入；`Caller`/`authorize` 占位，待权限模型完成后接入（D11） | `QUESTION-003` |
+| 权限接入 | 现阶段不接入；`Caller`/`authorize` 占位已移除，待权限模型完成后重新设计接入边界（D11） | `QUESTION-003` |
 | GateFlow 替换的并发、重试、外部引用 | 业务结果已确认；切换瞬间并发准入与旧元素清理待 GateFlow 专项 | 本节 GateFlow |
 | Reference/Association 构建与删除守卫 | QUESTION-010 已裁定 C；六类可见性/守卫待确认 | `QUESTION-010`、T7-E |
 | SK 契约版本治理 | 团队开放项 | `QUESTION-014` |

@@ -1,6 +1,8 @@
 # T6-C 身份分配与唯一冲突验证
 
-**状态：Reviewed（2026-11-13，实施证据）**
+**状态：Reviewed（2026-11-13，实施证据；接口名称以当前实现为准）**
+
+> **2026-11-19 补充**：文中 `TrackerScopePort`、`RequirementApplicationService`、`WorkingSetApplicationService` 是当时路径/名称；当前 Tracker 归属查询由 `TrackerQueryProvider` 承担，创建入口边界见[当前实现边界](current-boundaries.md)。本记录保留当时的身份规则证据，不把旧接口名作为当前设计入口。
 
 依据 [T4 §4](../domain/cross-bc-contract-v1.md)、[POL-005](../domain/facts.md)、[QUESTION-004](../domain/open-questions.md) 与用户 2026-11-13 裁定。
 

@@ -51,7 +51,7 @@ public interface TrackerItem extends BusinessObject {
 
 - T2 的 K1～K3 只约束 Tracker、ProductSpace、WorkingSet 的绑定/删除；**业务 TrackerItem 删除不在 T2 契约内**。
 - S7 的 `Requirement.delete`/`undelete`/`delete2` 是 ALM 业务对象的实现，不是 Working Set 聚合删除规则。
-- T4 的 `TrackerItemQueryProvider` 继续只读；`BusinessObject` 是领域公共能力，不替代 `RequirementWritePort` 等 BC 写入协作 Port。
+- T4 的 `TrackerItemQueryProvider` 继续只读；`BusinessObject` 是领域公共能力。原同步写 Port（如 `RequirementWritePort`）已从当前实现移除，写入协作以 T4 §3.2 的事件为准；本历史设计不把旧 Port 作为当前边界。
 - 该扩展改变 T4 §3.1 对 `TrackerItem` “只读”的表述，必须经接口评审/ADR 记录；不得静默改写冻结契约。
 
 ## 4. 各 BC 的责任

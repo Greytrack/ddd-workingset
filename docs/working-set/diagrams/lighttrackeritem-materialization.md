@@ -67,3 +67,5 @@ sequenceDiagram
 图不承诺收据与请求当前已经原子提交，也不表示技术故障统一可重试。业务恢复入口已移除。
 
 补充：未物化目标被 Merge 修改时，「构建业务聚合并 Save」由 Merge 执行（T1），保存成功后按**同一状态切换行为**更新三字段（物化与修改一体，D-019），不新增第三条物化路径。
+
+**2026-11-19 首次继承编辑补充**：用户直接编辑未物化目标时，ALM 在自身事务保存 Requirement，并发布 `BusinessObjectUpdateEvent`；SK 的 `TrackerItemLocalizedListener` 在独立事务把 LTI 切换为 Local-backed。该路径不先经 `TrackerItemMaterializationRequestedEvent`，因为业务内容已由编辑命令保存；它仍遵守“业务保存成功、LTI 切换独立收敛”，失败不回滚业务保存。原同步 `TrackerItemLifecyclePort.completeInheritedEdit` 已移除。

@@ -34,6 +34,9 @@
 | `CONCEPT-027` | **MergeRound／合并轮次** | 一页合并决策的执行载体聚合；记录本轮参数、条目、进度与唯一终态结果。 | 不是三类核心聚合之一；终态不可重开。 |
 | `CONCEPT-028` | **MergeCheckpoint／合并检查点** | 表达“差异已处理”的确认/撤销事实的独立聚合；不证明内容相等。 | 不等同 Apply Result；不按 Working Set 定位。 |
 | `CONCEPT-029` | **WorkingSetCreation／工作集创建任务** | 按用户选择范围创建子工作集的异步执行记录；保存范围、进度与结果。 | 不拥有 Working Set/Tracker/LTI；不是创建入口本身。 |
+| `CONCEPT-030` | **Shared Kernel 内部模块** | `sharedkernel` 内的代码组织单元，如 `businessframework`、`tracker`、`productspace`、`workingset`；用于承载不同模型区域。 | 不自动等于独立限界上下文、微服务或已批准部署单元。 |
+| `CONCEPT-031` | **只读共享聚合访问** | 业务 BC 以只读方式使用 SK 共享聚合/仓储完成身份、来源和就绪校验；不得保存、删除或修改 SK 聚合状态。 | 不等于获得 SK 写入权；不替代跨聚合原子校验或事件协作。 |
+| `CONCEPT-032` | **Business Object Framework／业务对象框架** | `sk.businessframework` 提供的通用业务对象、属性、版次和排序能力，供多个 BC 复用。 | 不是 Working Set 业务模型；其 `BusinessObject` 与 `TrackerItem` 公共工作集契约不是同一概念。 |
 
 ## Item 身份规则（已确认）
 

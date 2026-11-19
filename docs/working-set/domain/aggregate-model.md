@@ -18,16 +18,28 @@
 | **MergeEntry** | MergeRound 内 Entity | 轮次内 `Entry.id`；双侧业务定位保存在证据中 | 证据与决定绑定；终态后不可重执行 | 引用 Difference 证据 |
 | **MergeCheckpoint** | 独立聚合根 | 规范化 Tracker 对 + `CommonId` | 确认/撤销因果单调；方向只是属性；WorkingSet 不参与；不证明内容相等 | 按 Tracker 对/家族/双侧版次关联 MergeRound |
 | **TrackerItem** | 公共契约（非聚合） | 无 | 公共身份、Revision 与生命周期能力声明 | 业务 BC 聚合实现 |
-| **BusinessObject** | 公共能力接口（非聚合） | 无 | `delete/undelete/delete2` 能力声明；实际规则由 BC 拥有 | `TrackerItem` 继承 |
+| **BusinessObject（Working Set 契约）** | 公共能力接口（非聚合） | 无 | `delete/undelete/delete2` 能力声明；实际规则由 BC 拥有。与 `sk.businessframework` 的同名通用接口不是同一概念 | `TrackerItem` 继承 |
 | **Reference／Association** | SK 关系聚合（WorkingSet 不拥有；本轮只发事件） | 业务关系聚合 ID | 端点意图、钉版、有效性、修复；不参与 Compare/Merge | 关系服务消费事件；引用业务对象/变体 |
 | **WorkingSetCreation** | LRO 载体聚合 | `creationId`；`requestId` 幂等 | 任务状态机、范围快照、部分成功明细；不拥有 WorkingSet/Tracker/LTI | ID 引用父/目标 WS |
 
 完整业务内容与状态机由各业务 BC 的聚合负责。Working Set 的聚合之间按身份引用。跨 BC 写入见 [T4](cross-bc-contract-v1.md)。
 
+## 非聚合的共享能力
+
+`sk.businessframework` 是 Shared Kernel 的通用业务对象、版次、属性与排序能力，不是 Working Set 聚合，也不自动拥有 Working Set 的身份或范围语义。它是一个可被多个 BC 复用的能力模块；其 `BusinessObject`/`Revisionable` 契约与 `sk.workingset.domain.TrackerItem` 的公共工作集契约不是同一概念，不能互相替代。
+
+共享能力与业务聚合的边界：
+
+- `businessframework` 不拥有 Working Set、Tracker、LightTrackerItem、ProductSpace 或业务 BC 的状态；
+- 业务 BC 可以使用共享能力实现自身聚合，但聚合身份、不变量、状态机和持久化仍归该 BC；
+- 不得把 `businessframework` 的通用类型当作跨 BC 的通用写模型，也不得用它绕过业务 BC 的整体校验。
+
 ## 一致性边界
 
 - `TC-002` 已由用户于 2026-11-19 明确确认为架构硬约束：一个写事务最多修改一个聚合，跨聚合变更通过可靠事件与独立事务最终收敛。不是业务不变量，也不得再作为可选实现策略。执行规则及反模式清单见 [AGENTS §7.2/7.4](../../../AGENTS.md)，偏差见 [反模式审查](../reviews/2026-11-19-ddd-anti-pattern-scan.md)。
 - 业务对象保存与 LTI 切换是双事实：禁止跨聚合同一写事务；业务保存成功而切换失败不回滚；恢复及重投见 [T3](lighttrackeritem-materialization-contract-v1.md)。
+- 业务 BC 可以只读使用 SK 共享聚合/仓储做身份和来源校验；不得直接保存、删除或修改 SK 聚合，也不得把直接读取当作跨聚合原子校验。跨聚合写入仍通过事件和独立事务完成（D4，2026-11-19 澄清）。
+- 首次继承编辑由 ALM 保存后发布 `BusinessObjectUpdateEvent`，SK 的 `TrackerItemLocalizedListener` 在独立事务切换 LTI；业务保存成功不等于 LTI 已立即切换。
 - Merge 条目业务应用在目标 BC 独立事务提交；LTI 切换由 SK 消费 `MergeAppliedEvent` 在独立事务完成（D15-B）。
 - 工作集创建任务按步骤/批次独立提交，不把全流程放进一个大事务；部分成功保留明细（T7）。
 

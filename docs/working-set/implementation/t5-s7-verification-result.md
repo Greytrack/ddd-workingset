@@ -3,6 +3,8 @@
 **状态：Reviewed（实施验证记录，2026-11-12；部分执行方式已被 T6-E 取代）**
 
 > **后续变化（2026-11-15/16）**：Compare 不再持久化，`merge_comparisons`、`ComparisonToken` 回读、分批 `entries` 端点已被删除；现行入口是一页 1～50 条决策的 `POST /api/worksets/{target}/merge-rounds` 与 `requestId` 幂等，见 [T6-E 验收](t6-e-merge-round-verification.md) 和[Compare 不持久化裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)。下文保留 S7 当时的证据与接口，不再作为当前接口说明。
+>
+> **2026-11-19 补充**：`RequirementWritePort` 已移除，Merge 写入改用 `MergeEntryApprovedEvent` / `MergeEntryResolvedEvent` 事件链；本记录中“通过 RequirementWritePort 接收”只描述当时实现。当前边界见 [T4 §3.2](../domain/cross-bc-contract-v1.md) 与[当前实现边界](current-boundaries.md)。
 
 依据 [T1](../domain/merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md) 和 [S7 用户裁定](../reviews/2026-11-12-s7-merge-implementation-decisions.md)。
 

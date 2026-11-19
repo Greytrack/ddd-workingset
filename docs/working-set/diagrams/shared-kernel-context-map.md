@@ -33,6 +33,10 @@ flowchart TB
     WorkingSet -.->|"流程协作待定义"| Workflow
 ```
 
+## 内部实现模块（2026-11-19 补充）
+
+`WorkingSet` 能力当前在 `sharedkernel` 内拆为 `sk.businessframework`（通用业务对象/版次能力）、`sk.tracker`（Tracker 聚合）、`sk.productspace`（ProductSpace 聚合）和 `sk.workingset`（WorkingSet/LTI/Merge/创建）。这些是 Shared Kernel 内部模块，不是四个新的企业 BC，也不表示已批准独立部署；模块间仍有同进程依赖和 TC-002 整改项。详见 [当前实现边界](../implementation/current-boundaries.md) 与 [Shared Kernel 边界](../domain/shared-kernel-boundary.md)。
+
 ## 明确不表达
 
 - 不表示 Shared Kernel 是一个单体服务、单一限界上下文或单一聚合；

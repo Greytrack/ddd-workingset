@@ -35,3 +35,4 @@
 - [2026-11-16 Merge Checkpoint 对齐](2026-11-16-merge-checkpoint-legacy-alignment.md)：吸收旧 `merge_index` 的“参考坐标系”定位；方向不进唯一键、不新增工作集 ID 列；命中按（Tracker 对，家族，双侧版次）；同一 Tracker 对禁止并发合并。
 - [2026-11-16 文档收敛与降噪](2026-11-16-doc-consolidation.md)：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；未改变业务语义。
 - [2026-11-18 仓库降噪与对齐](2026-11-18-cleanup-and-alignment.md)：删除 AirEdge 遗留 `.lattice/` 与运行日志，修正文档断链/计数/状态，清理无调用代码，并修复 ID 排序、索引事件时间与扩展期间可读性。
+- [2026-11-19 代码演进后的文档对齐](2026-11-19-doc-alignment-after-code-evolution.md)：登记 `businessframework`/`tracker`/`productspace`/`workingset` 模块边界、直接只读与事件写入边界；清理已移除 Port、`Caller`、缓存等过时声明。

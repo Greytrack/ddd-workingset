@@ -1,6 +1,8 @@
 # D4 SK 边界验证：LTI 校验与移除移回 SK
 
-**状态：Reviewed（实施验证记录，2026-11-12）**
+**状态：Historical（实施验证记录，2026-11-12；2026-11-19 边界已调整，本页保留当时证据）**
+
+> **2026-11-19 当前边界**：业务 BC 可以只读使用 SK 共享聚合/仓储；`TrackerItemLifecyclePort` 与 `InheritedEditTarget` 已移除，首次继承编辑改由 `BusinessObjectUpdateEvent` 异步切换 LTI。下文“ALM 直接读取 SK 仓储是越界”“只经 TrackerItemLifecyclePort”等表述只反映 2026-11-12 时点，不再是当前规则。当前规则见 [T4 §3.1 D4](../domain/cross-bc-contract-v1.md) 与[当前实现边界](current-boundaries.md)。
 
 依据 [T4 跨 BC 公共契约](../domain/cross-bc-contract-v1.md)（K1″/K2″ 与 2026-11-12 D4 裁定）、[T3 物化协议](../domain/lighttrackeritem-materialization-contract-v1.md)、[S7 验证](t5-s7-verification-result.md)。
 

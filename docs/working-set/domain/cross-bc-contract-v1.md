@@ -1,6 +1,6 @@
 # 跨 BC 公共契约 v1
 
-**状态：Reviewed（T4 契约冻结，2026-11-11；K1″、K2″ 已由用户正式确认；K3″ 保持团队开放项；2026-11-17 补充 §5.4 数值错误码 API 契约 v1）**
+**状态：Reviewed（T4 契约冻结，2026-11-11；K1″、K2″ 已由用户正式确认；K3″ 保持团队开放项；2026-11-17 补充 §5.4 数值错误码 API 契约 v1；2026-11-19 按用户要求补充只读边界与事件协作澄清，不改变已确认范围）**
 
 - 日期：2026-11-11
 - 阶段：阶段 5 契约层 T4（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
@@ -58,20 +58,24 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 | Revision | 提供当前业务 `Revision` | 同上 |
 | 内容解析 | 按指定 `Revision` 解析出完整业务内容（BC 内部工厂重建） | 同上 |
 | 能力声明 | 声明 `comparable` / `mergeable` / `derivable` / `creatable` / `historyReadable` | 同上 |
-| 授权事实 | 对指定操作与调用者返回授权结论（BC 或 Privilege 提供） | 同上 |
+| 授权事实 | 未来权限接入后，对指定操作返回授权结论（BC 或 Privilege 提供）；当前不实现 | 同上 |
 
 **明确不属于 `TrackerItemQueryProvider`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见 §3.3），不是只读契约的方法。
 
 **2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；`BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemQueryProvider` 仍保持只读；写入由各 BC 自管，跨聚合协作使用事件。`Requirement` 作为 ALM 实现已具备该能力，`RequirementLifecycleService.delete2` 先调用聚合 guard 再删除。设计见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
 
-**D4（所有权约束）**：Tracker、LTI 及其仓储归 SK；业务 BC 不直接读写这些仓储，不接收 SK 聚合作为写入对象。协作传递身份和证据。业务对象永久删除后由 ALM 发布 `CompleteDeleteEvent`，SK 异步清理 LTI。当前 ALM 尚有直接仓储读取偏差，见 [实现边界](../implementation/current-boundaries.md)。
+**D4（所有权与只读边界，2026-11-19 实现边界澄清）**：Tracker、LTI 及其仓储归 SK。业务 BC 可以**只读**使用 SK 的共享聚合与聚合仓储（例如按 ID 读取 LTI、校验 WorkingSet 就绪、读取 Tracker 身份），用于自身用例的身份与来源校验；不得调用 SK 仓储的保存、删除、移除或修改 SK 聚合状态，也不接收 SK 聚合作为写入对象。集合查询和读模型使用 `application/query/provider` 的只读 Provider；不为单个查询方法新增同步 Port。跨聚合写入继续通过事件协作。业务对象永久删除后由 ALM 发布 `CompleteDeleteEvent`，SK 异步清理 LTI。
 
 ### 3.2 写入协作（事件）
 
 - SK 负责范围、变体身份和执行请求；目标业务 BC 整体校验并独立提交聚合，发布业务结果。请求不是完成事实；不提供通用写端口或跨 BC 聚合透传。
 - ALM 切片：Merge 使用 `MergeEntryApprovedEvent` / `MergeEntryResolvedEvent`；COW 使用 `TrackerItemMaterializationRequestedEvent` / `TrackerItemMaterializationCompletedEvent`。Merge 结果由 SK 接收，适用时再经 `MergeAppliedEvent` 切换 LTI。
-- 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectUpdateEvent` 触发 SK 独立切换 LTI；不修改来源，不保证两边原子可见。
+- 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectUpdateEvent` 触发 SK 的 `TrackerItemLocalizedListener` 在独立事务切换 LTI；不修改来源，不保证两边原子可见。
 - 每个写事务最多修改一个聚合（TC-002）。事件交付、失败与实现差距见 [实现边界](../implementation/current-boundaries.md)、[T1](merge-execution-contract-v1.md)、[T3](lighttrackeritem-materialization-contract-v1.md) 和 [跨 BC 图](../diagrams/cross-bc-contract.md)。
+
+### 3.2.1 已移除的同步协作
+
+`TrackerItemLifecyclePort`（`findInheritedTarget` / `completeInheritedEdit`）、`RequirementWritePort` 和 `Caller` 占位已从当前实现移除，不再作为契约入口。继承编辑、COW 和 Merge 均按上述事件协作；只读身份查询直接使用 SK 共享聚合/仓储，边界见 D4。
 
 ### 3.3 业务 BC 必须拥有的职责
 
@@ -227,7 +231,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 - **T1（Merge 执行）**：`diff`/`merge` 的执行与终态由 T1 定义；本契约提供能力声明与失败词汇。
 - **T2（绑定与删除）**：绑定事实由 SK 管理，BC 只读；删除受 `TrackerItem` 存在性约束。
 - **T3（物化）**：BC 保存后由 SK 切换 `materialized`；BC 必须能按稳定 `localId` 定位或创建变体（INV-070）。
-- **权限**：Privilege 提供身份/授权事实，BC 裁决专有业务操作，SK 裁决范围操作；依赖不可用返回 `DependencyUnavailable`。**2026-11-12 D11 用户裁定：现阶段不接入权限**——`Caller` 与 `authorize` 仅作占位，不实现身份解析、授权判定或 `Denied` 分类；等权限模型开发完毕后再接入，本版不以权限缺口为由放宽或收紧其他契约。
+- **权限**：Privilege 提供身份/授权事实，BC 裁决专有业务操作，SK 裁决范围操作；依赖不可用返回 `DependencyUnavailable`。**2026-11-12 D11 用户裁定：现阶段不接入权限**。`Caller` 与 `authorize` 占位已在 2026-11-19 移除；当前不实现身份解析、授权判定或 `Denied` 分类，等权限模型开发完毕后再接入。本版不以权限缺口为由放宽或收紧其他契约。
 
 ## 8. 规则性质
 
@@ -239,7 +243,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | 数值错误码、响应结构与稳定性规则（§5.4） | **API 契约 v1**（2026-11-17 登记；新增/变更需 T4 评审） |
 | 六个用例的边界划分与适用分类矩阵 | **契约 v1（本文件冻结）** |
 | 版本治理（K3″） | **团队开放项**（`QUESTION-014`，未裁定） |
-| SK 独占 Tracker/LightTrackerItem 聚合与仓储；业务 BC 只经 `TrackerItemLifecyclePort` 与 `CompleteDeleteEvent` 事件协作（D4） | **用户确认**（2026-11-12，方案 A：移回 SK，跨聚合用事件） |
+| SK 独占 Tracker/LightTrackerItem 聚合与仓储；业务 BC 可只读使用共享聚合/仓储，写入与生命周期清理通过事件协作（D4，2026-11-19 澄清） | **用户确认**（2026-11-12 方案 A；2026-11-19 移除单方法 Port） |
 | `BusinessObject` 在 SK 内声明 delete/undelete/delete2 能力，`TrackerItem` 继承并由各 BC 实现（D14） | **用户确认**（2026-11-12，已落地） |
 | 权限接入时机：现阶段不接入，待权限模型完成后接入（D11） | **用户确认**（2026-11-12） |
 | 具体 API 签名、包名、模块、传输协议、事务、权限缓存时效 | **不在本契约** |

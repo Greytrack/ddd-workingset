@@ -10,7 +10,7 @@
 - [聚合边界](domain/aggregate-model.md) · [Shared Kernel 边界](domain/shared-kernel-boundary.md) · [跨 BC 契约](domain/cross-bc-contract-v1.md)
 - [派生与首次物化](domain/lighttrackeritem-materialization-contract-v1.md) · [Compare / Merge](domain/merge-execution-contract-v1.md)
 - [业务场景](scenarios/README.md) · [不变量](domain/invariants.md) · [图表索引](diagrams/README.md)
-- [开放问题](domain/open-questions.md) · [实施与验收](implementation/README.md)
+- [当前实现边界](implementation/current-boundaries.md) · [开放问题](domain/open-questions.md) · [实施与验收](implementation/README.md)
 
 ## 决策与历史
 
