@@ -109,7 +109,7 @@ public class MergeComparisonService {
         boolean leftIsA = key.a().equals(trackers.source());
         sk.workingset.domain.Revision aRevision = leftIsA ? left.revision() : right.revision();
         sk.workingset.domain.Revision bRevision = leftIsA ? right.revision() : left.revision();
-        return store.findCheckpoint(key)
+        return store.findById(key)
                 .filter(checkpoint -> !checkpoint.revoked())
                 .filter(checkpoint -> java.util.Objects.equals(checkpoint.revisionA(), aRevision)
                         && java.util.Objects.equals(checkpoint.revisionB(), bRevision))

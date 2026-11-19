@@ -9,7 +9,7 @@ import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
-import sk.workingset.domain.repository.CowMaterializationRepository;
+import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 import java.time.Instant;
@@ -27,7 +27,7 @@ public final class CowEventHandler {
     private final LightTrackerItemRepository items;
     private final CowFailureLogQueryProvider failureLog;
     private final TransactionTemplate transactionTemplate;
-    private final CowMaterializationRepository store;
+    private final CowMaterializationStore store;
     private final ApplicationEventPublisher events;
 
     private static TrackerItemMaterializationRequestedEvent request(BusinessObjectUpdateEvent event,
@@ -50,11 +50,11 @@ public final class CowEventHandler {
             }
             int attempts = 1;
             try {
-                CowMaterializationRepository.Entry receipt = transactionTemplate.execute(status ->
+                CowMaterializationStore.Entry receipt = transactionTemplate.execute(status ->
                         store.markPending(event.eventId(), target.localId(),
                                 event.sourceLocalId(), event.beforeRevision()));
                 attempts = receipt.attempts();
-                if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {
+                if (receipt.status() == CowMaterializationStore.Status.SWITCHED) {
                     continue;
                 }
                 events.publishEvent(request(event, target));

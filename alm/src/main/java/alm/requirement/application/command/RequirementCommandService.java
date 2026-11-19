@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.domain.SnapshotRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
@@ -44,7 +44,7 @@ import sk.workingset.domain.WorkingSetId;
 public class RequirementCommandService {
 
     private final RequirementRepository repository;
-    private final SnapshotRepository snapshotStore;
+    private final RequirementSnapshotStore snapshotStore;
     private final IdentifierGenerator identifierGenerator;
     private final ApplicationEventPublisher eventPublisher;
     private final TrackerRepository trackers;

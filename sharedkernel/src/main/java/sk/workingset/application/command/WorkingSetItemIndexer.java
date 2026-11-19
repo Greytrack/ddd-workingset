@@ -18,7 +18,7 @@ import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
 import sk.workingset.domain.WorkingSetCreation.Stage;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.time.Instant;
@@ -40,7 +40,7 @@ public final class WorkingSetItemIndexer {
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
     private final TrackerItemCatalogQueryProvider catalog;
-    private final WorkingSetCreationSnapshotRepository snapshots;
+    private final WorkingSetCreationSnapshotStore snapshots;
     private final BusinessTrackerItems businessItems;
     private final Function<LocalId, TrackerItemQueryProvider> readPorts;
     private final IdentifierGenerator ids;
@@ -48,7 +48,7 @@ public final class WorkingSetItemIndexer {
 
     public WorkingSetItemIndexer(WorkingSetRepository workingSets, TrackerRepository trackers,
                                  LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
-                                 WorkingSetCreationSnapshotRepository snapshots, BusinessTrackerItems businessItems,
+                                 WorkingSetCreationSnapshotStore snapshots, BusinessTrackerItems businessItems,
                                  Function<LocalId, TrackerItemQueryProvider> readPorts,
                                  IdentifierGenerator ids, int batchSize) {
         if (batchSize < 1) {
@@ -95,7 +95,7 @@ public final class WorkingSetItemIndexer {
         }
         for (String parent : parents) {
             TrackerId parentTracker = TrackerId.of(parent);
-            ArrayList<WorkingSetCreationSnapshotRepository.Item> frozen = new ArrayList<WorkingSetCreationSnapshotRepository.Item>();
+            ArrayList<WorkingSetCreationSnapshotStore.Item> frozen = new ArrayList<WorkingSetCreationSnapshotStore.Item>();
             String cursor = "";
             while (true) {
                 List<WorkingSetItemIndexer.Candidate> candidates = livePage(parentTracker, cursor);
@@ -105,7 +105,7 @@ public final class WorkingSetItemIndexer {
                             || catalog.hasActiveFamily(parentTracker, candidate.commonId()))) {
                         continue;
                     }
-                    frozen.add(new WorkingSetCreationSnapshotRepository.Item(parent, candidate.localId(),
+                    frozen.add(new WorkingSetCreationSnapshotStore.Item(parent, candidate.localId(),
                             candidate.commonId(), candidate.revision(), candidate.sourceId(),
                             candidate.sourceRevision()));
                 }
@@ -239,7 +239,7 @@ public final class WorkingSetItemIndexer {
             return new Candidate(item.localId(), item.commonId(), item.revision(), item.localId(), item.revision(), false);
         }
 
-        static Candidate from(WorkingSetCreationSnapshotRepository.Item item) {
+        static Candidate from(WorkingSetCreationSnapshotStore.Item item) {
             return new Candidate(item.localId(), item.commonId(), item.revision(),
                     item.sourceLocalId(), item.sourceRevision(), false);
         }

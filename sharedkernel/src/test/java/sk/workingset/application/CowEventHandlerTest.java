@@ -12,7 +12,7 @@ import sk.workingset.domain.*;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
-import sk.workingset.domain.repository.CowMaterializationRepository;
+import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 import java.time.Instant;
@@ -43,9 +43,9 @@ class CowEventHandlerTest {
         BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(42, source, source, before, after,
                 LockVersion.of(5), LockVersion.of(6), SnapshotRefEvent.of("258782756974528"), Instant.EPOCH);
 
-        CowMaterializationRepository store = mock(CowMaterializationRepository.class);
-        CowMaterializationRepository.Entry pending = new CowMaterializationRepository.Entry(42, target.localId(),
-                source, before, CowMaterializationRepository.Status.PENDING, 1, false, null);
+        CowMaterializationStore store = mock(CowMaterializationStore.class);
+        CowMaterializationStore.Entry pending = new CowMaterializationStore.Entry(42, target.localId(),
+                source, before, CowMaterializationStore.Status.PENDING, 1, false, null);
         when(store.markPending(42, target.localId(), source, before)).thenReturn(pending);
 
         TransactionTemplate transaction = mock(TransactionTemplate.class);

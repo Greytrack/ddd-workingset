@@ -8,7 +8,7 @@ import sk.workingset.domain.event.SnapshotRefEvent;
 /**
  * ALM 自有快照存储：保存「修改前」不可变内容并返回引用；SK 只持有引用。
  */
-public interface SnapshotRepository {
+public interface RequirementSnapshotStore {
 
     /** 保存快照并返回不可变引用。 */
     SnapshotRefEvent save(RequirementSnapshot snapshot);

@@ -1,7 +1,7 @@
 package alm.requirement.infrastructure.repositories;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.domain.SnapshotRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
@@ -23,9 +23,9 @@ import sk.workingset.domain.Version;
 /**
  * Requirement 修改前快照的 PostgreSQL/Spring JDBC 存储。
  */
-@Repository
+@Component
 @RequiredArgsConstructor
-public class JdbcSnapshotRepository implements SnapshotRepository {
+public class JdbcRequirementSnapshotStore implements RequirementSnapshotStore {
 
     private static final String INSERT = """
             INSERT INTO requirement_snapshots

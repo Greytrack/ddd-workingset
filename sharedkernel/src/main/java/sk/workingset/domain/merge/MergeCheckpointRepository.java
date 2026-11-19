@@ -4,15 +4,10 @@ import java.util.Optional;
 
 import org.jmolecules.ddd.annotation.Repository;
 
+/** MergeCheckpoint 独立聚合仓储；确认/撤销事实由聚合行为产生后通过 save 持久化。 */
 @Repository
 public interface MergeCheckpointRepository {
-    boolean save(MergeCheckpoint checkpoint);
+    void save(MergeCheckpoint checkpoint);
 
-    Optional<MergeCheckpoint> findCheckpoint(MergeCheckpoint.Key key);
-
-    boolean revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion, long newVersion);
-
-    long nextDecisionVersion();
-
-    int deleteSupersededCheckpoints();
+    Optional<MergeCheckpoint> findById(MergeCheckpoint.Key key);
 }

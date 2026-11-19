@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.application.command.RequirementMaterializationService;
-import alm.requirement.domain.SnapshotRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import sk.workingset.domain.Version;
 
 class RequirementMaterializationAdapterTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
-    private final SnapshotRepository snapshots = mock(SnapshotRepository.class);
+    private final RequirementSnapshotStore snapshots = mock(RequirementSnapshotStore.class);
     private final RequirementMaterializationService adapter = new RequirementMaterializationService(
             repository, snapshots);
 

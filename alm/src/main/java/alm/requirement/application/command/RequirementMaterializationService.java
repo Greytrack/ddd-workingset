@@ -10,7 +10,7 @@ import java.util.Optional;
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
-import alm.requirement.domain.SnapshotRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import sk.common.error.DomainException;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.common.TargetIdentity;
@@ -22,7 +22,7 @@ import sk.workingset.error.WorkingsetResultCode;
 @RequiredArgsConstructor
 public final class RequirementMaterializationService {
     private final RequirementRepository repository;
-    private final SnapshotRepository snapshotStore;
+    private final RequirementSnapshotStore snapshotStore;
 
 
     public void materialize(MaterializeRequest request, TargetIdentity target) {

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
 
-import alm.requirement.infrastructure.repositories.JdbcSnapshotRepository;
+import alm.requirement.infrastructure.repositories.JdbcRequirementSnapshotStore;
 import bootstrap.WorkingsetApplication;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ class JdbcSnapshotStoreTest {
     private static final TrackerId T0 = TrackerId.of("264905365135296");
     private static final Revision R3 = Revision.of(3);
 
-    @Autowired private JdbcSnapshotRepository store;
+    @Autowired private JdbcRequirementSnapshotStore store;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private IdentifierGenerator ids;
 

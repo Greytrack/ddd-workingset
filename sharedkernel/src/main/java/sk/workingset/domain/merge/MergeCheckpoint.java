@@ -20,6 +20,22 @@ public record MergeCheckpoint(Key key, long decisionVersion, Revision revisionA,
                               Direction direction, boolean revoked, String operator) {
     public enum Direction {A_TO_B, B_TO_A}
 
+    /** 撤销当前已处理事实；预期版本不一致或已撤销时拒绝。 */
+    public MergeCheckpoint revoke(long expectedVersion, long newVersion) {
+        if (revoked || decisionVersion != expectedVersion) {
+            throw new MergeFailure(MergeFailure.Reason.Conflict,
+                    "checkpoint is missing, superseded or already revoked");
+        }
+        return new MergeCheckpoint(key, newVersion, revisionA, revisionB, localIdA, localIdB,
+                roundId, changeKind, direction, true, operator);
+    }
+
+    /** 新事实是否应覆盖已有确认/撤销事实。 */
+    public boolean supersedes(MergeCheckpoint existing) {
+        return existing.decisionVersion < decisionVersion
+                || (existing.decisionVersion == decisionVersion && revoked && !existing.revoked);
+    }
+
     /**
      * 方向无关键：A/B 按 TrackerId 数值排序，保证同一对 Tracker 只有一种表示。
      */

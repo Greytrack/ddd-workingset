@@ -44,7 +44,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.workingset.domain.merge.MergeCheckpointCleanupStore;
 import sk.workingset.domain.merge.MergeCheckpointRepository;
+import sk.workingset.domain.merge.MergeDecisionVersionGenerator;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -66,6 +68,8 @@ class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @SpyBean private MergeCheckpointRepository store;
+    @Autowired private MergeCheckpointCleanupStore checkpointCleanup;
+    @Autowired private MergeDecisionVersionGenerator decisionVersions;
     @Autowired private RequirementCommandService requirements;
     @Autowired private JdbcRequirementRepository repository;
 
@@ -456,7 +460,7 @@ class MergeAcceptanceTest {
 
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
                 CommonId.of(keep));
-        MergeCheckpoint checkpoint = store.findCheckpoint(key).orElseThrow();
+        MergeCheckpoint checkpoint = store.findById(key).orElseThrow();
         assertNotNull(checkpoint.localIdA());
         assertNotNull(checkpoint.localIdB());
         assertTrue(kept.equals(checkpoint.localIdA().value()) || kept.equals(checkpoint.localIdB().value()));
@@ -474,8 +478,8 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(
                 "/api/merge-checkpoints/" + key.a().value() + "/" + key.b().value() + "/" + keep + "/revoke",
                 Map.of("expectedDecisionVersion", checkpoint.decisionVersion()), Void.class));
-        assertFalse(store.save(checkpoint));
-        assertTrue(store.findCheckpoint(key).orElseThrow().revoked());
+        assertThrows(sk.workingset.domain.merge.MergeFailure.class, () -> store.save(checkpoint));
+        assertTrue(store.findById(key).orElseThrow().revoked());
         assertNotNull(diff(compare("1", child), keep));
     }
 
@@ -504,7 +508,7 @@ class MergeAcceptanceTest {
         assertEquals("accepted", requirement(target).title());
         assertEquals("later accepted", requirement(laterTarget).title());
 
-        MergeCheckpoint checkpoint = store.findCheckpoint(new MergeCheckpoint.Key(
+        MergeCheckpoint checkpoint = store.findById(new MergeCheckpoint.Key(
                 TrackerId.of(rootTracker), TrackerId.of(childTracker), CommonId.of(family))).orElseThrow();
         assertTrue(checkpoint.revisionA().value() == 3 || checkpoint.revisionB().value() == 3);
     }
@@ -708,11 +712,11 @@ class MergeAcceptanceTest {
         insertItem(low, keepFamily, 5, low.equals(rootTracker) ? "1" : child);
         insertItem(high, keepFamily, 8, high.equals(rootTracker) ? "1" : child);
 
-        assertEquals(1, store.deleteSupersededCheckpoints());
+        assertEquals(1, checkpointCleanup.deleteSupersededCheckpoints());
         MergeCheckpoint.Key oldKey = new MergeCheckpoint.Key(TrackerId.of(low), TrackerId.of(high), CommonId.of(oldFamily));
         MergeCheckpoint.Key keepKey = new MergeCheckpoint.Key(TrackerId.of(low), TrackerId.of(high), CommonId.of(keepFamily));
-        assertTrue(store.findCheckpoint(oldKey).isEmpty());
-        assertTrue(store.findCheckpoint(keepKey).isPresent());
+        assertTrue(store.findById(oldKey).isEmpty());
+        assertTrue(store.findById(keepKey).isPresent());
     }
 
     @Test
@@ -764,7 +768,7 @@ class MergeAcceptanceTest {
                     local_id_a, local_id_b, revision_a, revision_b, change_kind, merge_direction, decision_version)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'MODIFIED', 'A_TO_B', ?)
                 """, fixtureId("checkpoint-" + family), id("cleanup-round"), trackerA, trackerB, family,
-                fixtureId("la-" + family), fixtureId("lb-" + family), revisionA, revisionB, store.nextDecisionVersion());
+                fixtureId("la-" + family), fixtureId("lb-" + family), revisionA, revisionB, decisionVersions.nextDecisionVersion());
     }
 
     private void insertItem(String tracker, String family, int revision, String workset) {

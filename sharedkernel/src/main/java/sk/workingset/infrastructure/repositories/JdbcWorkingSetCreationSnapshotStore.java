@@ -3,8 +3,8 @@ package sk.workingset.infrastructure.repositories;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
+import org.springframework.stereotype.Component;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -14,9 +14,9 @@ import java.util.List;
  * 创建任务受理时冻结的父 Item 身份快照（PostgreSQL）。
  */
 @Slf4j
-@Repository
+@Component
 @RequiredArgsConstructor
-public class JdbcWorkingSetCreationSnapshotRepositoryImpl implements WorkingSetCreationSnapshotRepository {
+public class JdbcWorkingSetCreationSnapshotStore implements WorkingSetCreationSnapshotStore {
     private final JdbcTemplate jdbc;
 
 

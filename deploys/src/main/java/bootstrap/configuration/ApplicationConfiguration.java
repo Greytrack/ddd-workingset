@@ -21,7 +21,7 @@ import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.merge.MergeCheckpointRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
@@ -51,7 +51,7 @@ public class ApplicationConfiguration {
     public WorkingSetItemIndexer workingSetItemIndexer(
             WorkingSetRepository bindings, TrackerRepository trackers, LightTrackerItemRepository items,
             TrackerItemCatalogQueryProvider catalog, BusinessTrackerItems businessItems,
-            WorkingSetCreationSnapshotRepository snapshots, JdbcRequirementRepository requirements,
+            WorkingSetCreationSnapshotStore snapshots, JdbcRequirementRepository requirements,
             IdentifierGenerator ids, @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
         return new WorkingSetItemIndexer(bindings, trackers, items, catalog, snapshots,
                 businessItems, id -> new RequirementAdapter(requirements, id), ids, batchSize);

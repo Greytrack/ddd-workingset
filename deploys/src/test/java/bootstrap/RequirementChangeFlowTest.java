@@ -26,7 +26,7 @@ import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.domain.SnapshotRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.CommonId;
@@ -45,7 +45,7 @@ class RequirementChangeFlowTest {
     private static final SnapshotRefEvent SECOND = SnapshotRefEvent.of("258985471651776");
 
     private final RequirementRepository requirements = mock(RequirementRepository.class);
-    private final SnapshotRepository snapshots = mock(SnapshotRepository.class);
+    private final RequirementSnapshotStore snapshots = mock(RequirementSnapshotStore.class);
     private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
     private final RequirementCommandService service = new RequirementCommandService(
             requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher,

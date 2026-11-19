@@ -7,7 +7,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
-import sk.workingset.domain.repository.CowMaterializationRepository;
+import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 import java.time.Instant;
@@ -19,7 +19,7 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public final class CowMaterializationCompletionService {
-    private final CowMaterializationRepository store;
+    private final CowMaterializationStore store;
     private final LightTrackerItemRepository items;
     private final CowFailureLogQueryProvider failureLog;
     private final TransactionTemplate transaction;
@@ -34,9 +34,9 @@ public final class CowMaterializationCompletionService {
     }
 
     private void switchToLocalBacked(TrackerItemMaterializationCompletedEvent event) {
-        CowMaterializationRepository.Entry receipt = store.lockByEventAndTarget(event.eventId(), event.targetLocalId())
+        CowMaterializationStore.Entry receipt = store.lockByEventAndTarget(event.eventId(), event.targetLocalId())
                 .orElseThrow(() -> new IllegalStateException("COW receipt is missing"));
-        if (receipt.status() == CowMaterializationRepository.Status.SWITCHED) {
+        if (receipt.status() == CowMaterializationStore.Status.SWITCHED) {
             return;
         }
         store.markMaterialized(event.eventId(), event.targetLocalId());
@@ -54,7 +54,7 @@ public final class CowMaterializationCompletionService {
     }
 
     private void fail(TrackerItemMaterializationCompletedEvent event) {
-        CowMaterializationRepository.Entry receipt = store.findByEventAndTarget(event.eventId(), event.targetLocalId())
+        CowMaterializationStore.Entry receipt = store.findByEventAndTarget(event.eventId(), event.targetLocalId())
                 .orElse(null);
         store.markFailed(event.eventId(), event.targetLocalId(), event.failure());
         if (receipt != null) {

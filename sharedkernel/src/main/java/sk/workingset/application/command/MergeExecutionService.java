@@ -47,6 +47,7 @@ public class MergeExecutionService {
 
     private final MergeRepository store;
     private final MergeCheckpointRepository checkpoints;
+    private final MergeDecisionVersionGenerator decisionVersions;
     private final MergeComparisonService comparisons;
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
@@ -177,7 +178,7 @@ public class MergeExecutionService {
                 throw new MergeFailure(Reason.InvalidDecision, "decision is required");
             }
             request.decision().validate(frozen);
-            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), checkpoints.nextDecisionVersion(),
+            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), decisionVersions.nextDecisionVersion(),
                     frozen, request.decision(), null));
         }
         store.save(updated);
@@ -189,9 +190,10 @@ public class MergeExecutionService {
 
     @Transactional
     public void revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion) {
-        if (!checkpoints.revokeCheckpoint(key, expectedVersion, checkpoints.nextDecisionVersion())) {
-            throw new MergeFailure(Reason.Conflict, "checkpoint is missing, superseded or already revoked");
-        }
+        MergeCheckpoint checkpoint = checkpoints.findById(key)
+                .orElseThrow(() -> new MergeFailure(Reason.Conflict,
+                        "checkpoint is missing, superseded or already revoked"));
+        checkpoints.save(checkpoint.revoke(expectedVersion, decisionVersions.nextDecisionVersion()));
     }
 
     /**
@@ -343,9 +345,15 @@ public class MergeExecutionService {
             Revision revisionA = sourceIsA ? receipt.sourceRevision() : receipt.targetRevision();
             Revision revisionB = sourceIsA ? receipt.targetRevision() : receipt.sourceRevision();
             MergeCheckpoint.Direction direction = sourceIsA ? MergeCheckpoint.Direction.A_TO_B : MergeCheckpoint.Direction.B_TO_A;
-            boolean confirmed = checkpoints.save(new MergeCheckpoint(key, entry.decisionVersion(),
+            MergeCheckpoint proposed = new MergeCheckpoint(key, entry.decisionVersion(),
                     revisionA, revisionB, localA, localB, round.id(), entry.evidence().kind(), direction, false,
-                    round.caller()));
+                    round.caller());
+            boolean confirmed = checkpoints.findById(key)
+                    .map(existing -> proposed.supersedes(existing))
+                    .orElse(true);
+            if (confirmed) {
+                checkpoints.save(proposed);
+            }
             return result(entry, confirmed ? Outcome.Confirmed : Outcome.Applied, operation, businessRef,
                     confirmed ? "Confirmed" : "Superseded", null);
         }

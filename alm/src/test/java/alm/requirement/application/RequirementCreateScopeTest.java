@@ -19,7 +19,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.domain.SnapshotRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.Classification.SharingMode;
@@ -41,7 +41,7 @@ class RequirementCreateScopeTest {
     private final WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
-            repository, mock(SnapshotRepository.class), ids, mock(ApplicationEventPublisher.class), trackers,
+            repository, mock(RequirementSnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackers,
             workingSets, mock(sk.workingset.domain.repository.LightTrackerItemRepository.class));
 
     private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
