@@ -6,7 +6,7 @@
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
 - **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）；`8231d33`（2026-11-16 Checkpoint 身份改为两侧 Tracker 对）
 - **Released Git Tag**: None
-- **Last Updated**: 2026-11-18
+- **Last Updated**: 2026-11-19
 
 ## 当前基线状态
 
@@ -64,6 +64,8 @@
 - [阶段 2 设计审查](reviews/2026-11-09-stage-2-domain-discovery-review.md)
 
 ## 一致性裁定与开放问题
+
+**2026-11-19 用户明确裁定（TC-002）**：一个写事务最多修改一个聚合，跨聚合状态变更必须使用可靠事件与独立事务最终收敛，禁止跨聚合同步事务。此限定裁定已确认，不代表本轮自动接受其他候选模型或发布基线。权威规范见 [AGENTS §7.2/7.4](../../AGENTS.md)，设计冲突、Skill 依据及整改入口见 [反模式审查](reviews/2026-11-19-ddd-anti-pattern-scan.md)。既有 Accepted ADR 保留历史，当前未发现需要推翻其结论；本轮未创建提交或 Tag。现有代码及旧验收不因文档修正而视为合规。
 
 2026-11-11 的内容固定和接口责任裁定见[一致性修正记录](reviews/2026-11-11-consistency-reconciliation.md)，契约入口为 T3 §2.1 与 T4 §3.1。接受范围仅限用户确认的规则，关联 SCN-072/073。
 

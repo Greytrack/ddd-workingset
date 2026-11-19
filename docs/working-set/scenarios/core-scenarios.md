@@ -609,7 +609,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 - Given 平台元数据已初始化 Classification 集合，常驻内存。
 - When 创建 ProductSpace P。
-- Then 系统在同一事务中创建 P、默认 WorkingSet 的 SpaceBinding（INITIAL_PROJECTION）、每个适用分类的默认 Tracker 及对应 TrackerBinding。创建完成后，默认 WorkingSet 的绑定视图可见空间和 Tracker，Tracker 的 Item 列表可读。
+- Then P、默认 WorkingSet 的 SpaceBinding（INITIAL_PROJECTION）、适用分类的默认 Tracker 及 TrackerBinding 通过可靠事件协作，在各自聚合事务中创建并最终收敛。2026-11-19 裁定替代原同事务预期；处理中状态、部分失败与可见性验收待专项补齐，不得用“P 已创建”表示全部初始化完成。
 - 边界：Tracker 随产品空间创建。同一 Classification 在不同 ProductSpace 可对应不同 Tracker；同一（WorkingSet，ProductSpace，Classification）可存在多个 Tracker，但只有一个默认。产品空间只能归属默认工作集；创建入口路径中的工作集 ID 仅为路由占位，不参与目标选择，也不在入口层做限制。
 
 <a id="scn-052"></a>
