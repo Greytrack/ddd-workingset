@@ -7,6 +7,7 @@ import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -43,7 +44,7 @@ public class WorkingSetController {
     @ResponseStatus(HttpStatus.CREATED)
     public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
         return WorkingSetView.from(commands.createChildWorkingSet(WorkingSetId.of(workingSetId),
-                request.name()));
+                request.name(), request.color()));
     }
 
     @GetMapping("/{workingSetId}/children")
@@ -67,15 +68,6 @@ public class WorkingSetController {
     @GetMapping("/metadata/classifications")
     public List<ClassificationView> findClassifications() {
         return queries.findClassifications().stream().map(ClassificationView::from).toList();
-    }
-
-    @PostMapping("/{workingSetId}/trackers")
-    @ResponseStatus(HttpStatus.CREATED)
-    public TrackerView createTracker(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
-        SharingMode mode = SharingMode.valueOf(requireText(request.sharingMode(), "sharingMode"));
-        return TrackerView.from(commands.createTracker(WorkingSetId.of(workingSetId),
-                requireText(request.productSpaceId(), "productSpaceId"), requireText(request.name(), "name"),
-                requireText(request.classificationId(), "classificationId"), mode));
     }
 
     /**
@@ -135,26 +127,23 @@ public class WorkingSetController {
         }
     }
 
-    public record CreateChildRequest(String name) {
-    }
-
-    public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
-                                       String sharingMode) {
+    public record CreateChildRequest(String name, String color) {
     }
 
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
-                                 String parentWorkingSetId) {
+                                 String parentWorkingSetId, String color) {
         static WorkingSetView from(WorkingSet workingSet) {
             WorkingSetId parentId = workingSet.parentWorkingSetId();
             return new WorkingSetView(workingSet.id().value(), workingSet.name(),
                     WorkingSet.DEFAULT_ID.equals(workingSet.id()),
-                    parentId == null ? null : parentId.value());
+                    parentId == null ? null : parentId.value(), workingSet.color());
         }
 
         static WorkingSetView from(WorkingSetSummary summary) {
             return new WorkingSetView(String.valueOf(summary.workingSetId()), summary.name(),
                     summary.defaultWorkingSet(),
-                    summary.parentWorkingSetId() == null ? null : String.valueOf(summary.parentWorkingSetId()));
+                    summary.parentWorkingSetId() == null ? null : String.valueOf(summary.parentWorkingSetId()),
+                    summary.color());
         }
     }
 
@@ -200,14 +189,6 @@ public class WorkingSetController {
 
     public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
                               String classificationId, String sharingMode, boolean isDefault) {
-        static TrackerView from(Tracker tracker) {
-            return new TrackerView(tracker.trackerId().value(), tracker.name(),
-                    tracker.parentId() == null ? null : tracker.parentId().value(),
-                    tracker.sourceId() == null ? null : tracker.sourceId().value(),
-                    tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name(),
-                    tracker.isDefault());
-        }
-
         static TrackerView from(TrackerSummary summary) {
             return new TrackerView(String.valueOf(summary.trackerId()), summary.name(),
                     summary.parentId() == null ? null : String.valueOf(summary.parentId()),

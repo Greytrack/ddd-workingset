@@ -1,5 +1,7 @@
 package sk.workingset.domain;
 
+import sk.tracker.domain.Tracker;
+
 import org.jmolecules.ddd.annotation.Service;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;

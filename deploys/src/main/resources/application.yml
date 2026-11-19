@@ -2,7 +2,7 @@ server:
   port: ${SERVER_PORT:7102}
 
 springdoc:
-  packages-to-scan: bootstrap.web,alm.requirement.adapters,sk.workingset.adapters
+  packages-to-scan: bootstrap.web,alm.requirement.adapters,sk.workingset.adapters,sk.tracker.adapters
   paths-to-match: /api/**
   api-docs:
     enabled: ${API_DOCS_ENABLED:true}

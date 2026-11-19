@@ -21,7 +21,7 @@ import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 
 /**
  * D2：Requirement 家族唯一性按 WorkingSet 作用域，而不是按 Tracker。

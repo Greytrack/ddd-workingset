@@ -8,8 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
@@ -17,9 +20,10 @@ import sk.workingset.domain.WorkingSetCreation.*;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
-import sk.workingset.domain.repository.TrackerRepository;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -46,18 +50,17 @@ public class WorkingSetCreationService {
     }
 
     @Transactional
-    public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request,
-                                        String caller) {
+    public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request) {
         java.util.Optional<WorkingSetCreation> existing = store.findByRequest(requestId);
         if (existing.isPresent()) {
             WorkingSetCreation task = existing.get();
             return replay(task, request.apply(task.request().newWorkingSetId()));
         }
-        return submit(request.apply(Long.toString(ids.nextId(null).longValue())), caller);
+        return submit(request.apply(Long.toString(ids.nextId(null).longValue())));
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public WorkingSetCreation submit(WorkingSetCreation.Request request, String caller) {
+    public WorkingSetCreation submit(WorkingSetCreation.Request request) {
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
         }
@@ -73,7 +76,8 @@ public class WorkingSetCreationService {
             throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
-        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller, Instant.now());
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
+                request, currentActor(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
@@ -83,7 +87,7 @@ public class WorkingSetCreationService {
                 .or(() -> store.findByTarget(target)).orElseThrow();
         WorkingSetCreation.Request normalized = new WorkingSetCreation.Request(request.parentWorkingSetId(), winner.request().newWorkingSetId(),
                 request.requestId(), request.productSpaceIds(), request.sharedTrackerIds(),
-                request.unsharedParentTrackerIds(), request.name(), request.mode());
+                request.unsharedParentTrackerIds(), request.name(), request.mode(), request.color());
         return replay(winner, normalized);
     }
 
@@ -92,7 +96,7 @@ public class WorkingSetCreationService {
      */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
-                                              List<String> parentTrackerIds, String caller) {
+                                              List<String> parentTrackerIds) {
         java.util.Optional<WorkingSetCreation> active = store.findActiveExtension(target);
         if (active.isPresent()) {
             if (active.get().request().requestId().equals(requestId)) {
@@ -110,7 +114,7 @@ public class WorkingSetCreationService {
         ArrayList<String> unshared = new ArrayList<String>();
         for (String trackerId : requested) {
             TrackerId id = TrackerId.of(trackerId);
-            sk.workingset.domain.Tracker source = trackers.findTracker(id).orElse(null);
+            sk.tracker.domain.Tracker source = trackers.findTracker(id).orElse(null);
             if (source != null && source.sharingMode() == SharingMode.SHARED) {
                 if (targetSet.hasTrackerBinding(id)) continue;
                 shared.add(trackerId);
@@ -129,7 +133,8 @@ public class WorkingSetCreationService {
         }
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
                 List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
-        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()), request, caller, Instant.now());
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
+                request, currentActor(), Instant.now());
         if (store.insert(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
@@ -144,6 +149,14 @@ public class WorkingSetCreationService {
         }
         return replay(store.findByRequest(requestId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, target.value())), request);
+    }
+
+    private static String currentActor() {
+        Long userId = RequestThreadHolder.getLongUserId();
+        if (userId == null || userId <= 0) {
+            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
+        }
+        return userId.toString();
     }
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
@@ -186,7 +199,8 @@ public class WorkingSetCreationService {
                 store.update(updated);
                 if (updated.status() != Status.Running && updated.request().mode() == Mode.EXTEND) {
                     workingSetService.revealExtensionTrackers(WorkingSetId.of(updated.request().newWorkingSetId()),
-                            updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList());
+                            updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList(),
+                            Long.parseLong(updated.requestedBy()));
                 }
                 if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
                         && updated.stage() != Stage.INDEX_UNSHARED_TRACKERS) {
@@ -223,12 +237,12 @@ public class WorkingSetCreationService {
                 case CREATE_WORKING_SET -> {
                     workingSetService.createChildForTask(
                             WorkingSetId.of(creation.request().parentWorkingSetId()), target,
-                            creation.request().name());
+                            creation.request().name(), creation.request().color(), Long.valueOf(creation.requestedBy()));
                     yield true;
                 }
                 case BIND_PRODUCT_SPACES -> workingSetService.bindSpaceForTask(target, item);
                 case COPY_UNSHARED_TRACKERS -> workingSetService.copyUnsharedTrackerForTask(target, TrackerId.of(item),
-                        creation.request().mode() == Mode.CREATE);
+                        creation.request().mode() == Mode.CREATE, Long.parseLong(creation.requestedBy()));
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
                 case INDEX_UNSHARED_TRACKERS -> throw new IllegalStateException("Indexing requires batch execution");

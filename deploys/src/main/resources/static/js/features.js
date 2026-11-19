@@ -220,6 +220,15 @@ async function openCreateWorkset() {
           <label for="createName">工作集名称</label>
           <input id="createName" name="name" placeholder="例如：动力系统 V2 需求工作集" maxlength="255" required>
         </div>
+        <div class="field">
+          <label for="createColor">工作集颜色</label>
+          <div class="color-field">
+            <input id="createColorPicker" type="color" value="#ffffff" aria-label="选择工作集颜色">
+            <input id="createColor" name="color" value="#FFFF" maxlength="9"
+              pattern="#(?:[0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})" required>
+          </div>
+          <span class="hint">可用选择器，或输入十六进制颜色（例如 #3478F6）。</span>
+        </div>
         <input type="hidden" name="requestId" value="${escapeHtml(newRequestId())}">
         <div id="createScope"><div class="empty small">加载父工作集范围…</div></div>
         <div id="createFormError" class="form-error"></div>
@@ -229,6 +238,17 @@ async function openCreateWorkset() {
         <button type="submit" class="btn primary">创建并轮询</button>
       </div>
     </form>`, true);
+  const picker = $('#createColorPicker');
+  const color = $('#createColor');
+  picker.addEventListener('input', () => { color.value = picker.value.toUpperCase(); });
+  color.addEventListener('input', () => {
+    const value = color.value;
+    if (/^#[0-9a-f]{3,4}$/i.test(value)) {
+      picker.value = '#' + [...value.slice(1, 4)].map((digit) => digit.repeat(2)).join('');
+    } else if (/^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)) {
+      picker.value = value.slice(0, 7);
+    }
+  });
   const parentSelect = $('#createParent');
   if (parentSelect) await loadCreateScope(parentSelect.value);
 }
@@ -336,6 +356,7 @@ async function submitCreateWorkset(form) {
         parentWorkingSetId: parentId,
         requestId,
         name: workspaceName,
+        color: form.elements.namedItem('color').value,
         productSpaceIds,
         sharedTrackerIds: trackerValues('sharedTrackerIds'),
         unsharedParentTrackerIds: trackerValues('unsharedParentTrackerIds')

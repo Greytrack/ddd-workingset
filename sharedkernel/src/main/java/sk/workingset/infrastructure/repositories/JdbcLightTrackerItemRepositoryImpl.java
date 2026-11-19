@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 

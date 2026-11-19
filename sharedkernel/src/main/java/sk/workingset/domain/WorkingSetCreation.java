@@ -150,13 +150,20 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                           @JsonProperty("productSpaceIds") List<Long> numericProductSpaceIds,
                           @JsonProperty("sharedTrackerIds") List<Long> numericSharedTrackerIds,
                           @JsonProperty("unsharedParentTrackerIds") List<Long> numericUnsharedTrackerIds,
-                          String name, Mode mode) {
+                          String name, Mode mode, String color) {
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds, String name, Mode mode) {
+            this(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds, sharedTrackerIds,
+                    unsharedParentTrackerIds, name, mode, null);
+        }
+
+        public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
+                       List<String> productSpaceIds, List<String> sharedTrackerIds,
+                       List<String> unsharedParentTrackerIds, String name, Mode mode, String color) {
             this(WorkingSetId.of(parentWorkingSetId).numericValue(), WorkingSetId.of(newWorkingSetId).numericValue(),
                     requestId, parseIds(productSpaceIds), parseIds(sharedTrackerIds),
-                    parseIds(unsharedParentTrackerIds), name, mode);
+                    parseIds(unsharedParentTrackerIds), name, mode, color);
         }
 
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
@@ -182,6 +189,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
             numericUnsharedTrackerIds = normalize(numericUnsharedTrackerIds);
             name = normalizeName(name);
             mode = mode == null ? Mode.CREATE : mode;
+            color = mode == Mode.CREATE ? WorkingSet.normalizeColor(color) : null;
         }
 
         private static List<Long> parseIds(List<String> ids) {

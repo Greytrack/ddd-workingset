@@ -19,7 +19,7 @@ import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;

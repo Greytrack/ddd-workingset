@@ -1,5 +1,6 @@
 package sk.workingset.application.command.dto;
 
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.event.SnapshotRefEvent;
 

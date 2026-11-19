@@ -12,7 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication(scanBasePackages = {
         "bootstrap",
         "alm.requirement.adapters", "alm.requirement.application", "alm.requirement.infrastructure",
-        "sk.workingset.adapters", "sk.workingset.application", "sk.workingset.infrastructure"
+        "sk.workingset.adapters", "sk.workingset.application", "sk.workingset.infrastructure",
+        "sk.tracker.adapters", "sk.tracker.application", "sk.tracker.infrastructure"
 })
 @MapperScan({
         "sk.workingset.infrastructure.providers",

@@ -67,6 +67,14 @@ class SnowflakeStorageAcceptanceTest {
                             + task.creationId(), CreationView.class).status()));
 
             TrackerView tracker = rest.getForObject("/api/worksets/" + targetId + "/trackers", TrackerView[].class)[0];
+            assertEquals(Long.valueOf(root.trackerId()), jdbc.queryForObject("""
+                    SELECT child.common_id
+                    FROM air_inst_tracker_rev child
+                    JOIN air_ws_tracker compat ON compat.id = child.id
+                    WHERE child.id = ? AND child.source_branch_id = ? AND compat.source_branch_id = ?
+                      AND child.id = child.instance_id AND child.id <> child.common_id
+                    """, Long.class, Long.valueOf(tracker.trackerId()), Long.valueOf(root.trackerId()),
+                    Long.valueOf(root.trackerId())));
             LightTrackerItemView item = rest.getForObject("/api/worksets/" + targetId + "/trackers/" + tracker.trackerId() + "/light-tracker-items",
                     LightTrackerItemView[].class)[0];
             assertNotEquals(requirement.localId(), item.localId());
@@ -83,6 +91,9 @@ class SnowflakeStorageAcceptanceTest {
             jdbc.update("DELETE FROM requirement_snapshots WHERE tracker_id IN (" + trackerFilter + ")", spaceId);
             jdbc.update("DELETE FROM requirements WHERE tracker_id IN (" + trackerFilter + ")", spaceId);
             jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", spaceId);
+            if (targetId != null) {
+                jdbc.update("DELETE FROM trackers WHERE product_space_id = ? AND working_set_id = ?", spaceId, targetId);
+            }
             jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", spaceId);
             jdbc.update("DELETE FROM space_bindings WHERE product_space_id = ?", spaceId);
             if (targetId != null) {

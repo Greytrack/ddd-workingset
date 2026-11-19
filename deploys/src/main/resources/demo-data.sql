@@ -46,7 +46,8 @@ SELECT pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot),
        t.name,
        CASE WHEN d.source_ws = 0 THEN t.id ELSE pg_temp.demo_id(d.source_ws * 10 + d.space * 10000 + d.slot) END,
        pg_temp.demo_id(d.ws), pg_temp.demo_id(100 + d.space), t.classification, t.sharing, d.slot = 1
-FROM demo_derivations d JOIN demo_trackers t ON t.space = d.space AND t.slot = d.slot;
+FROM demo_derivations d JOIN demo_trackers t ON t.space = d.space AND t.slot = d.slot
+ORDER BY d.ws, d.space, d.slot;
 
 INSERT INTO space_bindings (working_set_id, product_space_id, origin, state)
 SELECT 1, pg_temp.demo_id(100 + n), 'INITIAL_PROJECTION', 'ACTIVE' FROM demo_spaces

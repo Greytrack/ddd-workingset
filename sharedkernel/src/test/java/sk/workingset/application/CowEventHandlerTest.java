@@ -22,7 +22,7 @@ import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;

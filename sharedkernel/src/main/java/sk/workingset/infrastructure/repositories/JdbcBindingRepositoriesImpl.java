@@ -3,44 +3,28 @@ package sk.workingset.infrastructure.repositories;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * WorkingSet/Tracker/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。
+ * WorkingSet/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。
  */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, TrackerRepository, ProductSpaceRepository {
-    private static final String TRACKER_COLUMNS =
-            "tracker_id, name, source_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id, is_default";
-    private static final RowMapper<Tracker> TRACKER_MAPPER = (rs, row) -> new Tracker(
-            TrackerId.of(rs.getLong("tracker_id")), rs.getString("name"),
-            optionalId(rs, "source_id"), WorkingSetId.of(rs.getLong("working_set_id")),
-            rs.getLong("product_space_id"), rs.getLong("classification_id"),
-            SharingMode.valueOf(rs.getString("sharing_mode")), optionalId(rs, "parent_id"),
-            rs.getBoolean("is_default"));
-
+public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, ProductSpaceRepository {
     private final JdbcTemplate jdbc;
-
-    private static TrackerId optionalId(ResultSet rs, String column) throws SQLException {
-        String id = rs.getString(column);
-        return id == null ? null : TrackerId.of(id);
-    }
 
     @Override
     public Optional<WorkingSet> findWorkingSet(WorkingSetId id) {
@@ -68,12 +52,13 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
-        String sql = "SELECT parent_working_set_id, name FROM working_sets WHERE working_set_id = ?";
+        String sql = "SELECT NULLIF(parent_id, 0), name, COALESCE(color, '#FFFF')"
+                + " FROM air_inst_workingset WHERE id = ? AND delete_flag = 0";
         if (lock) {
             sql += " FOR UPDATE";
         }
         List<String[]> rows = jdbc.query(sql,
-                (rs, row) -> new String[]{rs.getString("parent_working_set_id"), rs.getString("name")},
+                (rs, row) -> new String[]{rs.getString(1), rs.getString(2), rs.getString(3)},
                 id.numericValue());
         if (rows.isEmpty()) {
             return Optional.empty();
@@ -96,7 +81,8 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
                 WorkingSet.TrackerOrigin.valueOf(rs.getString("origin"))), id.numericValue());
         String parent = rows.getFirst()[0];
         String name = rows.getFirst()[1];
-        return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), name, spaces, trackers));
+        return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), name,
+                rows.getFirst()[2], spaces, trackers));
     }
 
     @Override
@@ -112,22 +98,33 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     }
 
     @Override
-    public boolean insertWorkingSet(WorkingSet workingSet) {
+    public boolean insertWorkingSet(WorkingSet workingSet, Long actor) {
+        long id = workingSet.id().numericValue();
+        Long owner = actor == null ? RequestThreadHolder.getLongUserId() : actor;
+        if (owner == null || owner <= 0) {
+            throw new DomainException(sk.workingset.error.WorkingsetResultCode.APPLICATION_DENIED);
+        }
+        String auditActor = owner.toString();
+        long now = System.currentTimeMillis();
         return jdbc.update("""
-                INSERT INTO working_sets (working_set_id, parent_working_set_id, name)
-                VALUES (?, ?, ?) ON CONFLICT (working_set_id) DO NOTHING
-                """, workingSet.id().numericValue(), workingSet.parentWorkingSetId().numericValue(), workingSet.name()) == 1;
+                INSERT INTO air_inst_workingset (id, instance_id, common_id, workingset_id, parent_id,
+                    base_class, class, type, tracker, name, number, color, owner, revision, version_type,
+                    delete_flag, lock_version, created_by, created_time, updated_by, updated_time)
+                VALUES (?, ?, ?, ?, ?, 1008, 100801, 10080101, 584190236948832, ?, ?, ?, ?, 1, 10001,
+                    0, 0, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
+                """, id, id, id, id, workingSet.parentWorkingSetId().numericValue(), workingSet.name(), "WS-" + id,
+                workingSet.color(), owner, auditActor, now, auditActor, now) == 1;
     }
 
     @Override
     public List<WorkingSetId> findChildren(WorkingSetId id) {
         return jdbc.queryForList("""
-                SELECT w.working_set_id FROM working_sets w
-                WHERE parent_working_set_id = ? AND NOT EXISTS (
-                    SELECT 1 FROM working_set_creations c WHERE c.new_working_set_id = w.working_set_id
+                SELECT w.id FROM air_inst_workingset w
+                WHERE w.parent_id = ? AND w.delete_flag = 0 AND NOT EXISTS (
+                    SELECT 1 FROM working_set_creations c WHERE c.new_working_set_id = w.id
                     AND c.status IN ('Pending', 'Running')
                     AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')
-                ORDER BY w.working_set_id
+                ORDER BY w.id
                 """, Long.class, id.numericValue()).stream().map(WorkingSetId::of).toList();
     }
 
@@ -135,11 +132,12 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     public List<WorkingSetId> findAncestors(WorkingSetId id) {
         List<Long> ancestors = jdbc.queryForList("""
                 WITH RECURSIVE lineage(working_set_id, parent_working_set_id, distance) AS (
-                    SELECT working_set_id, parent_working_set_id, 0
-                    FROM working_sets WHERE working_set_id = ?
+                    SELECT id, NULLIF(parent_id, 0), 0
+                    FROM air_inst_workingset WHERE id = ? AND delete_flag = 0
                     UNION ALL
-                    SELECT parent.working_set_id, parent.parent_working_set_id, child.distance + 1
-                    FROM working_sets parent JOIN lineage child ON parent.working_set_id = child.parent_working_set_id
+                    SELECT parent.id, NULLIF(parent.parent_id, 0), child.distance + 1
+                    FROM air_inst_workingset parent JOIN lineage child ON parent.id = child.parent_working_set_id
+                    WHERE parent.delete_flag = 0
                 ) CYCLE working_set_id SET cyclic USING path
                 SELECT working_set_id FROM lineage
                 WHERE distance > 0 AND NOT EXISTS (
@@ -174,82 +172,6 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     }
 
     @Override
-    public Optional<Tracker> findTracker(TrackerId id) {
-        return loadTracker(id, false);
-    }
-
-    @Override
-    public Optional<Tracker> lockTracker(TrackerId id) {
-        return loadTracker(id, true);
-    }
-
-    @Override
-    public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
-        return jdbc.query("""
-                        SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?
-                        """, (rs, row) -> TrackerId.of(rs.getLong(1)), target.numericValue(), source.numericValue())
-                .stream().findFirst().flatMap(this::findTracker);
-    }
-
-    private Optional<Tracker> loadTracker(TrackerId id, boolean lock) {
-        String sql = "SELECT " + TRACKER_COLUMNS + " FROM trackers WHERE tracker_id = ?";
-        return jdbc.query(lock ? sql + " FOR UPDATE" : sql, TRACKER_MAPPER, id.numericValue()).stream().findFirst();
-    }
-
-    @Override
-    public List<Tracker> findTrackers(WorkingSetId workingSetId) {
-        return jdbc.query("SELECT " + TRACKER_COLUMNS + """
-                 FROM trackers t
-                 WHERE t.visible AND (t.working_set_id = ? OR EXISTS (
-                     SELECT 1 FROM tracker_bindings b
-                     WHERE b.working_set_id = ? AND b.tracker_id = t.tracker_id
-                 ))
-                 ORDER BY t.tracker_id
-                """, TRACKER_MAPPER, workingSetId.numericValue(), workingSetId.numericValue());
-    }
-
-    @Override
-    public void insertTracker(Tracker tracker) {
-        insertTracker(tracker, true);
-    }
-
-    @Override
-    public void insertInvisibleTracker(Tracker tracker) {
-        insertTracker(tracker, false);
-    }
-
-    private void insertTracker(Tracker tracker, boolean visible) {
-        jdbc.update("""
-                        INSERT INTO trackers
-                            (tracker_id, name, source_id, working_set_id, product_space_id, classification_id,
-                             sharing_mode, parent_id, is_default, visible)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, tracker.trackerId().numericValue(), tracker.name(),
-                tracker.sourceId() == null ? null : tracker.sourceId().numericValue(),
-                tracker.workingSetId().numericValue(), tracker.numericProductSpaceId(), tracker.numericClassificationId(),
-                tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().numericValue(),
-                tracker.isDefault(), visible);
-    }
-
-    @Override
-    public boolean isVisible(TrackerId trackerId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT visible FROM trackers WHERE tracker_id = ?", Boolean.class, trackerId.numericValue()));
-    }
-
-    @Override
-    public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
-        for (TrackerId parent : parentTrackerIds) {
-            jdbc.update("""
-                    UPDATE trackers t SET visible = TRUE
-                    WHERE t.working_set_id = ? AND t.source_id = ? AND NOT t.visible
-                      AND EXISTS (SELECT 1 FROM tracker_bindings b
-                                  WHERE b.working_set_id = t.working_set_id AND b.tracker_id = t.tracker_id)
-                    """, target.numericValue(), parent.numericValue());
-        }
-    }
-
-    @Override
     public Optional<ProductSpace> lockProductSpace(String id) {
         return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
                 (rs, row) -> new ProductSpace(rs.getLong(1), rs.getString(2)), Long.valueOf(id)).stream().findFirst();
@@ -272,14 +194,6 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     public void insertProductSpace(ProductSpace space) {
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
                 space.numericId(), space.name());
-    }
-
-    @Override
-    public boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM trackers
-                    WHERE working_set_id = ? AND product_space_id = ? AND classification_id = ? AND is_default)
-                """, Boolean.class, workingSetId.numericValue(), Long.valueOf(spaceId), Long.valueOf(classificationId)));
     }
 
     @Override
@@ -307,30 +221,7 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
 
     @Override
     public void deleteWorkingSet(WorkingSetId id) {
-        jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", id.numericValue());
-    }
-
-    @Override
-    public boolean hasOrgChildren(TrackerId id) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM trackers WHERE parent_id = ?)", Boolean.class, id.numericValue()));
-    }
-
-    @Override
-    public boolean hasDerivedChildren(TrackerId id) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM trackers WHERE source_id = ?)", Boolean.class, id.numericValue()));
-    }
-
-    @Override
-    public boolean hasTrackersInSpace(String spaceId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM trackers WHERE product_space_id = ?)", Boolean.class, spaceId));
-    }
-
-    @Override
-    public void deleteTracker(TrackerId id) {
-        jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", id.numericValue());
+        jdbc.update("DELETE FROM air_inst_workingset WHERE id = ? AND delete_flag = 0", id.numericValue());
     }
 
     @Override

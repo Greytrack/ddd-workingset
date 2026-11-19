@@ -50,9 +50,18 @@ class WorkingSetLineageAcceptanceTest {
         WorkingSetView root = rest.getForObject(path("1"), WorkingSetView.class);
         assertTrue(root.defaultWorkingSet());
         assertNull(root.parentWorkingSetId());
+        assertEquals("#FFFF", root.color());
 
         String child = create("1", "child");
         String grandchild = create(child, "grandchild");
+        assertEquals("#2468AC", rest.getForObject(path(grandchild), WorkingSetView.class).color());
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM air_inst_workingset
+                WHERE id = ? AND parent_id = ? AND id = instance_id AND id = common_id AND id = workingset_id
+                  AND base_class = 1008 AND class = 100801 AND type = 10080101
+                  AND tracker = 584190236948832 AND revision = 1 AND version_type = 10001
+                  AND color = '#2468AC'
+                """, Integer.class, Long.valueOf(grandchild), Long.valueOf(child)));
         BindingsView range = rest.getForObject(path(grandchild) + "/bindings", BindingsView.class);
         assertTrue(range.spaces().isEmpty());
         assertTrue(range.trackers().isEmpty());
@@ -101,6 +110,7 @@ class WorkingSetLineageAcceptanceTest {
 
                 ResourceDatabasePopulator schemaScript = new ResourceDatabasePopulator(new ClassPathResource("schema.sql"));
                 schemaScript.populate(connection);
+                new ResourceDatabasePopulator(new ClassPathResource("tracker-fixtures.sql")).populate(connection);
                 sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
                         + " VALUES (258520000000080, 1)");
                 sql.execute("INSERT INTO working_sets (working_set_id, parent_working_set_id)"
@@ -127,7 +137,8 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     private String create(String parent, String label) {
-        org.springframework.http.ResponseEntity<WorkingSetView> response = rest.postForEntity(path(parent) + "/children", Map.of("name", label),
+        org.springframework.http.ResponseEntity<WorkingSetView> response = rest.postForEntity(path(parent) + "/children",
+                Map.of("name", label, "color", "#2468ac"),
                 WorkingSetView.class);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         String id = response.getBody().workingSetId();

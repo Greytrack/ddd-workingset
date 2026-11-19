@@ -138,6 +138,9 @@
     outline: 2px solid var(--accent-soft); border-color: var(--accent);
   }
   .field .hint { font-size: 10.5px; color: var(--muted); font-weight: 400; }
+  .color-field { display: flex; align-items: center; gap: 8px; }
+  .color-field input[type="color"] { width: 40px; height: 34px; padding: 3px; flex: 0 0 auto; cursor: pointer; }
+  .color-field input[type="text"], .color-field input:not([type]) { max-width: 11ch; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .check-id { display: block; color: var(--muted); font-size: 10px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; }
   .scope-hint { margin: 4px 0 8px; font-size: 11px; line-height: 1.5; color: var(--muted); }

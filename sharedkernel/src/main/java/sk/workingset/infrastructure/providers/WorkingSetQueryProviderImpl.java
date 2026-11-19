@@ -2,6 +2,7 @@ package sk.workingset.infrastructure.providers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import sk.RequestThreadHolder;
 import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
@@ -43,7 +44,7 @@ public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
 
     @Override
     public List<TrackerSummary> findTrackers(long workingSetId) {
-        return mapper.findTrackers(workingSetId);
+        return mapper.findTrackers(workingSetId, RequestThreadHolder.getWorkspace());
     }
 
     @Override
@@ -53,12 +54,13 @@ public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
 
     @Override
     public BindingsView findBindings(long workingSetId) {
-        return new BindingsView(mapper.findSpaceBindings(workingSetId),
-                mapper.findTrackerBindings(workingSetId));
+        Long workspace = RequestThreadHolder.getWorkspace();
+        return new BindingsView(mapper.findSpaceBindings(workingSetId, workspace),
+                mapper.findTrackerBindings(workingSetId, workspace));
     }
 
     @Override
     public boolean hasTrackerBinding(long workingSetId, long trackerId) {
-        return mapper.hasTrackerBinding(workingSetId, trackerId);
+        return mapper.hasTrackerBinding(workingSetId, trackerId, RequestThreadHolder.getWorkspace());
     }
 }

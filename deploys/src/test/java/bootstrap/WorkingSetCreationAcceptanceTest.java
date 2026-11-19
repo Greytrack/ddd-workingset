@@ -232,19 +232,20 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
-    void persistsCustomWorkingSetName() {
-        String id = submit(new Request("1", child, "named", List.of(), List.of(), List.of(), "自定义工作集"));
+    void persistsCustomWorkingSetNameAndColor() {
+        String id = submit(new Request("1", child, "named", List.of(), List.of(), List.of(),
+                "自定义工作集", Mode.CREATE, "#90abcdef"));
         awaitStatus(id, Status.Succeeded);
-        assertEquals("自定义工作集",
-                rest.getForObject("/api/worksets/" + child, WorkingSetView.class).name());
+        WorkingSetView result = rest.getForObject("/api/worksets/" + child, WorkingSetView.class);
+        assertEquals("自定义工作集", result.name());
+        assertEquals("#90ABCDEF", result.color());
     }
 
     @Test
     void rejectsExistingTargetWithoutMarkingItPreparing() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", child);
         sk.workingset.domain.BindingFailure failure = assertThrows(sk.workingset.domain.BindingFailure.class, () ->
-                creations.submit(new Request("1", child, "existing-target", List.of(), List.of(), List.of()),
-                        "test"));
+                creations.submit(new Request("1", child, "existing-target", List.of(), List.of(), List.of())));
         assertEquals("WorkingSetAlreadyExists", failure.reason().name());
         assertEquals(HttpStatus.OK, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
     }
@@ -602,7 +603,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private String submit(Request request) {
-        return creations.submit(request, "test").id();
+        return creations.submit(request).id();
     }
 
     private List<String> orderedFamilies() {

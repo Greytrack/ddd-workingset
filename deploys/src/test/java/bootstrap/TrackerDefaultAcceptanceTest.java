@@ -27,11 +27,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.client.RestClient;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.WorkingSetId;
 
 /** T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。 */
@@ -39,6 +42,7 @@ import sk.workingset.domain.WorkingSetId;
 class TrackerDefaultAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private TrackerRepository trackerRepository;
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = fixtureId("WS-CHILD-" + suffix);
@@ -71,6 +75,18 @@ class TrackerDefaultAcceptanceTest {
         java.util.List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
+        assertEquals(classifications, jdbc.queryForObject("""
+                SELECT count(*)
+                FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id
+                WHERE r.work_space = ? AND r.workingset_id = 1 AND c.workingset_id = 1
+                  AND r.id = r.instance_id AND r.id = r.common_id
+                  AND r.revision = 1 AND r.revision_id IS NULL AND r.version_type = 10001
+                  AND r.base_class = 1009 AND r.class = 100901 AND r.type = 10090101
+                  AND r.tracker = 584578917040480 AND r.default_layout = 584532998805760
+                  AND r.owner = ? AND r.number = c.number AND r.tracker_class = c.sub_class_id
+                  AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
+                  AND r.created_time = c.created_time AND r.created_by = c.created_by
+                """, Integer.class, Long.valueOf(spaceId), sk.RequestThreadHolder.getLongUserId()));
         for (TrackerView tracker : trackers) {
             org.springframework.http.ResponseEntity<String> items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/light-tracker-items",
                     String.class);
@@ -94,6 +110,44 @@ class TrackerDefaultAcceptanceTest {
             LightTrackerItemView[] items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/light-tracker-items", LightTrackerItemView[].class);
             assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
         });
+    }
+
+    @Test
+    void renamingTrackerUpdatesBothRowsAndDoesNotChangeIdentity() {
+        String spaceId = createSpace("1");
+        TrackerView tracker = rest.postForEntity("/api/worksets/1/trackers",
+                Map.of("productSpaceId", spaceId, "classificationId", "258519859202016",
+                        "sharingMode", "UNSHARED", "name", "变更前"), TrackerView.class).getBody();
+        long id = Long.parseLong(tracker.trackerId());
+        RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
+                .requestFactory(new JdkClientHttpRequestFactory()).build();
+
+        TrackerView renamed = client.patch().uri("/api/trackers/{id}", id)
+                .body(Map.of("name", "  变更后  ")).retrieve().body(TrackerView.class);
+
+        assertEquals(tracker.trackerId(), renamed.trackerId());
+        assertEquals("变更后", renamed.name());
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id
+                WHERE r.id = ? AND r.name = ? AND c.name = r.name
+                  AND r.common_id = r.id AND r.revision = 1 AND r.workingset_id = 1
+                  AND r.lock_version = 1 AND c.lock_version = r.lock_version
+                  AND r.updated_by = c.updated_by AND r.updated_time = c.updated_time
+                """, Integer.class, id, "变更后"));
+    }
+
+    @Test
+    void rejectedCompatibilityRowRollsBackRootInsert() {
+        long space = Long.parseLong(createSpace("1"));
+        TrackerId id = TrackerId.of(fixtureId("TRACKER-ROLLBACK-" + suffix));
+        Tracker tracker = Tracker.reconstitute(id, id, "x".repeat(501), null, WorkingSetId.of(1L),
+                space, 258519859202016L, Classification.SharingMode.UNSHARED, null, false);
+
+        assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.insertTracker(tracker));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
+                Integer.class, id.numericValue()));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
+                Integer.class, id.numericValue()));
     }
 
     @Test
@@ -125,6 +179,11 @@ class TrackerDefaultAcceptanceTest {
                         null, Map.class).getStatusCode());
                 assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/trackers/shared/"
                         + tracker.trackerId(), null, Map.class).getStatusCode());
+                assertEquals(1L, jdbc.queryForObject("""
+                        SELECT r.workingset_id FROM air_inst_tracker_rev r
+                        JOIN air_ws_tracker c ON c.id = r.id AND c.workingset_id = r.workingset_id
+                        WHERE r.id = ?
+                        """, Long.class, Long.valueOf(tracker.trackerId())));
                 assertEquals(HttpStatus.CONFLICT, rest.postForEntity("/api/worksets/" + child + "/trackers",
                         request, Map.class).getStatusCode());
             }

@@ -7,9 +7,9 @@ import java.util.List;
 public record CreateWorkingSetRequest(String parentWorkingSetId, String requestId,
                                       List<String> productSpaceIds, List<String> sharedTrackerIds,
                                       List<String> unsharedParentTrackerIds, String name,
-                                      WorkingSetCreation.Mode mode) {
+                                      WorkingSetCreation.Mode mode, String color) {
     WorkingSetCreation.Request toDomainRequest(String newWorkingSetId) {
         return new WorkingSetCreation.Request(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds,
-                sharedTrackerIds, unsharedParentTrackerIds, name, mode);
+                sharedTrackerIds, unsharedParentTrackerIds, name, mode, color);
     }
 }

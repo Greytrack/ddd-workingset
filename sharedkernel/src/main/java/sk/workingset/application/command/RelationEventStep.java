@@ -5,12 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.TrackerRepository;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.List;

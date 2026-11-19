@@ -7,11 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.workingset.domain.repository.TrackerRepository;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.List;
@@ -38,16 +40,16 @@ public class WorkingSetCommandService {
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
         workingSets.requireReady(newId);
-        return createChildForTask(parentId, newId, null);
+        return createChildForTask(parentId, newId, null, null, null);
     }
 
     @Transactional
-    public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name) {
-        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId(null).longValue()), name);
+    public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name, String color) {
+        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId(null).longValue()), name, color, null);
     }
 
     // Called by the creation runner with the user-supplied display name.
-    WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId, String name) {
+    WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId, String name, String color, Long actor) {
         if (newId.equals(parentId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
@@ -55,33 +57,14 @@ public class WorkingSetCommandService {
         if (workingSets.findAncestors(parentId).contains(newId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
-        WorkingSet child = WorkingSet.child(newId, parentId, name);
-        if (!workingSets.insertWorkingSet(child)) {
+        WorkingSet child = WorkingSet.child(newId, parentId, name, color);
+        if (!workingSets.insertWorkingSet(child, actor)) {
             List<WorkingSetId> existing = workingSets.findAncestors(newId);
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             Reason reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
             throw new BindingFailure(reason, newId.value());
         }
         return child;
-    }
-
-    @Transactional
-    public Tracker createTracker(WorkingSetId id, String spaceId, String name, String classificationId,
-                                 SharingMode sharingMode) {
-        if (!WorkingSet.DEFAULT_ID.equals(id)) {
-            throw new BindingFailure(Reason.WorkingSetNotWritable, "只允许在默认工作集新建跟踪分类");
-        }
-        WorkingSet workingSet = writable(id);
-        ProductSpace space = lockSpace(spaceId);
-        workingSet.requireSpaceBinding(spaceId);
-        Classification classification = spaces.findClassification(classificationId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
-        Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
-                name, space, classification, sharingMode);
-        WorkingSet.TrackerBinding binding = workingSet.bindTracker(tracker, classification, sharingMode);
-        trackers.insertTracker(tracker);
-        workingSets.insertTrackerBinding(binding);
-        return tracker;
     }
 
     /**
@@ -149,7 +132,7 @@ public class WorkingSetCommandService {
         return true;
     }
 
-    boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId, boolean visible) {
+    boolean copyUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId, boolean visible, long actor) {
         WorkingSet target = lockTaskTarget(id);
         Tracker source = directParentTracker(target, parentTrackerId);
         requireUnshared(source);
@@ -158,16 +141,12 @@ public class WorkingSetCommandService {
             return false;
         }
         Tracker copy = derivedTracker(target, source);
-        if (visible) {
-            trackers.insertTracker(copy);
-        } else {
-            trackers.insertInvisibleTracker(copy);
-        }
+        trackers.insertTrackerForTask(copy, visible, actor);
         return true;
     }
 
-    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
-        trackers.revealExtensionTrackers(target, parentTrackerIds);
+    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor) {
+        trackers.revealExtensionTrackers(target, parentTrackerIds, actor);
     }
 
     boolean bindUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
@@ -222,7 +201,7 @@ public class WorkingSetCommandService {
     }
 
     private Tracker derivedTracker(WorkingSet target, Tracker source) {
-        boolean isDefault = !spaces.existsDefaultTracker(target.id(), source.productSpaceId(),
+        boolean isDefault = !trackers.existsDefaultTracker(target.id(), source.productSpaceId(),
                 source.classificationId());
         return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
                 isDefault);

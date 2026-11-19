@@ -3,7 +3,7 @@ package sk.workingset.adapters;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sk.workingset.application.command.WorkingSetDeletionService;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
 /**
@@ -31,12 +31,6 @@ public class BindingDeletionController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
         deletions.removeSpace(WorkingSetId.of(workingSetId), spaceId);
-    }
-
-    @DeleteMapping("/trackers/{trackerId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTracker(@PathVariable String trackerId) {
-        deletions.deleteTracker(TrackerId.of(trackerId));
     }
 
     @DeleteMapping("/worksets/1/product-spaces/{spaceId}")

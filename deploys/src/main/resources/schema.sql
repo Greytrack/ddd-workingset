@@ -6,30 +6,213 @@
 -- Working Sets and platform metadata
 -- ---------------------------------------------------------------------------
 
+-- Existing V4 storage needs an explicit data and foreign-key migration before bootstrap.
 DO 'BEGIN
-    IF EXISTS (SELECT 1 FROM pg_attribute
-       WHERE attrelid = to_regclass(''working_sets'') AND attname = ''working_set_id''
-       AND atttypid <> ''bigint''::regtype AND NOT attisdropped) THEN
-        RAISE EXCEPTION ''Legacy string IDs detected. Recreate the development database or use the dedicated demo database.'';
+    IF EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass(''trackers'') AND relkind IN (''r'', ''p'')) THEN
+        RAISE EXCEPTION ''Existing trackers table requires an explicit Tracker data migration before startup.'';
     END IF;
 END';
 
-CREATE TABLE IF NOT EXISTS working_sets (
-    working_set_id        BIGINT PRIMARY KEY,
-    parent_working_set_id BIGINT REFERENCES working_sets (working_set_id),
-    name                  VARCHAR(255),
-    CONSTRAINT ck_working_set_parent CHECK (
-        (working_set_id = '1' AND parent_working_set_id IS NULL)
-        OR (working_set_id <> '1' AND parent_working_set_id IS NOT NULL
-            AND parent_working_set_id <> working_set_id)
-    )
+DO 'BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass(''working_sets'') AND relkind IN (''r'', ''p'')) THEN
+        RAISE EXCEPTION ''Existing working_sets table requires an explicit Working Set migration before startup.'';
+    END IF;
+END';
+
+CREATE TABLE IF NOT EXISTS air_inst_workingset (
+  "id" bigint NOT NULL,
+  "base_class" bigint NOT NULL,
+  "class" bigint,
+  "type" bigint NOT NULL,
+  "number" character varying(255) NOT NULL,
+  "name" character varying(255),
+  "description" character varying(2000),
+  "color" character varying(500),
+  "workingset_id" bigint,
+  "work_space" bigint,
+  "owner" bigint,
+  "instance_id" bigint NOT NULL,
+  "common_id" bigint NOT NULL,
+  "parent_id" bigint,
+  "delete_flag" integer NOT NULL,
+  "flags" character varying(255),
+  "attributes" jsonb,
+  "revision" bigint,
+  "version_type" bigint NOT NULL DEFAULT 10001,
+  "lock_version" bigint NOT NULL,
+  "created_by" character varying(50) NOT NULL,
+  "created_time" bigint NOT NULL,
+  "updated_by" character varying(50) NOT NULL,
+  "updated_time" bigint NOT NULL,
+  "date01" bigint,
+  "date02" bigint,
+  "date03" bigint,
+  "date04" bigint,
+  "date05" bigint,
+  "text01" character varying(150),
+  "text02" character varying(150),
+  "text03" character varying(150),
+  "text04" character varying(150),
+  "text05" character varying(150),
+  "text06" character varying(150),
+  "text07" character varying(150),
+  "text08" character varying(150),
+  "text09" character varying(150),
+  "text10" character varying(150),
+  "list01" bigint,
+  "list02" bigint,
+  "list03" bigint,
+  "list04" bigint,
+  "list05" bigint,
+  "list06" bigint,
+  "list07" bigint,
+  "list08" bigint,
+  "list09" bigint,
+  "list10" bigint,
+  "multilist01" character varying(4000),
+  "multilist02" character varying(4000),
+  "multilist03" character varying(4000),
+  "multilist04" character varying(4000),
+  "multilist05" character varying(4000),
+  "multilist06" character varying(4000),
+  "multilist07" character varying(4000),
+  "multilist08" character varying(4000),
+  "multilist09" character varying(4000),
+  "multilist10" character varying(4000),
+  "numeric01" numeric,
+  "numeric02" numeric,
+  "numeric03" numeric,
+  "numeric04" numeric,
+  "numeric05" numeric,
+  "numeric06" numeric,
+  "numeric07" numeric,
+  "numeric08" numeric,
+  "numeric09" numeric,
+  "numeric10" numeric,
+  "largetext01" character varying(4000),
+  "largetext02" character varying(4000),
+  "largetext03" character varying(4000),
+  "largetext04" character varying(4000),
+  "largetext05" character varying(4000),
+  "compositetext01" character varying(255),
+  "compositetext02" character varying(255),
+  "compositetext03" character varying(255),
+  "compositetext04" character varying(255),
+  "compositetext05" character varying(255),
+  "compositenumber01" character varying(255),
+  "compositenumber02" character varying(255),
+  "compositenumber03" character varying(255),
+  "compositenumber04" character varying(255),
+  "compositenumber05" character varying(255),
+  "startdate01" bigint,
+  "endstartdate01" bigint,
+  "startdate02" bigint,
+  "endstartdate02" bigint,
+  "startdate03" bigint,
+  "endstartdate03" bigint,
+  "startdate04" bigint,
+  "endstartdate04" bigint,
+  "startdate05" bigint,
+  "endstartdate05" bigint,
+  "richtext01" text,
+  "richtext02" text,
+  "richtext03" text,
+  "richtext04" text,
+  "richtext05" text,
+  "date001" bigint,
+  "date002" bigint,
+  "date003" bigint,
+  "date004" bigint,
+  "date005" bigint,
+  "text001" character varying(150),
+  "text002" character varying(150),
+  "text003" character varying(150),
+  "text004" character varying(150),
+  "text005" character varying(150),
+  "text006" character varying(150),
+  "text007" character varying(150),
+  "text008" character varying(150),
+  "text009" character varying(150),
+  "text010" character varying(150),
+  "list001" bigint,
+  "list002" bigint,
+  "list003" bigint,
+  "list004" bigint,
+  "list005" bigint,
+  "list006" bigint,
+  "list007" bigint,
+  "list008" bigint,
+  "list009" bigint,
+  "list010" bigint,
+  "multilist001" character varying(4000),
+  "multilist002" character varying(4000),
+  "multilist003" character varying(4000),
+  "multilist004" character varying(4000),
+  "multilist005" character varying(4000),
+  "multilist006" character varying(4000),
+  "multilist007" character varying(4000),
+  "multilist008" character varying(4000),
+  "multilist009" character varying(4000),
+  "multilist010" character varying(4000),
+  "numeric001" numeric,
+  "numeric002" numeric,
+  "numeric003" numeric,
+  "numeric004" numeric,
+  "numeric005" numeric,
+  "numeric006" numeric,
+  "numeric007" numeric,
+  "numeric008" numeric,
+  "numeric009" numeric,
+  "numeric010" numeric,
+  "largetext001" character varying(4000),
+  "largetext002" character varying(4000),
+  "largetext003" character varying(4000),
+  "largetext004" character varying(4000),
+  "largetext005" character varying(4000),
+  "compositetext001" character varying(255),
+  "compositetext002" character varying(255),
+  "compositetext003" character varying(255),
+  "compositetext004" character varying(255),
+  "compositetext005" character varying(255),
+  "compositenumber001" character varying(255),
+  "compositenumber002" character varying(255),
+  "compositenumber003" character varying(255),
+  "compositenumber004" character varying(255),
+  "compositenumber005" character varying(255),
+  "startdate001" bigint,
+  "endstartdate001" bigint,
+  "startdate002" bigint,
+  "endstartdate002" bigint,
+  "startdate003" bigint,
+  "endstartdate003" bigint,
+  "startdate004" bigint,
+  "endstartdate004" bigint,
+  "startdate005" bigint,
+  "endstartdate005" bigint,
+  "richtext001" text,
+  "richtext002" text,
+  "richtext003" text,
+  "richtext004" text,
+  "richtext005" text,
+  "tracker" bigint,
+  "workingset_scop" bigint DEFAULT 0,
+  PRIMARY KEY ("id"),
+  CONSTRAINT ck_workingset_identity CHECK (
+      id = instance_id AND id = common_id AND workingset_id IS NOT NULL AND id = workingset_id),
+  CONSTRAINT ck_workingset_parent CHECK (
+      (id = 1 AND parent_id IS NULL) OR (id <> 1 AND parent_id IS NOT NULL AND parent_id <> id)),
+  CONSTRAINT workingset_parent_fk FOREIGN KEY (parent_id) REFERENCES air_inst_workingset (id)
 );
 
-INSERT INTO working_sets (working_set_id, parent_working_set_id, name)
-VALUES ('1', NULL, '默认工作集')
-ON CONFLICT (working_set_id) DO NOTHING;
+INSERT INTO air_inst_workingset (id, instance_id, common_id, workingset_id, parent_id,
+    base_class, class, type, tracker, name, number, color, revision, version_type, delete_flag,
+    lock_version, created_by, created_time, updated_by, updated_time)
+SELECT 1, 1, 1, 1, NULL, 1008, 100801, 10080101, 584190236948832, '默认工作集', 'WS-1', '#FFFF',
+    1, 10001, 0, 0, 'system', now_ms, 'system', now_ms
+FROM (SELECT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::bigint AS now_ms) AS seed
+ON CONFLICT (id) DO NOTHING;
 
-CREATE INDEX IF NOT EXISTS idx_working_sets_parent ON working_sets (parent_working_set_id);
+CREATE INDEX IF NOT EXISTS idx_air_workingset_parent ON air_inst_workingset (parent_id) WHERE delete_flag = 0;
 
 CREATE TABLE IF NOT EXISTS product_spaces (
     product_space_id BIGINT PRIMARY KEY,
@@ -52,47 +235,282 @@ ON CONFLICT (classification_id) DO NOTHING;
 -- Trackers and bindings
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS trackers (
-    tracker_id        BIGINT PRIMARY KEY,
-    name              VARCHAR(255),
-    source_id         BIGINT REFERENCES trackers (tracker_id),
-    working_set_id    BIGINT NOT NULL REFERENCES working_sets (working_set_id),
-    product_space_id  BIGINT NOT NULL REFERENCES product_spaces (product_space_id),
-    classification_id BIGINT NOT NULL,
-    sharing_mode      VARCHAR(8) NOT NULL,
-    parent_id         BIGINT,
-    is_default        BOOLEAN NOT NULL DEFAULT FALSE,
-    visible           BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (tracker_id, working_set_id),
-    UNIQUE (tracker_id, product_space_id, classification_id, sharing_mode),
-    CONSTRAINT trackers_classification_id_fkey
-        FOREIGN KEY (classification_id) REFERENCES classifications (classification_id),
-    CONSTRAINT trackers_sharing_mode_check CHECK (sharing_mode IN ('SHARED', 'UNSHARED')),
-    FOREIGN KEY (parent_id, working_set_id)
-        REFERENCES trackers (tracker_id, working_set_id),
-    CHECK ((source_id IS NULL AND working_set_id = '1')
-        OR (source_id IS NOT NULL AND working_set_id <> '1' AND sharing_mode = 'UNSHARED'))
+CREATE TABLE IF NOT EXISTS air_inst_tracker_rev (
+  "id" bigint NOT NULL,
+  "base_class" bigint NOT NULL,
+  "class" bigint,
+  "type" bigint NOT NULL,
+  "name" character varying(2000),
+  "work_space" bigint,
+  "delete_flag" integer NOT NULL,
+  "number" character varying(255) NOT NULL,
+  "flags" character varying(255),
+  "attributes" jsonb,
+  "revision_id" bigint,
+  "revision" bigint,
+  "description" text,
+  "tracker_class" bigint NOT NULL,
+  "default_layout" bigint NOT NULL DEFAULT '584532998805760'::bigint,
+  "share" bigint,
+  "owner" bigint NOT NULL,
+  "tracker" bigint,
+  "life_cycle_phase" bigint,
+  "checked_out" integer,
+  "instance_id" bigint,
+  "version_type" bigint NOT NULL DEFAULT 10001,
+  "common_id" bigint,
+  "workingset_id" bigint,
+  "parent_id" bigint,
+  "related_instance_id" bigint,
+  "related_type" bigint,
+  "lock_version" bigint NOT NULL,
+  "created_by" character varying(50) NOT NULL,
+  "created_time" bigint NOT NULL,
+  "updated_by" character varying(50) NOT NULL,
+  "updated_time" bigint NOT NULL,
+  "date01" bigint,
+  "date02" bigint,
+  "date03" bigint,
+  "date04" bigint,
+  "date05" bigint,
+  "text01" character varying(150),
+  "text02" character varying(150),
+  "text03" character varying(150),
+  "text04" character varying(150),
+  "text05" character varying(150),
+  "text06" character varying(150),
+  "text07" character varying(150),
+  "text08" character varying(150),
+  "text09" character varying(150),
+  "text10" character varying(150),
+  "list01" bigint,
+  "list02" bigint,
+  "list03" bigint,
+  "list04" bigint,
+  "list05" bigint,
+  "list06" bigint,
+  "list07" bigint,
+  "list08" bigint,
+  "list09" bigint,
+  "list10" bigint,
+  "multilist01" character varying(4000),
+  "multilist02" character varying(4000),
+  "multilist03" character varying(4000),
+  "multilist04" character varying(4000),
+  "multilist05" character varying(4000),
+  "multilist06" character varying(4000),
+  "multilist07" character varying(4000),
+  "multilist08" character varying(4000),
+  "multilist09" character varying(4000),
+  "multilist10" character varying(4000),
+  "numeric01" numeric,
+  "numeric02" numeric,
+  "numeric03" numeric,
+  "numeric04" numeric,
+  "numeric05" numeric,
+  "numeric06" numeric,
+  "numeric07" numeric,
+  "numeric08" numeric,
+  "numeric09" numeric,
+  "numeric10" numeric,
+  "largetext01" character varying(4000),
+  "largetext02" character varying(4000),
+  "largetext03" character varying(4000),
+  "largetext04" character varying(4000),
+  "largetext05" character varying(4000),
+  "compositetext01" character varying(255),
+  "compositetext02" character varying(255),
+  "compositetext03" character varying(255),
+  "compositetext04" character varying(255),
+  "compositetext05" character varying(255),
+  "compositenumber01" character varying(255),
+  "compositenumber02" character varying(255),
+  "compositenumber03" character varying(255),
+  "compositenumber04" character varying(255),
+  "compositenumber05" character varying(255),
+  "startdate01" bigint,
+  "endstartdate01" bigint,
+  "startdate02" bigint,
+  "endstartdate02" bigint,
+  "startdate03" bigint,
+  "endstartdate03" bigint,
+  "startdate04" bigint,
+  "endstartdate04" bigint,
+  "startdate05" bigint,
+  "endstartdate05" bigint,
+  "richtext01" text,
+  "richtext02" text,
+  "richtext03" text,
+  "richtext04" text,
+  "richtext05" text,
+  "date001" bigint,
+  "date002" bigint,
+  "date003" bigint,
+  "date004" bigint,
+  "date005" bigint,
+  "text001" character varying(150),
+  "text002" character varying(150),
+  "text003" character varying(150),
+  "text004" character varying(150),
+  "text005" character varying(150),
+  "text006" character varying(150),
+  "text007" character varying(150),
+  "text008" character varying(150),
+  "text009" character varying(150),
+  "text010" character varying(150),
+  "list001" bigint,
+  "list002" bigint,
+  "list003" bigint,
+  "list004" bigint,
+  "list005" bigint,
+  "list006" bigint,
+  "list007" bigint,
+  "list008" bigint,
+  "list009" bigint,
+  "list010" bigint,
+  "multilist001" character varying(4000),
+  "multilist002" character varying(4000),
+  "multilist003" character varying(4000),
+  "multilist004" character varying(4000),
+  "multilist005" character varying(4000),
+  "multilist006" character varying(4000),
+  "multilist007" character varying(4000),
+  "multilist008" character varying(4000),
+  "multilist009" character varying(4000),
+  "multilist010" character varying(4000),
+  "numeric001" numeric,
+  "numeric002" numeric,
+  "numeric003" numeric,
+  "numeric004" numeric,
+  "numeric005" numeric,
+  "numeric006" numeric,
+  "numeric007" numeric,
+  "numeric008" numeric,
+  "numeric009" numeric,
+  "numeric010" numeric,
+  "largetext001" character varying(4000),
+  "largetext002" character varying(4000),
+  "largetext003" character varying(4000),
+  "largetext004" character varying(4000),
+  "largetext005" character varying(4000),
+  "compositetext001" character varying(255),
+  "compositetext002" character varying(255),
+  "compositetext003" character varying(255),
+  "compositetext004" character varying(255),
+  "compositetext005" character varying(255),
+  "compositenumber001" character varying(255),
+  "compositenumber002" character varying(255),
+  "compositenumber003" character varying(255),
+  "compositenumber004" character varying(255),
+  "compositenumber005" character varying(255),
+  "startdate001" bigint,
+  "endstartdate001" bigint,
+  "startdate002" bigint,
+  "endstartdate002" bigint,
+  "startdate003" bigint,
+  "endstartdate003" bigint,
+  "startdate004" bigint,
+  "endstartdate004" bigint,
+  "startdate005" bigint,
+  "endstartdate005" bigint,
+  "richtext001" text,
+  "richtext002" text,
+  "richtext003" text,
+  "richtext004" text,
+  "richtext005" text,
+  "instance_tree_show_content" character varying(20) DEFAULT '1'::character varying,
+  "reference1" bigint,
+  "reference01" bigint,
+  "reference001" bigint,
+  "rank" character varying(64),
+  "source_branch_id" bigint,
+  "color" character varying(255),
+  "visible" smallint DEFAULT 1,
+  "locked" smallint DEFAULT 0,
+  "is_default" smallint DEFAULT 0,
+  "instance_type" bigint NOT NULL DEFAULT 0,
+  "tab_id" bigint,
+  "revision_in" bigint,
+  "revision_out" bigint,
+  "edit_row" bigint,
+  "checkout_user" character varying(50),
+  "checkout_time" bigint,
+  "checkin_user" character varying(50),
+  "checkin_time" bigint,
+  "release_time" bigint,
+  "version" character varying(50),
+  "main_version" character varying(50),
+  "small_version" integer,
+  "last_revision_id" bigint,
+  "last_version_id" bigint,
+  "related_common_id" bigint,
+  "related_workingset_id" bigint,
+  "related_work_space" bigint,
+  "is_global" smallint,
+  "version_rule_id" bigint,
+  "version_number" character varying(500),
+  "instance_baseline" bigint,
+  PRIMARY KEY ("id"),
+  CONSTRAINT tracker_v4_identity CHECK (
+      instance_id IS NOT NULL AND instance_id = id AND revision IS NOT NULL AND revision = 1
+      AND common_id IS NOT NULL AND common_id > 0
+      AND ((source_branch_id IS NULL AND common_id = id) OR (source_branch_id IS NOT NULL AND common_id <> id))
+      AND work_space IS NOT NULL AND workingset_id IS NOT NULL
+      AND share IS NOT NULL AND share IN (0, 1) AND delete_flag IN (0, 1)),
+  CONSTRAINT tracker_v4_lineage CHECK (
+      (source_branch_id IS NULL AND workingset_id = 1)
+      OR (source_branch_id IS NOT NULL AND workingset_id <> 1 AND share = 0)),
+  CONSTRAINT tracker_v4_workingset_fk FOREIGN KEY (workingset_id) REFERENCES air_inst_workingset (id),
+  CONSTRAINT tracker_v4_space_fk FOREIGN KEY (work_space) REFERENCES product_spaces (product_space_id),
+  CONSTRAINT tracker_v4_classification_fk FOREIGN KEY (tracker_class) REFERENCES classifications (classification_id),
+  CONSTRAINT tracker_v4_source_fk FOREIGN KEY (source_branch_id) REFERENCES air_inst_tracker_rev (id),
+  CONSTRAINT uq_tracker_rev_owner UNIQUE (id, workingset_id),
+  FOREIGN KEY (parent_id, workingset_id) REFERENCES air_inst_tracker_rev (id, workingset_id)
 );
 
--- 每个（所有者工作集，空间，分类）至多一个默认 Tracker
-CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_default_slot
-    ON trackers (working_set_id, product_space_id, classification_id) WHERE is_default;
+CREATE TABLE IF NOT EXISTS air_ws_tracker (
+  "id" bigint NOT NULL,
+  "parent_id" bigint,
+  "number" character varying(500),
+  "name" character varying(500),
+  "description" character varying(1000),
+  "color" character varying(255),
+  "workingset_id" bigint NOT NULL,
+  "sub_class_id" bigint NOT NULL,
+  "source_branch_id" bigint,
+  "visible" smallint,
+  "locked" smallint,
+  "shared" integer,
+  "is_default" smallint,
+  "attributes" jsonb,
+  "delete_flag" integer,
+  "lock_version" bigint,
+  "created_by" character varying(50),
+  "created_time" bigint,
+  "updated_by" character varying(50),
+  "updated_time" bigint,
+  PRIMARY KEY ("id"), FOREIGN KEY (id) REFERENCES air_inst_tracker_rev (id)
+);
 
--- 同一（工作集，空间，分类）内业务原生 Tracker 名称唯一；派生 Tracker 继承来源名称，不参与该约束。
-CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_name_slot
-    ON trackers (working_set_id, product_space_id, classification_id, name)
-    WHERE name IS NOT NULL AND source_id IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_trackers_org_parent ON trackers (parent_id);
-CREATE INDEX IF NOT EXISTS idx_trackers_source ON trackers (source_id);
--- Tracker lineage is 1:1: a child Working Set has at most one derived Tracker per parent Tracker.
--- Multiple Tracker projections in the same classification use different parent TrackerIds.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_trackers_derived_source
-    ON trackers (working_set_id, source_id) WHERE source_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_trackers_product_space ON trackers (product_space_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_owner ON air_inst_tracker_rev (id, workingset_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_binding ON air_inst_tracker_rev (id, work_space, tracker_class, share);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_default ON air_inst_tracker_rev (workingset_id, work_space, tracker_class)
+    WHERE is_default = 1 AND delete_flag = 0;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_name ON air_inst_tracker_rev (workingset_id, work_space, tracker_class, name)
+    WHERE name IS NOT NULL AND source_branch_id IS NULL AND delete_flag = 0;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_source ON air_inst_tracker_rev (workingset_id, source_branch_id)
+    WHERE source_branch_id IS NOT NULL AND delete_flag = 0;
+CREATE INDEX IF NOT EXISTS idx_tracker_rev_parent ON air_inst_tracker_rev (parent_id);
+CREATE INDEX IF NOT EXISTS idx_tracker_rev_source ON air_inst_tracker_rev (source_branch_id);
+CREATE INDEX IF NOT EXISTS idx_tracker_rev_space ON air_inst_tracker_rev (work_space);
+CREATE INDEX IF NOT EXISTS idx_tracker_instance_type ON air_inst_tracker_rev (instance_type);
+CREATE INDEX IF NOT EXISTS idx_tracker_revision ON air_inst_tracker_rev (revision);
+CREATE INDEX IF NOT EXISTS idx_tracker_version ON air_inst_tracker_rev (version);
+CREATE INDEX IF NOT EXISTS tracker_number_test_index ON air_inst_tracker_rev (number);
+CREATE INDEX IF NOT EXISTS tracker_number_ws_test_index ON air_inst_tracker_rev (number, workingset_id);
 
 CREATE TABLE IF NOT EXISTS space_bindings (
-    working_set_id  BIGINT NOT NULL REFERENCES working_sets (working_set_id),
+    working_set_id  BIGINT NOT NULL REFERENCES air_inst_workingset (id),
     product_space_id BIGINT NOT NULL REFERENCES product_spaces (product_space_id),
     origin          VARCHAR(24) NOT NULL CHECK (origin IN ('INITIAL_PROJECTION', 'EXPLICIT')),
     state           VARCHAR(8) NOT NULL CHECK (state = 'ACTIVE'),
@@ -111,8 +529,9 @@ CREATE TABLE IF NOT EXISTS tracker_bindings (
     PRIMARY KEY (working_set_id, tracker_id),
     FOREIGN KEY (working_set_id, product_space_id)
         REFERENCES space_bindings (working_set_id, product_space_id),
-    FOREIGN KEY (tracker_id, product_space_id, classification_id, sharing_mode)
-        REFERENCES trackers (tracker_id, product_space_id, classification_id, sharing_mode),
+    legacy_share BIGINT GENERATED ALWAYS AS (CASE sharing_mode WHEN 'SHARED' THEN 1 ELSE 0 END) STORED,
+    FOREIGN KEY (tracker_id, product_space_id, classification_id, legacy_share)
+        REFERENCES air_inst_tracker_rev (id, work_space, tracker_class, share),
     CHECK ((origin = 'SHARED_REUSE' AND sharing_mode = 'SHARED')
         OR (origin = 'UNSHARED_DERIVATION' AND sharing_mode = 'UNSHARED'))
 );
@@ -129,21 +548,21 @@ CREATE TABLE IF NOT EXISTS requirements (
     local_id       BIGINT PRIMARY KEY,
     common_id      BIGINT NOT NULL,
     number         VARCHAR(200) GENERATED ALWAYS AS ('REQ-' || upper(to_hex(common_id))) STORED NOT NULL,
-    tracker_id     BIGINT NOT NULL REFERENCES trackers (tracker_id),
+    tracker_id     BIGINT NOT NULL REFERENCES air_inst_tracker_rev (id),
     title          TEXT NOT NULL,
     description    TEXT NOT NULL,
     revision       INTEGER NOT NULL,
     version        VARCHAR(64),
     lock_version   BIGINT NOT NULL,
     delete_flag    BOOLEAN NOT NULL DEFAULT FALSE,
-    working_set_id BIGINT NOT NULL REFERENCES working_sets (working_set_id),
+    working_set_id BIGINT NOT NULL REFERENCES air_inst_workingset (id),
     name           VARCHAR(255)
 );
 
 CREATE OR REPLACE FUNCTION set_requirement_working_set() RETURNS trigger AS '
 BEGIN
-    SELECT t.working_set_id INTO NEW.working_set_id
-    FROM trackers t WHERE t.tracker_id = NEW.tracker_id;
+    SELECT t.workingset_id INTO NEW.working_set_id
+    FROM air_inst_tracker_rev t WHERE t.id = NEW.tracker_id AND t.delete_flag = 0;
     IF NEW.working_set_id IS NULL THEN
         RAISE EXCEPTION ''tracker % not found for requirement %'', NEW.tracker_id, NEW.local_id
             USING ERRCODE = ''23503'';
@@ -174,7 +593,7 @@ CREATE TABLE IF NOT EXISTS light_tracker_items (
     source_revision INTEGER NOT NULL,
     materialized    BOOLEAN NOT NULL,
     FOREIGN KEY (tracker_id, working_set_id)
-        REFERENCES trackers (tracker_id, working_set_id),
+        REFERENCES air_inst_tracker_rev (id, workingset_id),
     CHECK ((materialized = FALSE AND source_local_id <> local_id)
         OR (materialized = TRUE AND source_local_id = local_id AND source_revision = revision))
 );

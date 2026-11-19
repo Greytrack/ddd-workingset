@@ -1,5 +1,6 @@
 package sk.workingset.domain;
 
+
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;

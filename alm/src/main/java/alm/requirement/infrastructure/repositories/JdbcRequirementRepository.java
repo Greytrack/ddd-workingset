@@ -19,7 +19,7 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.Version;
 
 /**
@@ -116,7 +116,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     public Optional<Requirement> lockFamilyInWorkingSet(TrackerId trackerId, CommonId commonId) {
         return jdbc.query("""
                 SELECT r.* FROM requirements r
-                WHERE r.working_set_id = (SELECT working_set_id FROM trackers WHERE tracker_id = ?)
+                WHERE r.working_set_id = (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ? AND delete_flag = 0)
                   AND r.common_id = ?
                 FOR UPDATE
                 """, MAPPER, trackerId.numericValue(), commonId.numericValue()).stream().findFirst();

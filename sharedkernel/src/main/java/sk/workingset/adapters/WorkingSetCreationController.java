@@ -21,7 +21,7 @@ public class WorkingSetCreationController {
 
     @PostMapping
     public ResponseEntity<CreationView> submit(@RequestBody CreateWorkingSetRequest request) {
-        WorkingSetCreation creation = creations.submitNew(request.requestId(), request::toDomainRequest, "web");
+        WorkingSetCreation creation = creations.submitNew(request.requestId(), request::toDomainRequest);
         return ResponseEntity.accepted().location(URI.create("/api/working-set-creations/" + creation.id()))
                 .body(CreationView.from(creation));
     }

@@ -21,7 +21,5 @@ public interface ProductSpaceRepository {
 
     void insertProductSpace(ProductSpace space);
 
-    boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId);
-
     void deleteProductSpace(String id);
 }

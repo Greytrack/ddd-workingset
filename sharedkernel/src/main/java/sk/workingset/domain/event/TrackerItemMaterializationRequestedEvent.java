@@ -1,5 +1,6 @@
 package sk.workingset.domain.event;
 
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 
 import java.util.Objects;

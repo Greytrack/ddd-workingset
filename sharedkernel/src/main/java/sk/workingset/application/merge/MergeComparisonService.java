@@ -6,6 +6,8 @@ import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.*;
@@ -14,7 +16,7 @@ import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.TrackerRepository;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.time.Instant;

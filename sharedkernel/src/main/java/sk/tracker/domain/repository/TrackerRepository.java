@@ -1,8 +1,8 @@
-package sk.workingset.domain.repository;
+package sk.tracker.domain.repository;
 
 import org.jmolecules.ddd.annotation.Repository;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
 import java.util.List;
@@ -20,29 +20,33 @@ public interface TrackerRepository {
     Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source);
 
     /**
-     * 只读列出工作集内的 Tracker，供界面构建 Tracker 树；包含尚未绑定的副本。
+     * 列出归属于或绑定到工作集的可见 Tracker。
      */
     List<Tracker> findTrackers(WorkingSetId workingSetId);
 
     void insertTracker(Tracker tracker);
 
+    void updateName(Tracker tracker);
+
     /**
      * 扩展任务创建的新 Tracker 在任务终态前不可见。
      */
-    void insertInvisibleTracker(Tracker tracker);
+    void insertTrackerForTask(Tracker tracker, boolean visible, long actor);
 
     boolean isVisible(TrackerId trackerId);
 
     /**
      * 终态后只揭示已成功建立绑定的新 Tracker。
      */
-    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds);
+    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor);
 
     boolean hasOrgChildren(TrackerId id);
 
     boolean hasDerivedChildren(TrackerId id);
 
     boolean hasTrackersInSpace(String spaceId);
+
+    boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId);
 
     void deleteTracker(TrackerId id);
 }

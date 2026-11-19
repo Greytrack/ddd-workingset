@@ -1,8 +1,13 @@
-package sk.workingset.domain;
+package sk.tracker.domain;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
+import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.ProductSpace;
+import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;
@@ -16,10 +21,18 @@ import java.util.Objects;
  * 业务原生 Tracker，因此实际等价于（产品空间，分类）内唯一。
  */
 @AggregateRoot
-public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
-                      Long numericProductSpaceId, Long numericClassificationId, SharingMode sharingMode,
-                      TrackerId parentId,
-                      boolean isDefault) {
+public final class Tracker {
+    private final TrackerId trackerId;
+    private final TrackerId commonId;
+    private String name;
+    private final TrackerId sourceId;
+    private final WorkingSetId workingSetId;
+    private final Long numericProductSpaceId;
+    private final Long numericClassificationId;
+    private final SharingMode sharingMode;
+    private final TrackerId parentId;
+    private final boolean isDefault;
+    private final TrackerCompatibility compatibility;
 
     public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
                    String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId,
@@ -38,18 +51,45 @@ public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, Work
         this(trackerId, null, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId, false);
     }
 
-    public Tracker {
-        Objects.requireNonNull(trackerId, "trackerId");
-        Objects.requireNonNull(workingSetId, "workingSetId");
-        Objects.requireNonNull(numericProductSpaceId, "productSpaceId");
-        Objects.requireNonNull(numericClassificationId, "classificationId");
-        Objects.requireNonNull(sharingMode, "sharingMode");
+    public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
+                   Long numericProductSpaceId, Long numericClassificationId, SharingMode sharingMode,
+                   TrackerId parentId, boolean isDefault) {
+        this(trackerId, trackerId, name, sourceId, workingSetId, numericProductSpaceId,
+                numericClassificationId, sharingMode, parentId, isDefault);
+    }
+
+    private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
+                   WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                   SharingMode sharingMode, TrackerId parentId, boolean isDefault) {
+        this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
+        this.commonId = Objects.requireNonNull(commonId, "commonId");
+        this.name = name;
+        this.sourceId = sourceId;
+        this.parentId = parentId;
+        this.isDefault = isDefault;
+        this.workingSetId = Objects.requireNonNull(workingSetId, "workingSetId");
+        this.numericProductSpaceId = Objects.requireNonNull(numericProductSpaceId, "productSpaceId");
+        this.numericClassificationId = Objects.requireNonNull(numericClassificationId, "classificationId");
+        this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
+        this.compatibility = new TrackerCompatibility(trackerId, numericClassificationId);
+        if (sourceId == null && !trackerId.equals(commonId)) {
+            throw new IllegalArgumentException("An original Tracker must use its own ID as common ID");
+        }
         if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "original Tracker must belong to the default Working Set");
         }
         if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "derived Tracker must be unshared and belong to a child Working Set");
         }
+        if (sourceId != null && (trackerId.equals(commonId) || trackerId.equals(sourceId))) {
+            throw new IllegalArgumentException("A derived Tracker must have its own ID and a distinct family ID");
+        }
+    }
+
+    public static Tracker reconstitute(TrackerId id, TrackerId commonId, String name, TrackerId source,
+                                       WorkingSetId owner, Long productSpace, Long classification,
+                                       SharingMode sharing, TrackerId parent, boolean isDefault) {
+        return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault);
     }
 
     /**
@@ -70,10 +110,7 @@ public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, Work
 
     public static Tracker original(TrackerId id, String name, ProductSpace space, Classification classification,
                                    SharingMode sharingMode) {
-        String normalizedName = name == null ? "" : name.strip();
-        if (normalizedName.isEmpty() || normalizedName.codePointCount(0, normalizedName.length()) > 255) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
-        }
+        String normalizedName = normalizeName(name);
         if (!classification.allows(sharingMode)) {
             throw new BindingFailure(BindingFailure.Reason.SharingModeMismatch, classification.id());
         }
@@ -86,8 +123,37 @@ public record Tracker(TrackerId trackerId, String name, TrackerId sourceId, Work
     }
 
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault) {
-        return new Tracker(id, source.name(), source.trackerId(), target, source.productSpaceId(),
-                source.classificationId(), source.sharingMode(), null, isDefault);
+        return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
+                source.numericProductSpaceId(), source.numericClassificationId(), source.sharingMode(), null, isDefault);
+    }
+
+    public TrackerId trackerId() { return trackerId; }
+    public TrackerId commonId() { return commonId; }
+    public String name() { return name; }
+    public TrackerId sourceId() { return sourceId; }
+    public WorkingSetId workingSetId() { return workingSetId; }
+    public Long numericProductSpaceId() { return numericProductSpaceId; }
+    public Long numericClassificationId() { return numericClassificationId; }
+    public SharingMode sharingMode() { return sharingMode; }
+    public TrackerId parentId() { return parentId; }
+    public boolean isDefault() { return isDefault; }
+    public TrackerCompatibility compatibility() { return compatibility; }
+
+    public boolean rename(String newName) {
+        String normalized = normalizeName(newName);
+        if (normalized.equals(name)) {
+            return false;
+        }
+        name = normalized;
+        return true;
+    }
+
+    private static String normalizeName(String name) {
+        String normalized = name == null ? "" : name.strip();
+        if (normalized.isEmpty() || normalized.codePointCount(0, normalized.length()) > 255) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
+        }
+        return normalized;
     }
 
     public String productSpaceId() {

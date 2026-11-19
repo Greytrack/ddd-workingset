@@ -13,6 +13,7 @@ import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.repository.LightTrackerItemRepository;

@@ -1,5 +1,8 @@
 package sk.workingset.domain;
 
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
+
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
 import sk.common.error.DomainException;
@@ -17,9 +20,13 @@ import java.util.*;
 public final class WorkingSet {
 
     public static final WorkingSetId DEFAULT_ID = WorkingSetId.of("1");
+    public static final String DEFAULT_COLOR = "#FFFF";
+    private static final java.util.regex.Pattern HEX_COLOR =
+            java.util.regex.Pattern.compile("#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;
     private final String name;
+    private final String color;
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
 
@@ -28,6 +35,11 @@ public final class WorkingSet {
         this(id, parentWorkingSetId, null, spaces, trackers);
     }
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name,
+                      Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
+        this(id, parentWorkingSetId, name, DEFAULT_COLOR, spaces, trackers);
+    }
+
+    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this.id = Objects.requireNonNull(id, "id");
         if (id.equals(parentWorkingSetId)) {
@@ -38,6 +50,7 @@ public final class WorkingSet {
         }
         this.parentWorkingSetId = parentWorkingSetId;
         this.name = name;
+        this.color = color;
         spaces.forEach(binding -> this.spaces.put(binding.productSpaceId(), binding));
         trackers.forEach(binding -> this.trackers.put(binding.trackerId(), binding));
     }
@@ -47,7 +60,23 @@ public final class WorkingSet {
     }
 
     public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name) {
-        return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name, List.of(), List.of());
+        return child(id, parentId, name, null);
+    }
+
+    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name, String color) {
+        return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name,
+                normalizeColor(color), List.of(), List.of());
+    }
+
+    public static String normalizeColor(String color) {
+        if (color == null) {
+            return DEFAULT_COLOR;
+        }
+        String normalized = color.strip();
+        if (!HEX_COLOR.matcher(normalized).matches()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "color must be a hexadecimal color");
+        }
+        return normalized.toUpperCase(Locale.ROOT);
     }
 
     public static void requireDeletable(WorkingSetId id) {
@@ -66,6 +95,10 @@ public final class WorkingSet {
 
     public String name() {
         return name;
+    }
+
+    public String color() {
+        return color;
     }
 
     public List<SpaceBinding> spaces() {

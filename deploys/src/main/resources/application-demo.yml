@@ -4,5 +4,5 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:reset-demo-schema.sql,classpath:schema.sql
+      schema-locations: classpath:reset-demo-schema.sql,classpath:schema.sql,classpath:tracker-fixtures.sql
       data-locations: classpath:demo-data.sql

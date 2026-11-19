@@ -1,7 +1,7 @@
 package sk.workingset.domain.repository;
 
 import org.jmolecules.ddd.annotation.Repository;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
@@ -26,7 +26,7 @@ public interface WorkingSetRepository {
 
     void requireReady(WorkingSetId id);
 
-    boolean insertWorkingSet(WorkingSet workingSet);
+    boolean insertWorkingSet(WorkingSet workingSet, Long actor);
 
     List<WorkingSetId> findChildren(WorkingSetId id);
 

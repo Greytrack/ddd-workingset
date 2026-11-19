@@ -37,7 +37,7 @@ import sk.workingset.application.query.provider.RelationSourceQueryProvider.Refe
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

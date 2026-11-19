@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeCheckpoint.Direction;
@@ -84,34 +84,6 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     @Override
     public void updateRound(MergeRound round) {
         jdbc.update("UPDATE merge_rounds SET state = CAST(? AS jsonb) WHERE id = ?", encode(round), round.numericId());
-    }
-
-    @Override
-    public boolean tryLockExecution(String roundId) {
-        return jdbc.query("""
-                SELECT pg_try_advisory_xact_lock(id) FROM merge_rounds WHERE id = ?
-                """, (rs, row) -> rs.getBoolean(1), Long.valueOf(roundId)).stream().findFirst().orElse(false);
-    }
-
-    @Override
-    public Optional<MergeCommitReceipt> findCommitReceipt(String roundId, String entryId) {
-        return jdbc.query("""
-                SELECT business_ref, source_revision, target_revision FROM merge_commit_receipts
-                WHERE round_id = ? AND entry_id = ?
-                """, (rs, row) -> {
-            String businessRef = rs.getString(1);
-            return new MergeCommitReceipt(businessRef == null ? null : LocalId.of(businessRef),
-                    revision(rs.getObject(2, Integer.class)), revision(rs.getObject(3, Integer.class)));
-        }, Long.valueOf(roundId), Long.valueOf(entryId)).stream().findFirst();
-    }
-
-    @Override
-    public void insertCommitReceipt(String roundId, String entryId, MergeCommitReceipt receipt) {
-        jdbc.update("""
-                        INSERT INTO merge_commit_receipts (round_id, entry_id, business_ref, source_revision, target_revision)
-                        VALUES (?, ?, ?, ?, ?)
-                        """, Long.valueOf(roundId), Long.valueOf(entryId), receipt.businessRef() == null ? null : receipt.businessRef().numericValue(),
-                revision(receipt.sourceRevision()), revision(receipt.targetRevision()));
     }
 
     @Override

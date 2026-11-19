@@ -2,7 +2,7 @@ package sk.workingset.domain.event;
 
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
 import java.util.Objects;

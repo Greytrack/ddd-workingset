@@ -1,7 +1,7 @@
 package sk.workingset.domain.merge;
 
 import org.jmolecules.ddd.annotation.Repository;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 
 import java.util.Optional;
 
@@ -22,15 +22,6 @@ public interface MergeRepository {
     Optional<MergeRound> findRoundByRequest(String requestId);
 
     void updateRound(MergeRound round);
-
-    /**
-     * 在当前事务内独占一个轮次的执行权，事务结束时释放。
-     */
-    boolean tryLockExecution(String roundId);
-
-    Optional<MergeCommitReceipt> findCommitReceipt(String roundId, String entryId);
-
-    void insertCommitReceipt(String roundId, String entryId, MergeCommitReceipt receipt);
 
     /**
      * 清理已被两侧更新版次超越的 Checkpoint；返回删除行数。

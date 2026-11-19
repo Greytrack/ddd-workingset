@@ -1,6 +1,7 @@
 package sk.workingset.domain.merge;
 
 import org.jmolecules.ddd.annotation.ValueObject;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 
 import java.time.Instant;

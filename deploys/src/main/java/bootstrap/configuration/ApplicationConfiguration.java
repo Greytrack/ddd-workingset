@@ -19,11 +19,12 @@ import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.TrackerId;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
-import sk.workingset.infrastructure.repositories.JdbcBindingRepositoriesImpl;
+import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 
 /**
  * 组合根只保留需要运行时参数、条件装配或 lambda 的 Bean。
@@ -69,11 +70,11 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetItemIndexer workingSetItemIndexer(
-            JdbcBindingRepositoriesImpl bindings, LightTrackerItemRepository items,
+            WorkingSetRepository bindings, TrackerRepository trackers, LightTrackerItemRepository items,
             TrackerItemCatalogQueryProvider catalog, BusinessTrackerItems businessItems,
             WorkingSetCreationSnapshotRepository snapshots, JdbcRequirementRepository requirements,
             IdentifierGenerator ids, @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
-        return new WorkingSetItemIndexer(bindings, bindings, items, catalog, snapshots,
+        return new WorkingSetItemIndexer(bindings, trackers, items, catalog, snapshots,
                 businessItems, id -> new RequirementAdapter(requirements, id), ids, batchSize);
     }
 
@@ -99,12 +100,13 @@ public class ApplicationConfiguration {
 
     @Bean
     public MergeComparisonService mergeComparisonService(
-            JdbcBindingRepositoriesImpl bindings,
+            WorkingSetRepository bindings,
+            TrackerRepository trackers,
             LightTrackerItemRepository items,
             TrackerItemCatalogQueryProvider catalog,
             JdbcRequirementRepository requirements,
             MergeRepository store) {
-        return new MergeComparisonService(bindings, bindings, items, catalog,
+        return new MergeComparisonService(bindings, trackers, items, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
     }
 }

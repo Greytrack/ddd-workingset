@@ -5,13 +5,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.workingset.application.port.BusinessTrackerItems;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.workingset.domain.repository.TrackerRepository;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.Comparator;

@@ -65,6 +65,14 @@
       <version>1.9.0</version>
     </dependency>
     <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>transmittable-thread-local</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-collections4</artifactId>
       <version>${commons-collections4.version}</version>

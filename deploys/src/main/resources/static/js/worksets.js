@@ -66,6 +66,11 @@ function renderWorksetTree() {
     row.innerHTML = `<span class="tree-dot"></span><span class="tree-label">${escapeHtml(label)}</span>` +
       (node.children.length ? `<span class="badge count">${node.children.length}</span>` : '') +
       (node.error ? '<span class="badge unbound">不可用</span>' : '');
+    const color = node.ws?.color;
+    if (color && /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)) {
+      row.querySelector('.tree-dot').style.backgroundColor = color;
+      row.querySelector('.tree-dot').style.border = '1px solid var(--line)';
+    }
     container.appendChild(row);
     node.children.forEach((child) => walk(child, depth + 1));
   };
