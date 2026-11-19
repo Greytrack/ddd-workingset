@@ -1,7 +1,6 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
-
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -27,5 +26,7 @@ public record ProductSpace(Long numericId, String name) {
         }
     }
 
-    public String id() { return numericId.toString(); }
+    public String id() {
+        return numericId.toString();
+    }
 }

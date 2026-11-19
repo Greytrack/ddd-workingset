@@ -1,40 +1,25 @@
 package sk.workingset.application.merge;
 
-import sk.common.error.DomainException;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
-import java.util.function.Function;
-
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.WorkingSetLineagePolicy;
+import sk.workingset.domain.*;
 import sk.workingset.domain.merge.Comparison;
-import sk.workingset.domain.merge.Comparison.ChangeKind;
-import sk.workingset.domain.merge.Comparison.Difference;
-import sk.workingset.domain.merge.Comparison.Presence;
-import sk.workingset.domain.merge.Comparison.Side;
-import sk.workingset.domain.merge.Comparison.TrackerPair;
+import sk.workingset.domain.merge.Comparison.*;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeFailure.Reason;
+import sk.workingset.domain.merge.MergeRepository;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
+
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * 有向比较：按直属父子与 Tracker 来源选择候选，读取双侧证据并生成瞬时差异。
@@ -61,6 +46,27 @@ public class MergeComparisonService {
         this.store = store;
     }
 
+    private static void putFamily(Map<CommonId, LocalId> families, CommonId family, LocalId id) {
+        LocalId previous = families.putIfAbsent(family, id);
+        if (previous != null && !previous.equals(id)) {
+            throw new MergeFailure(Reason.Conflict, "multiple variants in family " + family.value());
+        }
+    }
+
+    private static Side unreadable(LocalId id, FailureReason reason) {
+        return new Side(id, null, null, null, null, null, Presence.UNREADABLE, reason.name(), Map.of());
+    }
+
+    private static List<String> differingFields(Side source, Side target) {
+        if (source.presence() != Presence.PRESENT || target.presence() != Presence.PRESENT) {
+            return List.of();
+        }
+        TreeSet<String> keys = new TreeSet<>(source.fields().keySet());
+        keys.addAll(target.fields().keySet());
+        return keys.stream().filter(key -> !java.util.Objects.equals(source.fields().get(key), target.fields().get(key)))
+                .toList();
+    }
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId sourceTracker,
                               TrackerId targetTracker) {
@@ -69,8 +75,8 @@ public class MergeComparisonService {
             throw new MergeFailure(Reason.MergeNotAllowed, "trackers must form a direct derivation pair in the supplied working sets");
         }
         ArrayList<Difference> differences = new ArrayList<Difference>();
-        Map<CommonId,LocalId> sources = familyIds(pair.source());
-        Map<CommonId,LocalId> targets = familyIds(pair.target());
+        Map<CommonId, LocalId> sources = familyIds(pair.source());
+        Map<CommonId, LocalId> targets = familyIds(pair.target());
         TreeSet<CommonId> families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
         families.addAll(sources.keySet());
         families.addAll(targets.keySet());
@@ -114,14 +120,14 @@ public class MergeComparisonService {
         WorkingSet child = WorkingSetLineagePolicy.childOf(left, right);
         return WorkingSetLineagePolicy.comparableBindings(left, right).stream().flatMap(binding ->
                 trackers.findTracker(binding.trackerId()).stream()
-                // The binding must belong to the direct child Working Set; this rejects cross-level
-                // and Shared bindings that happen to carry a sourceId.
-                .filter(tracker -> tracker.workingSetId().equals(child.id()))
-                .filter(tracker -> tracker.sourceId() != null)
-                .filter(tracker -> parentIncludes(left, right, tracker))
-                .map(tracker -> tracker.workingSetId().equals(source)
-                        ? new TrackerPair(source, tracker.trackerId(), target, tracker.sourceId())
-                        : new TrackerPair(source, tracker.sourceId(), target, tracker.trackerId()))).toList();
+                        // The binding must belong to the direct child Working Set; this rejects cross-level
+                        // and Shared bindings that happen to carry a sourceId.
+                        .filter(tracker -> tracker.workingSetId().equals(child.id()))
+                        .filter(tracker -> tracker.sourceId() != null)
+                        .filter(tracker -> parentIncludes(left, right, tracker))
+                        .map(tracker -> tracker.workingSetId().equals(source)
+                                ? new TrackerPair(source, tracker.trackerId(), target, tracker.sourceId())
+                                : new TrackerPair(source, tracker.sourceId(), target, tracker.trackerId()))).toList();
     }
 
     public boolean isMergeBack(WorkingSetId source, WorkingSetId target) {
@@ -161,13 +167,6 @@ public class MergeComparisonService {
         return families;
     }
 
-    private static void putFamily(Map<CommonId, LocalId> families, CommonId family, LocalId id) {
-        LocalId previous = families.putIfAbsent(family, id);
-        if (previous != null && !previous.equals(id)) {
-            throw new MergeFailure(Reason.Conflict, "multiple variants in family " + family.value());
-        }
-    }
-
     private Side read(LocalId id) {
         if (id == null) {
             return Side.absent();
@@ -194,20 +193,6 @@ public class MergeComparisonService {
         } catch (UnsupportedOperationException failure) {
             return unreadable(id, FailureReason.CAPABILITY_NOT_SUPPORTED);
         }
-    }
-
-    private static Side unreadable(LocalId id, FailureReason reason) {
-        return new Side(id, null, null, null, null, null, Presence.UNREADABLE, reason.name(), Map.of());
-    }
-
-    private static List<String> differingFields(Side source, Side target) {
-        if (source.presence() != Presence.PRESENT || target.presence() != Presence.PRESENT) {
-            return List.of();
-        }
-        TreeSet<String> keys = new TreeSet<>(source.fields().keySet());
-        keys.addAll(target.fields().keySet());
-        return keys.stream().filter(key -> !java.util.Objects.equals(source.fields().get(key), target.fields().get(key)))
-                .toList();
     }
 
     private WorkingSet workingSet(WorkingSetId id) {

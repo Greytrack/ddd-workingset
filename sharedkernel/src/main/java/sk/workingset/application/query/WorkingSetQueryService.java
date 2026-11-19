@@ -3,31 +3,26 @@ package sk.workingset.application.query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Objects;
-
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 
-/** Working Set 查询侧应用服务：读模型优先，不重建聚合，不执行写操作。 */
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Working Set 查询侧应用服务：读模型优先，不重建聚合，不执行写操作。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -77,7 +72,9 @@ public class WorkingSetQueryService {
         return query.findBindings(id.numericValue());
     }
 
-    /** 工作集只返回自己的 LightTrackerItem 索引，不桥接业务 BC 的展示内容。 */
+    /**
+     * 工作集只返回自己的 LightTrackerItem 索引，不桥接业务 BC 的展示内容。
+     */
     @Transactional(readOnly = true)
     public List<LightTrackerItem> findLightTrackerItems(WorkingSetId workingSetId, TrackerId trackerId) {
         find(workingSetId);
@@ -87,7 +84,9 @@ public class WorkingSetQueryService {
         return items.findInTracker(trackerId);
     }
 
-    /** 按工作集 + 变体身份解析；未命中 → NotFound；存在但不在该工作集 → NotIncluded。 */
+    /**
+     * 按工作集 + 变体身份解析；未命中 → NotFound；存在但不在该工作集 → NotIncluded。
+     */
     public LightTrackerItem resolve(WorkingSetId workingSetId, LocalId localId) {
         Objects.requireNonNull(localId, "localId");
         requireReady(workingSetId);

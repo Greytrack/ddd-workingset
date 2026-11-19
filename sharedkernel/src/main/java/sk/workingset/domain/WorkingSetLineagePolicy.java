@@ -1,20 +1,24 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.Service;
-
-import java.util.List;
-
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
 
-/** Compare/Merge 的谱系准入。业务能力与比较证据由 T1 执行入口另行校验。 */
+import java.util.List;
+
+/**
+ * Compare/Merge 的谱系准入。业务能力与比较证据由 T1 执行入口另行校验。
+ */
 @Service
 public final class WorkingSetLineagePolicy {
 
-    private WorkingSetLineagePolicy() {}
+    private WorkingSetLineagePolicy() {
+    }
 
-    /** 返回直属子级；source/target 必须是相邻父子，否则拒绝。 */
+    /**
+     * 返回直属子级；source/target 必须是相邻父子，否则拒绝。
+     */
     public static WorkingSet childOf(WorkingSet source, WorkingSet target) {
         if (source.id().equals(target.parentWorkingSetId())) {
             return target;
@@ -25,7 +29,9 @@ public final class WorkingSetLineagePolicy {
         throw new BindingFailure(Reason.WorkingSetsNotAdjacent, source.id().value() + "/" + target.id().value());
     }
 
-    /** 双向使用同一子级候选范围。空列表表示无可比较的 Tracker 候选。 */
+    /**
+     * 双向使用同一子级候选范围。空列表表示无可比较的 Tracker 候选。
+     */
     public static List<TrackerBinding> comparableBindings(WorkingSet source, WorkingSet target) {
         return childOf(source, target).trackers().stream()
                 .filter(binding -> binding.sharingMode() == SharingMode.UNSHARED)

@@ -1,8 +1,13 @@
 package sk.workingset.domain.merge;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
 import org.jmolecules.ddd.annotation.ValueObject;
+import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.merge.Comparison.Difference;
+import sk.workingset.domain.merge.MergeFailure.Reason;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -10,72 +15,32 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.merge.Comparison.Difference;
-import sk.workingset.domain.merge.MergeFailure.Reason;
-
 /**
  * Merge 轮次聚合：登记条目、执行、唯一终态结果；终态不可重开。
  *
  * <p>状态为 Preparing → Running → Succeeded/PartiallySucceeded/Failed，没有独立 Completed 阶段（C5）。
  */
 @AggregateRoot
-public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, String token, String requestId, WorkingSetId source, WorkingSetId target,
+public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, String token,
+                         String requestId, WorkingSetId source, WorkingSetId target,
                          String caller, State state, List<Entry> entries, ApplyResult result) {
-    public enum State { Preparing, Running, Succeeded, PartiallySucceeded, Failed }
-    public enum Outcome { Applied, Confirmed, Rejected, Conflict, StaleEvidence, Deferred, Unknown }
-
-    @Entity
-    public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result, boolean requested) {
-        public Entry(String id, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
-            this(Long.valueOf(id), decisionVersion, evidence, decision, result, false);
-        }
-
-        public String id() { return numericId.toString(); }
-
-        Entry finish(ItemResult result) {
-            if (this.result != null) {
-                throw new MergeFailure(Reason.RoundClosed, id());
-            }
-            return new Entry(numericId, decisionVersion, evidence, decision, result, requested);
-        }
-
-        Entry request() {
-            return requested ? this : new Entry(numericId, decisionVersion, evidence, decision, result, true);
-        }
-    }
-
-    @ValueObject
-    public record ItemResult(String entryId, Outcome outcome, String operation,
-                             String businessRef, String checkpoint, String failure) {
-        public boolean succeeded() {
-            return outcome == Outcome.Applied || outcome == Outcome.Confirmed;
-        }
-    }
-
-    @ValueObject
-    public record Summary(long applied, long confirmed, long rejected, long conflict, long deferred,
-                          long staleEvidence, long unknown) {}
-
-    @ValueObject
-    public record ApplyResult(State state, Summary summary, List<ItemResult> itemResults, Instant completedAt) {
-        public ApplyResult { itemResults = List.copyOf(itemResults); }
-    }
-
     public MergeRound {
         Objects.requireNonNull(requestId, "requestId");
         entries = List.copyOf(entries);
     }
 
-    public String id() { return numericId.toString(); }
-
     public static MergeRound prepare(String id, String requestId, WorkingSetId source, WorkingSetId target,
                                      String caller) {
         return new MergeRound(Long.valueOf(id), UUID.randomUUID().toString(), requestId, source, target, caller,
                 State.Preparing, List.of(), null);
+    }
+
+    private static long count(List<ItemResult> results, Outcome outcome) {
+        return results.stream().filter(result -> result.outcome() == outcome).count();
+    }
+
+    public String id() {
+        return numericId.toString();
     }
 
     public MergeRound register(Entry entry) {
@@ -129,7 +94,51 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
                 new ApplyResult(terminal, summary, results, completedAt));
     }
 
-    private static long count(List<ItemResult> results, Outcome outcome) {
-        return results.stream().filter(result -> result.outcome() == outcome).count();
+    public enum State {Preparing, Running, Succeeded, PartiallySucceeded, Failed}
+
+    public enum Outcome {Applied, Confirmed, Rejected, Conflict, StaleEvidence, Deferred, Unknown}
+
+    @Entity
+    public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId,
+                        long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result,
+                        boolean requested) {
+        public Entry(String id, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
+            this(Long.valueOf(id), decisionVersion, evidence, decision, result, false);
+        }
+
+        public String id() {
+            return numericId.toString();
+        }
+
+        Entry finish(ItemResult result) {
+            if (this.result != null) {
+                throw new MergeFailure(Reason.RoundClosed, id());
+            }
+            return new Entry(numericId, decisionVersion, evidence, decision, result, requested);
+        }
+
+        Entry request() {
+            return requested ? this : new Entry(numericId, decisionVersion, evidence, decision, result, true);
+        }
+    }
+
+    @ValueObject
+    public record ItemResult(String entryId, Outcome outcome, String operation,
+                             String businessRef, String checkpoint, String failure) {
+        public boolean succeeded() {
+            return outcome == Outcome.Applied || outcome == Outcome.Confirmed;
+        }
+    }
+
+    @ValueObject
+    public record Summary(long applied, long confirmed, long rejected, long conflict, long deferred,
+                          long staleEvidence, long unknown) {
+    }
+
+    @ValueObject
+    public record ApplyResult(State state, Summary summary, List<ItemResult> itemResults, Instant completedAt) {
+        public ApplyResult {
+            itemResults = List.copyOf(itemResults);
+        }
     }
 }

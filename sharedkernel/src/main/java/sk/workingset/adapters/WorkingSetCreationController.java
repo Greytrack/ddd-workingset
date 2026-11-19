@@ -1,20 +1,14 @@
 package sk.workingset.adapters;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import sk.workingset.application.command.WorkingSetCreationService;
+import sk.workingset.domain.WorkingSetCreation;
+
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import sk.workingset.application.command.WorkingSetCreationService;
-import sk.workingset.domain.WorkingSetCreation;
 
 @RestController
 @RequestMapping("/api/working-set-creations")
@@ -37,13 +31,16 @@ public class WorkingSetCreationController {
         return CreationView.from(creations.find(id));
     }
 
-    /** 任务上下文读取创建中的目标工作集；普通 /api/worksets/{id} 仍返回 Preparing。 */
+    /**
+     * 任务上下文读取创建中的目标工作集；普通 /api/worksets/{id} 仍返回 Preparing。
+     */
     @GetMapping("/{id}/working-set")
     public WorkingSetController.WorkingSetView findTarget(@PathVariable String id) {
         return WorkingSetController.WorkingSetView.from(creations.findTarget(id));
     }
 
-    public record CreationView(String creationId, String targetWorkingSetId, String mode, WorkingSetCreation.Status status,
+    public record CreationView(String creationId, String targetWorkingSetId, String mode,
+                               WorkingSetCreation.Status status,
                                WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
                                Instant createdAt, Instant startedAt, Instant completedAt,
@@ -55,8 +52,8 @@ public class WorkingSetCreationController {
                     creation.progress(),
                     creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt(),
                     creation.stageProgress(), creation.indexProgress().entrySet().stream().collect(
-                            java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey,
-                                    entry -> IndexCounts.from(entry.getValue()))));
+                    java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey,
+                            entry -> IndexCounts.from(entry.getValue()))));
         }
     }
 

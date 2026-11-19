@@ -7,7 +7,7 @@ import sk.workingset.domain.event.CompleteDeleteEvent;
 
 /**
  * 业务对象永久删除后，由 SK 移除对应 LightTrackerItem（D4：跨聚合用事件交互）。
- *
+ * <p>
  * 处理失败时事件保留为未完成，不再提供 COW 恢复入口；
  * 处理本身幂等（无对应 LTI 为空操作）。
  */

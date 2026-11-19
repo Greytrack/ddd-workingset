@@ -4,12 +4,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.domain.event.MergeRoundSubmittedEvent;
 import sk.workingset.domain.merge.MergeFailure;
 
-/** Merge LRO 的异步执行入口：提交决策后由事件驱动逐条推进。 */
+/**
+ * Merge LRO 的异步执行入口：提交决策后由事件驱动逐条推进。
+ */
 @Component
 public class MergeRoundSubmittedListener {
     private static final Logger log = LoggerFactory.getLogger(MergeRoundSubmittedListener.class);

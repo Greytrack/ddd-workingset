@@ -21,8 +21,6 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
-import sk.workingset.application.port.TrackerItemLifecyclePort;
-import sk.workingset.application.common.InheritedEditTarget;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LockVersion;
@@ -31,8 +29,10 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.WorkingSetId;
 
 /**
@@ -49,7 +49,7 @@ public class RequirementCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final TrackerRepository trackers;
     private final WorkingSetRepository workingSets;
-    private final TrackerItemLifecyclePort lifecycle;
+    private final LightTrackerItemRepository items;
 
 
     /**
@@ -124,7 +124,8 @@ public class RequirementCommandService {
     }
 
     private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
-        java.util.Optional<InheritedEditTarget> inherited = lifecycle.findInheritedTarget(localId);
+        java.util.Optional<LightTrackerItem> inherited = items.findById(localId)
+                .filter(item -> !item.materialized());
         Requirement current = inherited.map(target -> {
             workingSets.requireReady(target.workingSetId());
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
@@ -133,7 +134,7 @@ public class RequirementCommandService {
         return saveChange(current, change.apply(current));
     }
 
-    private Requirement createEditBase(InheritedEditTarget target, LockVersion expectedLockVersion) {
+    private Requirement createEditBase(LightTrackerItem target, LockVersion expectedLockVersion) {
         if (!LockVersion.initial().equals(expectedLockVersion)) {
             throw new LockVersionConflictException(expectedLockVersion, LockVersion.initial());
         }
@@ -142,15 +143,14 @@ public class RequirementCommandService {
         return base;
     }
 
-    private Requirement rebuildInherited(InheritedEditTarget target) {
+    private Requirement rebuildInherited(LightTrackerItem target) {
         Requirement source = load(target.sourceLocalId());
         requireActive(source);
         if (!source.revision().equals(target.sourceRevision())) {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
-        sk.workingset.application.common.TargetIdentity identity = target.identity();
-        return Requirement.create(identity.localId(), identity.commonId(), identity.trackerId(),
-                source.title(), source.description(), identity.revision(), source.version());
+        return Requirement.create(target.localId(), target.commonId(), target.trackerId(),
+                source.title(), source.description(), target.revision(), source.version());
     }
 
     @Transactional

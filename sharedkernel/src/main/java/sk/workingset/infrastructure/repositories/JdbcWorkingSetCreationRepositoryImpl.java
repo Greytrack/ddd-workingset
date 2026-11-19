@@ -1,20 +1,17 @@
 package sk.workingset.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import sk.workingset.domain.WorkingSetCreation;
+import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.repository.WorkingSetCreationRepository;
 
 import java.sql.Timestamp;
 import java.util.Optional;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import sk.workingset.domain.repository.WorkingSetCreationRepository;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetId;
 
 @Slf4j
 @Repository
@@ -28,11 +25,11 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     public boolean insert(WorkingSetCreation creation) {
         WorkingSetCreation.Request request = creation.request();
         return jdbc.update("""
-                INSERT INTO working_set_creations
-                    (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
-                VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
-                ON CONFLICT DO NOTHING
-                """, creation.numericId(), request.numericParentWorkingSetId(), request.numericTargetWorkingSetId(), request.requestId(),
+                        INSERT INTO working_set_creations
+                            (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
+                        VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
+                        ON CONFLICT DO NOTHING
+                        """, creation.numericId(), request.numericParentWorkingSetId(), request.numericTargetWorkingSetId(), request.requestId(),
                 creation.status().name(), encode(creation), Timestamp.from(creation.createdAt())) == 1;
     }
 
@@ -75,10 +72,10 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     @Override
     public void update(WorkingSetCreation creation) {
         jdbc.update("""
-                UPDATE working_set_creations
-                SET status = ?, result = CAST(? AS jsonb), started_at = ?, completed_at = ?
-                WHERE id = ?
-                """, creation.status().name(), encode(creation),
+                        UPDATE working_set_creations
+                        SET status = ?, result = CAST(? AS jsonb), started_at = ?, completed_at = ?
+                        WHERE id = ?
+                        """, creation.status().name(), encode(creation),
                 Timestamp.from(creation.startedAt()),
                 creation.completedAt() == null ? null : Timestamp.from(creation.completedAt()), creation.numericId());
     }

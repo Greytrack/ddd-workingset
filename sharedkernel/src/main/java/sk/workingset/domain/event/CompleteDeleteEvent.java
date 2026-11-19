@@ -1,10 +1,10 @@
 package sk.workingset.domain.event;
 
-import java.time.Instant;
-import java.util.Objects;
-
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
+
+import java.time.Instant;
+import java.util.Objects;
 
 /**
  * 业务对象被永久删除的事实（SK 定义、业务 BC 发布）。

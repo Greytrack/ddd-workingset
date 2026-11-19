@@ -3,18 +3,18 @@ package sk.workingset.application.command;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
-
 import org.springframework.transaction.support.TransactionTemplate;
-
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
-/** 消费 ALM 的实例化结果：成功则切换 LTI，失败则落失败终态。 */
+import java.time.Instant;
+
+/**
+ * 消费 ALM 的实例化结果：成功则切换 LTI，失败则落失败终态。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor

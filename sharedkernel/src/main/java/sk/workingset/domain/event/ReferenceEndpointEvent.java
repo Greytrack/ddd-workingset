@@ -1,20 +1,15 @@
 package sk.workingset.domain.event;
 
-import java.util.Objects;
+import sk.workingset.domain.*;
 
-import org.springframework.data.domain.DomainEvents;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import java.util.Objects;
 
 /**
  * Reference 端点。source 端必须完整；target 的 local/workingSet/revision 可为空，
  * 表示目标尚未纳入或悬空引用。
  */
 public record ReferenceEndpointEvent(WorkingSetId workingSetId, LocalId localId, CommonId commonId,
-                                TrackerId trackerId, Revision revision) {
+                                     TrackerId trackerId, Revision revision) {
 
     public ReferenceEndpointEvent {
         Objects.requireNonNull(workingSetId, "workingSetId");

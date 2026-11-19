@@ -2,9 +2,11 @@ package sk.workingset.domain.event;
 
 import java.util.Objects;
 
-/** 请求关系服务修复已有 Reference；{@code originalRelationId} 必须指向原关系聚合。 */
+/**
+ * 请求关系服务修复已有 Reference；{@code originalRelationId} 必须指向原关系聚合。
+ */
 public record DanglingReferenceRepairRequestedEvent(RelationEventMetadataEvent metadata, ReferenceEndpointEvent source,
-                                               ReferenceEndpointEvent target) {
+                                                    ReferenceEndpointEvent target) {
 
     public DanglingReferenceRepairRequestedEvent {
         Objects.requireNonNull(metadata, "metadata");

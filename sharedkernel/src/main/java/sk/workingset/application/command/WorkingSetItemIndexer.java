@@ -1,8 +1,23 @@
 package sk.workingset.application.command;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.transaction.SavepointManager;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import sk.workingset.application.query.provider.TrackerItemQueryProvider;
+import sk.workingset.domain.*;
+import sk.workingset.domain.WorkingSetCreation.Failure;
+import sk.workingset.domain.WorkingSetCreation.IndexProgress;
+import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
+import sk.workingset.domain.WorkingSetCreation.Stage;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -11,37 +26,13 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.transaction.SavepointManager;
-
-import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import sk.workingset.application.query.provider.TrackerItemQueryProvider;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetCreation.Failure;
-import sk.workingset.domain.WorkingSetCreation.IndexProgress;
-import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
-import sk.workingset.domain.WorkingSetCreation.Stage;
-import sk.workingset.domain.WorkingSetId;
-
-/** Indexes the frozen parent-item snapshot under the creation task's transaction. */
+/**
+ * Indexes the frozen parent-item snapshot under the creation task's transaction.
+ */
+@Slf4j
 public final class WorkingSetItemIndexer {
-    private static final Logger log = LoggerFactory.getLogger(WorkingSetItemIndexer.class);
-    // IDs are positive Snowflake longs; SQL snapshots and catalog pages use numeric order.
-    private static final Comparator<String> LOCAL_ID_ORDER =
-            Comparator.comparingLong(Long::parseLong);
+
+    private static final Comparator<String> LOCAL_ID_ORDER = Comparator.comparingLong(Long::parseLong);
 
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
@@ -70,6 +61,24 @@ public final class WorkingSetItemIndexer {
         this.readPorts = readPorts;
         this.ids = ids;
         this.batchSize = batchSize;
+    }
+
+    private static Outcome skipped(TrackerId parent, Tracker child, Candidate candidate, FailureReason reason) {
+        return new Outcome(IndexResult.Skipped, failure(parent, child, candidate.localId(), reason));
+    }
+
+    private static Failure failure(TrackerId parent, Tracker child, LocalId localId, FailureReason reason) {
+        return new Failure(Stage.INDEX_UNSHARED_TRACKERS, child.productSpaceId(), parent.value(),
+                localId == null ? null : localId.value(), reason.name(), Instant.now());
+    }
+
+    private static FailureReason reason(RuntimeException failure) {
+        if (failure instanceof DomainException domainFailure) {
+            return FailureReason.of(domainFailure);
+        }
+        log.warn("Working set indexing operation failed", failure);
+        return failure instanceof DataAccessResourceFailureException
+                ? FailureReason.DEPENDENCY_UNAVAILABLE : FailureReason.UNKNOWN;
     }
 
     /**
@@ -146,7 +155,8 @@ public final class WorkingSetItemIndexer {
                         skipped++;
                         failures.add(outcome.failure());
                     }
-                    case Excluded -> { }
+                    case Excluded -> {
+                    }
                 }
             } catch (RuntimeException failure) {
                 transaction.rollbackToSavepoint(itemSavepoint);
@@ -171,7 +181,7 @@ public final class WorkingSetItemIndexer {
     }
 
     private List<Candidate> livePage(TrackerId parent, String cursor) {
-        TreeMap<String,WorkingSetItemIndexer.Candidate> candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
+        TreeMap<String, WorkingSetItemIndexer.Candidate> candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
         items.pageInTracker(parent, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
         catalog.page(parent, cursor, batchSize).forEach(item ->
@@ -211,27 +221,10 @@ public final class WorkingSetItemIndexer {
                 : new Outcome(IndexResult.Existing, null);
     }
 
-    private static Outcome skipped(TrackerId parent, Tracker child, Candidate candidate, FailureReason reason) {
-        return new Outcome(IndexResult.Skipped, failure(parent, child, candidate.localId(), reason));
+    private enum IndexResult {Indexed, Existing, Skipped, Excluded}
+
+    private record Outcome(IndexResult result, Failure failure) {
     }
-
-    private static Failure failure(TrackerId parent, Tracker child, LocalId localId, FailureReason reason) {
-        return new Failure(Stage.INDEX_UNSHARED_TRACKERS, child.productSpaceId(), parent.value(),
-                localId == null ? null : localId.value(), reason.name(), Instant.now());
-    }
-
-    private static FailureReason reason(RuntimeException failure) {
-        if (failure instanceof DomainException domainFailure) {
-            return FailureReason.of(domainFailure);
-        }
-        log.warn("Working set indexing operation failed", failure);
-        return failure instanceof DataAccessResourceFailureException
-                ? FailureReason.DEPENDENCY_UNAVAILABLE : FailureReason.UNKNOWN;
-    }
-
-    private enum IndexResult { Indexed, Existing, Skipped, Excluded }
-
-    private record Outcome(IndexResult result, Failure failure) {}
 
     private record Candidate(LocalId localId, CommonId commonId, Revision revision,
                              LocalId sourceId, Revision sourceRevision, boolean lightweight) {

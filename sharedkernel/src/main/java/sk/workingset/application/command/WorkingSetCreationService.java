@@ -1,43 +1,31 @@
 package sk.workingset.application.command;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
+import sk.workingset.domain.*;
+import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.WorkingSetCreation.*;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import sk.workingset.domain.event.TrackerItemsIndexedEvent;
+import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetCreationRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.function.Function;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
-
-import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
-import sk.workingset.domain.event.TrackerItemsIndexedEvent;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetCreationRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetCreation.Failure;
-import sk.workingset.domain.WorkingSetCreation.Mode;
-import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
-import sk.workingset.domain.WorkingSetCreation.IndexProgress;
-import sk.workingset.domain.WorkingSetCreation.Stage;
-import sk.workingset.domain.WorkingSetCreation.Status;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.domain.TrackerId;
 
 @Slf4j
 @Service
@@ -53,6 +41,9 @@ public class WorkingSetCreationService {
     private final WorkingSetItemIndexer indexer;
     private final RelationEventStep relationEvents;
 
+    private static DomainException notFound(String id) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
+    }
 
     @Transactional
     public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request,
@@ -96,7 +87,9 @@ public class WorkingSetCreationService {
         return replay(winner, normalized);
     }
 
-    /** 扩展已有子工作集：复用共享 Tracker 或派生非共享 Tracker，跳过已纳入的来源。 */
+    /**
+     * 扩展已有子工作集：复用共享 Tracker 或派生非共享 Tracker，跳过已纳入的来源。
+     */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
                                               List<String> parentTrackerIds, String caller) {
@@ -164,7 +157,9 @@ public class WorkingSetCreationService {
         return store.find(id, false).orElseThrow(() -> notFound(id));
     }
 
-    /** 任务上下文读取创建中的目标工作集；普通查询仍按 Preparing 过滤。 */
+    /**
+     * 任务上下文读取创建中的目标工作集；普通查询仍按 Preparing 过滤。
+     */
     public WorkingSet findTarget(String id) {
         WorkingSetCreation creation = find(id);
         return workingSets.findWorkingSetForCreation(WorkingSetId.of(creation.request().newWorkingSetId()))
@@ -237,7 +232,8 @@ public class WorkingSetCreationService {
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
                 case INDEX_UNSHARED_TRACKERS -> throw new IllegalStateException("Indexing requires batch execution");
-                case PUBLISH_RELATION_EVENTS -> throw new IllegalStateException("Relation events require batch execution");
+                case PUBLISH_RELATION_EVENTS ->
+                        throw new IllegalStateException("Relation events require batch execution");
             };
             return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
         } catch (BindingFailure failure) {
@@ -255,7 +251,7 @@ public class WorkingSetCreationService {
         WorkingSetCreation.Stage stage = creation.stage();
         String trackerId = switch (stage) {
             case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
-                    PUBLISH_RELATION_EVENTS -> item;
+                 PUBLISH_RELATION_EVENTS -> item;
             default -> null;
         };
         String spaceId = stage == Stage.BIND_PRODUCT_SPACES ? item
@@ -266,9 +262,5 @@ public class WorkingSetCreationService {
 
     private WorkingSetCreation lock(String id) {
         return store.find(id, true).orElseThrow(() -> notFound(id));
-    }
-
-    private static DomainException notFound(String id) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
     }
 }

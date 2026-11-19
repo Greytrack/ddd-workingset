@@ -3,8 +3,21 @@ package sk.workingset.domain.merge;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
-/** Merge 失败：冲突、拒绝、证据过期、轮次关闭等，区别于应用层的 DomainException + FailureReason。 */
+/**
+ * Merge 失败：冲突、拒绝、证据过期、轮次关闭等，区别于应用层的 DomainException + FailureReason。
+ */
 public final class MergeFailure extends DomainException {
+    private final Reason reason;
+
+    public MergeFailure(Reason reason, String message) {
+        super(reason.resultCode(), message, null);
+        this.reason = reason;
+    }
+
+    public Reason reason() {
+        return reason;
+    }
+
     public enum Reason {
         MergeNotAllowed(WorkingsetResultCode.MERGE_MERGE_NOT_ALLOWED),
         RoundNotFound(WorkingsetResultCode.MERGE_ROUND_NOT_FOUND),
@@ -26,13 +39,4 @@ public final class MergeFailure extends DomainException {
             return resultCode;
         }
     }
-
-    private final Reason reason;
-
-    public MergeFailure(Reason reason, String message) {
-        super(reason.resultCode(), message, null);
-        this.reason = reason;
-    }
-
-    public Reason reason() { return reason; }
 }

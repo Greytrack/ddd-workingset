@@ -1,19 +1,15 @@
 package sk.workingset.domain.merge;
 
 import org.jmolecules.ddd.annotation.ValueObject;
+import sk.workingset.domain.*;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
-
-/** 瞬时比较结果：双侧工作集、候选 Tracker 对与差异清单；不作为持久化事实。 */
+/**
+ * 瞬时比较结果：双侧工作集、候选 Tracker 对与差异清单；不作为持久化事实。
+ */
 @ValueObject
 public record Comparison(WorkingSetId source, WorkingSetId target, Instant comparedAt,
                          List<TrackerPair> candidates, List<Difference> differences) {
@@ -21,6 +17,13 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
         candidates = List.copyOf(candidates);
         differences = List.copyOf(differences);
     }
+
+    public enum Presence {PRESENT, ABSENT, DELETED, UNREADABLE}
+
+    /**
+     * 有向差异的三类可决策结果。
+     */
+    public enum ChangeKind {ADDED, MODIFIED, DELETED}
 
     /**
      * 有向比较对：source/target WorkingSet 是本次角色上下文，不是父子谱系方向。
@@ -37,13 +40,13 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
         }
     }
 
-    public enum Presence { PRESENT, ABSENT, DELETED, UNREADABLE }
-
     @ValueObject
     public record Side(LocalId localId, LocalId contentId, Revision revision, Revision contentRevision,
                        String version, Long lockVersion, Presence presence, String failure,
                        Map<String, Object> fields) {
-        public Side { fields = Map.copyOf(fields); }
+        public Side {
+            fields = Map.copyOf(fields);
+        }
 
         public static Side absent() {
             return new Side(null, null, null, null, null, null, Presence.ABSENT, null, Map.of());
@@ -56,7 +59,8 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
         }
 
         private record Shape(LocalId localId, Revision revision, Revision contentRevision,
-                             String version, Presence presence, String failure) {}
+                             String version, Presence presence, String failure) {
+        }
     }
 
     /**
@@ -85,7 +89,4 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
             return ChangeKind.MODIFIED;
         }
     }
-
-    /** 有向差异的三类可决策结果。 */
-    public enum ChangeKind { ADDED, MODIFIED, DELETED }
 }

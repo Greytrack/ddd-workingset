@@ -2,9 +2,11 @@ package sk.workingset.domain.event;
 
 import java.util.Objects;
 
-/** 请求关系服务建立新的 Reference；不是 Reference 已创建的领域事实。 */
+/**
+ * 请求关系服务建立新的 Reference；不是 Reference 已创建的领域事实。
+ */
 public record ReferenceCreationRequestedEvent(RelationEventMetadataEvent metadata, ReferenceEndpointEvent source,
-                                         ReferenceEndpointEvent target) {
+                                              ReferenceEndpointEvent target) {
 
     public ReferenceCreationRequestedEvent {
         Objects.requireNonNull(metadata, "metadata");

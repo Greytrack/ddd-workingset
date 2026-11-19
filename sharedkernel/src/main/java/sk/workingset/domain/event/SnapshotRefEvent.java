@@ -1,8 +1,9 @@
 package sk.workingset.domain.event;
 
-import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Objects;
 
 /**
  * 不可变快照引用（P4）：SK 公共信封只携带引用，不解释、不复制业务内容。
@@ -18,9 +19,11 @@ public record SnapshotRefEvent(@JsonProperty("id") @JsonFormat(shape = JsonForma
         }
     }
 
-    public String id() { return numericId.toString(); }
-
     public static SnapshotRefEvent of(String id) {
         return new SnapshotRefEvent(Long.valueOf(id));
+    }
+
+    public String id() {
+        return numericId.toString();
     }
 }

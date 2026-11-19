@@ -1,34 +1,27 @@
 package sk.workingset.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import sk.common.error.DomainException;
+import sk.workingset.application.FailureReason;
+import sk.workingset.domain.*;
+import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.repository.ProductSpaceRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-
-import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.Classification;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
-
-/** WorkingSet/Tracker/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。 */
+/**
+ * WorkingSet/Tracker/ProductSpace 的 JDBC 仓储实现；谱系查询带防环与根/非根约束。
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -44,6 +37,10 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
 
     private final JdbcTemplate jdbc;
 
+    private static TrackerId optionalId(ResultSet rs, String column) throws SQLException {
+        String id = rs.getString(column);
+        return id == null ? null : TrackerId.of(id);
+    }
 
     @Override
     public Optional<WorkingSet> findWorkingSet(WorkingSetId id) {
@@ -161,18 +158,18 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     @Override
     public void insertSpaceBinding(WorkingSet.SpaceBinding binding) {
         jdbc.update("""
-                INSERT INTO space_bindings (working_set_id, product_space_id, origin, state) VALUES (?, ?, ?, ?)
-                """, binding.workingSetId().numericValue(), binding.numericProductSpaceId(), binding.origin().name(),
+                        INSERT INTO space_bindings (working_set_id, product_space_id, origin, state) VALUES (?, ?, ?, ?)
+                        """, binding.workingSetId().numericValue(), binding.numericProductSpaceId(), binding.origin().name(),
                 binding.state().name());
     }
 
     @Override
     public void insertTrackerBinding(WorkingSet.TrackerBinding binding) {
         jdbc.update("""
-                INSERT INTO tracker_bindings
-                    (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """, binding.workingSetId().numericValue(), binding.trackerId().numericValue(), binding.numericProductSpaceId(),
+                        INSERT INTO tracker_bindings
+                            (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """, binding.workingSetId().numericValue(), binding.trackerId().numericValue(), binding.numericProductSpaceId(),
                 binding.numericClassificationId(), binding.sharingMode().name(), binding.origin().name());
     }
 
@@ -189,8 +186,8 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     @Override
     public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
         return jdbc.query("""
-                SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?
-                """, (rs, row) -> TrackerId.of(rs.getLong(1)), target.numericValue(), source.numericValue())
+                        SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?
+                        """, (rs, row) -> TrackerId.of(rs.getLong(1)), target.numericValue(), source.numericValue())
                 .stream().findFirst().flatMap(this::findTracker);
     }
 
@@ -223,11 +220,11 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
 
     private void insertTracker(Tracker tracker, boolean visible) {
         jdbc.update("""
-                INSERT INTO trackers
-                    (tracker_id, name, source_id, working_set_id, product_space_id, classification_id,
-                     sharing_mode, parent_id, is_default, visible)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, tracker.trackerId().numericValue(), tracker.name(),
+                        INSERT INTO trackers
+                            (tracker_id, name, source_id, working_set_id, product_space_id, classification_id,
+                             sharing_mode, parent_id, is_default, visible)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, tracker.trackerId().numericValue(), tracker.name(),
                 tracker.sourceId() == null ? null : tracker.sourceId().numericValue(),
                 tracker.workingSetId().numericValue(), tracker.numericProductSpaceId(), tracker.numericClassificationId(),
                 tracker.sharingMode().name(), tracker.parentId() == null ? null : tracker.parentId().numericValue(),
@@ -339,10 +336,5 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Tracke
     @Override
     public void deleteProductSpace(String id) {
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", Long.valueOf(id));
-    }
-
-    private static TrackerId optionalId(ResultSet rs, String column) throws SQLException {
-        String id = rs.getString(column);
-        return id == null ? null : TrackerId.of(id);
     }
 }

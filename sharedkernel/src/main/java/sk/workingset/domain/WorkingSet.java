@@ -3,16 +3,11 @@ package sk.workingset.domain;
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
 import sk.common.error.DomainException;
-import sk.workingset.error.WorkingsetResultCode;
-
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.error.WorkingsetResultCode;
+
+import java.util.*;
 
 /**
  * WorkingSet 聚合根：默认根不可删除、单父谱系（{@code parentWorkingSetId}）、
@@ -22,37 +17,6 @@ import sk.workingset.domain.Classification.SharingMode;
 public final class WorkingSet {
 
     public static final WorkingSetId DEFAULT_ID = WorkingSetId.of("1");
-
-    public enum SpaceOrigin { INITIAL_PROJECTION, EXPLICIT }
-    public enum SpaceState { ACTIVE }
-    public enum TrackerOrigin { SHARED_REUSE, UNSHARED_DERIVATION }
-
-    @Entity
-    public record SpaceBinding(WorkingSetId workingSetId, Long numericProductSpaceId, String name,
-                               SpaceOrigin origin, SpaceState state) {
-        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
-                            SpaceOrigin origin, SpaceState state) {
-            this(workingSetId, Long.valueOf(productSpaceId), name, origin, state);
-        }
-        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId,
-                            SpaceOrigin origin, SpaceState state) {
-            this(workingSetId, productSpaceId, null, origin, state);
-        }
-        public String productSpaceId() { return numericProductSpaceId.toString(); }
-    }
-
-    @Entity
-    public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
-                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
-        public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
-                              String classificationId, SharingMode sharingMode, TrackerOrigin origin) {
-            this(workingSetId, trackerId, Long.valueOf(productSpaceId), Long.valueOf(classificationId),
-                    sharingMode, origin);
-        }
-        public String productSpaceId() { return numericProductSpaceId.toString(); }
-        public String classificationId() { return numericClassificationId.toString(); }
-    }
-
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;
     private final String name;
@@ -63,7 +27,6 @@ public final class WorkingSet {
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this(id, parentWorkingSetId, null, spaces, trackers);
     }
-
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this.id = Objects.requireNonNull(id, "id");
@@ -87,11 +50,31 @@ public final class WorkingSet {
         return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name, List.of(), List.of());
     }
 
-    public WorkingSetId id() { return id; }
-    public WorkingSetId parentWorkingSetId() { return parentWorkingSetId; }
-    public String name() { return name; }
-    public List<SpaceBinding> spaces() { return List.copyOf(spaces.values()); }
-    public List<TrackerBinding> trackers() { return List.copyOf(trackers.values()); }
+    public static void requireDeletable(WorkingSetId id) {
+        if (DEFAULT_ID.equals(id)) {
+            throw new BindingFailure(Reason.DefaultWorkingSetUndeletable, id.value());
+        }
+    }
+
+    public WorkingSetId id() {
+        return id;
+    }
+
+    public WorkingSetId parentWorkingSetId() {
+        return parentWorkingSetId;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public List<SpaceBinding> spaces() {
+        return List.copyOf(spaces.values());
+    }
+
+    public List<TrackerBinding> trackers() {
+        return List.copyOf(trackers.values());
+    }
 
     public SpaceBinding bindSpace(ProductSpace space) {
         return bindSpace(space, SpaceOrigin.EXPLICIT);
@@ -124,12 +107,6 @@ public final class WorkingSet {
         }
         if (spaces.remove(spaceId) == null) {
             throw new BindingFailure(Reason.SpaceBindingNotFound, spaceId);
-        }
-    }
-
-    public static void requireDeletable(WorkingSetId id) {
-        if (DEFAULT_ID.equals(id)) {
-            throw new BindingFailure(Reason.DefaultWorkingSetUndeletable, id.value());
         }
     }
 
@@ -178,5 +155,47 @@ public final class WorkingSet {
                 requestedMode, origin);
         trackers.put(binding.trackerId(), binding);
         return binding;
+    }
+
+    public enum SpaceOrigin {INITIAL_PROJECTION, EXPLICIT}
+
+    public enum SpaceState {ACTIVE}
+
+    public enum TrackerOrigin {SHARED_REUSE, UNSHARED_DERIVATION}
+
+    @Entity
+    public record SpaceBinding(WorkingSetId workingSetId, Long numericProductSpaceId, String name,
+                               SpaceOrigin origin, SpaceState state) {
+        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
+                            SpaceOrigin origin, SpaceState state) {
+            this(workingSetId, Long.valueOf(productSpaceId), name, origin, state);
+        }
+
+        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId,
+                            SpaceOrigin origin, SpaceState state) {
+            this(workingSetId, productSpaceId, null, origin, state);
+        }
+
+        public String productSpaceId() {
+            return numericProductSpaceId.toString();
+        }
+    }
+
+    @Entity
+    public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
+                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
+        public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
+                              String classificationId, SharingMode sharingMode, TrackerOrigin origin) {
+            this(workingSetId, trackerId, Long.valueOf(productSpaceId), Long.valueOf(classificationId),
+                    sharingMode, origin);
+        }
+
+        public String productSpaceId() {
+            return numericProductSpaceId.toString();
+        }
+
+        public String classificationId() {
+            return numericClassificationId.toString();
+        }
     }
 }

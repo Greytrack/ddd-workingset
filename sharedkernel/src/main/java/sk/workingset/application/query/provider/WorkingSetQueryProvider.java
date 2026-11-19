@@ -1,14 +1,16 @@
 package sk.workingset.application.query.provider;
 
-import java.util.List;
-import java.util.Optional;
-
 import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 
-/** Working Set 查询侧端口；实现必须只读。 */
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Working Set 查询侧端口；实现必须只读。
+ */
 public interface WorkingSetQueryProvider {
 
     Optional<WorkingSetSummary> find(long workingSetId);

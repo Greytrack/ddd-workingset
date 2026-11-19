@@ -17,12 +17,11 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.common.InheritedEditTarget;
-import sk.workingset.application.common.TargetIdentity;
-import sk.workingset.application.port.TrackerItemLifecyclePort;
+import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
@@ -32,7 +31,7 @@ import sk.workingset.domain.repository.WorkingSetRepository;
 public class RequirementQueryService {
     private final RequirementQueryProvider query;
     private final RequirementRepository repository;
-    private final TrackerItemLifecyclePort lifecycle;
+    private final LightTrackerItemRepository items;
     private final WorkingSetRepository workingSets;
 
 
@@ -55,7 +54,8 @@ public class RequirementQueryService {
     }
 
     private RequirementDetail findInherited(LocalId localId) {
-        InheritedEditTarget target = lifecycle.findInheritedTarget(localId)
+        LightTrackerItem target = items.findById(localId)
+                .filter(item -> !item.materialized())
                 .orElseThrow(() -> notFound(localId));
         workingSets.requireReady(target.workingSetId());
         Requirement source = repository.findById(target.sourceLocalId())
@@ -66,9 +66,8 @@ public class RequirementQueryService {
         if (!source.revision().equals(target.sourceRevision())) {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
-        TargetIdentity identity = target.identity();
-        Requirement requirement = Requirement.inherited(identity.localId(), identity.commonId(), identity.trackerId(),
-                source.title(), source.description(), identity.revision(), source.version());
+        Requirement requirement = Requirement.inherited(target.localId(), target.commonId(), target.trackerId(),
+                source.title(), source.description(), target.revision(), source.version());
         return new RequirementDetail(
                 requirement.localId().numericValue(), requirement.commonId().numericValue(),
                 requirement.trackerId().numericValue(), requirement.number(), requirement.title(),

@@ -8,9 +8,7 @@ import java.util.Objects;
  * {@code originalRelationId} 用于消费方回查原始关系的传播怀疑、类型、方向等信息。
  */
 public record RelationEventMetadataEvent(String eventId, String originalRelationId, String originId,
-                                    OriginType originType, Instant occurredAt) {
-
-    public enum OriginType { CREATION, EXTENSION, MERGE }
+                                         OriginType originType, Instant occurredAt) {
 
     public RelationEventMetadataEvent {
         requireText(eventId, "eventId");
@@ -25,4 +23,6 @@ public record RelationEventMetadataEvent(String eventId, String originalRelation
             throw new IllegalArgumentException(field + " must not be blank");
         }
     }
+
+    public enum OriginType {CREATION, EXTENSION, MERGE}
 }

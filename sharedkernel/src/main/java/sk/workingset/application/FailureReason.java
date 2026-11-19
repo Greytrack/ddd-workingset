@@ -1,11 +1,13 @@
 package sk.workingset.application;
 
 import sk.common.error.DomainErrorType;
-import sk.common.error.DomainResCode;
 import sk.common.error.DomainException;
+import sk.common.error.DomainResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
-/** 跨 BC 公共失败分类（T4 §5）。 */
+/**
+ * 跨 BC 公共失败分类（T4 §5）。
+ */
 public enum FailureReason implements DomainResCode {
     NOT_FOUND(WorkingsetResultCode.APPLICATION_NOT_FOUND),
     NOT_INCLUDED(WorkingsetResultCode.APPLICATION_NOT_INCLUDED),
@@ -21,6 +23,13 @@ public enum FailureReason implements DomainResCode {
 
     FailureReason(WorkingsetResultCode resultCode) {
         this.resultCode = resultCode;
+    }
+
+    /**
+     * Reads the application reason from a DomainException without relying on a subclass.
+     */
+    public static FailureReason of(DomainException failure) {
+        return failure.getResCode() instanceof FailureReason reason ? reason : UNKNOWN;
     }
 
     public WorkingsetResultCode resultCode() {
@@ -40,10 +49,5 @@ public enum FailureReason implements DomainResCode {
     @Override
     public String getDesc() {
         return resultCode.getDesc();
-    }
-
-    /** Reads the application reason from a DomainException without relying on a subclass. */
-    public static FailureReason of(DomainException failure) {
-        return failure.getResCode() instanceof FailureReason reason ? reason : UNKNOWN;
     }
 }

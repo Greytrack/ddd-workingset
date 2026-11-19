@@ -1,19 +1,16 @@
 package sk.workingset.adapters;
 
-import java.net.URI;
-import java.util.List;
-
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.WorkingSetId;
 
-/** T7-G：对已有子工作集批量纳入直接父 Tracker；任务复用 working-set-creations 轮询。 */
+import java.net.URI;
+import java.util.List;
+
+/**
+ * T7-G：对已有子工作集批量纳入直接父 Tracker；任务复用 working-set-creations 轮询。
+ */
 @RestController
 @RequestMapping("/api/worksets")
 public class WorkingSetExtensionController {
@@ -40,5 +37,6 @@ public class WorkingSetExtensionController {
                 .body(WorkingSetCreationController.CreationView.from(creation));
     }
 
-    public record ExtensionRequest(String requestId, List<String> trackerIds) {}
+    public record ExtensionRequest(String requestId, List<String> trackerIds) {
+    }
 }

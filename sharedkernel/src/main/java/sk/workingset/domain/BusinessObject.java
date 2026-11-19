@@ -12,10 +12,14 @@ public interface BusinessObject {
 
     CommonId commonId();
 
-    /** 软删：保留业务数据但从正常读取隐藏。 */
+    /**
+     * 软删：保留业务数据但从正常读取隐藏。
+     */
     LifecycleResult delete(LifecycleCommand command);
 
-    /** 恢复软删。 */
+    /**
+     * 恢复软删。
+     */
     LifecycleResult undelete(LifecycleCommand command);
 
     /**

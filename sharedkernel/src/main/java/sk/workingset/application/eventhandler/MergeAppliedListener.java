@@ -4,7 +4,6 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import sk.workingset.application.command.TrackerItemLifecycleService;
 import sk.workingset.domain.event.MergeAppliedEvent;
-import sk.workingset.application.port.TrackerItemLifecyclePort;
 
 /**
  * Merge 业务写入提交后，由 SK 在独立事务中切换/创建目标变体（D15-B：事件交互）。

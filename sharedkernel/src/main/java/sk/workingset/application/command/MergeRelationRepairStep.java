@@ -2,22 +2,19 @@ package sk.workingset.application.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import sk.workingset.domain.event.ReferenceEndpointEvent;
-import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import org.springframework.stereotype.Service;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.Entry;
 import sk.workingset.domain.merge.MergeRound.ItemResult;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Merge 完成后的关系修复 step。只对本轮实际成功且改变目标变体的条目发布
@@ -32,6 +29,9 @@ public final class MergeRelationRepairStep {
     private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
 
+    private static boolean changesTarget(String operation) {
+        return operation != null && !"KEEP_TARGET".equals(operation) && !"DEFER".equals(operation);
+    }
 
     public StepResult repair(MergeRound round) {
         int published = 0;
@@ -67,10 +67,6 @@ public final class MergeRelationRepairStep {
             targets.put(localId.value(), target);
         }
         return targets;
-    }
-
-    private static boolean changesTarget(String operation) {
-        return operation != null && !"KEEP_TARGET".equals(operation) && !"DEFER".equals(operation);
     }
 
     public record StepResult(int published, int failed) {

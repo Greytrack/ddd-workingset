@@ -1,7 +1,6 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.ValueObject;
-
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 

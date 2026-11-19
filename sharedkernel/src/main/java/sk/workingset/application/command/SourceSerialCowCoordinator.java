@@ -1,27 +1,27 @@
 package sk.workingset.application.command;
 
 
+import lombok.extern.slf4j.Slf4j;
+import sk.workingset.domain.LocalId;
+
 import java.time.Duration;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import sk.workingset.domain.LocalId;
-
-/** 按来源串行执行 COW：同一来源的事件按顺序处理，避免旧事件覆盖新快照。 */
+/**
+ * 按来源串行执行 COW：同一来源的事件按顺序处理，避免旧事件覆盖新快照。
+ */
+@Slf4j
 public final class SourceSerialCowCoordinator {
-    private static final Logger log = LoggerFactory.getLogger(SourceSerialCowCoordinator.class);
+
     private static final int RECENT_SOURCE_LIMIT = 1024;
 
     private final Map<LocalId, PriorityQueue<Task>> queues = new HashMap<>();
+
     private final LinkedHashMap<LocalId, Long> lastExecuted = new LinkedHashMap<>(16, 0.75f, true);
+
     private final long gapWaitNanos;
 
     public SourceSerialCowCoordinator() {
@@ -35,13 +35,17 @@ public final class SourceSerialCowCoordinator {
         this.gapWaitNanos = gapWait.toNanos();
     }
 
+    private static boolean isGap(long sequence, long previous) {
+        return sequence > previous && sequence - previous > 1;
+    }
+
     public void runSerial(LocalId sourceLocalId, long sequence, Runnable task) {
         CompletableFuture<Void> completion = new CompletableFuture<Void>();
         boolean drain;
         synchronized (queues) {
             drain = !queues.containsKey(sourceLocalId);
             queues.computeIfAbsent(sourceLocalId,
-                    ignored -> new PriorityQueue<>(Comparator.comparingLong(Task::sequence)))
+                            ignored -> new PriorityQueue<>(Comparator.comparingLong(Task::sequence)))
                     .add(new Task(sequence, task, completion));
             queues.notifyAll();
         }
@@ -109,9 +113,6 @@ public final class SourceSerialCowCoordinator {
         }
     }
 
-    private static boolean isGap(long sequence, long previous) {
-        return sequence > previous && sequence - previous > 1;
+    private record Task(long sequence, Runnable work, CompletableFuture<Void> completion) {
     }
-
-    private record Task(long sequence, Runnable work, CompletableFuture<Void> completion) {}
 }

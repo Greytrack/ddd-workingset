@@ -1,16 +1,10 @@
 package sk.workingset.domain.repository;
 
 import org.jmolecules.ddd.annotation.Repository;
+import sk.workingset.domain.*;
 
 import java.util.List;
 import java.util.Optional;
-
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 
 /**
  * LightTrackerItem 聚合的命令侧存取（T3）。

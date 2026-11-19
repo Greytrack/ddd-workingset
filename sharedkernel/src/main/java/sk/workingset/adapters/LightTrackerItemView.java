@@ -2,7 +2,9 @@ package sk.workingset.adapters;
 
 import sk.workingset.domain.LightTrackerItem;
 
-/** LightTrackerItem 的最小读模型。 */
+/**
+ * LightTrackerItem 的最小读模型。
+ */
 public record LightTrackerItemView(String localId,
                                    String commonId,
                                    String trackerId,

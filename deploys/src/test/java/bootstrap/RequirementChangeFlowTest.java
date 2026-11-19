@@ -51,7 +51,7 @@ class RequirementChangeFlowTest {
             requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher,
             mock(sk.workingset.domain.repository.TrackerRepository.class),
             mock(sk.workingset.domain.repository.WorkingSetRepository.class),
-            mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
+            mock(sk.workingset.domain.repository.LightTrackerItemRepository.class));
     private final Requirement before = Requirement.create(
             L0, CommonId.of("265506033508288"), TrackerId.of("264905365135296"), "A", "source description", R3, Version.of("1.2"));
 

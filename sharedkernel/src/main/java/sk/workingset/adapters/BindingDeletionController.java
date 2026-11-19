@@ -1,12 +1,7 @@
 package sk.workingset.adapters;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import sk.workingset.application.command.WorkingSetDeletionService;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;

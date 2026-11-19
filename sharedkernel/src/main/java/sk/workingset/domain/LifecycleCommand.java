@@ -19,7 +19,9 @@ public record LifecycleCommand(LockVersion expectedLockVersion, String reason) {
         reason = reason == null ? "" : reason;
     }
 
-    /** 调用方已锁定对象时使用。 */
+    /**
+     * 调用方已锁定对象时使用。
+     */
     public static LifecycleCommand locked(String reason) {
         return new LifecycleCommand(null, reason);
     }

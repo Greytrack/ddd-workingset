@@ -1,9 +1,8 @@
 package sk.workingset.domain;
 
-import org.jmolecules.ddd.annotation.ValueObject;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jmolecules.ddd.annotation.ValueObject;
 
 import java.util.Objects;
 

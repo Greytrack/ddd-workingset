@@ -1,15 +1,17 @@
 package sk.workingset.domain.event;
 
-import java.util.Objects;
-
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 
-/** Association 端点：具体 Variant，不固定版次。 */
+import java.util.Objects;
+
+/**
+ * Association 端点：具体 Variant，不固定版次。
+ */
 public record AssociationEndpointEvent(WorkingSetId workingSetId, LocalId localId, CommonId commonId,
-                                  TrackerId trackerId) {
+                                       TrackerId trackerId) {
 
     public AssociationEndpointEvent {
         Objects.requireNonNull(workingSetId, "workingSetId");

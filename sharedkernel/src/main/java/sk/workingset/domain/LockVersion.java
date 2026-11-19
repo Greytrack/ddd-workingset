@@ -1,7 +1,6 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.ValueObject;
-
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -29,7 +28,9 @@ public record LockVersion(long value) {
         return new LockVersion(value);
     }
 
-    /** 数据变动后的下一个乐观锁版本。 */
+    /**
+     * 数据变动后的下一个乐观锁版本。
+     */
     public LockVersion next() {
         return new LockVersion(Math.addExact(value, 1L));
     }

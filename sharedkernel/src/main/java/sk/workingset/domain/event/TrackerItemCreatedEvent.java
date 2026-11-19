@@ -1,11 +1,10 @@
 package sk.workingset.domain.event;
 
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.*;
 
-/** A business BC has created a native Tracker Item in its owning Working Set. */
+/**
+ * A business BC has created a native Tracker Item in its owning Working Set.
+ */
 public record TrackerItemCreatedEvent(LocalId localId, CommonId commonId, TrackerId trackerId,
-                                 WorkingSetId workingSetId, Revision revision) {}
+                                      WorkingSetId workingSetId, Revision revision) {
+}

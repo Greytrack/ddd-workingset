@@ -1,51 +1,37 @@
 package sk.workingset.application.command;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.merge.MergeComparisonService;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.event.*;
+import sk.workingset.domain.merge.Comparison.Difference;
+import sk.workingset.domain.merge.Comparison.Side;
+import sk.workingset.domain.merge.*;
+import sk.workingset.domain.merge.MergeDecision.FieldAction;
+import sk.workingset.domain.merge.MergeFailure.Reason;
+import sk.workingset.domain.merge.MergeRound.Entry;
+import sk.workingset.domain.merge.MergeRound.ItemResult;
+import sk.workingset.domain.merge.MergeRound.Outcome;
+import sk.workingset.domain.merge.MergeRound.State;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.transaction.TransactionException;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
-
-import sk.workingset.domain.event.MergeAppliedEvent;
-import sk.workingset.domain.event.MergeEntryApprovedEvent;
-import sk.workingset.domain.event.MergeEntryResolvedEvent;
-import sk.workingset.domain.event.MergeRoundSubmittedEvent;
-import sk.workingset.domain.event.MergeTargetEvent;
-import sk.workingset.domain.merge.MergeCheckpoint;
-import sk.workingset.domain.merge.MergeCommitReceipt;
-import sk.workingset.domain.merge.MergeDecision.FieldAction;
-import sk.workingset.domain.merge.MergeFailure;
-import sk.workingset.domain.merge.MergeFailure.Reason;
-import sk.workingset.domain.merge.MergeRepository;
-import sk.workingset.domain.merge.MergeRound;
-import sk.workingset.domain.merge.MergeRound.Entry;
-import sk.workingset.domain.merge.MergeRound.ItemResult;
-import sk.workingset.domain.merge.MergeRound.Outcome;
-import sk.workingset.domain.merge.MergeRound.State;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.merge.Comparison.Difference;
-import sk.workingset.domain.merge.Comparison.Side;
 
 /**
  * Merge 轮次执行：登记决定、发布逐条应用事件、消费业务结果并收敛轮次。
@@ -58,43 +44,13 @@ import sk.workingset.domain.merge.Comparison.Side;
 @Service
 @RequiredArgsConstructor
 public class MergeExecutionService {
-    private static final Logger log = LoggerFactory.getLogger(MergeExecutionService.class);
 
     private final MergeRepository store;
     private final MergeComparisonService comparisons;
-    private final TrackerRepository trackers;
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
     private final MergeRelationRepairStep relationRepair;
-
-
-    /** 一页决策只提交 evidence + decision；条目身份由服务端在登记时生成。 */
-    public record EntryRequest(Difference evidence, sk.workingset.domain.merge.MergeDecision decision) {}
-
-    @Transactional
-    public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
-                             List<EntryRequest> decisions, String caller) {
-        java.util.Optional<MergeRound> existing = store.findRoundByRequest(requestId);
-        if (existing.isPresent()) {
-            return matching(existing.get(), source, target);
-        }
-        MergeCheckpoint.Key pair = trackerPair(decisions);
-        MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
-        MergeRound round;
-        try {
-            round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
-                    () -> new MergeFailure(Reason.Conflict, requestId));
-        } catch (DataIntegrityViolationException conflict) {
-            throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
-        }
-        if (!round.id().equals(prepared.id())) {
-            return matching(round, source, target);
-        }
-        registerDecisions(round, decisions);
-        events.publishEvent(new MergeRoundSubmittedEvent(round.id()));
-        return round(round.id(), false);
-    }
 
     private static MergeCheckpoint.Key trackerPair(List<EntryRequest> decisions) {
         Difference evidence = decisions.getFirst().evidence();
@@ -122,7 +78,80 @@ public class MergeExecutionService {
         return pair;
     }
 
-    /** 一页决策要么整页登记成功，要么整轮回滚。 */
+    private static MergeRound matching(MergeRound round, WorkingSetId source, WorkingSetId target) {
+        if (!round.source().equals(source) || !round.target().equals(target)) {
+            throw new MergeFailure(Reason.Conflict, "requestId is already used by another merge round");
+        }
+        return round;
+    }
+
+    private static MergeRound finish(MergeRound round, Entry entry, ItemResult result) {
+        return round.finishEntry(entry, result);
+    }
+
+    private static Outcome outcome(MergeEntryResolvedEvent.Outcome outcome) {
+        return switch (outcome) {
+            case APPLIED -> Outcome.Applied;
+            case CONFLICT -> Outcome.Conflict;
+            case STALE_EVIDENCE -> Outcome.StaleEvidence;
+            case UNKNOWN -> Outcome.Unknown;
+            case REJECTED -> Outcome.Rejected;
+        };
+    }
+
+    private static Map<String, Object> acceptedFields(Entry entry, Difference current) {
+        LinkedHashMap<String, Object> accepted = new LinkedHashMap<>();
+        entry.decision().fields().forEach((path, decision) -> {
+            if (decision == FieldAction.ACCEPT) {
+                Object value = current.source().fields().get(path);
+                if (value == null) {
+                    throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, path);
+                }
+                accepted.put(path, value);
+            }
+        });
+        return Map.copyOf(accepted);
+    }
+
+    private static String operation(Entry entry) {
+        if (entry.decision().existence() != null) {
+            return entry.decision().existence().name();
+        }
+        return entry.decision().fields().containsValue(FieldAction.ACCEPT) ? "UPDATE" : "KEEP_TARGET";
+    }
+
+    private static ItemResult result(Entry entry, Outcome outcome, String operation, String businessRef,
+                                     String checkpoint, String failure) {
+        return new ItemResult(entry.id(), outcome, operation, businessRef, checkpoint, failure);
+    }
+
+    @Transactional
+    public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
+                             List<EntryRequest> decisions, String caller) {
+        java.util.Optional<MergeRound> existing = store.findRoundByRequest(requestId);
+        if (existing.isPresent()) {
+            return matching(existing.get(), source, target);
+        }
+        MergeCheckpoint.Key pair = trackerPair(decisions);
+        MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
+        MergeRound round;
+        try {
+            round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
+                    () -> new MergeFailure(Reason.Conflict, requestId));
+        } catch (DataIntegrityViolationException conflict) {
+            throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
+        }
+        if (!round.id().equals(prepared.id())) {
+            return matching(round, source, target);
+        }
+        registerDecisions(round, decisions);
+        events.publishEvent(new MergeRoundSubmittedEvent(round.id()));
+        return round(round.id(), false);
+    }
+
+    /**
+     * 一页决策要么整页登记成功，要么整轮回滚。
+     */
     private void registerDecisions(MergeRound round, List<EntryRequest> requests) {
         List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = comparisons.candidates(round.source(), round.target());
         MergeRound updated = round;
@@ -153,14 +182,9 @@ public class MergeExecutionService {
         store.updateRound(updated);
     }
 
-    private static MergeRound matching(MergeRound round, WorkingSetId source, WorkingSetId target) {
-        if (!round.source().equals(source) || !round.target().equals(target)) {
-            throw new MergeFailure(Reason.Conflict, "requestId is already used by another merge round");
-        }
-        return round;
+    public MergeRound get(String id) {
+        return round(id, false);
     }
-
-    public MergeRound get(String id) { return round(id, false); }
 
     @Transactional
     public void revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion) {
@@ -169,7 +193,9 @@ public class MergeExecutionService {
         }
     }
 
-    /** 异步启动：发布尚未请求的条目事件；返回当前轮次供客户端轮询。 */
+    /**
+     * 异步启动：发布尚未请求的条目事件；返回当前轮次供客户端轮询。
+     */
     public MergeRound apply(String id) {
         try {
             return transaction.execute(status -> dispatch(id));
@@ -221,8 +247,8 @@ public class MergeExecutionService {
         MergeEntryApprovedEvent.Operation action = MergeEntryApprovedEvent.Operation.valueOf(operation);
         LocalId localId = action == MergeEntryApprovedEvent.Operation.CREATE
                 ? (WorkingSet.DEFAULT_ID.equals(round.target())
-                        ? LocalId.of(current.family().value())
-                        : LocalId.of(Long.toString(ids.nextId(null).longValue())))
+                ? LocalId.of(current.family().value())
+                : LocalId.of(Long.toString(ids.nextId(null).longValue())))
                 : target.localId();
         boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
         boolean create = action == MergeEntryApprovedEvent.Operation.CREATE;
@@ -239,7 +265,9 @@ public class MergeExecutionService {
                 create && comparisons.isMergeBack(round.source(), round.target()));
     }
 
-    /** 消费 ALM 的条目结果；同一结果重复到达时幂等。 */
+    /**
+     * 消费 ALM 的条目结果；同一结果重复到达时幂等。
+     */
     public MergeRound.ApplyResult recordResult(MergeEntryResolvedEvent event) {
         try {
             return transaction.execute(status -> resolve(event));
@@ -292,10 +320,6 @@ public class MergeExecutionService {
         return finished.result();
     }
 
-    private static MergeRound finish(MergeRound round, Entry entry, ItemResult result) {
-        return round.finishEntry(entry, result);
-    }
-
     private void verifyCurrent(Entry entry, Difference current) {
         if (!entry.evidence().source().sameExecutionShape(current.source())
                 || !entry.evidence().target().sameExecutionShape(current.target())) {
@@ -327,43 +351,13 @@ public class MergeExecutionService {
         return result(entry, Outcome.Applied, operation, businessRef, null, null);
     }
 
-    private static Outcome outcome(MergeEntryResolvedEvent.Outcome outcome) {
-        return switch (outcome) {
-            case APPLIED -> Outcome.Applied;
-            case CONFLICT -> Outcome.Conflict;
-            case STALE_EVIDENCE -> Outcome.StaleEvidence;
-            case UNKNOWN -> Outcome.Unknown;
-            case REJECTED -> Outcome.Rejected;
-        };
-    }
-
-    private static Map<String, Object> acceptedFields(Entry entry, Difference current) {
-        LinkedHashMap<String, Object> accepted = new LinkedHashMap<>();
-        entry.decision().fields().forEach((path, decision) -> {
-            if (decision == FieldAction.ACCEPT) {
-                Object value = current.source().fields().get(path);
-                if (value == null) {
-                    throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, path);
-                }
-                accepted.put(path, value);
-            }
-        });
-        return Map.copyOf(accepted);
-    }
-
-    private static String operation(Entry entry) {
-        if (entry.decision().existence() != null) {
-            return entry.decision().existence().name();
-        }
-        return entry.decision().fields().containsValue(FieldAction.ACCEPT) ? "UPDATE" : "KEEP_TARGET";
-    }
-
-    private static ItemResult result(Entry entry, Outcome outcome, String operation, String businessRef,
-                                     String checkpoint, String failure) {
-        return new ItemResult(entry.id(), outcome, operation, businessRef, checkpoint, failure);
-    }
-
     private MergeRound round(String id, boolean lock) {
         return store.findRound(id, lock).orElseThrow(() -> new MergeFailure(Reason.RoundNotFound, id));
+    }
+
+    /**
+     * 一页决策只提交 evidence + decision；条目身份由服务端在登记时生成。
+     */
+    public record EntryRequest(Difference evidence, sk.workingset.domain.merge.MergeDecision decision) {
     }
 }

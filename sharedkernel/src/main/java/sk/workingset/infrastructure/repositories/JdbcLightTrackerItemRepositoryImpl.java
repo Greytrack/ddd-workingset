@@ -1,23 +1,15 @@
 package sk.workingset.infrastructure.repositories;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Repository;
+import sk.workingset.domain.*;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
 
 /**
  * LightTrackerItem 的 PostgreSQL/Spring JDBC 仓储。
@@ -98,11 +90,11 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     @Override
     public boolean insertIfFamilyAbsent(LightTrackerItem item) {
         return jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                    source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (working_set_id, common_id) DO NOTHING
-                """, item.localId().numericValue(), item.commonId().numericValue(), item.trackerId().numericValue(),
+                        INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
+                            source_local_id, source_revision, materialized)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (working_set_id, common_id) DO NOTHING
+                        """, item.localId().numericValue(), item.commonId().numericValue(), item.trackerId().numericValue(),
                 item.workingSetId().numericValue(), item.revision().value(), item.sourceLocalId().numericValue(),
                 item.sourceRevision().value(), item.materialized()) == 1;
     }

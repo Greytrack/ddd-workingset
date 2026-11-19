@@ -1,32 +1,24 @@
 package sk.workingset.application.command;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-
-import java.util.List;
-import java.util.Objects;
-
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.transaction.annotation.Transactional;
-
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
+import sk.workingset.domain.*;
+import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.repository.ProductSpaceRepository;
 import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.Classification;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
 
-/** Working Set 命令侧应用服务：谱系、纳入和绑定写入。 */
+import java.util.List;
+
+/**
+ * Working Set 命令侧应用服务：谱系、纳入和绑定写入。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,6 +29,11 @@ public class WorkingSetCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
 
+    private static void requireUnshared(Tracker source) {
+        if (source.sharingMode() != SharingMode.UNSHARED) {
+            throw new BindingFailure(Reason.SharingModeMismatch, source.classificationId());
+        }
+    }
 
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
@@ -222,12 +219,6 @@ public class WorkingSetCommandService {
     private Classification classification(Tracker tracker) {
         return spaces.findClassification(tracker.classificationId())
                 .orElseThrow(() -> new BindingFailure(Reason.SharingModeMismatch, tracker.classificationId()));
-    }
-
-    private static void requireUnshared(Tracker source) {
-        if (source.sharingMode() != SharingMode.UNSHARED) {
-            throw new BindingFailure(Reason.SharingModeMismatch, source.classificationId());
-        }
     }
 
     private Tracker derivedTracker(WorkingSet target, Tracker source) {

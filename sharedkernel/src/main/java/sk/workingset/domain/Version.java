@@ -1,7 +1,6 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.ValueObject;
-
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -21,7 +20,9 @@ public record Version(String value) {
         }
     }
 
-    /** 尚未发布大版本。 */
+    /**
+     * 尚未发布大版本。
+     */
     public static Version none() {
         return new Version(null);
     }
@@ -30,7 +31,9 @@ public record Version(String value) {
         return new Version(value);
     }
 
-    /** 是否已发布大版本。 */
+    /**
+     * 是否已发布大版本。
+     */
     public boolean isPresent() {
         return value != null;
     }

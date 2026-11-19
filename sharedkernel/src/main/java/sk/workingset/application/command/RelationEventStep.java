@@ -3,19 +3,17 @@ package sk.workingset.application.command;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-
-import java.util.List;
-
-import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.Tracker;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
+
+import java.util.List;
 
 /**
  * T7 创建/扩展索引后的关系事件 step。只发布事件，不写 Reference/Association 聚合。

@@ -1,12 +1,11 @@
 package sk.workingset.domain.repository;
 
 import org.jmolecules.ddd.annotation.Repository;
-
-import java.util.List;
-
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+
+import java.util.List;
 
 /**
  * 创建任务受理时冻结的父 Item 身份分页。
@@ -17,7 +16,9 @@ import sk.workingset.domain.Revision;
 @Repository
 public interface WorkingSetCreationSnapshotRepository {
 
-    /** 写入或补齐一个创建任务的快照；空集合也会写入完成标记。 */
+    /**
+     * 写入或补齐一个创建任务的快照；空集合也会写入完成标记。
+     */
     void save(String creationId, List<Item> items);
 
     List<Item> page(String creationId, String parentTrackerId, String afterLocalId, int limit);
@@ -25,5 +26,6 @@ public interface WorkingSetCreationSnapshotRepository {
     boolean contains(String creationId);
 
     record Item(String parentTrackerId, LocalId localId, CommonId commonId, Revision revision,
-                LocalId sourceLocalId, Revision sourceRevision) {}
+                LocalId sourceLocalId, Revision sourceRevision) {
+    }
 }

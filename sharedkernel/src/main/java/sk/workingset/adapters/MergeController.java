@@ -1,30 +1,21 @@
 package sk.workingset.adapters;
 
-import sk.common.error.DomainException;
-import sk.workingset.error.WorkingsetResultCode;
-
-import java.time.Instant;
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-
-import sk.workingset.application.merge.MergeComparisonService;
+import org.springframework.web.bind.annotation.*;
+import sk.common.error.DomainException;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeExecutionService.EntryRequest;
+import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
+import sk.workingset.error.WorkingsetResultCode;
+
+import java.time.Instant;
+import java.util.List;
 
 /**
  * Compare / Merge 的 HTTP 入口。
@@ -36,7 +27,9 @@ import sk.workingset.domain.merge.MergeRound;
 @RestController
 @RequestMapping("/api")
 public class MergeController {
-    /** UI 一页差异约 20–50 条；超出应重新 compare 分页，而不是提交一轮更大的决策。 */
+    /**
+     * UI 一页差异约 20–50 条；超出应重新 compare 分页，而不是提交一轮更大的决策。
+     */
     private static final int MAX_DECISIONS = 50;
     private static final int MAX_REQUEST_ID = 128;
     private static final int MAX_COMPARE_LIMIT = 500;
@@ -47,6 +40,21 @@ public class MergeController {
     public MergeController(MergeComparisonService comparisons, MergeExecutionService rounds) {
         this.comparisons = comparisons;
         this.rounds = rounds;
+    }
+
+    private static void checkPage(int offset, int limit) {
+        if (offset < 0 || limit < 1 || limit > MAX_COMPARE_LIMIT) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "offset must be nonnegative and limit must be between 1 and "
+                    + MAX_COMPARE_LIMIT);
+        }
+    }
+
+    private static ComparisonPage page(Comparison comparison, int offset, int limit) {
+        int start = Math.min(offset, comparison.differences().size());
+        int end = start + Math.min(limit, comparison.differences().size() - start);
+        return new ComparisonPage(comparison.source(), comparison.target(), comparison.comparedAt(),
+                comparison.candidates(), comparison.differences().subList(start, end),
+                end < comparison.differences().size() ? end : null);
     }
 
     @PostMapping("/worksets/{target}/compare/{source}")
@@ -103,24 +111,14 @@ public class MergeController {
                 CommonId.of(family)), request.expectedDecisionVersion());
     }
 
-    private static void checkPage(int offset, int limit) {
-        if (offset < 0 || limit < 1 || limit > MAX_COMPARE_LIMIT) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "offset must be nonnegative and limit must be between 1 and "
-                    + MAX_COMPARE_LIMIT);
-        }
+    public record SubmitRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {
     }
 
-    private static ComparisonPage page(Comparison comparison, int offset, int limit) {
-        int start = Math.min(offset, comparison.differences().size());
-        int end = start + Math.min(limit, comparison.differences().size() - start);
-        return new ComparisonPage(comparison.source(), comparison.target(), comparison.comparedAt(),
-                comparison.candidates(), comparison.differences().subList(start, end),
-                end < comparison.differences().size() ? end : null);
+    public record RevokeRequest(long expectedDecisionVersion) {
     }
 
-    public record SubmitRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {}
-    public record RevokeRequest(long expectedDecisionVersion) {}
     public record ComparisonPage(WorkingSetId source, WorkingSetId target, Instant comparedAt,
                                  List<Comparison.TrackerPair> candidates, List<Comparison.Difference> differences,
-                                 Integer nextOffset) {}
+                                 Integer nextOffset) {
+    }
 }

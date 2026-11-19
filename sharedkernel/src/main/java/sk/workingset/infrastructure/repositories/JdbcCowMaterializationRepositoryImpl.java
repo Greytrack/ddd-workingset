@@ -1,19 +1,20 @@
 package sk.workingset.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.repository.CowMaterializationRepository;
 
 import java.util.List;
 import java.util.Optional;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import sk.workingset.domain.repository.CowMaterializationRepository;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 
-/** COW 物化收据的 JDBC 实现：按事件与目标变体做幂等 upsert 与状态推进。 */
+/**
+ * COW 物化收据的 JDBC 实现：按事件与目标变体做幂等 upsert 与状态推进。
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor

@@ -2,19 +2,17 @@ package sk.workingset.application.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import java.time.Instant;
-
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
+import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.LightTrackerItem;
+
+import java.time.Instant;
 
 /**
  * COW 请求处理器：来源变化后，为未物化目标发布逐目标实例化请求。
@@ -32,6 +30,13 @@ public final class CowEventHandler {
     private final CowMaterializationRepository store;
     private final ApplicationEventPublisher events;
 
+    private static TrackerItemMaterializationRequestedEvent request(BusinessObjectUpdateEvent event,
+                                                                    LightTrackerItem target) {
+        return new TrackerItemMaterializationRequestedEvent(event.eventId(), target.localId(),
+                target.trackerId(), target.commonId(), event.sourceLocalId(), event.beforeRevision(),
+                event.afterRevision(), event.beforeLockVersion(), event.afterLockVersion(),
+                target.revision(), event.snapshotRef());
+    }
 
     public void onTrackerItemChanged(BusinessObjectUpdateEvent event) {
         for (LightTrackerItem target : items.findBySource(event.sourceLocalId(), event.beforeRevision())) {
@@ -71,13 +76,5 @@ public final class CowEventHandler {
                 }
             }
         }
-    }
-
-    private static TrackerItemMaterializationRequestedEvent request(BusinessObjectUpdateEvent event,
-                                                                   LightTrackerItem target) {
-        return new TrackerItemMaterializationRequestedEvent(event.eventId(), target.localId(),
-                target.trackerId(), target.commonId(), event.sourceLocalId(), event.beforeRevision(),
-                event.afterRevision(), event.beforeLockVersion(), event.afterLockVersion(),
-                target.revision(), event.snapshotRef());
     }
 }

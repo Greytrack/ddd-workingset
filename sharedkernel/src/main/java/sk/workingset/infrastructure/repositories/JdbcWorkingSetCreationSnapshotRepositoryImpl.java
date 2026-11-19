@@ -1,19 +1,18 @@
 package sk.workingset.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotRepository;
-
-/** 创建任务受理时冻结的父 Item 身份快照（PostgreSQL）。 */
+/**
+ * 创建任务受理时冻结的父 Item 身份快照（PostgreSQL）。
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -34,30 +33,30 @@ public class JdbcWorkingSetCreationSnapshotRepositoryImpl implements WorkingSetC
                          source_local_id, source_revision)
                     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
                     """, items, items.size(), (statement, item) -> {
-                        statement.setLong(1, Long.parseLong(creationId));
-                        statement.setLong(2, Long.parseLong(item.parentTrackerId()));
-                        statement.setLong(3, item.localId().numericValue());
-                        statement.setLong(4, item.commonId().numericValue());
-                        statement.setInt(5, item.revision().value());
-                        statement.setLong(6, item.sourceLocalId().numericValue());
-                        statement.setInt(7, item.sourceRevision().value());
-                    });
+                statement.setLong(1, Long.parseLong(creationId));
+                statement.setLong(2, Long.parseLong(item.parentTrackerId()));
+                statement.setLong(3, item.localId().numericValue());
+                statement.setLong(4, item.commonId().numericValue());
+                statement.setInt(5, item.revision().value());
+                statement.setLong(6, item.sourceLocalId().numericValue());
+                statement.setInt(7, item.sourceRevision().value());
+            });
         }
     }
 
     @Override
     public List<Item> page(String creationId, String parentTrackerId, String afterLocalId, int limit) {
         return jdbc.query("""
-                SELECT parent_tracker_id, local_id, common_id, revision, source_local_id, source_revision
-                FROM working_set_creation_items
-                WHERE creation_id = ? AND parent_tracker_id = ? AND local_id > ?
-                ORDER BY local_id LIMIT ?
-                """, (rs, row) -> new Item(rs.getString("parent_tracker_id"),
-                sk.workingset.domain.LocalId.of(rs.getLong("local_id")),
-                sk.workingset.domain.CommonId.of(rs.getLong("common_id")),
-                sk.workingset.domain.Revision.of(rs.getInt("revision")),
-                sk.workingset.domain.LocalId.of(rs.getLong("source_local_id")),
-                sk.workingset.domain.Revision.of(rs.getInt("source_revision"))),
+                        SELECT parent_tracker_id, local_id, common_id, revision, source_local_id, source_revision
+                        FROM working_set_creation_items
+                        WHERE creation_id = ? AND parent_tracker_id = ? AND local_id > ?
+                        ORDER BY local_id LIMIT ?
+                        """, (rs, row) -> new Item(rs.getString("parent_tracker_id"),
+                        sk.workingset.domain.LocalId.of(rs.getLong("local_id")),
+                        sk.workingset.domain.CommonId.of(rs.getLong("common_id")),
+                        sk.workingset.domain.Revision.of(rs.getInt("revision")),
+                        sk.workingset.domain.LocalId.of(rs.getLong("source_local_id")),
+                        sk.workingset.domain.Revision.of(rs.getInt("source_revision"))),
                 Long.valueOf(creationId), Long.valueOf(parentTrackerId), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 

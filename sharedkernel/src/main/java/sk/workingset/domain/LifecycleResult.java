@@ -14,8 +14,6 @@ import java.util.Objects;
 @ValueObject
 public record LifecycleResult(Status status, String reason, BusinessObject object) {
 
-    public enum Status { Applied, Rejected, Conflict }
-
     public LifecycleResult {
         Objects.requireNonNull(status, "status");
         reason = reason == null ? "" : reason;
@@ -36,4 +34,6 @@ public record LifecycleResult(Status status, String reason, BusinessObject objec
     public boolean succeeded() {
         return status == Status.Applied;
     }
+
+    public enum Status {Applied, Rejected, Conflict}
 }

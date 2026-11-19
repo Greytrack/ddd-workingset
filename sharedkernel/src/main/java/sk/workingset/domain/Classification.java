@@ -1,13 +1,14 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.ValueObject;
-
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;
 
-/** 最小分类元数据。共享策略由分类初始化时确定。 */
+/**
+ * 最小分类元数据。共享策略由分类初始化时确定。
+ */
 @ValueObject
 public record Classification(Long numericId, SharingMode sharingMode, String name) {
     public Classification(String id, SharingMode sharingMode) {
@@ -25,11 +26,13 @@ public record Classification(Long numericId, SharingMode sharingMode, String nam
         Objects.requireNonNull(sharingMode, "sharingMode");
     }
 
-    public String id() { return numericId.toString(); }
+    public String id() {
+        return numericId.toString();
+    }
 
     public boolean allows(SharingMode mode) {
         return mode == SharingMode.SHARED || mode == sharingMode;
     }
 
-    public enum SharingMode { SHARED, UNSHARED }
+    public enum SharingMode {SHARED, UNSHARED}
 }

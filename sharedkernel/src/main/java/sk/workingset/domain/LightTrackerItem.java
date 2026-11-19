@@ -1,8 +1,6 @@
 package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
-
-
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -89,7 +87,9 @@ public final class LightTrackerItem {
         return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true);
     }
 
-    /** 从持久化/事件恢复时重建（调用方必须保证字段一致）。 */
+    /**
+     * 从持久化/事件恢复时重建（调用方必须保证字段一致）。
+     */
     public static LightTrackerItem restore(LocalId localId,
                                            CommonId commonId,
                                            TrackerId trackerId,
@@ -174,12 +174,16 @@ public final class LightTrackerItem {
         return materialized;
     }
 
-    /** 有效内容来源：Source-backed 时为外部来源变体，Local-backed 时为自身。 */
+    /**
+     * 有效内容来源：Source-backed 时为外部来源变体，Local-backed 时为自身。
+     */
     public LocalId effectiveContentSource() {
         return materialized ? localId : sourceLocalId;
     }
 
-    /** 读取有效内容应使用的业务版次。 */
+    /**
+     * 读取有效内容应使用的业务版次。
+     */
     public Revision effectiveContentRevision() {
         return materialized ? revision : sourceRevision;
     }

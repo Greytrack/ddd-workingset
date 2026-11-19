@@ -3,28 +3,21 @@ package sk.workingset.application.command;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.domain.*;
+import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.WorkingSet.TrackerBinding;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.repository.ProductSpaceRepository;
+import sk.workingset.domain.repository.TrackerRepository;
+import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.transaction.annotation.Transactional;
-
-import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.workingset.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSet.TrackerBinding;
-import sk.workingset.domain.WorkingSetId;
 
 /**
  * 工作集绑定解除与聚合删除：默认根保护、子工作集保护、成员可解除性预检与解除顺序。

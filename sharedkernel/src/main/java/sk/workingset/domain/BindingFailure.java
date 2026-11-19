@@ -5,8 +5,30 @@ import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Map;
 
-/** 绑定/删除失败：携带原因与可观察详情（子级、成员、空间等），由 Web 层映射为 HTTP 状态。 */
+/**
+ * 绑定/删除失败：携带原因与可观察详情（子级、成员、空间等），由 Web 层映射为 HTTP 状态。
+ */
 public final class BindingFailure extends DomainException {
+    private final Reason reason;
+    private final Map<String, Object> context;
+    public BindingFailure(Reason reason, String detail) {
+        this(reason, detail, Map.of());
+    }
+
+    public BindingFailure(Reason reason, String detail, Map<String, Object> context) {
+        super(reason.resultCode(), detail, null);
+        this.reason = reason;
+        this.context = Map.copyOf(context);
+    }
+
+    public Map<String, Object> context() {
+        return context;
+    }
+
+    public Reason reason() {
+        return reason;
+    }
+
     public enum Reason {
         WorkingSetNotFound(WorkingsetResultCode.WORKING_SET_NOT_EXISTS),
         WorkingSetNotWritable(WorkingsetResultCode.WORKING_SET_NOT_WRITABLE),
@@ -45,26 +67,5 @@ public final class BindingFailure extends DomainException {
         public WorkingsetResultCode resultCode() {
             return resultCode;
         }
-    }
-
-    private final Reason reason;
-    private final Map<String, Object> context;
-
-    public BindingFailure(Reason reason, String detail) {
-        this(reason, detail, Map.of());
-    }
-
-    public BindingFailure(Reason reason, String detail, Map<String, Object> context) {
-        super(reason.resultCode(), detail, null);
-        this.reason = reason;
-        this.context = Map.copyOf(context);
-    }
-
-    public Map<String, Object> context() {
-        return context;
-    }
-
-    public Reason reason() {
-        return reason;
     }
 }

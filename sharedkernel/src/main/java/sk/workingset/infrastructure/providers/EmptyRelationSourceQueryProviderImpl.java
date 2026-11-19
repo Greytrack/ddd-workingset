@@ -2,12 +2,11 @@ package sk.workingset.infrastructure.providers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.event.AssociationEndpointEvent;
 import sk.workingset.domain.event.ReferenceEndpointEvent;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider;
+
+import java.util.List;
 
 /**
  * 过渡实现：业务 BC 尚未提供关系事实时为空。接入真实关系事实后替换为 BC Adapter。

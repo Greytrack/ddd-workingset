@@ -1,20 +1,21 @@
 package sk.workingset.infrastructure.providers;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
-import java.sql.Timestamp;
-import java.util.List;
-
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 
-/** COW 失败日志的 JDBC 实现；每条失败独立事务写入，避免随业务回滚丢失。 */
+import java.sql.Timestamp;
+import java.util.List;
+
+/**
+ * COW 失败日志的 JDBC 实现；每条失败独立事务写入，避免随业务回滚丢失。
+ */
 @Component
 @RequiredArgsConstructor
 public class CowFailureLogQueryProviderImpl implements CowFailureLogQueryProvider {
@@ -22,15 +23,18 @@ public class CowFailureLogQueryProviderImpl implements CowFailureLogQueryProvide
     private final TransactionTemplate newTransactionTemplate;
     private final IdentifierGenerator ids;
 
+    private static LockVersion lockVersion(Long value) {
+        return value == null ? null : LockVersion.of(value);
+    }
 
     @Override
     public void record(Failure failure) {
         newTransactionTemplate.executeWithoutResult(status -> jdbc.update("""
-                INSERT INTO cow_failures (id, event_id, target_local_id, source_local_id, before_revision,
-                                          after_revision, stage, error_type, message, occurred_at,
-                                          before_lock_version, after_lock_version, attempts)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, ids.nextId(null).longValue(), failure.eventId(), failure.targetLocalId().numericValue(), failure.sourceLocalId().numericValue(),
+                        INSERT INTO cow_failures (id, event_id, target_local_id, source_local_id, before_revision,
+                                                  after_revision, stage, error_type, message, occurred_at,
+                                                  before_lock_version, after_lock_version, attempts)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, ids.nextId(null).longValue(), failure.eventId(), failure.targetLocalId().numericValue(), failure.sourceLocalId().numericValue(),
                 failure.beforeRevision().value(), failure.afterRevision().value(), failure.stage(),
                 failure.errorType(), failure.message(), Timestamp.from(failure.occurredAt()),
                 failure.beforeLockVersion().value(), failure.afterLockVersion().value(), failure.attempts()));
@@ -48,9 +52,5 @@ public class CowFailureLogQueryProviderImpl implements CowFailureLogQueryProvide
                 row.getInt("attempts"),
                 row.getString("stage"), row.getString("error_type"), row.getString("message"),
                 row.getTimestamp("occurred_at").toInstant()), sourceLocalId.numericValue());
-    }
-
-    private static LockVersion lockVersion(Long value) {
-        return value == null ? null : LockVersion.of(value);
     }
 }

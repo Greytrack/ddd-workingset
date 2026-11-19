@@ -1,23 +1,20 @@
 package sk.workingset.application.command;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-
-import java.time.Instant;
-import java.util.List;
-
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.context.ApplicationEventPublisher;
-
+import org.springframework.stereotype.Service;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import sk.workingset.domain.event.AssociationCreationRequestedEvent;
 import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
 import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
+
+import java.time.Instant;
+import java.util.List;
 
 /**
  * 发布关系请求事件。WorkingSet 不写 Reference/Association 聚合；事件由关系服务消费。
@@ -33,21 +30,21 @@ public final class RelationEventPublisher {
 
 
     public List<ReferenceCreationRequestedEvent> publishReferenceCreations(String originId, OriginType originType,
-                                                                     List<ReferenceFact> facts) {
+                                                                           List<ReferenceFact> facts) {
         return facts.stream().map(fact -> new ReferenceCreationRequestedEvent(
                         metadata(fact.originalRelationId(), originId, originType), fact.source(), fact.target()))
                 .peek(events::publishEvent).toList();
     }
 
     public List<DanglingReferenceRepairRequestedEvent> publishReferenceRepairs(String originId, OriginType originType,
-                                                                           List<ReferenceFact> facts) {
+                                                                               List<ReferenceFact> facts) {
         return facts.stream().map(fact -> new DanglingReferenceRepairRequestedEvent(
                         metadata(fact.originalRelationId(), originId, originType), fact.source(), fact.target()))
                 .peek(events::publishEvent).toList();
     }
 
     public List<AssociationCreationRequestedEvent> publishAssociationCreations(String originId, OriginType originType,
-                                                                          List<AssociationFact> facts) {
+                                                                               List<AssociationFact> facts) {
         return facts.stream().map(fact -> new AssociationCreationRequestedEvent(
                         metadata(fact.originalRelationId(), originId, originType), fact.source(), fact.target()))
                 .peek(events::publishEvent).toList();

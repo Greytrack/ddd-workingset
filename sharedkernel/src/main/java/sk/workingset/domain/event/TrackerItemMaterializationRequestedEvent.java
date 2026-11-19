@@ -1,12 +1,8 @@
 package sk.workingset.domain.event;
 
-import java.util.Objects;
+import sk.workingset.domain.*;
 
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import java.util.Objects;
 
 /**
  * SK 请求 ALM 实例化一个目标变体；ALM 在自己的事务中保存业务对象。
@@ -14,16 +10,16 @@ import sk.workingset.domain.TrackerId;
  * <p>事件只携带目标身份、来源切点和快照引用，不携带 SK 聚合。
  */
 public record TrackerItemMaterializationRequestedEvent(long eventId,
-                                                      LocalId targetLocalId,
-                                                      TrackerId targetTrackerId,
-                                                      CommonId commonId,
-                                                      LocalId sourceLocalId,
-                                                      Revision beforeRevision,
-                                                      Revision afterRevision,
-                                                      LockVersion beforeLockVersion,
-                                                      LockVersion afterLockVersion,
-                                                      Revision targetRevision,
-                                                      SnapshotRefEvent snapshotRef) {
+                                                       LocalId targetLocalId,
+                                                       TrackerId targetTrackerId,
+                                                       CommonId commonId,
+                                                       LocalId sourceLocalId,
+                                                       Revision beforeRevision,
+                                                       Revision afterRevision,
+                                                       LockVersion beforeLockVersion,
+                                                       LockVersion afterLockVersion,
+                                                       Revision targetRevision,
+                                                       SnapshotRefEvent snapshotRef) {
 
     public TrackerItemMaterializationRequestedEvent {
         Objects.requireNonNull(targetLocalId, "targetLocalId");

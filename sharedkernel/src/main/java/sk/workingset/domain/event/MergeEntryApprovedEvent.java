@@ -1,12 +1,12 @@
 package sk.workingset.domain.event;
 
-import java.util.Map;
-import java.util.Objects;
-
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.TrackerId;
+
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * SK 已批准应用某个 Merge 条目；ALM 在自己的事务中执行并返回结果事件。
@@ -29,8 +29,6 @@ public record MergeEntryApprovedEvent(String roundId,
                                       boolean inherited,
                                       boolean mergeBackCreate) {
 
-    public enum Operation { CREATE, UPDATE, DELETE, RESTORE }
-
     public MergeEntryApprovedEvent {
         Objects.requireNonNull(roundId, "roundId");
         Objects.requireNonNull(entryId, "entryId");
@@ -44,4 +42,6 @@ public record MergeEntryApprovedEvent(String roundId,
         baseFields = baseFields == null ? Map.of() : Map.copyOf(baseFields);
         acceptedFields = acceptedFields == null ? Map.of() : Map.copyOf(acceptedFields);
     }
+
+    public enum Operation {CREATE, UPDATE, DELETE, RESTORE}
 }

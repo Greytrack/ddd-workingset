@@ -1,31 +1,14 @@
 package sk.workingset.adapters;
 
-import sk.common.error.DomainException;
-import sk.workingset.error.WorkingsetResultCode;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
+import sk.common.error.DomainException;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
-import sk.workingset.application.query.model.ClassificationSummary;
-import sk.workingset.application.query.model.SpaceBindingSummary;
-import sk.workingset.application.query.model.TrackerBindingSummary;
-import sk.workingset.application.query.model.TrackerSummary;
-import sk.workingset.application.query.model.WorkingSetSummary;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.TrackerId;
-import sk.workingset.domain.Tracker;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.*;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;
 
@@ -42,6 +25,13 @@ public class WorkingSetController {
     public WorkingSetController(WorkingSetCommandService commands, WorkingSetQueryService queries) {
         this.commands = commands;
         this.queries = queries;
+    }
+
+    private static String requireText(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
+        }
+        return value;
     }
 
     @GetMapping("/{workingSetId}")
@@ -66,7 +56,9 @@ public class WorkingSetController {
         return queries.findAncestors(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
     }
 
-    /** 界面只读列表：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。 */
+    /**
+     * 界面只读列表：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。
+     */
     @GetMapping("/{workingSetId}/trackers")
     public List<TrackerView> findTrackers(@PathVariable String workingSetId) {
         return queries.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
@@ -86,7 +78,9 @@ public class WorkingSetController {
                 requireText(request.classificationId(), "classificationId"), mode));
     }
 
-    /** 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。 */
+    /**
+     * 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。
+     */
     @GetMapping("/{workingSetId}/trackers/{trackerId}/light-tracker-items")
     public List<LightTrackerItemView> findLightTrackerItems(@PathVariable String workingSetId,
                                                             @PathVariable String trackerId) {
@@ -94,12 +88,12 @@ public class WorkingSetController {
                 .map(LightTrackerItemView::from).toList();
     }
 
+    // Query-side model has the same simple name as the REST view; keep the conversion explicit.
+
     @GetMapping("/{workingSetId}/bindings")
     public BindingsView listBindings(@PathVariable String workingSetId) {
         return BindingsView.from(queries.findBindings(WorkingSetId.of(workingSetId)));
     }
-
-    // Query-side model has the same simple name as the REST view; keep the conversion explicit.
 
     /**
      * 创建产品空间。路径中的 {@code workingSetId} 仅是入口占位，不参与目标工作集选择：
@@ -132,7 +126,8 @@ public class WorkingSetController {
         return LightTrackerItemView.from(item);
     }
 
-    public record CreateProductSpaceRequest(String name) {}
+    public record CreateProductSpaceRequest(String name) {
+    }
 
     public record ProductSpaceView(String productSpaceId, String name) {
         static ProductSpaceView from(sk.workingset.domain.ProductSpace space) {
@@ -140,10 +135,12 @@ public class WorkingSetController {
         }
     }
 
-    public record CreateChildRequest(String name) {}
+    public record CreateChildRequest(String name) {
+    }
 
     public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
-                                       String sharingMode) {}
+                                       String sharingMode) {
+    }
 
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
                                  String parentWorkingSetId) {
@@ -218,12 +215,5 @@ public class WorkingSetController {
                     String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
                     summary.sharingMode(), summary.isDefault());
         }
-    }
-
-    private static String requireText(String value, String name) {
-        if (value == null || value.isBlank()) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
-        }
-        return value;
     }
 }

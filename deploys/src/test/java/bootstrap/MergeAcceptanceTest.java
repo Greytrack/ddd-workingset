@@ -45,7 +45,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.domain.merge.MergeRepository;
-import sk.workingset.application.port.TrackerItemLifecyclePort;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -67,7 +66,6 @@ class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @SpyBean private MergeRepository store;
-    @SpyBean private TrackerItemLifecyclePort lifecycle;
     @Autowired private RequirementCommandService requirements;
     @Autowired private JdbcRequirementRepository repository;
 

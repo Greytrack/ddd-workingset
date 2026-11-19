@@ -2,19 +2,19 @@ package sk.workingset.infrastructure.providers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
-
-import java.util.List;
-import java.util.Optional;
-
 import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
+import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
 
-/** MyBatis-Plus 查询适配器；只读，不重建 WorkingSet 聚合。 */
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * MyBatis-Plus 查询适配器；只读，不重建 WorkingSet 聚合。
+ */
 @Component
 @RequiredArgsConstructor
 public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {

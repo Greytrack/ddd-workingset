@@ -1,22 +1,33 @@
 package sk.workingset.domain.merge;
 
 import org.jmolecules.ddd.annotation.ValueObject;
-
-import java.util.Map;
-import java.util.Set;
-
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 
-/** 条目决定：字段级动作、存在性动作与 markAsMerged；DEFER 表示本轮不处理。 */
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 条目决定：字段级动作、存在性动作与 markAsMerged；DEFER 表示本轮不处理。
+ */
 @ValueObject
 public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction existence, boolean markAsMerged) {
-    public enum FieldAction { ACCEPT, KEEP_TARGET, DEFER }
-    public enum ExistenceAction { CREATE, RESTORE, DELETE, KEEP_TARGET, DEFER }
-
     public MergeDecision {
         fields = fields == null ? Map.of() : Map.copyOf(fields);
+    }
+
+    private static boolean allowed(ExistenceAction action, Presence source, Presence target) {
+        return switch (action) {
+            case CREATE -> source == Presence.PRESENT && target == Presence.ABSENT;
+            case RESTORE -> false;
+            case DELETE -> source != Presence.PRESENT && target == Presence.PRESENT;
+            case KEEP_TARGET, DEFER -> true;
+        };
+    }
+
+    private static MergeFailure invalid(String message) {
+        return new MergeFailure(Reason.InvalidDecision, message);
     }
 
     public boolean deferred() {
@@ -41,16 +52,7 @@ public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction exi
         }
     }
 
-    private static boolean allowed(ExistenceAction action, Presence source, Presence target) {
-        return switch (action) {
-            case CREATE -> source == Presence.PRESENT && target == Presence.ABSENT;
-            case RESTORE -> false;
-            case DELETE -> source != Presence.PRESENT && target == Presence.PRESENT;
-            case KEEP_TARGET, DEFER -> true;
-        };
-    }
+    public enum FieldAction {ACCEPT, KEEP_TARGET, DEFER}
 
-    private static MergeFailure invalid(String message) {
-        return new MergeFailure(Reason.InvalidDecision, message);
-    }
+    public enum ExistenceAction {CREATE, RESTORE, DELETE, KEEP_TARGET, DEFER}
 }

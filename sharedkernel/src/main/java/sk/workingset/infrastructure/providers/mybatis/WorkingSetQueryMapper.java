@@ -1,18 +1,15 @@
 package sk.workingset.infrastructure.providers.mybatis;
 
-import java.util.List;
-
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import sk.workingset.application.query.model.*;
 
-import sk.workingset.application.query.model.ClassificationSummary;
-import sk.workingset.application.query.model.SpaceBindingSummary;
-import sk.workingset.application.query.model.TrackerBindingSummary;
-import sk.workingset.application.query.model.TrackerSummary;
-import sk.workingset.application.query.model.WorkingSetSummary;
+import java.util.List;
 
-/** Working Set 查询 Mapper；仅包含 SELECT。 */
+/**
+ * Working Set 查询 Mapper；仅包含 SELECT。
+ */
 @Mapper
 public interface WorkingSetQueryMapper {
 

@@ -3,50 +3,34 @@ package sk.workingset.application.command;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-
-import java.util.Optional;
-
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import sk.workingset.application.common.InheritedEditTarget;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.error.WorkingsetResultCode;
-import sk.workingset.domain.event.MergeTargetEvent;
-import sk.workingset.domain.event.TrackerItemCreatedEvent;
-import sk.workingset.application.common.TargetIdentity;
+import sk.common.error.DomainException;
+import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.application.port.TrackerItemLifecyclePort;
-import sk.workingset.domain.repository.TrackerRepository;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.TrackerId;
+import sk.workingset.domain.event.MergeTargetEvent;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
+import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.repository.TrackerRepository;
 
 /**
- * SK 拥有的 LTI 生命周期协作实现（D4 方案 A）。
+ * SK 内部的 LTI 生命周期处理服务。
  *
- * <p>Tracker 与 LightTrackerItem 均属 SK；业务 BC 只通过 {@link TrackerItemLifecyclePort}
- * 请求协作，不再直接读写 SK 仓储。永久删除后的 LTI 清理由业务对象删除事件驱动。
+ * <p>业务 BC 不再通过同步端口请求 LTI 切换；继承编辑完成与合并目标物化都由事件驱动。
+ * 永久删除后的 LTI 清理由业务对象删除事件驱动。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TrackerItemLifecycleService implements TrackerItemLifecyclePort {
+public class TrackerItemLifecycleService {
 
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
     private final BusinessTrackerItems businessItems;
 
-
-    @Override
-    public Optional<InheritedEditTarget> findInheritedTarget(LocalId localId) {
-        return items.findById(localId).filter(item -> !item.materialized())
-                .map(item -> new InheritedEditTarget(TargetIdentity.of(item), item.workingSetId(),
-                        item.sourceLocalId(), item.sourceRevision()));
-    }
 
     @Transactional
     public void completeInheritedEdit(LocalId localId, Revision revision) {

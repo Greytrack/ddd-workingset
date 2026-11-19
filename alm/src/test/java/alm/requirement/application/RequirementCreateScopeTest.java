@@ -42,7 +42,7 @@ class RequirementCreateScopeTest {
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
             repository, mock(SnapshotRepository.class), ids, mock(ApplicationEventPublisher.class), trackers,
-            workingSets, mock(sk.workingset.application.port.TrackerItemLifecyclePort.class));
+            workingSets, mock(sk.workingset.domain.repository.LightTrackerItemRepository.class));
 
     private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
         Tracker tracker = mock(Tracker.class);
