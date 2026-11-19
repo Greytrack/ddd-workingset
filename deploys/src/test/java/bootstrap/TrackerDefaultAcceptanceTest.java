@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
-import sk.workingset.adapters.LightTrackerItemView;
 import alm.requirement.adapters.RequirementView;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.ClassificationView;
@@ -88,8 +87,8 @@ class TrackerDefaultAcceptanceTest {
                   AND r.created_time = c.created_time AND r.created_by = c.created_by
                 """, Integer.class, Long.valueOf(spaceId), sk.RequestThreadHolder.getLongUserId()));
         for (TrackerView tracker : trackers) {
-            org.springframework.http.ResponseEntity<String> items = rest.getForEntity("/api/worksets/1/trackers/" + tracker.trackerId() + "/light-tracker-items",
-                    String.class);
+            org.springframework.http.ResponseEntity<String> items = rest.getForEntity(
+                    "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class);
             assertEquals(HttpStatus.OK, items.getStatusCode(), items::getBody);
             assertEquals("[]", items.getBody());
         }
@@ -107,7 +106,8 @@ class TrackerDefaultAcceptanceTest {
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            LightTrackerItemView[] items = rest.getForObject("/api/worksets/1/trackers/" + trackerId + "/light-tracker-items", LightTrackerItemView[].class);
+            RequirementView[] items = rest.getForObject(
+                    "/api/requirements?trackerId=" + trackerId + "&workingSetId=1", RequirementView[].class);
             assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
         });
     }
@@ -169,8 +169,9 @@ class TrackerDefaultAcceptanceTest {
             assertEquals(mode.name(), tracker.sharingMode());
             assertEquals("项目-" + mode, tracker.name());
             assertFalse(tracker.isDefault());
-            assertEquals(HttpStatus.OK, rest.getForEntity(url + "/" + tracker.trackerId() + "/light-tracker-items",
-                    String.class).getStatusCode());
+            assertEquals(HttpStatus.OK, rest.getForEntity(
+                    "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class)
+                    .getStatusCode());
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
 
             if (mode == Classification.SharingMode.SHARED) {

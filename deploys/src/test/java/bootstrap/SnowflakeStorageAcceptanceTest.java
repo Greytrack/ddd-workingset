@@ -20,7 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import alm.requirement.adapters.RequirementView;
-import sk.workingset.adapters.LightTrackerItemView;
 import sk.workingset.adapters.WorkingSetController.ProductSpaceView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
@@ -75,16 +74,19 @@ class SnowflakeStorageAcceptanceTest {
                       AND child.id = child.instance_id AND child.id <> child.common_id
                     """, Long.class, Long.valueOf(tracker.trackerId()), Long.valueOf(root.trackerId()),
                     Long.valueOf(root.trackerId())));
-            LightTrackerItemView item = rest.getForObject("/api/worksets/" + targetId + "/trackers/" + tracker.trackerId() + "/light-tracker-items",
-                    LightTrackerItemView[].class)[0];
-            assertNotEquals(requirement.localId(), item.localId());
-            assertEquals(requirement.commonId(), item.commonId());
-            org.springframework.http.ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + item.localId() + "/title", HttpMethod.PUT,
+            java.util.Map<String, Object> item = jdbc.queryForMap("""
+                    SELECT local_id, common_id FROM light_tracker_items
+                    WHERE tracker_id = ? ORDER BY local_id LIMIT 1
+                    """, Long.valueOf(tracker.trackerId()));
+            String itemLocalId = String.valueOf(item.get("local_id"));
+            assertNotEquals(requirement.localId(), itemLocalId);
+            assertEquals(requirement.commonId(), String.valueOf(item.get("common_id")));
+            org.springframework.http.ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + itemLocalId + "/title", HttpMethod.PUT,
                     new HttpEntity<>(Map.of("title", "编号修订", "expectedLockVersion", 0)), RequirementView.class);
             assertEquals(HttpStatus.OK, edited.getStatusCode());
             assertEquals(requirement.number(), edited.getBody().number());
             assertEquals("bigint", jdbc.queryForObject("SELECT pg_typeof(local_id)::text FROM requirements WHERE local_id = ?",
-                    String.class, Long.valueOf(item.localId())));
+                    String.class, Long.valueOf(itemLocalId)));
         } finally {
             String trackerFilter = "SELECT tracker_id FROM trackers WHERE product_space_id = ?";
             jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (" + trackerFilter + ")", spaceId);

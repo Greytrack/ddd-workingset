@@ -70,16 +70,6 @@ public class WorkingSetController {
         return queries.findClassifications().stream().map(ClassificationView::from).toList();
     }
 
-    /**
-     * 界面只读列表：当前工作集已绑定的 Tracker 下的 LightTrackerItem。
-     */
-    @GetMapping("/{workingSetId}/trackers/{trackerId}/light-tracker-items")
-    public List<LightTrackerItemView> findLightTrackerItems(@PathVariable String workingSetId,
-                                                            @PathVariable String trackerId) {
-        return queries.findLightTrackerItems(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
-                .map(LightTrackerItemView::from).toList();
-    }
-
     // Query-side model has the same simple name as the REST view; keep the conversion explicit.
 
     @GetMapping("/{workingSetId}/bindings")

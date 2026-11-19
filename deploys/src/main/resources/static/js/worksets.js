@@ -352,23 +352,15 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
   renderItems();
   setStatus('加载 跟踪分类 Item…');
   try {
-    const [indexed, requirements] = await Promise.all([
-      api('/api/worksets/' + encodeURIComponent(workingSetId) +
-        '/trackers/' + encodeURIComponent(trackerId) + '/light-tracker-items') || [],
-      api('/api/requirements?trackerId=' + encodeURIComponent(trackerId) +
-        '&workingSetId=' + encodeURIComponent(workingSetId)) || []
-    ]);
+    const requirements = await api('/api/requirements?trackerId=' + encodeURIComponent(trackerId) +
+      '&workingSetId=' + encodeURIComponent(workingSetId)) || [];
     if (request !== trackerRequest) return;
-    const byLocalId = new Map((requirements || []).map((requirement) => [requirement.localId, requirement]));
-    state.items = (indexed || []).map((item) => {
-      const requirement = byLocalId.get(item.localId);
-      return {
-        ...item,
-        name: requirement?.title,
-        number: requirement?.number,
-        requirement
-      };
-    });
+    state.items = (requirements || []).map((requirement) => ({
+      ...requirement,
+      workingSetId,
+      name: requirement.title,
+      requirement
+    }));
     setStatus('已加载 ' + state.items.length + ' 个 Item', 'ok');
   } catch (error) {
     if (request !== trackerRequest) return;

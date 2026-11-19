@@ -13,7 +13,6 @@ import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
@@ -71,18 +70,6 @@ public class WorkingSetQueryService {
     public BindingsView findBindings(WorkingSetId id) {
         find(id);
         return query.findBindings(id.numericValue());
-    }
-
-    /**
-     * 工作集只返回自己的 LightTrackerItem 索引，不桥接业务 BC 的展示内容。
-     */
-    @Transactional(readOnly = true)
-    public List<LightTrackerItem> findLightTrackerItems(WorkingSetId workingSetId, TrackerId trackerId) {
-        find(workingSetId);
-        if (!query.hasTrackerBinding(workingSetId.numericValue(), trackerId.numericValue())) {
-            throw DomainException.withMessage(FailureReason.NOT_INCLUDED, trackerId.value());
-        }
-        return items.findInTracker(trackerId);
     }
 
     /**

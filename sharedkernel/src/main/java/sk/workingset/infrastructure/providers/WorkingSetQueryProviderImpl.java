@@ -58,9 +58,4 @@ public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
         return new BindingsView(mapper.findSpaceBindings(workingSetId, workspace),
                 mapper.findTrackerBindings(workingSetId, workspace));
     }
-
-    @Override
-    public boolean hasTrackerBinding(long workingSetId, long trackerId) {
-        return mapper.hasTrackerBinding(workingSetId, trackerId, RequestThreadHolder.getWorkspace());
-    }
 }

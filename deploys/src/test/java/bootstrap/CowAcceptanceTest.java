@@ -118,10 +118,6 @@ class CowAcceptanceTest {
 
         assertEquals(HttpStatus.OK, changed.getStatusCode(), String.valueOf(changed.getBody()));
         await().atMost(Duration.ofSeconds(8)).until(() -> read(child).materialized());
-        LightTrackerItemView[] listed = rest.getForObject("/api/worksets/" + child.ws() + "/trackers/" + child.trackerId() + "/light-tracker-items",
-                LightTrackerItemView[].class);
-        assertEquals(1, listed.length);
-        assertEquals(child.id(), listed[0].localId());
         RequirementView[] requirements = rest.getForObject("/api/requirements?trackerId=" + child.trackerId()
                 + "&workingSetId=" + child.ws(), RequirementView[].class);
         assertTrue(java.util.Arrays.stream(requirements)

@@ -100,13 +100,4 @@ public interface WorkingSetQueryMapper {
             ORDER BY b.product_space_id, b.classification_id
             """)
     List<TrackerBindingSummary> findTrackerBindings(@Param("id") long id, @Param("workspace") Long workspace);
-
-    @Select("""
-            SELECT EXISTS (
-                SELECT 1 FROM tracker_bindings
-                WHERE working_set_id = #{workingSetId} AND tracker_id = #{trackerId}
-                  AND product_space_id = COALESCE(#{workspace,jdbcType=BIGINT}, product_space_id))
-            """)
-    boolean hasTrackerBinding(@Param("workingSetId") long workingSetId, @Param("trackerId") long trackerId,
-                              @Param("workspace") Long workspace);
 }
