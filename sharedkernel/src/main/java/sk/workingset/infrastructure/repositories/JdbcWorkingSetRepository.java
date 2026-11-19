@@ -35,26 +35,17 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     @Override
     public Optional<WorkingSet> findById(WorkingSetId id) {
         requireReady(id);
-        return loadWorkingSet(id, false);
-    }
-
-    @Override
-    public Optional<WorkingSet> findByIdForUpdate(WorkingSetId id) {
-        requireReady(id);
-        return loadWorkingSet(id, true);
+        return loadWorkingSet(id);
     }
 
     @Override
     public Optional<WorkingSet> findByIdForCreation(WorkingSetId id) {
-        return loadWorkingSet(id, true);
+        return loadWorkingSet(id);
     }
 
-    private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
+    private Optional<WorkingSet> loadWorkingSet(WorkingSetId id) {
         String sql = "SELECT NULLIF(parent_id, 0), name, COALESCE(color, '#FFFF')"
                 + " FROM air_inst_workingset WHERE id = ? AND delete_flag = 0";
-        if (lock) {
-            sql += " FOR UPDATE";
-        }
         List<String[]> rows = jdbc.query(sql,
                 (rs, row) -> new String[]{rs.getString(1), rs.getString(2), rs.getString(3)},
                 id.numericValue());

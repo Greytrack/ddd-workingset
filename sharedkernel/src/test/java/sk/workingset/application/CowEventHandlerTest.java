@@ -12,6 +12,7 @@ import sk.workingset.domain.*;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 

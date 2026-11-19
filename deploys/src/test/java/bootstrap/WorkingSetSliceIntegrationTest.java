@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,7 +23,7 @@ import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;

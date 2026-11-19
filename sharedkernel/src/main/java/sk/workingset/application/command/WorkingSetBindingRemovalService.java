@@ -19,7 +19,7 @@ public class WorkingSetBindingRemovalService {
 
     @Transactional
     public void remove(WorkingSetId workingSetId, TrackerId trackerId) {
-        WorkingSet workingSet = workingSets.findByIdForUpdate(workingSetId)
+        WorkingSet workingSet = workingSets.findById(workingSetId)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, workingSetId.value()));
         if (!workingSet.hasTrackerBinding(trackerId)) {
             return;

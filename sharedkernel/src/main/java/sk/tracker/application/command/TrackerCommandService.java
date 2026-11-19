@@ -43,7 +43,7 @@ public class TrackerCommandService {
         if (Long.parseLong(classificationId) == Tracker.FOLDER_CLASSIFICATION_ID) {
             throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "根文件夹随产品空间创建");
         }
-        WorkingSet workingSet = workingSets.findByIdForUpdate(id)
+        WorkingSet workingSet = workingSets.findById(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
         ProductSpace space = spaces.findById(spaceId)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));

@@ -1,8 +1,12 @@
-package sk.workingset.domain;
+package sk.workingset.domain.lighttrackeritem;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;

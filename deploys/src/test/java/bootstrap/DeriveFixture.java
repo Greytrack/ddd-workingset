@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;

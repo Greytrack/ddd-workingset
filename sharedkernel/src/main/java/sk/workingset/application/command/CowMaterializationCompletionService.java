@@ -7,7 +7,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.repository.LightTrackerItemRepository;

@@ -138,7 +138,7 @@ public class WorkingSetDeletionService {
     }
 
     private WorkingSet lockWorkingSet(WorkingSetId id) {
-        return workingSets.findByIdForUpdate(id)
+        return workingSets.findById(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 

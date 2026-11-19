@@ -1,5 +1,6 @@
 package sk.workingset.application.eventhandler;
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -11,9 +12,9 @@ import sk.workingset.domain.merge.MergeFailure;
 /**
  * Merge LRO 的异步执行入口：提交决策后由事件驱动逐条推进。
  */
+@Slf4j
 @Component
 public class MergeRoundSubmittedListener {
-    private static final Logger log = LoggerFactory.getLogger(MergeRoundSubmittedListener.class);
 
     private final MergeExecutionService rounds;
 

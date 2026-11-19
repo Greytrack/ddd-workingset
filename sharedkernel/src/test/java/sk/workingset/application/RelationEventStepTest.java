@@ -21,6 +21,7 @@ import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.ArrayList;

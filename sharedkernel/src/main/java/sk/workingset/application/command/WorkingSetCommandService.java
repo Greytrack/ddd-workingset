@@ -203,7 +203,7 @@ public class WorkingSetCommandService {
     }
 
     private WorkingSet writable(WorkingSetId id) {
-        return workingSets.findByIdForUpdate(id)
+        return workingSets.findById(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 

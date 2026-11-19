@@ -1,6 +1,6 @@
 package sk.workingset.application.port;
 
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 
 /**
  * LightTrackerItem family 的唯一性认领。

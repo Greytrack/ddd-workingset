@@ -1,6 +1,6 @@
 package sk.workingset.adapters;
 
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 
 /**
  * LightTrackerItem 的最小读模型。

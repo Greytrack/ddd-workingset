@@ -1,7 +1,7 @@
 package sk.workingset.domain.repository;
 
 import org.jmolecules.ddd.annotation.Repository;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 

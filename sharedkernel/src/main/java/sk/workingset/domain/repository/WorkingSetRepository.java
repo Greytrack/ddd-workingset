@@ -14,9 +14,6 @@ public interface WorkingSetRepository {
     /** 命令侧重建并隐式加锁；不向领域接口暴露 lock 参数。 */
     Optional<WorkingSet> findById(WorkingSetId id);
 
-    /** 命令侧重建并加行锁。 */
-    Optional<WorkingSet> findByIdForUpdate(WorkingSetId id);
-
     /** 创建任务上下文重建：不检查 Preparing。 */
     Optional<WorkingSet> findByIdForCreation(WorkingSetId id);
 

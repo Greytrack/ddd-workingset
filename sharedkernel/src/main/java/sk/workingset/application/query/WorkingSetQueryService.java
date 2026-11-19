@@ -15,6 +15,7 @@ import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
 import java.util.List;

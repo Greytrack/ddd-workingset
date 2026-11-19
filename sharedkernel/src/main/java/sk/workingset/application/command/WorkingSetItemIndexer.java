@@ -20,6 +20,7 @@ import sk.workingset.domain.WorkingSetCreation.Failure;
 import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
 import sk.workingset.domain.WorkingSetCreation.Stage;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
 import sk.workingset.domain.repository.WorkingSetRepository;
 

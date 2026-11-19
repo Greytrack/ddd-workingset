@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.transaction.annotation.Isolation;
@@ -17,7 +16,7 @@ import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;

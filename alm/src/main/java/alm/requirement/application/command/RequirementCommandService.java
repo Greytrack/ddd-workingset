@@ -32,7 +32,7 @@ import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.WorkingSetId;
 
 /**

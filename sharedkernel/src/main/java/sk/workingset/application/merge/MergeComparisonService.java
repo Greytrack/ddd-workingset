@@ -11,6 +11,7 @@ import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.*;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.*;
 import sk.workingset.domain.merge.MergeCheckpoint;
@@ -177,7 +178,7 @@ public class MergeComparisonService {
         if (id == null) {
             return Side.absent();
         }
-        sk.workingset.domain.LightTrackerItem variant = items.findById(id).orElse(null);
+        LightTrackerItem variant = items.findById(id).orElse(null);
         LocalId contentId = variant == null ? id : variant.effectiveContentSource();
         boolean inherited = variant != null && !variant.materialized();
         TrackerItemQueryProvider port = readPorts.apply(contentId);

@@ -8,7 +8,7 @@ import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;

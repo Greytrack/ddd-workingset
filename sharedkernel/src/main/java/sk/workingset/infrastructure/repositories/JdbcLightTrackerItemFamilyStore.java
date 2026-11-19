@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import sk.workingset.application.port.LightTrackerItemFamilyStore;
-import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 
 /** LightTrackerItem family 的原子认领及继承摘要写入；索引流程专用。 */
 @Component
