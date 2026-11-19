@@ -21,11 +21,6 @@ public interface TrackerRepository {
 
     Optional<Tracker> findRootFolder(WorkingSetId owner, String spaceId);
 
-    /**
-     * 列出归属于或绑定到工作集的可见 Tracker。
-     */
-    List<Tracker> findTrackers(WorkingSetId workingSetId);
-
     void insertTracker(Tracker tracker);
 
     void updateName(Tracker tracker);

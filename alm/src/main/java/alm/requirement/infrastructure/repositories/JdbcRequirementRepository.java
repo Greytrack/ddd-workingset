@@ -6,12 +6,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
@@ -89,28 +87,6 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                         + "FROM requirements WHERE local_id = ?",
                 MAPPER,
                 localId.numericValue()).stream().findFirst();
-    }
-
-    public List<TrackerItemCatalogQueryProvider.Identity> findIdentitiesByTracker(TrackerId trackerId) {
-        return jdbc.query("SELECT local_id, common_id, revision FROM requirements "
-                        + "WHERE tracker_id = ? AND delete_flag = FALSE ORDER BY local_id",
-                (rs, row) -> new TrackerItemCatalogQueryProvider.Identity(LocalId.of(rs.getLong(1)),
-                        CommonId.of(rs.getLong(2)), Revision.of(rs.getInt(3))), trackerId.numericValue());
-    }
-
-    public List<TrackerItemCatalogQueryProvider.Identity> pageActiveIdentities(TrackerId trackerId, String afterLocalId, int limit) {
-        return jdbc.query("""
-                SELECT local_id, common_id, revision FROM requirements
-                WHERE tracker_id = ? AND NOT delete_flag AND local_id > ?
-                ORDER BY local_id LIMIT ?
-                """, (rs, row) -> new TrackerItemCatalogQueryProvider.Identity(LocalId.of(rs.getLong(1)),
-                CommonId.of(rs.getLong(2)), Revision.of(rs.getInt(3))), trackerId.numericValue(), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
-    }
-
-    public boolean hasActiveFamily(TrackerId trackerId, CommonId commonId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag)
-                """, Boolean.class, trackerId.numericValue(), commonId.numericValue()));
     }
 
     @Override

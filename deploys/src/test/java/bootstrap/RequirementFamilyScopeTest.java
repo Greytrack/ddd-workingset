@@ -3,9 +3,12 @@ package bootstrap;
 import static bootstrap.FixtureIds.fixtureId;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +25,7 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 
 /**
  * D2：Requirement 家族唯一性按 WorkingSet 作用域，而不是按 Tracker。
@@ -34,6 +38,9 @@ class RequirementFamilyScopeTest {
 
     @Autowired
     private JdbcRequirementRepository repository;
+
+    @Autowired
+    private TrackerItemCatalogQueryProvider catalog;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String ws2 = fixtureId("WS2-" + suffix);
@@ -102,9 +109,19 @@ class RequirementFamilyScopeTest {
     @Test
     void deleted_requirements_are_excluded_from_tracker_catalog() {
         Requirement saved = requirement("L1-", t1);
+        TrackerId trackerId = TrackerId.of(t1);
+        TrackerItemCatalogQueryProvider.Identity identity =
+                new TrackerItemCatalogQueryProvider.Identity(saved.localId(), saved.commonId(), saved.revision());
         repository.save(saved);
+        assertEquals(List.of(identity), catalog.identities(trackerId));
+        assertEquals(List.of(identity), catalog.page(trackerId, "", 1));
+        assertTrue(catalog.page(trackerId, saved.localId().value(), 1).isEmpty());
+        assertTrue(catalog.hasActiveFamily(trackerId, saved.commonId()));
+
         repository.save(saved.delete(saved.lockVersion()));
-        assertTrue(repository.findIdentitiesByTracker(TrackerId.of(t1)).isEmpty());
+        assertTrue(catalog.identities(trackerId).isEmpty());
+        assertTrue(catalog.page(trackerId, "", 1).isEmpty());
+        assertFalse(catalog.hasActiveFamily(trackerId, saved.commonId()));
     }
 
     @Test

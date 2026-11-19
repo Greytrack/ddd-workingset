@@ -96,20 +96,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    public List<Tracker> findTrackers(WorkingSetId workingSetId) {
-        return jdbc.query("SELECT " + COLUMNS + """
-                        FROM air_inst_tracker_rev t
-                        WHERE t.delete_flag = 0 AND t.visible = 1
-                          AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space) AND (t.workingset_id = ? OR EXISTS (
-                            SELECT 1 FROM tracker_bindings b WHERE b.working_set_id = ? AND b.tracker_id = t.id))
-                          AND NOT EXISTS (SELECT 1 FROM tracker_bindings b
-                              WHERE b.working_set_id = ? AND b.tracker_id = t.id AND NOT b.shown)
-                        ORDER BY t.id
-                        """, MAPPER, RequestThreadHolder.getWorkspace(), workingSetId.numericValue(),
-                workingSetId.numericValue(), workingSetId.numericValue());
-    }
-
-    @Override
     @Transactional
     public void insertTracker(Tracker tracker) {
         insert(tracker, 1, currentActor());

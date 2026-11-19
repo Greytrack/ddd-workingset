@@ -26,6 +26,7 @@ alm.requirement.application.query
 - 当前查询已迁移：
   - WorkingSet 摘要、子级/祖先、Tracker 列表、Classification、Bindings；
   - Requirement 详情：持久化记录与未物化继承目标在同一读快照内依次解析，不再以聚合仓储重复查找同一详情 ID；仅继承路径读取来源，仍校验来源版次。
+  - Requirement 活跃身份目录由 ALM 查询 Provider 直接读取，供比较与派生索引使用；不经聚合仓储。Tracker 展示列表仅由 Working Set 查询 Provider 提供。
 - Controller 暂未拆分，`WorkingSetController` 与 `RequirementController` 同时注入 command/query 服务。
 - 命令侧事务、聚合不变量、JdbcTemplate Repository 未改变。
 

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -46,26 +45,6 @@ public class ApplicationConfiguration {
     public SourceSerialCowCoordinator sourceSerialCowCoordinator(
             @Value("${workingset.cow.order-gap-wait:1s}") Duration orderGapWait) {
         return new SourceSerialCowCoordinator(orderGapWait);
-    }
-
-    @Bean
-    public TrackerItemCatalogQueryProvider trackerItemCatalogQueryProvider(JdbcRequirementRepository requirements) {
-        return new TrackerItemCatalogQueryProvider() {
-            @Override
-            public java.util.List<Identity> page(TrackerId trackerId, String afterLocalId, int limit) {
-                return requirements.pageActiveIdentities(trackerId, afterLocalId, limit);
-            }
-
-            @Override
-            public java.util.List<Identity> identities(TrackerId trackerId) {
-                return requirements.findIdentitiesByTracker(trackerId);
-            }
-
-            @Override
-            public boolean hasActiveFamily(TrackerId trackerId, sk.workingset.domain.CommonId commonId) {
-                return requirements.hasActiveFamily(trackerId, commonId);
-            }
-        };
     }
 
     @Bean
