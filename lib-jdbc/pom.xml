@@ -1,0 +1,51 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>ddd-workingset</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>lib-jdbc</artifactId>
+    <name>Archetype - lib-jdbc</name>
+    <description>受控 PostgreSQL 增量写入技术库，不包含业务表与版次规则</description>
+    <dependencies>
+        <!-- 领域异常体系（并发冲突等持久化失败的统一出口：技术异常不出栈） -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>lib-exception</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
+        <!-- Spring Data JDBC 写模型的聚合软删除生命周期（AggregateSoftDelete）实体元数据解析：
+             仅依赖 mapping API，版本由 lib-deps / Spring Boot BOM 管理 -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-relational</artifactId>
+        </dependency>
+        <!-- 执行器诊断日志：只依赖 SLF4J API（绑定实现由应用提供，版本由 lib-deps / Spring Boot BOM 管理） -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 测试内 Lombok（@Slf4j 测试日志）与编译期注解处理器；不传递给消费方。 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 公共库只在测试中记录日志实现；版本由 lib-deps / Spring Boot BOM 管理。 -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
