@@ -5,7 +5,6 @@ import org.springframework.dao.IncorrectUpdateSemanticsDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.RequestThreadHolder;
 import sk.tracker.domain.Tracker;
@@ -57,6 +56,22 @@ public class JdbcTrackerRepository implements TrackerRepository {
         return Objects.requireNonNull(RequestThreadHolder.getLongUserId(), "Tracker write requires a current user");
     }
 
+    /** Full physical row for internal compatibility reads, including soft-deleted rows. */
+    public Optional<TrackerRow> findLegacyRow(TrackerId id, long productSpaceId) {
+        return jdbc.query("SELECT t.* FROM air_inst_tracker_rev t WHERE t.id = ? AND t.work_space = ?",
+                (rs, row) -> TrackerRow.read(rs), id.numericValue(), productSpaceId).stream().findFirst();
+    }
+
+    /** The mirror has no workspace column; scope the lookup through the owning Tracker row. */
+    public Optional<TrackerCompatibilityRow> findLegacyCompatibilityRow(TrackerId id, long productSpaceId) {
+        return jdbc.query("""
+                SELECT mirror.* FROM air_ws_tracker mirror
+                JOIN air_inst_tracker_rev t ON t.id = mirror.id
+                WHERE t.id = ? AND t.work_space = ?
+                """, (rs, row) -> TrackerCompatibilityRow.read(rs), id.numericValue(), productSpaceId)
+                .stream().findFirst();
+    }
+
     @Override
     public Optional<Tracker> findById(TrackerId id) {
         return load(id, false);
@@ -96,13 +111,11 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    @Transactional
     public void save(Tracker tracker) {
         save(tracker, true, null);
     }
 
     @Override
-    @Transactional
     public void save(Tracker tracker, boolean initiallyVisible, Long actor) {
         long writeActor = actor == null ? currentActor() : actor;
         if (tracker.isNew()) {
@@ -173,7 +186,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    @Transactional
     public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor) {
         for (TrackerId parent : parentTrackerIds) {
             List<Long> ids = jdbc.queryForList("""
@@ -205,7 +217,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    @Transactional
     public void deleteTracker(TrackerId id) {
         if (lockTracker(id).isEmpty()) {
             return;
