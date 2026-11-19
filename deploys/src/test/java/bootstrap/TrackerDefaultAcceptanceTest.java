@@ -34,6 +34,7 @@ import sk.workingset.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
+import sk.businessframework.domain.litebusinessobject.LiteBusinessObjectRepository;
 import sk.workingset.domain.WorkingSetId;
 
 /** T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。 */
@@ -42,6 +43,7 @@ class TrackerDefaultAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TrackerRepository trackerRepository;
+    @Autowired private LiteBusinessObjectRepository instanceSummaries;
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = fixtureId("WS-CHILD-" + suffix);
@@ -65,6 +67,10 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void creatingProductSpacePublishesDefaultTrackerBindingsAndItemReadAccess() {
         String spaceId = createSpace("1");
+        var product = instanceSummaries.findById(Long.valueOf(spaceId)).orElseThrow();
+        assertEquals(10030101L, product.type());
+        assertEquals(584189545406816L, product.tracker());
+        assertEquals(584190236948832L, instanceSummaries.findById(1L).orElseThrow().tracker());
         int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND is_default", Integer.class, spaceId));
@@ -168,6 +174,34 @@ class TrackerDefaultAcceptanceTest {
                   AND r.lock_version = 1 AND c.lock_version = r.lock_version
                   AND r.updated_by = c.updated_by AND r.updated_time = c.updated_time
                 """, Integer.class, id, "变更后"));
+        var common = instanceSummaries.findById(id).orElseThrow();
+        assertEquals("变更后", common.name());
+        assertEquals(584578917040480L, common.tracker());
+        assertEquals(1L, jdbc.queryForObject("SELECT lock_version FROM air_inst_common WHERE id = ?", Long.class, id));
+        assertEquals(2, instanceSummaries.findByIds(java.util.List.of(id, 1L, id, Long.MAX_VALUE)).size());
+        assertEquals(HttpStatus.NO_CONTENT, rest.exchange("/api/trackers/" + id, org.springframework.http.HttpMethod.DELETE,
+                null, Void.class).getStatusCode());
+        assertTrue(instanceSummaries.findById(id).isEmpty());
+    }
+
+    @Test
+    void commonIdentityCollisionRollsBackBothTrackerRows() {
+        long space = Long.parseLong(createSpace("1"));
+        TrackerId id = TrackerId.of(fixtureId("COMMON-COLLISION-" + suffix));
+        jdbc.update("INSERT INTO air_inst_common (id, base_class, class, type) VALUES (?, 1003, 100301, 10030101)",
+                id.numericValue());
+        try {
+            Tracker tracker = Tracker.reconstitute(id, id, "projection collision", null, WorkingSetId.of(1L),
+                    space, 258519859202016L, Classification.SharingMode.UNSHARED, null, false);
+            assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.insertTracker(tracker));
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
+                    Integer.class, id.numericValue()));
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
+                    Integer.class, id.numericValue()));
+            assertEquals(10030101L, instanceSummaries.findById(id.numericValue()).orElseThrow().type());
+        } finally {
+            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", id.numericValue());
+        }
     }
 
     @Test

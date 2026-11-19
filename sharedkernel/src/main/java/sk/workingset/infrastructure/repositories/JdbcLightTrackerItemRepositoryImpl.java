@@ -5,6 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
@@ -52,6 +56,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             rs.getBoolean("materialized"));
 
     private final JdbcTemplate jdbc;
+    private final JdbcCommonInstanceStore commonInstances;
 
 
     @Override
@@ -89,8 +94,9 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY, noRollbackFor = RuntimeException.class)
     public boolean insertIfFamilyAbsent(LightTrackerItem item) {
-        return jdbc.update("""
+        boolean inserted = jdbc.update("""
                         INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                             source_local_id, source_revision, materialized)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -98,6 +104,28 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                         """, item.localId().numericValue(), item.commonId().numericValue(), item.trackerId().numericValue(),
                 item.workingSetId().numericValue(), item.revision().value(), item.sourceLocalId().numericValue(),
                 item.sourceRevision().value(), item.materialized()) == 1;
+        if (inserted && !item.materialized()) {
+            saveInheritedCommonInstance(item);
+        }
+        return inserted;
+    }
+
+    private void saveInheritedCommonInstance(LightTrackerItem item) {
+        AirInstCommonPo common = jdbc.queryForObject("""
+                SELECT target.work_space, source.number,
+                       CASE WHEN source.revision = ? THEN COALESCE(source.name, source.title) END AS name,
+                       CASE WHEN source.revision = ? THEN source.version END AS version
+                FROM requirements source JOIN air_inst_tracker_rev target ON target.id = ?
+                WHERE source.local_id = ? AND NOT EXISTS (SELECT 1 FROM requirements WHERE local_id = ?)
+                """, (rs, row) -> new AirInstCommonPo(item.localId().numericValue(), 1401L, 140101L, 14010101L,
+                        rs.getObject("work_space", Long.class), rs.getString("number"), rs.getString("name"),
+                        null, rs.getString("version"), (long) item.revision().value(), 0,
+                        null, null, null, null, null, null, null, item.commonId().numericValue(),
+                        item.workingSetId().numericValue(), null, item.trackerId().numericValue(),
+                        (long) item.revision().value()),
+                item.sourceRevision().value(), item.sourceRevision().value(), item.trackerId().numericValue(),
+                item.sourceLocalId().numericValue(), item.localId().numericValue());
+        commonInstances.save(common);
     }
 
     @Override
@@ -115,8 +143,15 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     }
 
     @Override
+    @Transactional
     public void remove(LocalId id) {
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", id.numericValue());
+        long local = id.numericValue();
+        List<Boolean> deleted = jdbc.queryForList(
+                "DELETE FROM light_tracker_items WHERE local_id = ? RETURNING materialized", Boolean.class, local);
+        if (!deleted.isEmpty() && !deleted.getFirst() && Boolean.FALSE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM requirements WHERE local_id = ?)", Boolean.class, local))) {
+            commonInstances.remove(local);
+        }
     }
 
     @Override

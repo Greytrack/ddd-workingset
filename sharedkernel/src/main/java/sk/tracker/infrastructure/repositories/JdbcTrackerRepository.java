@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.RequestThreadHolder;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
@@ -35,6 +36,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     private final JdbcTemplate jdbc;
     private final TrackerNumberGenerator numbers;
+    private final JdbcCommonInstanceStore commonInstances;
 
     private static void requireOne(int affected, long id) {
         if (affected != 1) {
@@ -148,6 +150,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                         """, tracker.compatibility().trackerId().numericValue(), workset,
                 tracker.compatibility().originalClassificationId(), tracker.name(), number,
                 parent, source, shared, defaultFlag, visible, auditActor, now, auditActor, now);
+        saveCommonInstance(id);
     }
 
     @Override
@@ -167,6 +170,17 @@ public class JdbcTrackerRepository implements TrackerRepository {
                 FROM air_inst_tracker_rev t
                 WHERE t.id = ? AND c.id = t.id AND c.lock_version = t.lock_version - 1
                 """, id), id);
+        saveCommonInstance(id);
+    }
+
+    private void saveCommonInstance(long id) {
+        commonInstances.save(jdbc.queryForObject("""
+                SELECT id, base_class, class, type, work_space, number, name, NULL::BIGINT AS status, version, revision,
+                       delete_flag, lock_version, created_by, created_time, updated_by, updated_time,
+                       checked_out, owner, common_id, workingset_id, parent_id,
+                       584578917040480 AS tracker, 1::BIGINT AS max_revision
+                FROM air_inst_tracker_rev WHERE id = ?
+                """, JdbcCommonInstanceStore.ROW_MAPPER, id));
     }
 
     @Override
@@ -196,6 +210,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                         FROM air_inst_tracker_rev t
                         WHERE t.id = ? AND c.id = t.id AND c.lock_version = t.lock_version - 1
                         """, id), id);
+                saveCommonInstance(id);
             }
         }
     }
@@ -235,5 +250,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
         }
         requireOne(jdbc.update("DELETE FROM air_ws_tracker WHERE id = ?", id.numericValue()), id.numericValue());
         requireOne(jdbc.update("DELETE FROM air_inst_tracker_rev WHERE id = ?", id.numericValue()), id.numericValue());
+        commonInstances.remove(id.numericValue());
     }
 }

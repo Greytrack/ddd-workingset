@@ -471,6 +471,36 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
+    void extensionRollsBackOnlyTheIndexItemWhosePublicSummaryConflicts() {
+        seedRange();
+        createTarget();
+        String conflicted = fixtureId("public-index-conflict-" + child);
+        String valid = fixtureId("public-index-valid-" + child);
+        long blocker = Long.parseLong(fixtureId("public-index-blocker-" + child));
+        seedItem(unshared, conflicted, conflicted, false);
+        seedItem(unshared, valid, valid, false);
+        jdbc.update("""
+                INSERT INTO air_inst_common (id, base_class, class, type, workingset_id, common_id)
+                VALUES (?, 1401, 140101, 14010101, ?, ?)
+                """, blocker, Long.valueOf(child), Long.valueOf(conflicted));
+        try {
+            CreationView completed = awaitStatus(extension(List.of(unshared)), Status.PartiallySucceeded);
+            assertEquals(Stage.INDEX_UNSHARED_TRACKERS, completed.failures().getFirst().stage());
+            assertEquals(0, jdbc.queryForObject("""
+                    SELECT count(*) FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?
+                    """, Integer.class, Long.valueOf(child), Long.valueOf(conflicted)));
+            assertEquals(1, jdbc.queryForObject("""
+                    SELECT count(*)
+                    FROM light_tracker_items l JOIN air_inst_common c ON c.id = l.local_id
+                    WHERE l.working_set_id = ? AND l.common_id = ?
+                      AND c.workingset_id = l.working_set_id AND c.common_id = l.common_id AND c.tracker = l.tracker_id
+                    """, Integer.class, Long.valueOf(child), Long.valueOf(valid)));
+        } finally {
+            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", blocker);
+        }
+    }
+
+    @Test
     void extendsAnExistingChildWithSharedAndDerivedTrackersAndFiltersAlreadyIncludedSources() {
         seedRange();
         createTarget();

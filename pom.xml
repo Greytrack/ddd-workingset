@@ -10,10 +10,11 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>exception</module>
+    <module>lib-exception</module>
     <module>sharedkernel</module>
     <module>alm</module>
     <module>deploys</module>
+    <module>lib-jdbc</module>
   </modules>
 
   <properties>
@@ -51,7 +52,12 @@
       </dependency>
       <dependency>
         <groupId>com.example</groupId>
-        <artifactId>exception</artifactId>
+        <artifactId>lib-exception</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.example</groupId>
+        <artifactId>lib-jdbc</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

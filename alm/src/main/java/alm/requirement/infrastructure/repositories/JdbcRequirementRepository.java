@@ -2,6 +2,9 @@ package alm.requirement.infrastructure.repositories;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 
 import java.util.List;
 import java.util.Optional;
@@ -55,15 +58,18 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             LockVersion.of(rs.getLong("lock_version")), rs.getBoolean("delete_flag"));
 
     private final JdbcTemplate jdbc;
+    private final JdbcCommonInstanceStore commonInstances;
 
 
     @Override
+    @Transactional
     public void save(Requirement requirement) {
         long lockVersion = requirement.lockVersion().value();
         if (lockVersion == 0) {
             jdbc.update(INSERT, requirement.localId().numericValue(), requirement.commonId().numericValue(),
                     requirement.trackerId().numericValue(), requirement.title(), requirement.title(), requirement.description(),
                     requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted());
+            saveCommonInstance(requirement.localId().numericValue());
             return;
         }
         long expected = lockVersion - 1;
@@ -73,6 +79,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         if (affected == 0) {
             throw new LockVersionConflictException(LockVersion.of(expected), currentLockVersion(requirement.localId()));
         }
+        saveCommonInstance(requirement.localId().numericValue());
     }
 
     @Override
@@ -123,9 +130,27 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     }
 
     @Override
+    @Transactional
     public void purge(Requirement requirement) {
-        jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", requirement.localId().numericValue());
-        jdbc.update("DELETE FROM requirements WHERE local_id = ?", requirement.localId().numericValue());
+        long id = requirement.localId().numericValue();
+        jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", id);
+        if (jdbc.update("DELETE FROM requirements WHERE local_id = ?", id) == 1) {
+            commonInstances.remove(id);
+        }
+    }
+
+    private void saveCommonInstance(long id) {
+        AirInstCommonPo common = jdbc.queryForObject("""
+                SELECT t.work_space, r.number, COALESCE(r.name, r.title) AS name, r.version, r.revision,
+                       r.delete_flag, r.lock_version, r.common_id, r.working_set_id, r.tracker_id
+                FROM requirements r JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
+                WHERE r.local_id = ?
+                """, (rs, row) -> new AirInstCommonPo(id, 1401L, 140101L, 14010101L,
+                        rs.getObject("work_space", Long.class), rs.getString("number"), rs.getString("name"),
+                        null, rs.getString("version"), rs.getLong("revision"), rs.getBoolean("delete_flag") ? 1 : 0,
+                        rs.getLong("lock_version"), null, null, null, null, null, null, rs.getLong("common_id"),
+                        rs.getLong("working_set_id"), null, rs.getLong("tracker_id"), rs.getLong("revision")), id);
+        commonInstances.save(common);
     }
 
     public boolean existsInTracker(TrackerId trackerId) {

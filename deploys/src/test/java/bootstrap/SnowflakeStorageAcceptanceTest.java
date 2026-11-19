@@ -84,10 +84,19 @@ class SnowflakeStorageAcceptanceTest {
             String itemLocalId = String.valueOf(item.get("local_id"));
             assertNotEquals(requirement.localId(), itemLocalId);
             assertEquals(requirement.commonId(), String.valueOf(item.get("common_id")));
+            long childLocalId = Long.parseLong(itemLocalId);
+            assertEquals(requirement.number(), jdbc.queryForObject("""
+                    SELECT number FROM air_inst_common WHERE id = ? AND workingset_id = ? AND tracker = ?
+                    """, String.class, childLocalId, targetId, Long.valueOf(tracker.trackerId())));
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+                    Integer.class, childLocalId));
             org.springframework.http.ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + itemLocalId + "/title", HttpMethod.PUT,
                     new HttpEntity<>(Map.of("title", "编号修订", "expectedLockVersion", 0)), RequirementView.class);
             assertEquals(HttpStatus.OK, edited.getStatusCode());
             assertEquals(requirement.number(), edited.getBody().number());
+            assertEquals(1, jdbc.queryForObject("""
+                    SELECT count(*) FROM air_inst_common WHERE id = ? AND name = '编号修订'
+                    """, Integer.class, childLocalId));
             assertEquals("bigint", jdbc.queryForObject("SELECT pg_typeof(local_id)::text FROM requirements WHERE local_id = ?",
                     String.class, Long.valueOf(itemLocalId)));
         } finally {

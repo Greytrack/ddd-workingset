@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
@@ -27,6 +30,7 @@ import java.util.Optional;
 public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, ProductSpaceRepository {
     private final JdbcTemplate jdbc;
     private final IdentifierGenerator ids;
+    private final JdbcCommonInstanceStore commonInstances;
 
     @Override
     public Optional<WorkingSet> findWorkingSet(WorkingSetId id) {
@@ -100,6 +104,7 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
     }
 
     @Override
+    @Transactional
     public boolean insertWorkingSet(WorkingSet workingSet, Long actor) {
         long id = workingSet.id().numericValue();
         Long owner = actor == null ? RequestThreadHolder.getLongUserId() : actor;
@@ -108,7 +113,7 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
         }
         String auditActor = owner.toString();
         long now = System.currentTimeMillis();
-        return jdbc.update("""
+        boolean inserted = jdbc.update("""
                         INSERT INTO air_inst_workingset (id, instance_id, common_id, workingset_id, parent_id,
                             base_class, class, type, tracker, name, number, color, owner, revision, version_type,
                             delete_flag, lock_version, created_by, created_time, updated_by, updated_time)
@@ -116,6 +121,12 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
                             0, 0, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
                         """, id, id, id, id, workingSet.parentWorkingSetId().numericValue(), workingSet.name(), "WS-" + id,
                 workingSet.color(), owner, auditActor, now, auditActor, now) == 1;
+        if (inserted) {
+            commonInstances.save(new AirInstCommonPo(id, 1008L, 100801L, 10080101L, null,
+                    "WS-" + id, workingSet.name(), null, null, 1L, 0, 0L, auditActor, now, auditActor, now,
+                    null, owner, id, id, workingSet.parentWorkingSetId().numericValue(), 584190236948832L, 1L));
+        }
+        return inserted;
     }
 
     @Override
@@ -198,9 +209,13 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
     }
 
     @Override
+    @Transactional
     public void insertProductSpace(ProductSpace space) {
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
                 space.numericId(), space.name());
+        commonInstances.save(new AirInstCommonPo(space.numericId(), 1003L, 100301L, 10030101L,
+                null, null, space.name(), null, null, 1L, 0, null, null, null, null, null,
+                null, null, null, null, null, 584189545406816L, 1L));
     }
 
     @Override
@@ -221,12 +236,19 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
     }
 
     @Override
+    @Transactional
     public void deleteWorkingSet(WorkingSetId id) {
-        jdbc.update("DELETE FROM air_inst_workingset WHERE id = ? AND delete_flag = 0", id.numericValue());
+        if (jdbc.update("DELETE FROM air_inst_workingset WHERE id = ? AND delete_flag = 0", id.numericValue()) == 1) {
+            commonInstances.remove(id.numericValue());
+        }
     }
 
     @Override
+    @Transactional
     public void deleteProductSpace(String id) {
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", Long.valueOf(id));
+        long numericId = Long.parseLong(id);
+        if (jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", numericId) == 1) {
+            commonInstances.remove(numericId);
+        }
     }
 }

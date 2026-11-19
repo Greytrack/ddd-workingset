@@ -86,6 +86,12 @@ class RequirementAcceptanceTest {
             assertEquals(HttpStatus.CREATED, created.getStatusCode(), String.valueOf(created.getBody()));
             localId = String.valueOf(created.getBody().get("localId"));
             assertTrue(indexing.await(5, TimeUnit.SECONDS));
+            assertEquals(1, jdbc.queryForObject("""
+                    SELECT count(*) FROM air_inst_common
+                    WHERE id = ? AND common_id = id AND workingset_id = 1 AND tracker = ?
+                      AND base_class = 1401 AND class = 140101 AND type = 14010101
+                      AND revision = 3 AND max_revision = 3 AND delete_flag = 0
+                    """, Integer.class, Long.valueOf(localId), Long.valueOf(trackerId)));
             assertEquals(HttpStatus.OK, rest.getForEntity("/api/requirements/" + localId, Map.class).getStatusCode());
             assertEquals(0, indexedRows());
         } finally {
@@ -100,8 +106,14 @@ class RequirementAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 2);
         assertEquals(1, indexedRows());
 
+        assertEquals(HttpStatus.NO_CONTENT, rest.exchange("/api/requirements/" + localId,
+                HttpMethod.DELETE, null, Void.class).getStatusCode());
+        assertEquals(1, jdbc.queryForObject("SELECT delete_flag FROM air_inst_common WHERE id = ?",
+                Integer.class, Long.valueOf(localId)));
         assertEquals(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + localId + "/delete2", null, Void.class).getStatusCode());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_common WHERE id = ?",
+                Integer.class, Long.valueOf(localId)));
         await().atMost(Duration.ofSeconds(8)).until(() -> indexedRows() == 0);
         transaction.executeWithoutResult(status -> events.publishEvent(event));
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 3);

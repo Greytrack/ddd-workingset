@@ -54,6 +54,10 @@ class WorkingSetLineageAcceptanceTest {
 
         String child = create("1", "child");
         String grandchild = create(child, "grandchild");
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM air_inst_common WHERE id = ? AND parent_id = ?
+                  AND common_id = id AND workingset_id = id AND tracker = 584190236948832 AND revision = 1
+                """, Integer.class, Long.valueOf(grandchild), Long.valueOf(child)));
         assertEquals("#2468AC", rest.getForObject(path(grandchild), WorkingSetView.class).color());
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*) FROM air_inst_workingset
@@ -129,6 +133,46 @@ class WorkingSetLineageAcceptanceTest {
                     assertTrue(rows.next());
                     assertEquals("258520000000081", rows.getString(1));
                     assertEquals("258520000000080", rows.getString(2));
+                }
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    @Test
+    void demoRebuildProjectsPhysicalAndInheritedInstances() throws Exception {
+        try (java.sql.Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (java.sql.Statement sql = connection.createStatement()) {
+                String schema = "common_demo_" + suffix.replace("-", "");
+                sql.execute("CREATE SCHEMA " + schema);
+                sql.execute("SET LOCAL search_path TO " + schema);
+                ResourceDatabasePopulator rebuild = new ResourceDatabasePopulator(
+                        new ClassPathResource("reset-demo-schema.sql"), new ClassPathResource("schema.sql"),
+                        new ClassPathResource("tracker-fixtures.sql"), new ClassPathResource("demo-data.sql"),
+                        new ClassPathResource("common-index-backfill.sql"));
+                rebuild.populate(connection);
+                rebuild.populate(connection);
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT (SELECT count(*) FROM air_inst_workingset)
+                               + (SELECT count(*) FROM air_inst_tracker_rev)
+                               + (SELECT count(*) FROM product_spaces)
+                               + (SELECT count(*) FROM requirements)
+                               + (SELECT count(*) FROM light_tracker_items WHERE NOT materialized),
+                               count(*), count(DISTINCT base_class)
+                        FROM air_inst_common
+                        """)) {
+                    assertTrue(rows.next());
+                    assertEquals(rows.getLong(1), rows.getLong(2));
+                    assertEquals(4, rows.getLong(3));
+                }
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT to_regclass('air_inst_common_source') IS NULL
+                           AND to_regprocedure('put_air_inst_common(jsonb)') IS NULL
+                        """)) {
+                    assertTrue(rows.next());
+                    assertTrue(rows.getBoolean(1));
                 }
             } finally {
                 connection.rollback();

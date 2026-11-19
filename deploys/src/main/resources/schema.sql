@@ -807,3 +807,55 @@ CREATE TABLE IF NOT EXISTS working_set_creation_items (
 
 CREATE INDEX IF NOT EXISTS idx_creation_items_page
     ON working_set_creation_items (creation_id, parent_tracker_id, local_id);
+
+-- Common business instance index. Writes are invoked by the owning repository,
+-- in the source transaction; there are no automatic triggers on legacy tables.
+CREATE TABLE IF NOT EXISTS air_inst_common (
+    id BIGINT PRIMARY KEY,
+    base_class BIGINT NOT NULL,
+    class BIGINT,
+    type BIGINT,
+    work_space BIGINT,
+    number VARCHAR(255),
+    name VARCHAR(2000),
+    status BIGINT,
+    version VARCHAR(255),
+    revision BIGINT,
+    delete_flag INTEGER,
+    lock_version BIGINT,
+    created_by VARCHAR(255),
+    created_time BIGINT,
+    updated_by VARCHAR(255),
+    updated_time BIGINT,
+    checked_out INTEGER,
+    owner BIGINT,
+    common_id BIGINT,
+    workingset_id BIGINT,
+    parent_id BIGINT,
+    tracker BIGINT,
+    max_revision BIGINT
+);
+
+COMMENT ON COLUMN air_inst_common.owner IS '所有者';
+COMMENT ON COLUMN air_inst_common.workingset_id IS '实例所属工作集';
+COMMENT ON COLUMN air_inst_common.tracker IS '所属或自举 Tracker';
+
+-- Soft-deleted rows still occupy the key. Unspecified scope or family remains NULL.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_air_inst_common_workingset_family
+    ON air_inst_common (workingset_id, common_id);
+CREATE INDEX IF NOT EXISTS idx_air_inst_common_tracker_workingset
+    ON air_inst_common (tracker, workingset_id);
+
+-- Remove database helpers installed by the earlier common-index implementation.
+DROP VIEW IF EXISTS air_inst_common_source;
+DROP FUNCTION IF EXISTS put_air_inst_common(jsonb);
+
+-- Bootstrap only the missing default root summary.
+INSERT INTO air_inst_common (
+    id, base_class, class, type, work_space, number, name, revision, delete_flag, lock_version,
+    created_by, created_time, updated_by, updated_time, owner, common_id, workingset_id, parent_id, tracker, max_revision
+)
+SELECT id, base_class, class, type, work_space, number, name, revision, delete_flag, lock_version,
+       created_by, created_time, updated_by, updated_time, owner, common_id, workingset_id, parent_id, 584190236948832, 1
+FROM air_inst_workingset WHERE id = 1
+ON CONFLICT (id) DO NOTHING;

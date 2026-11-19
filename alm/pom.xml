@@ -19,7 +19,11 @@
     </dependency>
     <dependency>
       <groupId>com.example</groupId>
-      <artifactId>exception</artifactId>
+      <artifactId>lib-exception</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.example</groupId>
+      <artifactId>lib-jdbc</artifactId>
     </dependency>
     <dependency>
       <groupId>com.example</groupId>
