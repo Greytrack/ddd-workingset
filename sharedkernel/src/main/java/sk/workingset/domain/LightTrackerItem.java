@@ -1,9 +1,8 @@
 package sk.workingset.domain;
 
-import sk.tracker.domain.TrackerId;
-
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;

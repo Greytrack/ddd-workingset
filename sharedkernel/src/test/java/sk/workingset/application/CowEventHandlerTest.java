@@ -1,36 +1,33 @@
 package sk.workingset.application;
 
-import sk.workingset.application.command.CowEventHandler;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.time.Instant;
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
-import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.application.command.CowEventHandler;
+import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
+import sk.workingset.domain.*;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import sk.workingset.domain.repository.CowMaterializationRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 
+import java.time.Instant;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 class CowEventHandlerTest {
+    private static LightTrackerItem target(String id, LocalId source, Revision own, Revision sourceRevision) {
+        return LightTrackerItem.restore(LocalId.of(id), CommonId.of("264220103598016"), TrackerId.of("264443044134848"),
+                WorkingSetId.of("266514385749952"), own, source, sourceRevision, false);
+    }
+
     @Test
     void changed_source_publishes_a_materialization_request_for_each_unmaterialized_target() {
         LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
@@ -66,10 +63,5 @@ class CowEventHandlerTest {
         assertEquals(after, request.getValue().afterRevision());
         assertEquals(own, request.getValue().targetRevision());
         assertEquals(target.localId(), request.getValue().targetLocalId());
-    }
-
-    private static LightTrackerItem target(String id, LocalId source, Revision own, Revision sourceRevision) {
-        return LightTrackerItem.restore(LocalId.of(id), CommonId.of("264220103598016"), TrackerId.of("264443044134848"),
-                WorkingSetId.of("266514385749952"), own, source, sourceRevision, false);
     }
 }

@@ -1,8 +1,7 @@
 package sk.workingset.domain;
 
-import sk.tracker.domain.Tracker;
-
 import org.jmolecules.ddd.annotation.Service;
+import sk.tracker.domain.Tracker;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
@@ -37,6 +36,7 @@ public final class WorkingSetLineagePolicy {
     public static List<TrackerBinding> comparableBindings(WorkingSet source, WorkingSet target) {
         return childOf(source, target).trackers().stream()
                 .filter(binding -> binding.sharingMode() == SharingMode.UNSHARED)
+                .filter(binding -> binding.numericClassificationId() != Tracker.FOLDER_CLASSIFICATION_ID)
                 .toList();
     }
 
@@ -45,6 +45,7 @@ public final class WorkingSetLineagePolicy {
      * 该判断不遍历祖先，也不把同父的其他子 Tracker 视为可配对兄弟。
      */
     public static boolean isDirectDerivation(Tracker child, Tracker sourceTracker) {
-        return child.sourceId() != null && child.sourceId().equals(sourceTracker.trackerId());
+        return !child.isFolder() && !sourceTracker.isFolder()
+                && child.sourceId() != null && child.sourceId().equals(sourceTracker.trackerId());
     }
 }

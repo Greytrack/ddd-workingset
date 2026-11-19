@@ -3,12 +3,15 @@ package sk.workingset.adapters;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sk.common.error.DomainException;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;
@@ -108,6 +111,16 @@ public class WorkingSetController {
         return LightTrackerItemView.from(item);
     }
 
+    @PatchMapping("/{workingSetId}/trackers/{trackerId}/visibility")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setTrackerShown(@PathVariable String workingSetId, @PathVariable String trackerId,
+                                @RequestBody TrackerVisibilityRequest request) {
+        if (request.shown() == null) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "shown is required");
+        }
+        commands.setTrackerShown(WorkingSetId.of(workingSetId), TrackerId.of(trackerId), request.shown());
+    }
+
     public record CreateProductSpaceRequest(String name) {
     }
 
@@ -156,17 +169,20 @@ public class WorkingSetController {
         }
     }
 
+    public record TrackerVisibilityRequest(Boolean shown) {
+    }
+
     public record TrackerBindingView(String trackerId, String productSpaceId, String classificationId,
-                                     String sharingMode, String origin) {
+                                     String sharingMode, String origin, boolean shown, boolean rootFolder) {
         static TrackerBindingView from(WorkingSet.TrackerBinding binding) {
             return new TrackerBindingView(binding.trackerId().value(), binding.productSpaceId(),
-                    binding.classificationId(), binding.sharingMode().name(), binding.origin().name());
+                    binding.classificationId(), binding.sharingMode().name(), binding.origin().name(), true, false);
         }
 
         static TrackerBindingView from(TrackerBindingSummary summary) {
             return new TrackerBindingView(String.valueOf(summary.trackerId()),
                     String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
-                    summary.sharingMode(), summary.origin());
+                    summary.sharingMode(), summary.origin(), summary.shown(), summary.rootFolder());
         }
     }
 

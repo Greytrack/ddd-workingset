@@ -162,9 +162,10 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(7, completed.progress().succeeded());
         BindingsView bindings = bindings();
         assertEquals(List.of(space), bindings.spaces().stream().map(binding -> binding.productSpaceId()).toList());
-        assertEquals(2, bindings.trackers().size());
+        assertEquals(3, bindings.trackers().size());
         assertEquals(1, bindings.trackers().stream().filter(binding -> shared.equals(binding.trackerId())).count());
         String copy = bindings.trackers().stream().filter(binding -> "UNSHARED".equals(binding.sharingMode()))
+                .filter(binding -> !"10070101".equals(binding.classificationId()))
                 .findFirst().orElseThrow().trackerId();
         assertEquals(unshared, jdbc.queryForObject("SELECT source_id FROM trackers WHERE tracker_id = ?", String.class, copy));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
@@ -177,7 +178,7 @@ class WorkingSetCreationAcceptanceTest {
                 """, Integer.class, "%" + id + "%")));
         assertEquals(completed, task(id));
         assertEquals(bindings, bindings());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL",
                 Integer.class, child));
     }
 
@@ -197,7 +198,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals("MissingSpaceBinding", failure.reason());
         assertEquals(1, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).skipped());
         assertEquals(1, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).skipped());
-        assertEquals(2, bindings().trackers().size());
+        assertEquals(3, bindings().trackers().size());
         assertEquals(1, bindings().spaces().size());
     }
 
@@ -212,7 +213,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(List.of("NOT_INCLUDED", "SourceTrackerNotFound"),
                 completed.failures().stream().map(failure -> failure.reason()).toList());
         assertEquals(List.of(space), bindings().spaces().stream().map(binding -> binding.productSpaceId()).toList());
-        assertEquals(List.of(), bindings().trackers());
+        assertEquals(List.of("10070101"), bindings().trackers().stream().map(binding -> binding.classificationId()).toList());
     }
 
     @Test
@@ -226,8 +227,8 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(2, completed.stageProgress().get(Stage.COPY_UNSHARED_TRACKERS).succeeded());
         assertEquals(2, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).succeeded());
         assertTrue(completed.failures().isEmpty());
-        assertEquals(2, bindings().trackers().size());
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
+        assertEquals(3, bindings().trackers().size());
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL",
                 Integer.class, child));
     }
 
@@ -347,6 +348,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(3, completed.indexProgress().get(unshared).succeeded());
         assertEquals(1, completed.indexProgress().get(second).succeeded());
         String copiedTracker = bindings().trackers().stream()
+                .filter(binding -> !"10070101".equals(binding.classificationId()))
                 .filter(binding -> space.equals(binding.productSpaceId())).findFirst().orElseThrow().trackerId();
         List<String> indexed = jdbc.queryForList("SELECT local_id FROM light_tracker_items WHERE tracker_id = ? ORDER BY common_id",
                 String.class, copiedTracker);
@@ -403,7 +405,8 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(broken, failure.localId());
         assertEquals(parentTracker, failure.trackerId());
         assertEquals("NOT_FOUND", failure.reason());
-        String copied = bindings().trackers().getFirst().trackerId();
+        String copied = bindings().trackers().stream().filter(binding -> !"10070101".equals(binding.classificationId()))
+                .findFirst().orElseThrow().trackerId();
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             TrackerItemsIndexedEvent event = indexEvents.find(child);
             assertNotNull(event);
@@ -478,14 +481,14 @@ class WorkingSetCreationAcceptanceTest {
         String first = extension(List.of(unshared, secondSource, shared));
         awaitStatus(first, Status.Succeeded);
 
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
+        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
-        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?",
+        assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?",
                 Integer.class, child));
         assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
                 Integer.class, child));
         TrackerView[] trackers = rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class);
-        assertEquals(3, trackers.length);
+        assertEquals(4, trackers.length);
         assertTrue(java.util.Arrays.stream(trackers).anyMatch(tracker -> shared.equals(tracker.trackerId())));
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/derive",
                 Map.of("sourceTrackerId", unshared, "sourceLocalId", fixtureId("extension-" + child),
@@ -497,7 +500,7 @@ class WorkingSetCreationAcceptanceTest {
                 Map.of("requestId", fixtureId("duplicate-" + child), "trackerIds", List.of(unshared, secondSource, shared)), Map.class);
         assertEquals(HttpStatus.CONFLICT, duplicate.getStatusCode());
         assertEquals("NoDerivableTracker", duplicate.getBody().get("reason"));
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
+        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
     }
 
@@ -535,7 +538,7 @@ class WorkingSetCreationAcceptanceTest {
         CreationView completed = awaitStatus(id, Status.PartiallySucceeded);
         assertEquals(1, completed.failures().size());
         assertEquals("SourceTrackerNotFound", completed.failures().getFirst().reason());
-        assertTrue(rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length == 1);
+        assertEquals(2, rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length);
     }
 
     @Test

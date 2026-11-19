@@ -458,7 +458,7 @@ CREATE TABLE IF NOT EXISTS air_inst_tracker_rev (
       AND work_space IS NOT NULL AND workingset_id IS NOT NULL
       AND share IS NOT NULL AND share IN (0, 1) AND delete_flag IN (0, 1)),
   CONSTRAINT tracker_v4_lineage CHECK (
-      (source_branch_id IS NULL AND workingset_id = 1)
+      (source_branch_id IS NULL AND (workingset_id = 1 OR (tracker_class = 10070101 AND share = 0 AND NULLIF(parent_id, 0) IS NULL)))
       OR (source_branch_id IS NOT NULL AND workingset_id <> 1 AND share = 0)),
   CONSTRAINT tracker_v4_workingset_fk FOREIGN KEY (workingset_id) REFERENCES air_inst_workingset (id),
   CONSTRAINT tracker_v4_space_fk FOREIGN KEY (work_space) REFERENCES product_spaces (product_space_id),
@@ -492,6 +492,16 @@ CREATE TABLE IF NOT EXISTS air_ws_tracker (
   PRIMARY KEY ("id"), FOREIGN KEY (id) REFERENCES air_inst_tracker_rev (id)
 );
 
+-- The legacy API accepts both 0 and NULL as the organization root sentinel.
+CREATE OR REPLACE FUNCTION normalize_tracker_parent() RETURNS trigger LANGUAGE plpgsql AS '
+BEGIN
+    NEW.parent_id := NULLIF(NEW.parent_id, 0);
+    RETURN NEW;
+END';
+DROP TRIGGER IF EXISTS tracker_parent_sentinel ON air_inst_tracker_rev;
+CREATE TRIGGER tracker_parent_sentinel BEFORE INSERT OR UPDATE OF parent_id ON air_inst_tracker_rev
+FOR EACH ROW EXECUTE FUNCTION normalize_tracker_parent();
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_owner ON air_inst_tracker_rev (id, workingset_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_binding ON air_inst_tracker_rev (id, work_space, tracker_class, share);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_default ON air_inst_tracker_rev (workingset_id, work_space, tracker_class)
@@ -500,6 +510,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_name ON air_inst_tracker_rev (w
     WHERE name IS NOT NULL AND source_branch_id IS NULL AND delete_flag = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_source ON air_inst_tracker_rev (workingset_id, source_branch_id)
     WHERE source_branch_id IS NOT NULL AND delete_flag = 0;
+INSERT INTO classifications (classification_id, sharing_mode, name) VALUES (10070101, 'UNSHARED', '文件夹') ON CONFLICT (classification_id) DO NOTHING;
+
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_parent ON air_inst_tracker_rev (parent_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_source ON air_inst_tracker_rev (source_branch_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_space ON air_inst_tracker_rev (work_space);
@@ -509,36 +521,55 @@ CREATE INDEX IF NOT EXISTS idx_tracker_version ON air_inst_tracker_rev (version)
 CREATE INDEX IF NOT EXISTS tracker_number_test_index ON air_inst_tracker_rev (number);
 CREATE INDEX IF NOT EXISTS tracker_number_ws_test_index ON air_inst_tracker_rev (number, workingset_id);
 
-CREATE TABLE IF NOT EXISTS space_bindings (
-    working_set_id  BIGINT NOT NULL REFERENCES air_inst_workingset (id),
-    product_space_id BIGINT NOT NULL REFERENCES product_spaces (product_space_id),
-    origin          VARCHAR(24) NOT NULL CHECK (origin IN ('INITIAL_PROJECTION', 'EXPLICIT')),
-    state           VARCHAR(8) NOT NULL CHECK (state = 'ACTIVE'),
-    PRIMARY KEY (working_set_id, product_space_id)
+-- Only one physical binding table. Existing legacy data is never reset at startup.
+DO 'BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE oid IN (to_regclass(''space_bindings''), to_regclass(''tracker_bindings''))
+               AND relkind IN (''r'', ''p'')) THEN
+        RAISE EXCEPTION ''V4 binding tables found. Rebuild the authorized development database before startup.'';
+    END IF;
+END';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_space_id ON air_inst_tracker_rev (id, work_space);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_local_root_folder ON air_inst_tracker_rev (workingset_id, work_space)
+    WHERE tracker_class = 10070101 AND NULLIF(parent_id, 0) IS NULL AND delete_flag = 0;
+
+CREATE TABLE IF NOT EXISTS air_ws_workingset_branch_relation (
+    id BIGINT PRIMARY KEY,
+    workingset_id BIGINT REFERENCES air_inst_workingset (id),
+    work_space BIGINT REFERENCES product_spaces (product_space_id),
+    tracker_id BIGINT,
+    baseline_id BIGINT,
+    lock_version BIGINT,
+    created_by VARCHAR(50),
+    created_time BIGINT,
+    updated_by VARCHAR(50),
+    updated_time BIGINT,
+    product_baseline_id BIGINT,
+    is_show INTEGER DEFAULT 1,
+    FOREIGN KEY (tracker_id, work_space) REFERENCES air_inst_tracker_rev (id, work_space)
 );
 
-CREATE INDEX IF NOT EXISTS idx_space_bindings_space ON space_bindings (product_space_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ws_relation_membership
+    ON air_ws_workingset_branch_relation (workingset_id, tracker_id)
+    WHERE workingset_id IS NOT NULL AND work_space IS NOT NULL AND tracker_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ws_relation_space ON air_ws_workingset_branch_relation (work_space, workingset_id);
+CREATE INDEX IF NOT EXISTS idx_ws_relation_tracker ON air_ws_workingset_branch_relation (tracker_id);
 
-CREATE TABLE IF NOT EXISTS tracker_bindings (
-    working_set_id   BIGINT NOT NULL,
-    tracker_id       BIGINT NOT NULL,
-    product_space_id BIGINT NOT NULL,
-    classification_id BIGINT NOT NULL,
-    sharing_mode     VARCHAR(8) NOT NULL,
-    origin           VARCHAR(24) NOT NULL,
-    PRIMARY KEY (working_set_id, tracker_id),
-    FOREIGN KEY (working_set_id, product_space_id)
-        REFERENCES space_bindings (working_set_id, product_space_id),
-    legacy_share BIGINT GENERATED ALWAYS AS (CASE sharing_mode WHEN 'SHARED' THEN 1 ELSE 0 END) STORED,
-    FOREIGN KEY (tracker_id, product_space_id, classification_id, legacy_share)
-        REFERENCES air_inst_tracker_rev (id, work_space, tracker_class, share),
-    CHECK ((origin = 'SHARED_REUSE' AND sharing_mode = 'SHARED')
-        OR (origin = 'UNSHARED_DERIVATION' AND sharing_mode = 'UNSHARED'))
-);
+CREATE OR REPLACE VIEW tracker_bindings AS
+SELECT r.workingset_id AS working_set_id, r.tracker_id, r.work_space AS product_space_id,
+       t.tracker_class AS classification_id,
+       CASE t.share WHEN 1 THEN 'SHARED' ELSE 'UNSHARED' END::varchar AS sharing_mode,
+       CASE t.share WHEN 1 THEN 'SHARED_REUSE' ELSE 'UNSHARED_DERIVATION' END::varchar AS origin,
+       COALESCE(r.is_show, 1) <> 0 AS shown
+FROM air_ws_workingset_branch_relation r
+JOIN air_inst_tracker_rev t ON t.id = r.tracker_id AND t.work_space = r.work_space AND t.delete_flag = 0
+JOIN air_inst_workingset w ON w.id = r.workingset_id AND w.delete_flag = 0
+JOIN product_spaces p ON p.product_space_id = r.work_space
+WHERE t.share = 1 OR (t.share = 0 AND t.workingset_id = r.workingset_id);
 
-CREATE INDEX IF NOT EXISTS idx_tracker_bindings_tracker ON tracker_bindings (tracker_id);
-
--- T6-F e 裁定：同一（工作集，空间，分类）允许多个 Tracker（建表时已不包含该唯一键）。
+CREATE OR REPLACE VIEW space_bindings AS
+SELECT DISTINCT working_set_id, product_space_id, 'RELATION'::varchar AS origin, 'ACTIVE'::varchar AS state
+FROM tracker_bindings;
 
 -- ---------------------------------------------------------------------------
 -- Requirements and LightTrackerItem index

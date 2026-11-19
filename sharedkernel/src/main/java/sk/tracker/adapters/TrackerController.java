@@ -17,6 +17,13 @@ import sk.workingset.error.WorkingsetResultCode;
 public class TrackerController {
     private final TrackerCommandService commands;
 
+    private static String required(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, field + " must not be blank");
+        }
+        return value;
+    }
+
     @PostMapping("/worksets/{workingSetId}/trackers")
     @ResponseStatus(HttpStatus.CREATED)
     public TrackerView create(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
@@ -37,17 +44,12 @@ public class TrackerController {
         commands.delete(TrackerId.of(trackerId));
     }
 
-    private static String required(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, field + " must not be blank");
-        }
-        return value;
+    public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
+                                       String sharingMode) {
     }
 
-    public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
-                                       String sharingMode) {}
-
-    public record RenameTrackerRequest(String name) {}
+    public record RenameTrackerRequest(String name) {
+    }
 
     public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
                               String classificationId, String sharingMode, boolean isDefault) {

@@ -377,7 +377,8 @@ async function selectTracker(trackerId, { keepFilter = false } = {}) {
 function renderTracker() {
   const tracker = state.selectedTracker;
   const bound = tracker && (state.bindings?.trackers || []).some((item) => item.trackerId === tracker.trackerId);
-  const canCompare = tracker?.sharingMode === 'UNSHARED' && (bound || state.selectedWs === '1');
+  const canCompare = tracker?.sharingMode === 'UNSHARED' && tracker.classificationId !== FOLDER_CLASSIFICATION_ID
+    && (bound || state.selectedWs === '1');
   $('#itemActions').classList.toggle('hidden', !bound && !canCompare);
   $('[data-action="new-requirement"]').classList.toggle('hidden', !bound);
   $('[data-action="compare-tracker"]').classList.toggle('hidden', !canCompare);

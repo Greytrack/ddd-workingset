@@ -20,6 +20,7 @@ const state = {
 };
 
 const TASK_KEY = 'ws-creation-tasks-v2';
+const FOLDER_CLASSIFICATION_ID = '10070101';
 const TERMINAL_STATUSES = new Set(['Succeeded', 'PartiallySucceeded', 'Failed']);
 const STAGES = [
   'CREATE_WORKING_SET',

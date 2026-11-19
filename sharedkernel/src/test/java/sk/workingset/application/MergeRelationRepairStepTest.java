@@ -1,29 +1,13 @@
 package sk.workingset.application;
 
-import sk.workingset.application.command.*;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.junit.jupiter.api.Test;
-
-import sk.workingset.domain.event.ReferenceEndpointEvent;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.application.command.MergeRelationRepairStep;
+import sk.workingset.application.command.RelationEventPublisher;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.*;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.Side;
@@ -35,7 +19,31 @@ import sk.workingset.domain.merge.MergeRound.Entry;
 import sk.workingset.domain.merge.MergeRound.ItemResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 class MergeRelationRepairStepTest {
+    private static Entry entry(String id, String family, String sourceLocalId, String targetLocalId,
+                               MergeDecision decision) {
+        TrackerPair pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("265625955250112"),
+                WorkingSetId.of("259712159403968"), TrackerId.of("261538396602304"));
+        Difference difference = new Difference(CommonId.of(family), pair,
+                side(sourceLocalId, Revision.of(3)), side(targetLocalId, Revision.of(4)), List.of("title"));
+        return new Entry(id, 1, difference, decision, null);
+    }
+
+    private static Side side(String localId, Revision revision) {
+        return new Side(LocalId.of(localId), LocalId.of(localId), revision, revision, "v", 0L,
+                Presence.PRESENT, null, Map.of("title", "value"));
+    }
+
     @Test
     void ignoresKeepTargetRejectedAndDeferredEntries() {
         WorkingSetId targetWorkingSet = WorkingSetId.of("259712159403968");
@@ -57,7 +65,8 @@ class MergeRelationRepairStepTest {
         round = round.complete(Instant.now());
 
         sk.workingset.application.command.MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourceQueryProvider.class),
-                new RelationEventPublisher(event -> { }, entity -> 1L));
+                new RelationEventPublisher(event -> {
+                }, entity -> 1L));
         assertEquals(0, step.changedTargets(round).size());
     }
 
@@ -92,19 +101,5 @@ class MergeRelationRepairStepTest {
         assertEquals(0, result.failed());
         assertEquals(1, published.size());
         assertEquals(1, step.changedTargets(round).size());
-    }
-
-    private static Entry entry(String id, String family, String sourceLocalId, String targetLocalId,
-                               MergeDecision decision) {
-        TrackerPair pair = new TrackerPair(WorkingSet.DEFAULT_ID, TrackerId.of("265625955250112"),
-                WorkingSetId.of("259712159403968"), TrackerId.of("261538396602304"));
-        Difference difference = new Difference(CommonId.of(family), pair,
-                side(sourceLocalId, Revision.of(3)), side(targetLocalId, Revision.of(4)), List.of("title"));
-        return new Entry(id, 1, difference, decision, null);
-    }
-
-    private static Side side(String localId, Revision revision) {
-        return new Side(LocalId.of(localId), LocalId.of(localId), revision, revision, "v", 0L,
-                Presence.PRESENT, null, Map.of("title", "value"));
     }
 }

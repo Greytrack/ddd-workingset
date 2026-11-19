@@ -71,6 +71,8 @@ public interface WorkingSetQueryMapper {
               AND (t.workingset_id = #{id} OR EXISTS (
                 SELECT 1 FROM tracker_bindings b
                 WHERE b.working_set_id = #{id} AND b.tracker_id = t.id))
+              AND NOT EXISTS (SELECT 1 FROM tracker_bindings b
+                WHERE b.working_set_id = #{id} AND b.tracker_id = t.id AND NOT b.shown)
             ORDER BY t.id
             """)
     List<TrackerSummary> findTrackers(@Param("id") long id, @Param("workspace") Long workspace);
@@ -92,7 +94,8 @@ public interface WorkingSetQueryMapper {
     List<SpaceBindingSummary> findSpaceBindings(@Param("id") long id, @Param("workspace") Long workspace);
 
     @Select("""
-            SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode, b.origin
+            SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode, b.origin, b.shown,
+                   (t.tracker_class = 10070101 AND NULLIF(t.parent_id, 0) IS NULL AND t.share = 0) AS root_folder
             FROM tracker_bindings b
             JOIN air_inst_tracker_rev t ON t.id = b.tracker_id AND t.work_space = b.product_space_id
             WHERE b.working_set_id = #{id} AND t.delete_flag = 0 AND t.visible = 1

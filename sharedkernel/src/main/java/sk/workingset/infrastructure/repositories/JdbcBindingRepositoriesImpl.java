@@ -1,13 +1,14 @@
 package sk.workingset.infrastructure.repositories;
 
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.application.FailureReason;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
@@ -25,6 +26,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, ProductSpaceRepository {
     private final JdbcTemplate jdbc;
+    private final IdentifierGenerator ids;
 
     @Override
     public Optional<WorkingSet> findWorkingSet(WorkingSetId id) {
@@ -107,12 +109,12 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
         String auditActor = owner.toString();
         long now = System.currentTimeMillis();
         return jdbc.update("""
-                INSERT INTO air_inst_workingset (id, instance_id, common_id, workingset_id, parent_id,
-                    base_class, class, type, tracker, name, number, color, owner, revision, version_type,
-                    delete_flag, lock_version, created_by, created_time, updated_by, updated_time)
-                VALUES (?, ?, ?, ?, ?, 1008, 100801, 10080101, 584190236948832, ?, ?, ?, ?, 1, 10001,
-                    0, 0, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
-                """, id, id, id, id, workingSet.parentWorkingSetId().numericValue(), workingSet.name(), "WS-" + id,
+                        INSERT INTO air_inst_workingset (id, instance_id, common_id, workingset_id, parent_id,
+                            base_class, class, type, tracker, name, number, color, owner, revision, version_type,
+                            delete_flag, lock_version, created_by, created_time, updated_by, updated_time)
+                        VALUES (?, ?, ?, ?, ?, 1008, 100801, 10080101, 584190236948832, ?, ?, ?, ?, 1, 10001,
+                            0, 0, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
+                        """, id, id, id, id, workingSet.parentWorkingSetId().numericValue(), workingSet.name(), "WS-" + id,
                 workingSet.color(), owner, auditActor, now, auditActor, now) == 1;
     }
 
@@ -154,21 +156,26 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
     }
 
     @Override
-    public void insertSpaceBinding(WorkingSet.SpaceBinding binding) {
+    public void insertTrackerBinding(WorkingSet.TrackerBinding binding) {
+        String actor = RequestThreadHolder.getUserId();
+        long now = System.currentTimeMillis();
         jdbc.update("""
-                        INSERT INTO space_bindings (working_set_id, product_space_id, origin, state) VALUES (?, ?, ?, ?)
-                        """, binding.workingSetId().numericValue(), binding.numericProductSpaceId(), binding.origin().name(),
-                binding.state().name());
+                        INSERT INTO air_ws_workingset_branch_relation (id, workingset_id, work_space, tracker_id,
+                            lock_version, created_by, created_time, updated_by, updated_time, is_show)
+                        VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, 1)
+                        """, ids.nextId(null).longValue(), binding.workingSetId().numericValue(),
+                binding.numericProductSpaceId(), binding.trackerId().numericValue(), actor, now, actor, now);
     }
 
     @Override
-    public void insertTrackerBinding(WorkingSet.TrackerBinding binding) {
+    public void setTrackerBindingShown(WorkingSetId id, TrackerId trackerId, boolean shown) {
         jdbc.update("""
-                        INSERT INTO tracker_bindings
-                            (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """, binding.workingSetId().numericValue(), binding.trackerId().numericValue(), binding.numericProductSpaceId(),
-                binding.numericClassificationId(), binding.sharingMode().name(), binding.origin().name());
+                        UPDATE air_ws_workingset_branch_relation
+                        SET is_show = ?, lock_version = COALESCE(lock_version, 0) + 1, updated_by = ?, updated_time = ?
+                        WHERE workingset_id = ? AND tracker_id = ? AND work_space IS NOT NULL
+                          AND COALESCE(is_show, 1) <> ?
+                        """, shown ? 1 : 0, RequestThreadHolder.getUserId(), System.currentTimeMillis(),
+                id.numericValue(), trackerId.numericValue(), shown ? 1 : 0);
     }
 
     @Override
@@ -198,19 +205,13 @@ public class JdbcBindingRepositoriesImpl implements WorkingSetRepository, Produc
 
     @Override
     public void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId) {
-        jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ? AND tracker_id = ?",
+        jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE workingset_id = ? AND tracker_id = ? AND work_space IS NOT NULL",
                 id.numericValue(), trackerId.numericValue());
     }
 
     @Override
     public void deleteBindingsToTracker(TrackerId trackerId) {
-        jdbc.update("DELETE FROM tracker_bindings WHERE tracker_id = ?", trackerId.numericValue());
-    }
-
-    @Override
-    public void deleteSpaceBinding(WorkingSetId id, String spaceId) {
-        jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
-                id.numericValue(), Long.valueOf(spaceId));
+        jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE tracker_id = ?", trackerId.numericValue());
     }
 
     @Override

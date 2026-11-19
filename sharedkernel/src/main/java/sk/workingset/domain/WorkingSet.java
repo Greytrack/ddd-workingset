@@ -1,11 +1,10 @@
 package sk.workingset.domain;
 
-import sk.tracker.domain.Tracker;
-import sk.tracker.domain.TrackerId;
-
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
 import sk.common.error.DomainException;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.error.WorkingsetResultCode;
@@ -34,6 +33,7 @@ public final class WorkingSet {
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this(id, parentWorkingSetId, null, spaces, trackers);
     }
+
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this(id, parentWorkingSetId, name, DEFAULT_COLOR, spaces, trackers);
@@ -190,7 +190,7 @@ public final class WorkingSet {
         return binding;
     }
 
-    public enum SpaceOrigin {INITIAL_PROJECTION, EXPLICIT}
+    public enum SpaceOrigin {INITIAL_PROJECTION, EXPLICIT, RELATION}
 
     public enum SpaceState {ACTIVE}
 

@@ -1,9 +1,9 @@
 package sk.workingset.application.query.provider;
 
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
 
 import java.util.List;
 

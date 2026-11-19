@@ -96,12 +96,13 @@ class TrackerDefaultAcceptanceTest {
         BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
         sk.workingset.adapters.WorkingSetController.SpaceBindingView projectedSpace = bindings.spaces().stream()
                 .filter(binding -> spaceId.equals(binding.productSpaceId())).findFirst().orElseThrow();
-        assertEquals("INITIAL_PROJECTION", projectedSpace.origin());
+        assertEquals("RELATION", projectedSpace.origin());
         assertEquals(trackers.stream().map(TrackerView::trackerId).sorted().toList(),
                 bindings.trackers().stream().filter(binding -> spaceId.equals(binding.productSpaceId()))
                         .map(binding -> binding.trackerId()).sorted().toList());
 
-        String trackerId = trackers.getFirst().trackerId();
+        String trackerId = trackers.stream().filter(tracker -> "258519859202016".equals(tracker.classificationId()))
+                .findFirst().orElseThrow().trackerId();
         org.springframework.http.ResponseEntity<RequirementView> item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
@@ -110,6 +111,39 @@ class TrackerDefaultAcceptanceTest {
                     "/api/requirements?trackerId=" + trackerId + "&workingSetId=1", RequirementView[].class);
             assertTrue(Arrays.stream(items).anyMatch(indexed -> item.getBody().localId().equals(indexed.localId())));
         });
+    }
+
+    @Test
+    void keepsSpaceMountedWithOnlyItsLocalFolderEvenWhenHidden() {
+        String space = createSpace("1");
+        FixtureIds.insertWorkingSet(jdbc, "1", child);
+        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/spaces/" + space,
+                null, Map.class).getStatusCode());
+        long folder = jdbc.queryForObject("""
+                SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
+                JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
+                WHERE r.workingset_id = ? AND r.work_space = ? AND t.tracker_class = 10070101
+                  AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NULL AND t.share = 0
+                  AND NULLIF(t.parent_id, 0) IS NULL AND t.name = '文件夹'
+                """, Long.class, Long.valueOf(child), Long.valueOf(space));
+        RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
+                .requestFactory(new JdkClientHttpRequestFactory()).build();
+        String path = "/api/worksets/" + child;
+        String visibility = path + "/trackers/" + folder + "/visibility";
+        assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", false))
+                .retrieve().toBodilessEntity().getStatusCode());
+        assertEquals(0, rest.getForObject(path + "/trackers", TrackerView[].class).length);
+        BindingsView hidden = rest.getForObject(path + "/bindings", BindingsView.class);
+        assertEquals(1, hidden.spaces().size());
+        assertTrue(hidden.trackers().getFirst().rootFolder());
+        assertFalse(hidden.trackers().getFirst().shown());
+        assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
+                .retrieve().toBodilessEntity().getStatusCode());
+        assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
+        rest.delete(path + "/spaces/" + space);
+        assertTrue(rest.getForObject(path + "/bindings", BindingsView.class).spaces().isEmpty());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
+                Integer.class, folder));
     }
 
     @Test

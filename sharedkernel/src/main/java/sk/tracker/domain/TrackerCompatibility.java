@@ -2,7 +2,9 @@ package sk.tracker.domain;
 
 import org.jmolecules.ddd.annotation.Entity;
 
-/** Identity and classification anchor of the legacy row owned by Tracker. */
+/**
+ * Identity and classification anchor of the legacy row owned by Tracker.
+ */
 @Entity
 public final class TrackerCompatibility {
     private final TrackerId trackerId;
@@ -13,6 +15,11 @@ public final class TrackerCompatibility {
         this.originalClassificationId = originalClassificationId;
     }
 
-    public TrackerId trackerId() { return trackerId; }
-    public long originalClassificationId() { return originalClassificationId; }
+    public TrackerId trackerId() {
+        return trackerId;
+    }
+
+    public long originalClassificationId() {
+        return originalClassificationId;
+    }
 }

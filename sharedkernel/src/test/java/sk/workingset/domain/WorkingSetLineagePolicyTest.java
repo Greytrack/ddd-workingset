@@ -1,29 +1,26 @@
 package sk.workingset.domain;
 
+import org.junit.jupiter.api.Test;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.WorkingSet.*;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet.SpaceBinding;
-import sk.workingset.domain.WorkingSet.SpaceOrigin;
-import sk.workingset.domain.WorkingSet.SpaceState;
-import sk.workingset.domain.WorkingSet.TrackerBinding;
-import sk.workingset.domain.WorkingSet.TrackerOrigin;
+import static org.junit.jupiter.api.Assertions.*;
 
 class WorkingSetLineagePolicyTest {
     private final WorkingSet root = new WorkingSet(WorkingSet.DEFAULT_ID, null, List.of(), List.of());
     private final WorkingSetId childId = WorkingSetId.of("259712159403968");
     private final WorkingSetId grandchildId = WorkingSetId.of("265077320994752");
+
+    private static void assertNotAdjacent(WorkingSet source, WorkingSet target) {
+        BindingFailure failure = assertThrows(BindingFailure.class,
+                () -> WorkingSetLineagePolicy.comparableBindings(source, target));
+        assertEquals(Reason.WorkingSetsNotAdjacent, failure.reason());
+    }
 
     @Test
     void allowsDirectParentChildInEitherDirectionAndExcludesSharedTrackers() {
@@ -64,11 +61,5 @@ class WorkingSetLineagePolicyTest {
         assertNotAdjacent(root, grandchild);
         assertNotAdjacent(grandchild, root);
         assertNotAdjacent(child, child);
-    }
-
-    private static void assertNotAdjacent(WorkingSet source, WorkingSet target) {
-        BindingFailure failure = assertThrows(BindingFailure.class,
-                () -> WorkingSetLineagePolicy.comparableBindings(source, target));
-        assertEquals(Reason.WorkingSetsNotAdjacent, failure.reason());
     }
 }

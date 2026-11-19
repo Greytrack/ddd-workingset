@@ -296,6 +296,7 @@ async function loadCreateScope(parentId) {
     const trackerById = new Map((trackers || []).map((tracker) => [tracker.trackerId, tracker]));
     const bySpace = new Map();
     (bindings.trackers || []).forEach((binding) => {
+      if (binding.shown === false || binding.classificationId === FOLDER_CLASSIFICATION_ID) return;
       if (!bySpace.has(binding.productSpaceId)) bySpace.set(binding.productSpaceId, []);
       const tracker = trackerById.get(binding.trackerId) || {
         trackerId: binding.trackerId,
@@ -488,7 +489,14 @@ async function openExtendWorkset() {
       .map((tracker) => tracker.sourceId));
     const groups = new Map();
     const spaceNames = new Map(parentBindings.spaces.map((space) => [space.productSpaceId, space.name]));
+    const mounted = new Set(targetBindings.spaces.map((space) => space.productSpaceId));
+    for (const root of parentBindings.trackers.filter((binding) => binding.rootFolder)) {
+      if (!mounted.has(root.productSpaceId)) {
+        groups.set(root.productSpaceId, [{ ...root, name: '仅挂载产品空间', mountOnly: true }]);
+      }
+    }
     for (const tracker of parentTrackers) {
+      if (tracker.classificationId === FOLDER_CLASSIFICATION_ID) continue;
       if (parentId !== '1' && !parentBound.has(tracker.trackerId)) continue;
       const space = tracker.productSpaceId;
       if (!groups.has(space)) groups.set(space, []);
@@ -502,7 +510,7 @@ async function openExtendWorkset() {
           return `<label class="scope-tracker${included ? ' already-included' : ''}">
             <input type="checkbox" name="trackerIds" value="${escapeHtml(tracker.trackerId)}"${included ? ' disabled' : ''}>
             <span class="scope-tracker-name">${escapeHtml(tracker.name || shortId(tracker.trackerId))}<span class="check-id">${escapeHtml(tracker.trackerId)}</span></span>
-            <span class="badge ${shared ? 'shared' : 'unshared'}">${shared ? '共享' : '非共享'}</span>
+            <span class="badge ${shared ? 'shared' : 'unshared'}">${tracker.mountOnly ? '自动创建根文件夹' : shared ? '共享' : '非共享'}</span>
             ${included ? '<span class="badge">已纳入</span>' : ''}
           </label>`;
         }).join('')}</fieldset>`).join('')}</div>` : '<div class="empty small">父工作集没有可展示的跟踪分类。</div>';
@@ -564,7 +572,8 @@ async function openTrackerCreate() {
     form.querySelector('[type="submit"]').disabled = !mode;
   });
   try {
-    const classifications = await api('/api/worksets/metadata/classifications');
+    const classifications = (await api('/api/worksets/metadata/classifications'))
+      .filter((classification) => classification.classificationId !== FOLDER_CLASSIFICATION_ID);
     if (!form.isConnected) return;
     form.classification.replaceChildren(new Option(classifications.length ? '选择所属分类' : '暂无可用分类', ''));
     for (const classification of classifications) {

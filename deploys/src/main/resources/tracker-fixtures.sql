@@ -67,3 +67,34 @@ END';
 DROP TRIGGER IF EXISTS tracker_fixture_write ON trackers;
 CREATE TRIGGER tracker_fixture_write INSTEAD OF INSERT OR UPDATE OR DELETE ON trackers
 FOR EACH ROW EXECUTE FUNCTION write_tracker_fixture();
+
+CREATE SEQUENCE IF NOT EXISTS tracker_binding_fixture_id;
+
+CREATE OR REPLACE FUNCTION write_tracker_binding_fixture() RETURNS trigger LANGUAGE plpgsql AS '
+BEGIN
+    IF TG_OP = ''DELETE'' THEN
+        DELETE FROM air_ws_workingset_branch_relation
+        WHERE workingset_id = OLD.working_set_id AND tracker_id = OLD.tracker_id;
+        RETURN OLD;
+    END IF;
+    INSERT INTO air_ws_workingset_branch_relation
+        (id, workingset_id, work_space, tracker_id, is_show, lock_version, created_by, updated_by)
+    VALUES (nextval(''tracker_binding_fixture_id''), NEW.working_set_id, NEW.product_space_id, NEW.tracker_id,
+            CASE WHEN COALESCE(NEW.shown, TRUE) THEN 1 ELSE 0 END, 0, ''fixture'', ''fixture'');
+    RETURN NEW;
+END';
+
+DROP TRIGGER IF EXISTS tracker_binding_fixture_write ON tracker_bindings;
+CREATE TRIGGER tracker_binding_fixture_write INSTEAD OF INSERT OR DELETE ON tracker_bindings
+FOR EACH ROW EXECUTE FUNCTION write_tracker_binding_fixture();
+
+-- Older fixtures delete spaces after deleting all corresponding Tracker relations.
+-- Reject attempts to use fixture cleanup to bypass that ordering.
+CREATE OR REPLACE FUNCTION delete_space_binding_fixture() RETURNS trigger LANGUAGE plpgsql AS '
+BEGIN
+    RAISE EXCEPTION ''Delete Tracker relations before removing the fixture space'';
+END';
+
+DROP TRIGGER IF EXISTS space_binding_fixture_delete ON space_bindings;
+CREATE TRIGGER space_binding_fixture_delete INSTEAD OF DELETE ON space_bindings
+FOR EACH ROW EXECUTE FUNCTION delete_space_binding_fixture();

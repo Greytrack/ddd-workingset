@@ -2,7 +2,10 @@ package sk.workingset.domain.merge;
 
 import org.jmolecules.ddd.annotation.ValueObject;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.WorkingSetId;
 
 import java.time.Instant;
 import java.util.List;

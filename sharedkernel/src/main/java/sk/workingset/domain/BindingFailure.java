@@ -11,6 +11,7 @@ import java.util.Map;
 public final class BindingFailure extends DomainException {
     private final Reason reason;
     private final Map<String, Object> context;
+
     public BindingFailure(Reason reason, String detail) {
         this(reason, detail, Map.of());
     }

@@ -1,8 +1,8 @@
 package sk.workingset.application.port;
 
 
-import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.LocalId;
 
 /**
  * 当前业务 Item 的身份与存在性，由组合根接入相应业务 BC。

@@ -1,44 +1,34 @@
 package sk.workingset.application;
 
-import sk.workingset.application.command.*;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import org.junit.jupiter.api.Test;
-
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
+import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.command.RelationEventPublisher;
+import sk.workingset.application.command.RelationEventStep;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
+import sk.workingset.domain.*;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.WorkingSet.TrackerBinding;
+import sk.workingset.domain.WorkingSet.TrackerOrigin;
 import sk.workingset.domain.event.AssociationCreationRequestedEvent;
 import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
 import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
-import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.Classification;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.Tracker;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.WorkingSet.TrackerBinding;
-import sk.workingset.domain.WorkingSet.TrackerOrigin;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class RelationEventStepTest {
     private final WorkingSetId target = WorkingSetId.of("259712159403968");
@@ -110,7 +100,8 @@ class RelationEventStepTest {
         when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
 
         sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, items, source,
-                new RelationEventPublisher(event -> { }, entity -> 1L));
+                new RelationEventPublisher(event -> {
+                }, entity -> 1L));
 
         sk.workingset.application.command.RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 

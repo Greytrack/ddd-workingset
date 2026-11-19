@@ -7,13 +7,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeCheckpoint.Direction;
-import sk.workingset.domain.merge.MergeCommitReceipt;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.merge.MergeRound;
 

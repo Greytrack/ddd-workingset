@@ -3,7 +3,6 @@ package sk.workingset.domain.repository;
 import org.jmolecules.ddd.annotation.Repository;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.WorkingSetId;
 
 import java.util.List;
 import java.util.Optional;

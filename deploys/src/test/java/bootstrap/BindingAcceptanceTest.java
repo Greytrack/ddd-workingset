@@ -103,7 +103,9 @@ class BindingAcceptanceTest {
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
         assertTrue(bindings.trackers().stream().anyMatch(binding -> binding.trackerId().equals(shared)));
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?", Integer.class, ws));
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT count(*) FROM trackers WHERE working_set_id = ? AND classification_id <> 10070101
+                """, Integer.class, ws));
     }
 
     @Test
@@ -123,7 +125,8 @@ class BindingAcceptanceTest {
     }
 
     private List<String> trackerIds(String path) {
-        return List.of(rest.getForObject(path, TrackerView[].class)).stream().map(TrackerView::trackerId).toList();
+        return List.of(rest.getForObject(path, TrackerView[].class)).stream()
+                .filter(tracker -> !"10070101".equals(tracker.classificationId())).map(TrackerView::trackerId).toList();
     }
 
     @Test
@@ -153,6 +156,7 @@ class BindingAcceptanceTest {
 
     private Map<String, Boolean> trackerDefaults(String id) {
         return List.of(rest.getForObject(path(id) + "/trackers", TrackerView[].class)).stream()
+                .filter(tracker -> !"10070101".equals(tracker.classificationId()))
                 .collect(java.util.stream.Collectors.toMap(TrackerView::trackerId, TrackerView::isDefault));
     }
 
@@ -186,7 +190,8 @@ class BindingAcceptanceTest {
 
         assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(shared, rest.getForObject(path(grandchild) + "/bindings", BindingsView.class)
-                .trackers().getFirst().trackerId());
+                .trackers().stream().filter(binding -> "SHARED".equals(binding.sharingMode()))
+                .findFirst().orElseThrow().trackerId());
         String laterChild = fixtureId("LATER-" + suffix);
         createChild(ws, laterChild);
         bindSpace(laterChild);
@@ -205,7 +210,7 @@ class BindingAcceptanceTest {
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
-        assertTrue(bindings.trackers().isEmpty());
+        assertTrue(bindings.trackers().stream().noneMatch(binding -> "SHARED".equals(binding.sharingMode())));
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasItems");
     }
@@ -281,7 +286,7 @@ class BindingAcceptanceTest {
         ResponseEntity<Map> blocked = delete(path(ws));
         assertFailure(blocked, HttpStatus.CONFLICT, "MemberCannotBeUnbound");
         assertEquals(Map.of(target.trackerId(), "TrackerHasItems"), blocked.getBody().get("members"));
-        assertEquals(2, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
+        assertEquals(3, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
 
         jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId().value());
@@ -305,7 +310,7 @@ class BindingAcceptanceTest {
 
         assertEquals(ws, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
-        assertEquals(shared, bindings.trackers().getFirst().trackerId());
+        assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
 
         assertEquals(HttpStatus.NO_CONTENT, delete(path(grandchild)).getStatusCode());

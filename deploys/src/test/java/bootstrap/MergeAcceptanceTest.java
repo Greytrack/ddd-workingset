@@ -522,8 +522,7 @@ class MergeAcceptanceTest {
         String grandchild = id("grandchild");
         createChild(child, grandchild);
         assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(grandchild) + "/spaces/" + space, null, Void.class));
-        String parentItem = rest.getForObject(ws(child) + "/bindings",
-                WorkingSetController.BindingsView.class).trackers().getFirst().trackerId();
+        String parentItem = childTracker;
         String parentLocal = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE tracker_id = ?",
                 String.class, parentItem);
         MergeAcceptanceTest.Derived grand = derive(grandchild, childTracker, parentLocal, anchor);

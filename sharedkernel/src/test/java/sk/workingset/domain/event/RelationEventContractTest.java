@@ -1,18 +1,15 @@
 package sk.workingset.domain.event;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.time.Instant;
-
 import org.junit.jupiter.api.Test;
-
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSetId;
+
+import java.time.Instant;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class RelationEventContractTest {
 

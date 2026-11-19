@@ -1,7 +1,10 @@
 package sk.workingset.domain.event;
 
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
 
 import java.util.Objects;
 

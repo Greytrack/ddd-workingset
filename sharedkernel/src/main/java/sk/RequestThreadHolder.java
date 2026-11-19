@@ -2,8 +2,6 @@ package sk;
 
 import com.alibaba.ttl.TransmittableThreadLocal;
 
-import java.util.*;
-
 /**
  * 请求线程持有者,用于用户相关信息传递（用户信息、语言、租户），其他无关变量禁止在此类中存储！！！
  *
@@ -48,17 +46,17 @@ public class RequestThreadHolder {
     }
 
     /**
-     * 设置工作空间ID
-     */
-    public static void setWorkspace(Long workspaceId) {
-        WORKSPACE.set(workspaceId);
-    }
-
-    /**
      * 获取工作空间ID
      */
     public static Long getWorkspace() {
         return WORKSPACE.get();
+    }
+
+    /**
+     * 设置工作空间ID
+     */
+    public static void setWorkspace(Long workspaceId) {
+        WORKSPACE.set(workspaceId);
     }
 
     /**
@@ -92,7 +90,6 @@ public class RequestThreadHolder {
     public static Long getLongUserId() {
         return 419436436619264L;
     }
-
 
 
 }

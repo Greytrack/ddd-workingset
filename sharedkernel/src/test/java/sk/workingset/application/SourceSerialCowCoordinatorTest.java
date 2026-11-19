@@ -1,20 +1,20 @@
 package sk.workingset.application;
 
-import sk.workingset.application.command.*;
-
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import sk.workingset.application.command.SourceSerialCowCoordinator;
+import sk.workingset.domain.LocalId;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
-import sk.workingset.domain.LocalId;
+
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(OutputCaptureExtension.class)
 class SourceSerialCowCoordinatorTest {
@@ -73,9 +73,12 @@ class SourceSerialCowCoordinatorTest {
         sk.workingset.application.command.SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator(Duration.ofMillis(100));
         LocalId source = LocalId.of("263956507357120");
         IllegalStateException failure = new IllegalStateException("target failed");
-        coordinator.runSerial(source, 1, () -> {});
+        coordinator.runSerial(source, 1, () -> {
+        });
         assertSame(failure, assertThrows(IllegalStateException.class,
-                () -> coordinator.runSerial(source, 3, () -> { throw failure; })));
+                () -> coordinator.runSerial(source, 3, () -> {
+                    throw failure;
+                })));
         assertTrue(output.getAll().contains("ORDER_GAP sourceLocalId=" + source.value() + " expected=2 actual=3"));
         java.util.ArrayList<Integer> visited = new java.util.ArrayList<Integer>();
         coordinator.runSerial(source, 4, () -> visited.add(4));

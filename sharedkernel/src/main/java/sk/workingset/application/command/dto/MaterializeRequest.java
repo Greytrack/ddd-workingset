@@ -1,7 +1,10 @@
 package sk.workingset.application.command.dto;
 
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.SnapshotRefEvent;
 
 /**

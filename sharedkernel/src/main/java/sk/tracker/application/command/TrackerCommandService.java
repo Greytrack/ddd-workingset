@@ -10,13 +10,9 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.command.WorkingSetDeletionService;
-import sk.workingset.domain.BindingFailure;
+import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.ProductSpaceRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
@@ -34,6 +30,9 @@ public class TrackerCommandService {
                           SharingMode sharingMode) {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw new BindingFailure(Reason.WorkingSetNotWritable, "只允许在默认工作集新建跟踪分类");
+        }
+        if (Long.parseLong(classificationId) == Tracker.FOLDER_CLASSIFICATION_ID) {
+            throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "根文件夹随产品空间创建");
         }
         WorkingSet workingSet = workingSets.lockWorkingSet(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));

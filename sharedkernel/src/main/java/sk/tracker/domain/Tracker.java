@@ -2,12 +2,8 @@ package sk.tracker.domain;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.Classification;
+import sk.workingset.domain.*;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.ProductSpace;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;
@@ -22,9 +18,9 @@ import java.util.Objects;
  */
 @AggregateRoot
 public final class Tracker {
+    public static final long FOLDER_CLASSIFICATION_ID = 10070101L;
     private final TrackerId trackerId;
     private final TrackerId commonId;
-    private String name;
     private final TrackerId sourceId;
     private final WorkingSetId workingSetId;
     private final Long numericProductSpaceId;
@@ -33,6 +29,7 @@ public final class Tracker {
     private final TrackerId parentId;
     private final boolean isDefault;
     private final TrackerCompatibility compatibility;
+    private String name;
 
     public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
                    String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId,
@@ -59,8 +56,8 @@ public final class Tracker {
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
-                   WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
-                   SharingMode sharingMode, TrackerId parentId, boolean isDefault) {
+                    WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                    SharingMode sharingMode, TrackerId parentId, boolean isDefault) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.name = name;
@@ -75,7 +72,7 @@ public final class Tracker {
         if (sourceId == null && !trackerId.equals(commonId)) {
             throw new IllegalArgumentException("An original Tracker must use its own ID as common ID");
         }
-        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId)) {
+        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId) && !isRootFolder()) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "original Tracker must belong to the default Working Set");
         }
         if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
@@ -90,6 +87,11 @@ public final class Tracker {
                                        WorkingSetId owner, Long productSpace, Long classification,
                                        SharingMode sharing, TrackerId parent, boolean isDefault) {
         return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault);
+    }
+
+    public static Tracker rootFolder(TrackerId id, WorkingSetId owner, ProductSpace space) {
+        return new Tracker(id, id, "文件夹", null, owner, space.numericId(), FOLDER_CLASSIFICATION_ID,
+                SharingMode.UNSHARED, null, true);
     }
 
     /**
@@ -127,17 +129,65 @@ public final class Tracker {
                 source.numericProductSpaceId(), source.numericClassificationId(), source.sharingMode(), null, isDefault);
     }
 
-    public TrackerId trackerId() { return trackerId; }
-    public TrackerId commonId() { return commonId; }
-    public String name() { return name; }
-    public TrackerId sourceId() { return sourceId; }
-    public WorkingSetId workingSetId() { return workingSetId; }
-    public Long numericProductSpaceId() { return numericProductSpaceId; }
-    public Long numericClassificationId() { return numericClassificationId; }
-    public SharingMode sharingMode() { return sharingMode; }
-    public TrackerId parentId() { return parentId; }
-    public boolean isDefault() { return isDefault; }
-    public TrackerCompatibility compatibility() { return compatibility; }
+    private static String normalizeName(String name) {
+        String normalized = name == null ? "" : name.strip();
+        if (normalized.isEmpty() || normalized.codePointCount(0, normalized.length()) > 255) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
+        }
+        return normalized;
+    }
+
+    public boolean isRootFolder() {
+        return isFolder() && parentId == null && sharingMode == SharingMode.UNSHARED;
+    }
+
+    public boolean isFolder() {
+        return numericClassificationId == FOLDER_CLASSIFICATION_ID;
+    }
+
+    public TrackerId trackerId() {
+        return trackerId;
+    }
+
+    public TrackerId commonId() {
+        return commonId;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public TrackerId sourceId() {
+        return sourceId;
+    }
+
+    public WorkingSetId workingSetId() {
+        return workingSetId;
+    }
+
+    public Long numericProductSpaceId() {
+        return numericProductSpaceId;
+    }
+
+    public Long numericClassificationId() {
+        return numericClassificationId;
+    }
+
+    public SharingMode sharingMode() {
+        return sharingMode;
+    }
+
+    public TrackerId parentId() {
+        return parentId;
+    }
+
+    public boolean isDefault() {
+        return isDefault;
+    }
+
+    public TrackerCompatibility compatibility() {
+        return compatibility;
+    }
 
     public boolean rename(String newName) {
         String normalized = normalizeName(newName);
@@ -146,14 +196,6 @@ public final class Tracker {
         }
         name = normalized;
         return true;
-    }
-
-    private static String normalizeName(String name) {
-        String normalized = name == null ? "" : name.strip();
-        if (normalized.isEmpty() || normalized.codePointCount(0, normalized.length()) > 255) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
-        }
-        return normalized;
     }
 
     public String productSpaceId() {

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.domain.LightTrackerItem;
@@ -14,7 +15,6 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.MergeTargetEvent;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.tracker.domain.repository.TrackerRepository;
 
 /**
  * SK 内部的 LTI 生命周期处理服务。

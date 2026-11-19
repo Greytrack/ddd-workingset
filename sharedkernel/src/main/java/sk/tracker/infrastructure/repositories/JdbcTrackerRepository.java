@@ -36,6 +36,25 @@ public class JdbcTrackerRepository implements TrackerRepository {
     private final JdbcTemplate jdbc;
     private final TrackerNumberGenerator numbers;
 
+    private static void requireOne(int affected, long id) {
+        if (affected != 1) {
+            throw new IncorrectUpdateSemanticsDataAccessException("Tracker rows are inconsistent for ID " + id);
+        }
+    }
+
+    private static TrackerId optionalId(ResultSet rs, String column) throws SQLException {
+        Long id = rs.getObject(column, Long.class);
+        return id == null ? null : TrackerId.of(id);
+    }
+
+    private static Long value(TrackerId id) {
+        return id == null ? null : id.numericValue();
+    }
+
+    private static long currentActor() {
+        return Objects.requireNonNull(RequestThreadHolder.getLongUserId(), "Tracker write requires a current user");
+    }
+
     @Override
     public Optional<Tracker> findTracker(TrackerId id) {
         return load(id, false);
@@ -48,31 +67,44 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     private Optional<Tracker> load(TrackerId id, boolean lock) {
         return jdbc.query("SELECT " + COLUMNS + """
-                FROM air_inst_tracker_rev t WHERE t.id = ? AND t.delete_flag = 0
-                AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
-                """ + (lock ? " FOR UPDATE" : ""), MAPPER, id.numericValue(), RequestThreadHolder.getWorkspace())
+                        FROM air_inst_tracker_rev t WHERE t.id = ? AND t.delete_flag = 0
+                        AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
+                        """ + (lock ? " FOR UPDATE" : ""), MAPPER, id.numericValue(), RequestThreadHolder.getWorkspace())
                 .stream().findFirst();
     }
 
     @Override
     public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
         return jdbc.query("SELECT " + COLUMNS + """
-                FROM air_inst_tracker_rev t
-                WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0
-                  AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
-                """, MAPPER, target.numericValue(), source.numericValue(), RequestThreadHolder.getWorkspace())
+                        FROM air_inst_tracker_rev t
+                        WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0
+                          AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
+                        """, MAPPER, target.numericValue(), source.numericValue(), RequestThreadHolder.getWorkspace())
+                .stream().findFirst();
+    }
+
+    @Override
+    public Optional<Tracker> findRootFolder(WorkingSetId owner, String spaceId) {
+        return jdbc.query("SELECT " + COLUMNS + """
+                        FROM air_inst_tracker_rev t
+                        WHERE t.workingset_id = ? AND t.work_space = ? AND t.tracker_class = ?
+                          AND NULLIF(t.parent_id, 0) IS NULL AND t.share = 0 AND t.delete_flag = 0
+                        """, MAPPER, owner.numericValue(), Long.valueOf(spaceId), Tracker.FOLDER_CLASSIFICATION_ID)
                 .stream().findFirst();
     }
 
     @Override
     public List<Tracker> findTrackers(WorkingSetId workingSetId) {
         return jdbc.query("SELECT " + COLUMNS + """
-                FROM air_inst_tracker_rev t
-                WHERE t.delete_flag = 0 AND t.visible = 1
-                  AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space) AND (t.workingset_id = ? OR EXISTS (
-                    SELECT 1 FROM tracker_bindings b WHERE b.working_set_id = ? AND b.tracker_id = t.id))
-                ORDER BY t.id
-                """, MAPPER, RequestThreadHolder.getWorkspace(), workingSetId.numericValue(), workingSetId.numericValue());
+                        FROM air_inst_tracker_rev t
+                        WHERE t.delete_flag = 0 AND t.visible = 1
+                          AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space) AND (t.workingset_id = ? OR EXISTS (
+                            SELECT 1 FROM tracker_bindings b WHERE b.working_set_id = ? AND b.tracker_id = t.id))
+                          AND NOT EXISTS (SELECT 1 FROM tracker_bindings b
+                              WHERE b.working_set_id = ? AND b.tracker_id = t.id AND NOT b.shown)
+                        ORDER BY t.id
+                        """, MAPPER, RequestThreadHolder.getWorkspace(), workingSetId.numericValue(),
+                workingSetId.numericValue(), workingSetId.numericValue());
     }
 
     @Override
@@ -98,22 +130,22 @@ public class JdbcTrackerRepository implements TrackerRepository {
         int shared = tracker.sharingMode() == SharingMode.SHARED ? 1 : 0;
         int defaultFlag = tracker.isDefault() ? 1 : 0;
         jdbc.update("""
-                INSERT INTO air_inst_tracker_rev (id, instance_id, common_id, workingset_id, work_space,
-                    base_class, class, type, tracker_class, tracker, default_layout, instance_type,
-                    name, number, owner, share, revision_id, revision, version_type,
-                    parent_id, source_branch_id, is_default, visible, locked, delete_flag, lock_version,
-                    created_by, created_time, updated_by, updated_time)
-                VALUES (?, ?, ?, ?, ?, 1009, 100901, 10090101, ?, 584578917040480, 584532998805760, 0,
-                    ?, ?, ?, ?, NULL, 1, 10001, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
-                """, id, id, tracker.commonId().numericValue(), workset, tracker.numericProductSpaceId(),
+                        INSERT INTO air_inst_tracker_rev (id, instance_id, common_id, workingset_id, work_space,
+                            base_class, class, type, tracker_class, tracker, default_layout, instance_type,
+                            name, number, owner, share, revision_id, revision, version_type,
+                            parent_id, source_branch_id, is_default, visible, locked, delete_flag, lock_version,
+                            created_by, created_time, updated_by, updated_time)
+                        VALUES (?, ?, ?, ?, ?, 1009, 100901, 10090101, ?, 584578917040480, 584532998805760, 0,
+                            ?, ?, ?, ?, NULL, 1, 10001, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
+                        """, id, id, tracker.commonId().numericValue(), workset, tracker.numericProductSpaceId(),
                 tracker.numericClassificationId(), tracker.name(), number, actor, shared, parent, source,
                 defaultFlag, visible, auditActor, now, auditActor, now);
         jdbc.update("""
-                INSERT INTO air_ws_tracker (id, workingset_id, sub_class_id, name, number,
-                    parent_id, source_branch_id, shared, is_default, visible, locked, delete_flag, lock_version,
-                    created_by, created_time, updated_by, updated_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
-                """, tracker.compatibility().trackerId().numericValue(), workset,
+                        INSERT INTO air_ws_tracker (id, workingset_id, sub_class_id, name, number,
+                            parent_id, source_branch_id, shared, is_default, visible, locked, delete_flag, lock_version,
+                            created_by, created_time, updated_by, updated_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
+                        """, tracker.compatibility().trackerId().numericValue(), workset,
                 tracker.compatibility().originalClassificationId(), tracker.name(), number,
                 parent, source, shared, defaultFlag, visible, auditActor, now, auditActor, now);
     }
@@ -123,10 +155,10 @@ public class JdbcTrackerRepository implements TrackerRepository {
     public void updateName(Tracker tracker) {
         long id = tracker.trackerId().numericValue();
         requireOne(jdbc.update("""
-                UPDATE air_inst_tracker_rev
-                SET name = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
-                WHERE id = ? AND work_space = ? AND visible = 1 AND delete_flag = 0
-                """, tracker.name(), Long.toString(currentActor()), System.currentTimeMillis(),
+                        UPDATE air_inst_tracker_rev
+                        SET name = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
+                        WHERE id = ? AND work_space = ? AND visible = 1 AND delete_flag = 0
+                        """, tracker.name(), Long.toString(currentActor()), System.currentTimeMillis(),
                 id, tracker.numericProductSpaceId()), id);
         requireOne(jdbc.update("""
                 UPDATE air_ws_tracker c
@@ -148,13 +180,13 @@ public class JdbcTrackerRepository implements TrackerRepository {
     public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor) {
         for (TrackerId parent : parentTrackerIds) {
             List<Long> ids = jdbc.queryForList("""
-                    UPDATE air_inst_tracker_rev t
-                    SET visible = 1, lock_version = lock_version + 1, updated_by = ?, updated_time = ?
-                    WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0 AND t.visible = 0
-                      AND EXISTS (SELECT 1 FROM tracker_bindings b
-                                  WHERE b.working_set_id = t.workingset_id AND b.tracker_id = t.id)
-                    RETURNING t.id
-                    """, Long.class, Long.toString(actor), System.currentTimeMillis(),
+                            UPDATE air_inst_tracker_rev t
+                            SET visible = 1, lock_version = lock_version + 1, updated_by = ?, updated_time = ?
+                            WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0 AND t.visible = 0
+                              AND EXISTS (SELECT 1 FROM tracker_bindings b
+                                          WHERE b.working_set_id = t.workingset_id AND b.tracker_id = t.id)
+                            RETURNING t.id
+                            """, Long.class, Long.toString(actor), System.currentTimeMillis(),
                     target.numericValue(), parent.numericValue());
             for (long id : ids) {
                 requireOne(jdbc.update("""
@@ -203,24 +235,5 @@ public class JdbcTrackerRepository implements TrackerRepository {
         }
         requireOne(jdbc.update("DELETE FROM air_ws_tracker WHERE id = ?", id.numericValue()), id.numericValue());
         requireOne(jdbc.update("DELETE FROM air_inst_tracker_rev WHERE id = ?", id.numericValue()), id.numericValue());
-    }
-
-    private static void requireOne(int affected, long id) {
-        if (affected != 1) {
-            throw new IncorrectUpdateSemanticsDataAccessException("Tracker rows are inconsistent for ID " + id);
-        }
-    }
-
-    private static TrackerId optionalId(ResultSet rs, String column) throws SQLException {
-        Long id = rs.getObject(column, Long.class);
-        return id == null ? null : TrackerId.of(id);
-    }
-
-    private static Long value(TrackerId id) {
-        return id == null ? null : id.numericValue();
-    }
-
-    private static long currentActor() {
-        return Objects.requireNonNull(RequestThreadHolder.getLongUserId(), "Tracker write requires a current user");
     }
 }

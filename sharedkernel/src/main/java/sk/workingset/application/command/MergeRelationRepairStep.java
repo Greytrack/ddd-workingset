@@ -2,8 +2,6 @@ package sk.workingset.application.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.LocalId;
@@ -24,7 +22,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public final class MergeRelationRepairStep {
-    private static final Logger log = LoggerFactory.getLogger(MergeRelationRepairStep.class);
 
     private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;

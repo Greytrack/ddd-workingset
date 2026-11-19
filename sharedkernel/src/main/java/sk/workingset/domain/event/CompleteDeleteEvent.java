@@ -1,7 +1,7 @@
 package sk.workingset.domain.event;
 
-import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.LocalId;
 
 import java.time.Instant;
 import java.util.Objects;

@@ -6,14 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
+import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.FailureReason;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.List;
@@ -78,8 +78,9 @@ public class WorkingSetCommandService {
         ProductSpace space = new ProductSpace(identifierGenerator.nextId(null).longValue(), name);
         WorkingSet defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
         spaces.insertProductSpace(space);
-        workingSets.insertSpaceBinding(defaultWorkingSet.bindSpace(space, WorkingSet.SpaceOrigin.INITIAL_PROJECTION));
+        bindSpace(defaultWorkingSet, space, null);
         for (Classification classification : spaces.findClassifications()) {
+            if (classification.numericId() == Tracker.FOLDER_CLASSIFICATION_ID) continue;
             Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
                     space, classification, null, true);
             WorkingSet.TrackerBinding binding = defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
@@ -91,7 +92,7 @@ public class WorkingSetCommandService {
 
     @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
-        return bindSpace(writable(id), lockSpace(spaceId));
+        return bindSpace(writable(id), lockSpace(spaceId), null);
     }
 
     private ProductSpace lockSpace(String spaceId) {
@@ -99,10 +100,23 @@ public class WorkingSetCommandService {
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
     }
 
-    private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space) {
-        WorkingSet.SpaceBinding binding = workingSet.bindSpace(space);
-        workingSets.insertSpaceBinding(binding);
+    private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space, Long actor) {
+        WorkingSet.SpaceBinding binding = workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
+        Tracker folder = trackers.findRootFolder(workingSet.id(), space.id()).orElseGet(() -> {
+            Tracker created = Tracker.rootFolder(TrackerId.of(identifierGenerator.nextId(null).longValue()),
+                    workingSet.id(), space);
+            if (actor == null) trackers.insertTracker(created);
+            else trackers.insertTrackerForTask(created, true, actor);
+            return created;
+        });
+        bindTracker(workingSet, folder, SharingMode.UNSHARED);
         return binding;
+    }
+
+    @Transactional
+    public void setTrackerShown(WorkingSetId workingSet, TrackerId tracker, boolean shown) {
+        writable(workingSet).trackerBinding(tracker);
+        workingSets.setTrackerBindingShown(workingSet, tracker, shown);
     }
 
     @Transactional
@@ -118,7 +132,7 @@ public class WorkingSetCommandService {
     }
 
     // These methods run only under the creation task row lock and the item transaction.
-    boolean bindSpaceForTask(WorkingSetId id, String spaceId) {
+    boolean bindSpaceForTask(WorkingSetId id, String spaceId, long actor) {
         WorkingSet target = lockTaskTarget(id);
         WorkingSet parent = writable(target.requireParentId());
         ProductSpace space = lockSpace(spaceId);
@@ -128,7 +142,7 @@ public class WorkingSetCommandService {
         if (target.hasSpaceBinding(spaceId)) {
             return false;
         }
-        bindSpace(target, space);
+        bindSpace(target, space, actor);
         return true;
     }
 

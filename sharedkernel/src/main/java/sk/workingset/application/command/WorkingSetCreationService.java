@@ -10,17 +10,19 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.FailureReason;
+import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.WorkingSetCreation;
 import sk.workingset.domain.WorkingSetCreation.*;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
-import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.error.WorkingsetResultCode;
@@ -49,18 +51,27 @@ public class WorkingSetCreationService {
         return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
     }
 
+    private static String currentActor() {
+        Long userId = RequestThreadHolder.getLongUserId();
+        if (userId == null || userId <= 0) {
+            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
+        }
+        return userId.toString();
+    }
+
     @Transactional
     public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request) {
         java.util.Optional<WorkingSetCreation> existing = store.findByRequest(requestId);
         if (existing.isPresent()) {
             WorkingSetCreation task = existing.get();
-            return replay(task, request.apply(task.request().newWorkingSetId()));
+            return replay(task, withoutFolderSelections(request.apply(task.request().newWorkingSetId())));
         }
         return submit(request.apply(Long.toString(ids.nextId(null).longValue())));
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submit(WorkingSetCreation.Request request) {
+        request = withoutFolderSelections(request);
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
         }
@@ -115,6 +126,12 @@ public class WorkingSetCreationService {
         for (String trackerId : requested) {
             TrackerId id = TrackerId.of(trackerId);
             sk.tracker.domain.Tracker source = trackers.findTracker(id).orElse(null);
+            if (source != null && source.isFolder()) {
+                if (parentId.equals(source.workingSetId()) && !targetSet.hasSpaceBinding(source.productSpaceId())) {
+                    spaces.add(source.productSpaceId());
+                }
+                continue;
+            }
             if (source != null && source.sharingMode() == SharingMode.SHARED) {
                 if (targetSet.hasTrackerBinding(id)) continue;
                 shared.add(trackerId);
@@ -128,7 +145,7 @@ public class WorkingSetCreationService {
             }
             if (source != null) spaces.add(source.productSpaceId());
         }
-        if (shared.isEmpty() && unshared.isEmpty()) {
+        if (shared.isEmpty() && unshared.isEmpty() && spaces.isEmpty()) {
             throw new BindingFailure(Reason.NoDerivableTracker, target.value());
         }
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
@@ -151,12 +168,16 @@ public class WorkingSetCreationService {
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, target.value())), request);
     }
 
-    private static String currentActor() {
-        Long userId = RequestThreadHolder.getLongUserId();
-        if (userId == null || userId <= 0) {
-            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
-        }
-        return userId.toString();
+    private WorkingSetCreation.Request withoutFolderSelections(WorkingSetCreation.Request request) {
+        if (request.mode() != Mode.CREATE) return request;
+        List<String> shared = request.sharedTrackerIds().stream().filter(this::isBusinessSelection).toList();
+        List<String> unshared = request.unsharedParentTrackerIds().stream().filter(this::isBusinessSelection).toList();
+        return new WorkingSetCreation.Request(request.parentWorkingSetId(), request.newWorkingSetId(), request.requestId(),
+                request.productSpaceIds(), shared, unshared, request.name(), request.mode(), request.color());
+    }
+
+    private boolean isBusinessSelection(String id) {
+        return trackers.findTracker(TrackerId.of(id)).map(tracker -> !tracker.isFolder()).orElse(true);
     }
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
@@ -240,7 +261,8 @@ public class WorkingSetCreationService {
                             creation.request().name(), creation.request().color(), Long.valueOf(creation.requestedBy()));
                     yield true;
                 }
-                case BIND_PRODUCT_SPACES -> workingSetService.bindSpaceForTask(target, item);
+                case BIND_PRODUCT_SPACES -> workingSetService.bindSpaceForTask(target, item,
+                        Long.parseLong(creation.requestedBy()));
                 case COPY_UNSHARED_TRACKERS -> workingSetService.copyUnsharedTrackerForTask(target, TrackerId.of(item),
                         creation.request().mode() == Mode.CREATE, Long.parseLong(creation.requestedBy()));
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));

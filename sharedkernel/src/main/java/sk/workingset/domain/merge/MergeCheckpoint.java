@@ -2,10 +2,10 @@ package sk.workingset.domain.merge;
 
 import org.jmolecules.ddd.annotation.Entity;
 import org.jmolecules.ddd.annotation.ValueObject;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 
 /**

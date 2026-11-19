@@ -40,6 +40,7 @@ class SnowflakeStorageAcceptanceTest {
         try {
             TrackerView root = java.util.Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                     .filter(tracker -> space.getBody().productSpaceId().equals(tracker.productSpaceId()))
+                    .filter(tracker -> "258519859202016".equals(tracker.classificationId()))
                     .filter(tracker -> "UNSHARED".equals(tracker.sharingMode())).findFirst().orElseThrow();
             org.springframework.http.ResponseEntity<RequirementView> created = rest.postForEntity("/api/requirements", Map.of("trackerId", root.trackerId(),
                     "workingSetId", "1", "title", "编号初稿", "description", "编号验收", "revision", 1),
@@ -65,7 +66,9 @@ class SnowflakeStorageAcceptanceTest {
                     assertEquals(Status.Succeeded, rest.getForObject("/api/working-set-creations/"
                             + task.creationId(), CreationView.class).status()));
 
-            TrackerView tracker = rest.getForObject("/api/worksets/" + targetId + "/trackers", TrackerView[].class)[0];
+            TrackerView tracker = java.util.Arrays.stream(rest.getForObject("/api/worksets/" + targetId + "/trackers",
+                            TrackerView[].class)).filter(view -> root.trackerId().equals(view.sourceId()))
+                    .findFirst().orElseThrow();
             assertEquals(Long.valueOf(root.trackerId()), jdbc.queryForObject("""
                     SELECT child.common_id
                     FROM air_inst_tracker_rev child

@@ -32,15 +32,15 @@ public interface WorkingSetRepository {
 
     List<WorkingSetId> findAncestors(WorkingSetId id);
 
-    void insertSpaceBinding(WorkingSet.SpaceBinding binding);
 
     void insertTrackerBinding(WorkingSet.TrackerBinding binding);
+
+    void setTrackerBindingShown(WorkingSetId id, TrackerId trackerId, boolean shown);
 
     void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId);
 
     void deleteBindingsToTracker(TrackerId trackerId);
 
-    void deleteSpaceBinding(WorkingSetId id, String spaceId);
 
     List<WorkingSetId> findWorkingSetsBoundToSpace(String spaceId);
 

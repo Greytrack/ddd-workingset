@@ -19,6 +19,8 @@ public interface TrackerRepository {
 
     Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source);
 
+    Optional<Tracker> findRootFolder(WorkingSetId owner, String spaceId);
+
     /**
      * 列出归属于或绑定到工作集的可见 Tracker。
      */

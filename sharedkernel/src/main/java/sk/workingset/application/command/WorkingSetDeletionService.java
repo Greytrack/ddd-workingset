@@ -4,17 +4,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sk.workingset.application.port.BusinessTrackerItems;
+import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
+import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.ProductSpaceRepository;
-import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -37,11 +41,17 @@ public class WorkingSetDeletionService {
     private final LightTrackerItemRepository items;
     private final BusinessTrackerItems businessItems;
 
+    private static void rejectIndependentFolderRemoval(Tracker tracker) {
+        if (tracker.isRootFolder()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "根文件夹须随产品空间卸载");
+        }
+    }
 
     @Transactional
     public void unbindTracker(WorkingSetId id, TrackerId trackerId) {
         WorkingSet workingSet = lockWorkingSet(id);
         TrackerBinding binding = workingSet.trackerBinding(trackerId);
+        rejectIndependentFolderRemoval(lockTracker(trackerId));
         checkUnbind(binding);
         unbind(workingSet, binding);
     }
@@ -54,6 +64,7 @@ public class WorkingSetDeletionService {
     @Transactional
     public void deleteTracker(TrackerId id) {
         Tracker tracker = lockTracker(id);
+        rejectIndependentFolderRemoval(tracker);
         workingSets.requireReady(tracker.workingSetId());
         requireDeletable(tracker);
         workingSets.deleteBindingsToTracker(id);
@@ -93,7 +104,7 @@ public class WorkingSetDeletionService {
             throw new BindingFailure(Reason.MemberCannotBeUnbound, id.value(), Map.of("members", blockers));
         }
         bindings.forEach(binding -> unbind(workingSet, binding));
-        workingSet.spaces().forEach(binding -> removeSpace(workingSet, binding.productSpaceId()));
+        workingSet.spaces().forEach(binding -> workingSet.removeSpace(binding.productSpaceId()));
         workingSets.deleteWorkingSet(id);
     }
 
@@ -120,8 +131,19 @@ public class WorkingSetDeletionService {
     }
 
     private void removeSpace(WorkingSet workingSet, String spaceId) {
+        if (!workingSet.hasSpaceBinding(spaceId)) {
+            throw new BindingFailure(Reason.SpaceBindingNotFound, spaceId);
+        }
+        List<TrackerBinding> members = workingSet.trackers().stream()
+                .filter(binding -> binding.productSpaceId().equals(spaceId)).toList();
+        for (TrackerBinding binding : members) {
+            if (!lockTracker(binding.trackerId()).isRootFolder()) {
+                throw new BindingFailure(Reason.SpaceStillHasTrackers, spaceId);
+            }
+        }
+        members.forEach(this::checkUnbind);
+        members.forEach(binding -> unbind(workingSet, binding));
         workingSet.removeSpace(spaceId);
-        workingSets.deleteSpaceBinding(workingSet.id(), spaceId);
     }
 
     private void requireDeletable(Tracker tracker) {

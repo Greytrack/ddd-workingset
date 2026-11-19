@@ -75,14 +75,11 @@ class WorkingSetItemIndexerTest {
                 VALUES (?, ?, ?, ?, ?, 'UNSHARED')
                 """, childTracker, parentTracker, child, space, classification);
         jdbc.update("""
-                INSERT INTO space_bindings (working_set_id, product_space_id, origin, state)
-                VALUES (?, ?, 'EXPLICIT', 'ACTIVE'), (?, ?, 'EXPLICIT', 'ACTIVE')
-                """, parent, space, child, space);
-        jdbc.update("""
                 INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id, classification_id,
                     sharing_mode, origin)
-                VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
-                """, child, childTracker, space, classification);
+                VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION'),
+                       (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
+                """, parent, parentTracker, space, classification, child, childTracker, space, classification);
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision,
                     lock_version, delete_flag)

@@ -49,10 +49,14 @@ SELECT pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot),
 FROM demo_derivations d JOIN demo_trackers t ON t.space = d.space AND t.slot = d.slot
 ORDER BY d.ws, d.space, d.slot;
 
-INSERT INTO space_bindings (working_set_id, product_space_id, origin, state)
-SELECT 1, pg_temp.demo_id(100 + n), 'INITIAL_PROJECTION', 'ACTIVE' FROM demo_spaces
-UNION ALL
-SELECT DISTINCT pg_temp.demo_id(ws), pg_temp.demo_id(100 + space), 'EXPLICIT', 'ACTIVE' FROM demo_derivations;
+INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode, is_default)
+SELECT pg_temp.demo_id(8000000 + row_number() OVER (ORDER BY owner, space)),
+       '文件夹', owner, space, 10070101, 'UNSHARED', TRUE
+FROM (
+    SELECT 1 AS owner, pg_temp.demo_id(100 + n) AS space FROM demo_spaces
+    UNION ALL
+    SELECT DISTINCT pg_temp.demo_id(ws), pg_temp.demo_id(100 + space) FROM demo_derivations
+) AS folders;
 
 INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
 SELECT working_set_id, tracker_id, product_space_id, classification_id, sharing_mode,
