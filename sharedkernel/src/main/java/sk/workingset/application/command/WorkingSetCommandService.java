@@ -66,7 +66,9 @@ public class WorkingSetCommandService {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
         WorkingSet child = WorkingSet.child(newId, parentId, name, color);
-        if (!workingSets.save(child, actor)) {
+        try {
+            workingSets.save(child);
+        } catch (BindingFailure conflict) {
             List<WorkingSetId> existing = queries.findAncestors(newId.numericValue()).stream().map(WorkingSetId::of).toList();
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             Reason reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
@@ -196,12 +198,12 @@ public class WorkingSetCommandService {
     }
 
     private WorkingSet lockTaskTarget(WorkingSetId id) {
-        return workingSets.lockWorkingSetForCreation(id)
+        return workingSets.findByIdForCreation(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 
     private WorkingSet writable(WorkingSetId id) {
-        return workingSets.lockWorkingSet(id)
+        return workingSets.findByIdForUpdate(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 

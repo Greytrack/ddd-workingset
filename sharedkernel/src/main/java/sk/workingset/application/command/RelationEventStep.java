@@ -33,7 +33,7 @@ public final class RelationEventStep {
     public StepResult publish(WorkingSetId target, TrackerId parent, OriginType originType, String originId) {
         try {
             Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
-            sk.workingset.domain.WorkingSet targetSet = workingSets.findWorkingSetForCreation(target).orElse(null);
+            sk.workingset.domain.WorkingSet targetSet = workingSets.findByIdForCreation(target).orElse(null);
             if (child == null || targetSet == null || !targetSet.hasTrackerBinding(child.trackerId())) {
                 return new StepResult(0, 0, true);
             }

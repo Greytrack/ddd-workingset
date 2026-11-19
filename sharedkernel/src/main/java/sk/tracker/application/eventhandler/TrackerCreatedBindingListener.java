@@ -27,7 +27,7 @@ public class TrackerCreatedBindingListener {
 
     @ApplicationModuleListener(id = "bootstrap.TrackerCreatedBindingListener.on(sk.workingset.domain.event.TrackerCreatedEvent)")
     public void on(TrackerCreatedEvent event) {
-        WorkingSet workingSet = workingSets.lockWorkingSet(event.workingSetId())
+        WorkingSet workingSet = workingSets.findByIdForUpdate(event.workingSetId())
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "working set disappeared: " + event.workingSetId().value()));
         if (workingSet.hasTrackerBinding(event.trackerId())) {

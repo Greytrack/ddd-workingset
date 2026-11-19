@@ -87,7 +87,7 @@ public class WorkingSetCreationService {
         if (previous.isPresent()) {
             return replay(previous.orElseThrow(), request);
         }
-        if (workingSets.findWorkingSetForCreation(target).isPresent()) {
+        if (workingSets.findByIdForCreation(target).isPresent()) {
             throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
@@ -200,7 +200,7 @@ public class WorkingSetCreationService {
      */
     public WorkingSet findTarget(String id) {
         WorkingSetCreation creation = find(id);
-        return workingSets.findWorkingSetForCreation(WorkingSetId.of(creation.request().newWorkingSetId()))
+        return workingSets.findByIdForCreation(WorkingSetId.of(creation.request().newWorkingSetId()))
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "Working set is not created yet: " + creation.request().newWorkingSetId()));
     }

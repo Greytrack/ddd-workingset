@@ -107,4 +107,7 @@ public interface WorkingSetQueryMapper {
     @Select("SELECT working_set_id FROM space_bindings WHERE product_space_id = #{spaceId} ORDER BY working_set_id")
     List<Long> findWorkingSetsBoundToSpace(@Param("spaceId") long spaceId);
 
+    @Select("SELECT DISTINCT working_set_id FROM tracker_bindings WHERE tracker_id = #{trackerId} ORDER BY working_set_id")
+    List<Long> findWorkingSetIdsBoundToTracker(@Param("trackerId") long trackerId);
+
 }

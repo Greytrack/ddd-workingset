@@ -53,7 +53,7 @@ class RelationEventStepTest {
         LightTrackerItemQueryProvider itemQueries = mock(LightTrackerItemQueryProvider.class);
         RelationSourceQueryProvider source = mock(RelationSourceQueryProvider.class);
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
-        when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
+        when(workingSets.findByIdForCreation(target)).thenReturn(Optional.of(workingSet));
         when(itemQueries.findInTracker(childId)).thenReturn(List.of(LightTrackerItemSummary.from(item)));
         ReferenceEndpointEvent targetEndpoint = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                 CommonId.of("261349487529920"), TrackerId.of("259649290751936"), Revision.of(4));
@@ -97,7 +97,7 @@ class RelationEventStepTest {
         LightTrackerItemQueryProvider itemQueries = mock(LightTrackerItemQueryProvider.class);
         RelationSourceQueryProvider source = mock(RelationSourceQueryProvider.class);
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
-        when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
+        when(workingSets.findByIdForCreation(target)).thenReturn(Optional.of(workingSet));
         when(itemQueries.findInTracker(childId)).thenReturn(List.of(LightTrackerItemSummary.from(item)));
         when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
 

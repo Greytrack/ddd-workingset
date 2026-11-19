@@ -5,37 +5,25 @@ import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSetId;
 
-import java.util.List;
 import java.util.Optional;
 
-/**
- * WorkingSet 聚合存取、绑定关系与谱系查询（子级/祖先）。
- */
+/** WorkingSet 聚合生命周期仓储；查询由 WorkingSetQueryProvider 承担。 */
 @Repository
 public interface WorkingSetRepository {
+
+    /** 命令侧重建并隐式加锁；不向领域接口暴露 lock 参数。 */
     Optional<WorkingSet> findById(WorkingSetId id);
 
-    Optional<WorkingSet> lockWorkingSet(WorkingSetId id);
+    /** 命令侧重建并加行锁。 */
+    Optional<WorkingSet> findByIdForUpdate(WorkingSetId id);
 
-    Optional<WorkingSet> lockWorkingSetForCreation(WorkingSetId id);
-
-    /**
-     * 任务上下文只读：不检查 Preparing，仅供 WorkingSetCreationService 使用。
-     */
-    Optional<WorkingSet> findWorkingSetForCreation(WorkingSetId id);
+    /** 创建任务上下文重建：不检查 Preparing。 */
+    Optional<WorkingSet> findByIdForCreation(WorkingSetId id);
 
     void requireReady(WorkingSetId id);
 
-    default boolean save(WorkingSet workingSet) {
-        return save(workingSet, null);
-    }
+    void save(WorkingSet workingSet);
 
-    /** 保存新建或持锁重建的聚合及成员；新建身份冲突时不覆盖现有状态。 */
-    boolean save(WorkingSet workingSet, Long actor);
+    void delete(WorkingSet workingSet);
 
-
-    void deleteBindingsToTracker(TrackerId trackerId);
-
-
-    void deleteWorkingSet(WorkingSetId id);
 }

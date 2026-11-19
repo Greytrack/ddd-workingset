@@ -68,16 +68,6 @@ public class WorkingSetDeletionService {
     }
 
     @Transactional
-    public void deleteTracker(TrackerId id) {
-        Tracker tracker = lockTracker(id);
-        rejectIndependentFolderRemoval(tracker);
-        workingSets.requireReady(tracker.workingSetId());
-        requireDeletable(tracker);
-        workingSets.deleteBindingsToTracker(id);
-        trackers.deleteTracker(id);
-    }
-
-    @Transactional
     public void deleteWorkingSet(WorkingSetId id) {
         WorkingSet.requireDeletable(id);
         WorkingSet workingSet = lockWorkingSet(id);
@@ -100,7 +90,7 @@ public class WorkingSetDeletionService {
         workingSet.spaces().forEach(binding -> workingSet.removeSpace(binding.productSpaceId()));
         workingSets.save(workingSet);
         bindings.forEach(this::deleteOwnedTracker);
-        workingSets.deleteWorkingSet(id);
+        workingSets.delete(workingSet);
     }
 
     private void assertNoChildren(WorkingSetId id) {
@@ -148,7 +138,7 @@ public class WorkingSetDeletionService {
     }
 
     private WorkingSet lockWorkingSet(WorkingSetId id) {
-        return workingSets.lockWorkingSet(id)
+        return workingSets.findByIdForUpdate(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
     }
 

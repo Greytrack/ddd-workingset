@@ -131,7 +131,7 @@ public final class WorkingSetItemIndexer {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
         Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
-        sk.workingset.domain.WorkingSet targetSet = workingSets.lockWorkingSetForCreation(target).orElseThrow();
+        sk.workingset.domain.WorkingSet targetSet = workingSets.findByIdForCreation(target).orElseThrow();
         if (child == null || !targetSet.hasTrackerBinding(child.trackerId())) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }

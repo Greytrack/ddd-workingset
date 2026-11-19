@@ -10,20 +10,22 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.command.WorkingSetDeletionService;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.workingset.application.query.provider.ClassificationCatalog;
+import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 @Service
 @RequiredArgsConstructor
 public class TrackerCommandService {
-    private final WorkingSetDeletionService workingSetDeletions;
+    private final LightTrackerItemQueryProvider itemQueries;
+    private final BusinessTrackerItems businessItems;
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
@@ -41,7 +43,7 @@ public class TrackerCommandService {
         if (Long.parseLong(classificationId) == Tracker.FOLDER_CLASSIFICATION_ID) {
             throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "根文件夹随产品空间创建");
         }
-        WorkingSet workingSet = workingSets.lockWorkingSet(id)
+        WorkingSet workingSet = workingSets.findByIdForUpdate(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
         ProductSpace space = spaces.findById(spaceId)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
@@ -69,7 +71,17 @@ public class TrackerCommandService {
         return tracker;
     }
 
+    @Transactional
     public void delete(TrackerId id) {
-        workingSetDeletions.deleteTracker(id);
+        Tracker tracker = trackers.lockTracker(id)
+                .orElseThrow(() -> new BindingFailure(Reason.TrackerNotFound, id.value()));
+        if (tracker.isRootFolder()) {
+            throw DomainException.withMessage(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST,
+                    "根文件夹须随产品空间卸载");
+        }
+        workingSets.requireReady(tracker.workingSetId());
+        tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
+                trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
+        events.publishEvent(new sk.workingset.domain.event.TrackerDeletionRequestedEvent(id));
     }
 }

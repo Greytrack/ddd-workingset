@@ -2,10 +2,16 @@ package bootstrap;
 
 import static bootstrap.FixtureIds.fixtureId;
 
+import static org.awaitility.Awaitility.await;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
+import java.time.Duration;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -151,6 +157,7 @@ class BindingAcceptanceTest {
         assertEquals(Map.of(shared, true, alternate, false), trackerDefaults(other));
 
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).until(() -> !trackerDefaults(other).containsKey(shared));
         assertEquals(Map.of(alternate, false), trackerDefaults(other));
     }
 
@@ -258,7 +265,8 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(other, shared), null, Void.class).getStatusCode());
 
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
-        assertEquals(0, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", shared));
+        await().atMost(Duration.ofSeconds(8)).until(() ->
+                count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", shared) == 0);
         assertEquals(2, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
         assertFailure(rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
                 "title", "A", "description", "deleted tracker", "revision", 3), Map.class),

@@ -34,27 +34,19 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
 
     @Override
     public Optional<WorkingSet> findById(WorkingSetId id) {
-        return loadReadyWorkingSet(id, false);
-    }
-
-    @Override
-    public Optional<WorkingSet> lockWorkingSet(WorkingSetId id) {
-        return loadReadyWorkingSet(id, true);
-    }
-
-    private Optional<WorkingSet> loadReadyWorkingSet(WorkingSetId id, boolean lock) {
         requireReady(id);
-        return loadWorkingSet(id, lock);
+        return loadWorkingSet(id, false);
     }
 
     @Override
-    public Optional<WorkingSet> lockWorkingSetForCreation(WorkingSetId id) {
+    public Optional<WorkingSet> findByIdForUpdate(WorkingSetId id) {
+        requireReady(id);
         return loadWorkingSet(id, true);
     }
 
     @Override
-    public Optional<WorkingSet> findWorkingSetForCreation(WorkingSetId id) {
-        return loadWorkingSet(id, false);
+    public Optional<WorkingSet> findByIdForCreation(WorkingSetId id) {
+        return loadWorkingSet(id, true);
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id, boolean lock) {
@@ -105,17 +97,38 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public boolean save(WorkingSet workingSet, Long actor) {
-        if (workingSet.isNew() && !insert(workingSet, actor)) {
-            return false;
+    public void save(WorkingSet workingSet) {
+        if (workingSet.isNew()) {
+            insert(workingSet);
+        } else {
+            updateHeader(workingSet);
         }
         updateMembership(workingSet);
-        return true;
     }
 
-    private boolean insert(WorkingSet workingSet, Long actor) {
+    private void updateHeader(WorkingSet workingSet) {
+        WorkingSetId id = workingSet.id();
+        String actor = RequestThreadHolder.getUserId();
+        long now = System.currentTimeMillis();
+        int updated = jdbc.update("""
+                        UPDATE air_inst_workingset
+                        SET name = ?, color = ?, lock_version = COALESCE(lock_version, 0) + 1,
+                            updated_by = ?, updated_time = ?
+                        WHERE id = ? AND delete_flag = 0
+                        """, workingSet.name(), workingSet.color(), actor, now, id.numericValue());
+        if (updated != 1) {
+            throw new BindingFailure(Reason.WorkingSetNotFound, id.value());
+        }
+        jdbc.update("""
+                UPDATE air_inst_common
+                SET name = ?, updated_by = ?, updated_time = ?
+                WHERE id = ?
+                """, workingSet.name(), actor, now, id.numericValue());
+    }
+
+    private void insert(WorkingSet workingSet) {
         long id = workingSet.id().numericValue();
-        Long owner = actor == null ? RequestThreadHolder.getLongUserId() : actor;
+        Long owner = RequestThreadHolder.getLongUserId();
         if (owner == null || owner <= 0) {
             throw new DomainException(sk.workingset.error.WorkingsetResultCode.APPLICATION_DENIED);
         }
@@ -129,12 +142,12 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                             0, 0, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
                         """, id, id, id, id, workingSet.parentWorkingSetId().numericValue(), workingSet.name(), "WS-" + id,
                 workingSet.color(), owner, auditActor, now, auditActor, now) == 1;
-        if (inserted) {
-            commonInstances.save(new AirInstCommonPo(id, 1008L, 100801L, 10080101L, null,
-                    "WS-" + id, workingSet.name(), null, null, 1L, 0, 0L, auditActor, now, auditActor, now,
-                    null, owner, id, id, workingSet.parentWorkingSetId().numericValue(), 584190236948832L, 1L));
+        if (!inserted) {
+            throw new BindingFailure(Reason.WorkingSetAlreadyExists, workingSet.id().value());
         }
-        return inserted;
+        commonInstances.save(new AirInstCommonPo(id, 1008L, 100801L, 10080101L, null,
+                "WS-" + id, workingSet.name(), null, null, 1L, 0, 0L, auditActor, now, auditActor, now,
+                null, owner, id, id, workingSet.parentWorkingSetId().numericValue(), 584190236948832L, 1L));
     }
 
     private void updateMembership(WorkingSet workingSet) {
@@ -172,13 +185,9 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     @Override
-    public void deleteBindingsToTracker(TrackerId trackerId) {
-        jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE tracker_id = ?", trackerId.numericValue());
-    }
-
-    @Override
     @Transactional
-    public void deleteWorkingSet(WorkingSetId id) {
+    public void delete(WorkingSet workingSet) {
+        WorkingSetId id = workingSet.id();
         if (jdbc.update("DELETE FROM air_inst_workingset WHERE id = ? AND delete_flag = 0", id.numericValue()) == 1) {
             commonInstances.remove(id.numericValue());
         }
