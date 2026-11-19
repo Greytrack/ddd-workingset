@@ -25,6 +25,7 @@ import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.repository.WorkingSetCreationRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.error.WorkingsetResultCode;
@@ -48,6 +49,7 @@ public class WorkingSetCreationService {
     private final ApplicationEventPublisher events;
     private final WorkingSetItemIndexer indexer;
     private final RelationEventStep relationEvents;
+    private final TrackerQueryProvider trackerQueries;
 
     private static DomainException notFound(String id) {
         return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
@@ -140,7 +142,7 @@ public class WorkingSetCreationService {
             } else {
                 boolean alreadyDerived = trackers.findDerivedTracker(target, id)
                         .filter(copy -> targetSet.hasTrackerBinding(copy.trackerId())
-                                && trackers.isVisible(copy.trackerId())).isPresent();
+                                && trackerQueries.isVisible(copy.trackerId())).isPresent();
                 if (alreadyDerived) continue;
                 // Unknown sources reach the task so its failure is reported alongside valid selections.
                 unshared.add(trackerId);

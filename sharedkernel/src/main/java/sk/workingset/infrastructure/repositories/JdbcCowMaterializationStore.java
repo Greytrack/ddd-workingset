@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.repository.CowMaterializationStore;
@@ -93,7 +95,7 @@ public class JdbcCowMaterializationStore implements CowMaterializationStore {
 
     private void update(String sql, long eventId, LocalId target) {
         if (jdbc.update(sql, eventId, target.numericValue()) != 1) {
-            throw new IllegalStateException("Unexpected COW receipt state for " + eventId + "/" + target.numericValue());
+            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID, "Unexpected COW receipt state for " + eventId + "/" + target.numericValue());
         }
     }
 }

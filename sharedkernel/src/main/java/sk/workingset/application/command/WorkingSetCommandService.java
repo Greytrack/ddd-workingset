@@ -14,6 +14,7 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.query.provider.ClassificationCatalog;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
@@ -36,6 +37,7 @@ public class WorkingSetCommandService {
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
     private final WorkingSetQueryProvider queries;
+    private final TrackerQueryProvider trackerQueries;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
@@ -219,7 +221,7 @@ public class WorkingSetCommandService {
     }
 
     private Tracker derivedTracker(WorkingSet target, Tracker source) {
-        boolean isDefault = !trackers.existsDefaultTracker(target.id(), source.productSpaceId(),
+        boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId(),
                 source.classificationId());
         return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
                 isDefault);

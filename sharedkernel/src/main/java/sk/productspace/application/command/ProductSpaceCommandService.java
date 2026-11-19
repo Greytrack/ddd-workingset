@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
-import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.BindingFailure;
@@ -24,7 +24,7 @@ public class ProductSpaceCommandService {
     private final WorkingSetCommandService memberships;
     private final WorkingSetRepository workingSets;
     private final WorkingSetQueryProvider queries;
-    private final TrackerRepository trackers;
+    private final TrackerQueryProvider trackerQueries;
     private final IdentifierGenerator ids;
 
     @Transactional
@@ -43,7 +43,7 @@ public class ProductSpaceCommandService {
         if (!bound.isEmpty()) {
             throw new BindingFailure(Reason.SpaceStillBoundInWorkingSet, id, Map.of("workingSetIds", bound));
         }
-        if (trackers.hasTrackersInSpace(id)) {
+        if (trackerQueries.hasTrackersInSpace(id)) {
             throw new BindingFailure(Reason.SpaceStillHasTrackers, id);
         }
         spaces.delete(space);

@@ -1,5 +1,8 @@
 package sk.workingset.infrastructure.repositories;
 
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -91,7 +94,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
         try {
             return mapper.writeValueAsString(creation);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("Cannot encode working set creation", failure);
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_SERIALIZATION_FAILED, failure);
         }
     }
 
@@ -99,7 +102,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
         try {
             return mapper.readValue(result, WorkingSetCreation.class);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("Cannot decode working set creation", failure);
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_SERIALIZATION_FAILED, failure);
         }
     }
 }

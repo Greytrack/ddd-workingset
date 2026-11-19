@@ -10,6 +10,7 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
@@ -41,6 +42,7 @@ public class WorkingSetDeletionService {
     private final LightTrackerItemRepository items;
     private final LightTrackerItemQueryProvider itemQueries;
     private final WorkingSetQueryProvider queries;
+    private final TrackerQueryProvider trackerQueries;
     private final BusinessTrackerItems businessItems;
 
     private static void rejectIndependentFolderRemoval(Tracker tracker) {
@@ -142,7 +144,7 @@ public class WorkingSetDeletionService {
     private void requireDeletable(Tracker tracker) {
         TrackerId id = tracker.trackerId();
         tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
-                trackers.hasOrgChildren(id), trackers.hasDerivedChildren(id));
+                trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
     }
 
     private WorkingSet lockWorkingSet(WorkingSetId id) {

@@ -173,12 +173,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    public boolean isVisible(TrackerId trackerId) {
-        return exists("id = ? AND visible = 1 AND work_space = COALESCE(CAST(? AS bigint), work_space)",
-                trackerId.numericValue(), RequestThreadHolder.getWorkspace());
-    }
-
-    @Override
     @Transactional
     public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor) {
         for (TrackerId parent : parentTrackerIds) {
@@ -202,27 +196,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
                 saveCommonInstance(id);
             }
         }
-    }
-
-    @Override
-    public boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId) {
-        return exists("workingset_id = ? AND work_space = ? AND tracker_class = ? AND is_default = 1",
-                workingSetId.numericValue(), Long.valueOf(spaceId), Long.valueOf(classificationId));
-    }
-
-    @Override
-    public boolean hasOrgChildren(TrackerId id) {
-        return exists("parent_id = ?", id.numericValue());
-    }
-
-    @Override
-    public boolean hasDerivedChildren(TrackerId id) {
-        return exists("source_branch_id = ?", id.numericValue());
-    }
-
-    @Override
-    public boolean hasTrackersInSpace(String spaceId) {
-        return exists("work_space = ?", Long.valueOf(spaceId));
     }
 
     private boolean exists(String predicate, Object... args) {

@@ -1,5 +1,8 @@
 package sk.workingset.infrastructure.repositories;
 
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -83,7 +86,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("Cannot serialize merge state", failure);
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_SERIALIZATION_FAILED, failure);
         }
     }
 
@@ -91,7 +94,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
         try {
             return json.readValue(value, type);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("Cannot reconstruct merge state", failure);
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_SERIALIZATION_FAILED, failure);
         }
     }
 }

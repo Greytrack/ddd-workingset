@@ -17,6 +17,7 @@ import sk.workingset.domain.Classification.SharingMode;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.workingset.application.query.provider.ClassificationCatalog;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 @Service
@@ -27,6 +28,7 @@ public class TrackerCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
+    private final TrackerQueryProvider trackerQueries;
     private final IdentifierGenerator ids;
     private final ApplicationEventPublisher events;
 
@@ -58,7 +60,7 @@ public class TrackerCommandService {
     @Transactional
     public Tracker rename(TrackerId id, String name) {
         Tracker tracker = trackers.lockTracker(id)
-                .filter(locked -> trackers.isVisible(id))
+                .filter(locked -> trackerQueries.isVisible(id))
                 .orElseThrow(() -> new BindingFailure(Reason.TrackerNotFound, id.value()));
         workingSets.requireReady(tracker.workingSetId());
         if (tracker.rename(name)) {

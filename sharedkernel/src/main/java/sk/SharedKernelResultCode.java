@@ -42,6 +42,10 @@ public enum SharedKernelResultCode implements DomainResCode {
     ATTRIBUTE_VALUE_FORMAT_INVALID(DomainErrorType.INVALID_ARGUMENT, 300100030, "属性值格式非法（%s）: %s"),
     ORDER_INDEX_INVALID(DomainErrorType.INVALID_ARGUMENT, 300100031, "位置值非法: %s"),
     CREATE_WORKINGSET_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100032, "CreateInput.workingsetId 不能为空"),
+    EVENT_TARGET_NOT_FOUND(DomainErrorType.NOT_FOUND, 300100033, "事件目标不存在: %s"),
+    EVENT_STATE_INVALID(DomainErrorType.CONFLICT, 300100034, "事件状态不一致: %s"),
+    PERSISTENCE_SERIALIZATION_FAILED(DomainErrorType.INTERNAL, 300100035, "持久化状态序列化失败: %s"),
+    PERSISTENCE_STATE_INVALID(DomainErrorType.INTERNAL, 300100036, "持久化状态非法: %s"),
     ;
 
     private final DomainErrorType type;

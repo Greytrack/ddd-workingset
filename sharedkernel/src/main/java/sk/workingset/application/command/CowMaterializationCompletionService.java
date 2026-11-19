@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
@@ -35,16 +37,16 @@ public final class CowMaterializationCompletionService {
 
     private void switchToLocalBacked(TrackerItemMaterializationCompletedEvent event) {
         CowMaterializationStore.Entry receipt = store.lockByEventAndTarget(event.eventId(), event.targetLocalId())
-                .orElseThrow(() -> new IllegalStateException("COW receipt is missing"));
+                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "COW receipt is missing"));
         if (receipt.status() == CowMaterializationStore.Status.SWITCHED) {
             return;
         }
         store.markMaterialized(event.eventId(), event.targetLocalId());
         LightTrackerItem target = items.findById(event.targetLocalId())
-                .orElseThrow(() -> new IllegalStateException("LightTrackerItem is missing"));
+                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "LightTrackerItem is missing"));
         if (!target.materialized() && (!target.sourceLocalId().equals(receipt.sourceLocalId())
                 || !target.sourceRevision().equals(receipt.sourceRevision()))) {
-            throw new IllegalStateException("LightTrackerItem no longer matches the receipt");
+            throw DomainException.withMessage(SharedKernelResultCode.EVENT_STATE_INVALID, "LightTrackerItem no longer matches the receipt");
         }
         if (!target.materialized()) {
             target.switchToLocalBacked(target.revision());

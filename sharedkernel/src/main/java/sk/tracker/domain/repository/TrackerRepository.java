@@ -30,20 +30,10 @@ public interface TrackerRepository {
      */
     void save(Tracker tracker, boolean initiallyVisible, Long actor);
 
-    boolean isVisible(TrackerId trackerId);
-
     /**
      * 终态后只揭示已成功建立绑定的新 Tracker。
      */
     void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor);
-
-    boolean hasOrgChildren(TrackerId id);
-
-    boolean hasDerivedChildren(TrackerId id);
-
-    boolean hasTrackersInSpace(String spaceId);
-
-    boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId);
 
     void deleteTracker(TrackerId id);
 }
