@@ -5,14 +5,13 @@ import sk.productspace.domain.ProductSpace;
 
 import java.util.Optional;
 
-/**
- * ProductSpace 聚合存取。
- */
+/** ProductSpace 聚合生命周期仓储。 */
 @Repository
 public interface ProductSpaceRepository {
-    Optional<ProductSpace> lockProductSpace(String id);
-
     void save(ProductSpace space);
 
-    void deleteProductSpace(String id);
+    /** 命令侧重建并锁定聚合；读模型查询使用 Query Provider。 */
+    Optional<ProductSpace> findById(String id);
+
+    void delete(ProductSpace space);
 }

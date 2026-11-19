@@ -1,15 +1,14 @@
 package sk.workingset.domain.repository;
 
 import org.jmolecules.ddd.annotation.Repository;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.workingset.domain.LightTrackerItem;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 
 import java.util.List;
 import java.util.Optional;
 
-/**
- * LightTrackerItem 聚合的命令侧存取（T3）。
- */
+/** LightTrackerItem 聚合的命令侧存取。查询职责由 LightTrackerItemQueryProvider 承担。 */
 @Repository
 public interface LightTrackerItemRepository {
 
@@ -17,24 +16,10 @@ public interface LightTrackerItemRepository {
 
     Optional<LightTrackerItem> findById(LocalId localId);
 
-    boolean existsInTracker(TrackerId trackerId);
-
-    List<LightTrackerItem> findInTracker(TrackerId trackerId);
-
-    List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit);
-
-    /** Registers the derived index and its public summary as one unit inside the task's item savepoint. */
-    boolean claimFamily(LightTrackerItem item);
-
-    boolean hasFamily(WorkingSetId workingSetId, CommonId commonId);
-
-    boolean hasSourceBackedDependents(LocalId id);
+    /**
+     * COW 命令侧领域 finder：按来源切点定位尚未物化的目标聚合。
+     */
+    List<LightTrackerItem> findSourceBackedTargets(LocalId sourceLocalId, Revision sourceRevision);
 
     void remove(LocalId id);
-
-    /**
-     * 按来源定位候选变体（D-017 消费时确定目标）：返回 {@code sourceLocalId}/{@code sourceRevision}
-     * 匹配的变体；是否已物化由调用方判断（不得在仓储层暗含业务判断）。
-     */
-    List<LightTrackerItem> findBySource(LocalId sourceLocalId, Revision sourceRevision);
 }

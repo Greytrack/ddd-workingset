@@ -12,14 +12,14 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class WorkingSetLineagePolicyTest {
+class WorkingSetLineageDomainServiceTest {
     private final WorkingSet root = new WorkingSet(WorkingSet.DEFAULT_ID, null, List.of(), List.of());
     private final WorkingSetId childId = WorkingSetId.of("259712159403968");
     private final WorkingSetId grandchildId = WorkingSetId.of("265077320994752");
 
     private static void assertNotAdjacent(WorkingSet source, WorkingSet target) {
         BindingFailure failure = assertThrows(BindingFailure.class,
-                () -> WorkingSetLineagePolicy.comparableBindings(source, target));
+                () -> WorkingSetLineageDomainService.comparableBindings(source, target));
         assertEquals(Reason.WorkingSetsNotAdjacent, failure.reason());
     }
 
@@ -33,9 +33,9 @@ class WorkingSetLineagePolicyTest {
         WorkingSet child = new WorkingSet(childId, root.id(), List.of(space), List.of(shared, unshared));
         WorkingSet grandchild = WorkingSet.child(grandchildId, child.id());
 
-        assertEquals(List.of(unshared), WorkingSetLineagePolicy.comparableBindings(root, child));
-        assertEquals(List.of(unshared), WorkingSetLineagePolicy.comparableBindings(child, root));
-        assertTrue(WorkingSetLineagePolicy.comparableBindings(child, grandchild).isEmpty());
+        assertEquals(List.of(unshared), WorkingSetLineageDomainService.comparableBindings(root, child));
+        assertEquals(List.of(unshared), WorkingSetLineageDomainService.comparableBindings(child, root));
+        assertTrue(WorkingSetLineageDomainService.comparableBindings(child, grandchild).isEmpty());
     }
 
     @Test
@@ -47,9 +47,9 @@ class WorkingSetLineagePolicyTest {
         Tracker sibling = Tracker.derived(TrackerId.of("263561533034432"), parent, childId);
         Tracker grandchild = Tracker.derived(TrackerId.of("265077320994752"), child, grandchildId);
 
-        assertTrue(WorkingSetLineagePolicy.isDirectDerivation(child, parent));
-        assertFalse(WorkingSetLineagePolicy.isDirectDerivation(grandchild, parent));
-        assertFalse(WorkingSetLineagePolicy.isDirectDerivation(sibling, child));
+        assertTrue(WorkingSetLineageDomainService.isDirectDerivation(child, parent));
+        assertFalse(WorkingSetLineageDomainService.isDirectDerivation(grandchild, parent));
+        assertFalse(WorkingSetLineageDomainService.isDirectDerivation(sibling, child));
     }
 
     @Test

@@ -10,6 +10,9 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.port.LightTrackerItemFamilyStore;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.*;
@@ -17,7 +20,6 @@ import sk.workingset.domain.WorkingSetCreation.Failure;
 import sk.workingset.domain.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
 import sk.workingset.domain.WorkingSetCreation.Stage;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
@@ -38,7 +40,8 @@ public final class WorkingSetItemIndexer {
 
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
-    private final LightTrackerItemRepository items;
+    private final LightTrackerItemQueryProvider itemQueries;
+    private final LightTrackerItemFamilyStore familyStore;
     private final TrackerItemCatalogQueryProvider catalog;
     private final WorkingSetCreationSnapshotStore snapshots;
     private final BusinessTrackerItems businessItems;
@@ -47,7 +50,8 @@ public final class WorkingSetItemIndexer {
     private final int batchSize;
 
     public WorkingSetItemIndexer(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                 LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
+                                 LightTrackerItemQueryProvider itemQueries,
+                                 LightTrackerItemFamilyStore familyStore, TrackerItemCatalogQueryProvider catalog,
                                  WorkingSetCreationSnapshotStore snapshots, BusinessTrackerItems businessItems,
                                  Function<LocalId, TrackerItemQueryProvider> readPorts,
                                  IdentifierGenerator ids, int batchSize) {
@@ -56,7 +60,8 @@ public final class WorkingSetItemIndexer {
         }
         this.workingSets = workingSets;
         this.trackers = trackers;
-        this.items = items;
+        this.itemQueries = itemQueries;
+        this.familyStore = familyStore;
         this.catalog = catalog;
         this.snapshots = snapshots;
         this.businessItems = businessItems;
@@ -184,7 +189,7 @@ public final class WorkingSetItemIndexer {
 
     private List<Candidate> livePage(TrackerId parent, String cursor) {
         TreeMap<String, WorkingSetItemIndexer.Candidate> candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
-        items.pageInTracker(parent, cursor, batchSize).forEach(item ->
+        itemQueries.pageInTracker(parent, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
         catalog.page(parent, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
@@ -193,7 +198,7 @@ public final class WorkingSetItemIndexer {
 
     private Outcome index(TrackerId parent, Tracker child, Candidate candidate) {
         // 重入/重复执行时先认已提交的同族，避免来源后来软删或不可读被误记为失败。
-        if (items.hasFamily(child.workingSetId(), candidate.commonId())) {
+        if (itemQueries.hasFamily(child.workingSetId(), candidate.commonId())) {
             return new Outcome(IndexResult.Existing, null);
         }
         if (candidate.lightweight() && catalog.hasActiveFamily(parent, candidate.commonId())) {
@@ -218,7 +223,7 @@ public final class WorkingSetItemIndexer {
         } while (id.value().equals(candidate.commonId().value()) || id.equals(candidate.sourceId()));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
                 candidate.revision(), candidate.sourceId(), candidate.sourceRevision());
-        return items.claimFamily(item)
+        return familyStore.claim(item)
                 ? new Outcome(IndexResult.Indexed, null)
                 : new Outcome(IndexResult.Existing, null);
     }
@@ -230,7 +235,7 @@ public final class WorkingSetItemIndexer {
 
     private record Candidate(LocalId localId, CommonId commonId, Revision revision,
                              LocalId sourceId, Revision sourceRevision, boolean lightweight) {
-        static Candidate from(LightTrackerItem item) {
+        static Candidate from(LightTrackerItemSummary item) {
             return new Candidate(item.localId(), item.commonId(), item.revision(),
                     item.effectiveContentSource(), item.effectiveContentRevision(), true);
         }

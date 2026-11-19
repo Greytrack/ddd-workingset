@@ -25,7 +25,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.WorkingSetLineagePolicy;
+import sk.workingset.domain.WorkingSetLineageDomainService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WorkingSetLineageAcceptanceTest {
@@ -94,8 +94,8 @@ class WorkingSetLineageAcceptanceTest {
         sk.workingset.domain.WorkingSet child = workingSets.findWorkingSet(WorkingSetId.of(create("1", "empty"))).orElseThrow();
         sk.workingset.domain.WorkingSet root = workingSets.findWorkingSet(WorkingSetId.of("1")).orElseThrow();
 
-        assertTrue(WorkingSetLineagePolicy.comparableBindings(root, child).isEmpty());
-        assertTrue(WorkingSetLineagePolicy.comparableBindings(child, root).isEmpty());
+        assertTrue(WorkingSetLineageDomainService.comparableBindings(root, child).isEmpty());
+        assertTrue(WorkingSetLineageDomainService.comparableBindings(child, root).isEmpty());
     }
 
     /**

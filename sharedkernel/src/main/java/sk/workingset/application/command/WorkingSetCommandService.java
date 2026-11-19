@@ -94,7 +94,7 @@ public class WorkingSetCommandService {
     }
 
     private ProductSpace lockSpace(String spaceId) {
-        return spaces.lockProductSpace(spaceId)
+        return spaces.findById(spaceId)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
     }
 

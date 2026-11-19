@@ -9,6 +9,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
@@ -37,6 +38,7 @@ public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
+    private final LightTrackerItemQueryProvider itemQueries;
     private final BusinessTrackerItems businessItems;
 
     private static void rejectIndependentFolderRemoval(Tracker tracker) {
@@ -137,7 +139,7 @@ public class WorkingSetDeletionService {
 
     private void requireDeletable(Tracker tracker) {
         TrackerId id = tracker.trackerId();
-        tracker.requireDeletable(items.existsInTracker(id) || businessItems.existsInTracker(id),
+        tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
                 trackers.hasOrgChildren(id), trackers.hasDerivedChildren(id));
     }
 

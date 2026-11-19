@@ -130,31 +130,32 @@ public class MergeExecutionService {
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, String caller) {
-        java.util.Optional<MergeRound> existing = store.findRoundByRequest(requestId);
+        java.util.Optional<MergeRound> existing = store.findByRequestId(requestId);
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
         MergeCheckpoint.Key pair = trackerPair(decisions);
         MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
-        MergeRound round;
+        // 先占幂等键：并发提交同一 requestId 时，save 保留先到轮次，后到请求直接返回该轮次。
+        store.save(prepared);
+        MergeRound winner = store.findByRequestId(requestId)
+                .orElseThrow(() -> new MergeFailure(Reason.Conflict, requestId));
+        if (!winner.id().equals(prepared.id())) {
+            return matching(winner, source, target);
+        }
         try {
-            round = store.admit(prepared, pair.a(), pair.b()).orElseThrow(
-                    () -> new MergeFailure(Reason.Conflict, requestId));
+            registerDecisions(prepared, decisions);
         } catch (DataIntegrityViolationException conflict) {
             throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
         }
-        if (!round.id().equals(prepared.id())) {
-            return matching(round, source, target);
-        }
-        registerDecisions(round, decisions);
-        events.publishEvent(new MergeRoundSubmittedEvent(round.id()));
-        return round(round.id(), false);
+        events.publishEvent(new MergeRoundSubmittedEvent(prepared.id()));
+        return round(prepared.id());
     }
 
     /**
      * 一页决策要么整页登记成功，要么整轮回滚。
      */
-    private void registerDecisions(MergeRound round, List<EntryRequest> requests) {
+    private MergeRound registerDecisions(MergeRound round, List<EntryRequest> requests) {
         List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = comparisons.candidates(round.source(), round.target());
         MergeRound updated = round;
         for (EntryRequest request : requests) {
@@ -182,10 +183,11 @@ public class MergeExecutionService {
                     frozen, request.decision(), null));
         }
         store.save(updated);
+        return updated;
     }
 
     public MergeRound get(String id) {
-        return round(id, false);
+        return round(id);
     }
 
     @Transactional
@@ -209,7 +211,7 @@ public class MergeExecutionService {
     }
 
     private MergeRound dispatch(String id) {
-        MergeRound round = round(id, true);
+        MergeRound round = round(id);
         if (round.result() != null) {
             return round;
         }
@@ -241,7 +243,7 @@ public class MergeExecutionService {
             store.save(round);
         }
         completeIfReady(round);
-        return round(id, false);
+        return round(id);
     }
 
     private MergeEntryApprovedEvent approve(MergeRound round, Entry entry, Difference current, String operation) {
@@ -281,7 +283,7 @@ public class MergeExecutionService {
     }
 
     private MergeRound.ApplyResult resolve(MergeEntryResolvedEvent event) {
-        MergeRound round = round(event.roundId(), true);
+        MergeRound round = round(event.roundId());
         Entry entry = round.entries().stream().filter(candidate -> candidate.id().equals(event.entryId()))
                 .findFirst().orElseThrow(() -> new MergeFailure(Reason.RoundNotFound, event.entryId()));
         if (entry.result() != null) {
@@ -360,8 +362,8 @@ public class MergeExecutionService {
         return result(entry, Outcome.Applied, operation, businessRef, null, null);
     }
 
-    private MergeRound round(String id, boolean lock) {
-        return store.findRound(id, lock).orElseThrow(() -> new MergeFailure(Reason.RoundNotFound, id));
+    private MergeRound round(String id) {
+        return store.findById(id).orElseThrow(() -> new MergeFailure(Reason.RoundNotFound, id));
     }
 
     /**

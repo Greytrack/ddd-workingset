@@ -2,6 +2,7 @@ package sk.tracker.application.command;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
@@ -27,6 +28,7 @@ public class TrackerCommandService {
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
     private final IdentifierGenerator ids;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public Tracker create(WorkingSetId id, String spaceId, String name, String classificationId,
@@ -39,7 +41,7 @@ public class TrackerCommandService {
         }
         WorkingSet workingSet = workingSets.lockWorkingSet(id)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
-        ProductSpace space = spaces.lockProductSpace(spaceId)
+        ProductSpace space = spaces.findById(spaceId)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
         workingSet.requireSpaceBinding(spaceId);
         Classification classification = classifications.findClassification(classificationId)
@@ -48,7 +50,8 @@ public class TrackerCommandService {
                 classification, sharingMode);
         workingSet.bindTracker(tracker, classification, sharingMode);
         trackers.save(tracker);
-        workingSets.save(workingSet);
+        events.publishEvent(new sk.workingset.domain.event.TrackerCreatedEvent(
+                tracker.trackerId(), workingSet.id(), space.id(), classification.id(), sharingMode));
         return tracker;
     }
 

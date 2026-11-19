@@ -7,6 +7,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.*;
@@ -33,16 +34,19 @@ public class MergeComparisonService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
+    private final LightTrackerItemQueryProvider itemQueries;
     private final TrackerItemCatalogQueryProvider catalog;
     private final Function<LocalId, TrackerItemQueryProvider> readPorts;
     private final MergeCheckpointRepository store;
 
     public MergeComparisonService(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                  LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
+                                  LightTrackerItemRepository items, LightTrackerItemQueryProvider itemQueries,
+                                  TrackerItemCatalogQueryProvider catalog,
                                   Function<LocalId, TrackerItemQueryProvider> readPorts, MergeCheckpointRepository store) {
         this.workingSets = workingSets;
         this.trackers = trackers;
         this.items = items;
+        this.itemQueries = itemQueries;
         this.catalog = catalog;
         this.readPorts = readPorts;
         this.store = store;
@@ -119,8 +123,8 @@ public class MergeComparisonService {
     public List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {
         WorkingSet left = workingSet(source);
         WorkingSet right = workingSet(target);
-        WorkingSet child = WorkingSetLineagePolicy.childOf(left, right);
-        return WorkingSetLineagePolicy.comparableBindings(left, right).stream().flatMap(binding ->
+        WorkingSet child = WorkingSetLineageDomainService.childOf(left, right);
+        return WorkingSetLineageDomainService.comparableBindings(left, right).stream().flatMap(binding ->
                 trackers.findTracker(binding.trackerId()).stream()
                         // The binding must belong to the direct child Working Set; this rejects cross-level
                         // and Shared bindings that happen to carry a sourceId.
@@ -148,7 +152,7 @@ public class MergeComparisonService {
         WorkingSet parent = source.id().equals(target.parentWorkingSetId()) ? source : target;
         return trackers.findTracker(child.sourceId())
                 .filter(sourceTracker -> parent.id().equals(sourceTracker.workingSetId()))
-                .filter(sourceTracker -> WorkingSetLineagePolicy.isDirectDerivation(child, sourceTracker))
+                .filter(sourceTracker -> WorkingSetLineageDomainService.isDirectDerivation(child, sourceTracker))
                 .filter(sourceTracker -> WorkingSet.DEFAULT_ID.equals(parent.id())
                         || parent.hasTrackerBinding(sourceTracker.trackerId()))
                 .isPresent();
@@ -165,7 +169,7 @@ public class MergeComparisonService {
     private Map<CommonId, LocalId> familyIds(TrackerId tracker) {
         Map<CommonId, LocalId> families = new LinkedHashMap<>();
         catalog.identities(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
-        items.findInTracker(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
+        itemQueries.findInTracker(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
         return families;
     }
 

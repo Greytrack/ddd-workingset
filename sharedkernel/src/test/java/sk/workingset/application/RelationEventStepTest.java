@@ -19,7 +19,8 @@ import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
 import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.ArrayList;
@@ -49,11 +50,11 @@ class RelationEventStepTest {
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
-        LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
+        LightTrackerItemQueryProvider itemQueries = mock(LightTrackerItemQueryProvider.class);
         RelationSourceQueryProvider source = mock(RelationSourceQueryProvider.class);
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
         when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
-        when(items.findInTracker(childId)).thenReturn(List.of(item));
+        when(itemQueries.findInTracker(childId)).thenReturn(List.of(LightTrackerItemSummary.from(item)));
         ReferenceEndpointEvent targetEndpoint = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                 CommonId.of("261349487529920"), TrackerId.of("259649290751936"), Revision.of(4));
         ReferenceEndpointEvent sourceEndpoint = new ReferenceEndpointEvent(target, item.localId(), item.commonId(), childId, item.revision());
@@ -68,7 +69,7 @@ class RelationEventStepTest {
 
         ArrayList<Object> published = new ArrayList<Object>();
         sk.workingset.application.command.RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
-        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, items, source, publisher);
+        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source, publisher);
 
         sk.workingset.application.command.RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 
@@ -93,14 +94,14 @@ class RelationEventStepTest {
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
-        LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
+        LightTrackerItemQueryProvider itemQueries = mock(LightTrackerItemQueryProvider.class);
         RelationSourceQueryProvider source = mock(RelationSourceQueryProvider.class);
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
         when(workingSets.findWorkingSetForCreation(target)).thenReturn(Optional.of(workingSet));
-        when(items.findInTracker(childId)).thenReturn(List.of(item));
+        when(itemQueries.findInTracker(childId)).thenReturn(List.of(LightTrackerItemSummary.from(item)));
         when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
 
-        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, items, source,
+        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source,
                 new RelationEventPublisher(event -> {
                 }, entity -> 1L));
 

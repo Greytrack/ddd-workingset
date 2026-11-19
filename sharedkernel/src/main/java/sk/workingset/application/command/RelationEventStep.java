@@ -6,11 +6,11 @@ import org.springframework.stereotype.Service;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
-import sk.workingset.domain.LightTrackerItem;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.List;
@@ -25,7 +25,7 @@ import java.util.List;
 public final class RelationEventStep {
     private final TrackerRepository trackers;
     private final WorkingSetRepository workingSets;
-    private final LightTrackerItemRepository items;
+    private final LightTrackerItemQueryProvider itemQueries;
     private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
 
@@ -37,17 +37,17 @@ public final class RelationEventStep {
             if (child == null || targetSet == null || !targetSet.hasTrackerBinding(child.trackerId())) {
                 return new StepResult(0, 0, true);
             }
-            return publishIndexed(target, child, items.findInTracker(child.trackerId()), originType, originId);
+            return publishIndexed(target, child, itemQueries.findInTracker(child.trackerId()), originType, originId);
         } catch (RuntimeException failure) {
             return new StepResult(0, 1, false);
         }
     }
 
-    private StepResult publishIndexed(WorkingSetId target, Tracker child, List<LightTrackerItem> indexed,
+    private StepResult publishIndexed(WorkingSetId target, Tracker child, List<LightTrackerItemSummary> indexed,
                                       OriginType originType, String originId) {
         int published = 0;
         int failed = 0;
-        for (LightTrackerItem item : indexed) {
+        for (LightTrackerItemSummary item : indexed) {
             try {
                 sk.workingset.domain.event.ReferenceEndpointEvent referenceSource = new sk.workingset.domain.event.ReferenceEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId(), item.revision());

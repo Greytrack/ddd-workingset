@@ -16,6 +16,8 @@ import sk.workingset.application.command.SourceSerialCowCoordinator;
 import sk.workingset.application.command.WorkingSetItemIndexer;
 import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.port.LightTrackerItemFamilyStore;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
@@ -49,11 +51,12 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetItemIndexer workingSetItemIndexer(
-            WorkingSetRepository bindings, TrackerRepository trackers, LightTrackerItemRepository items,
+            WorkingSetRepository bindings, TrackerRepository trackers,
+            LightTrackerItemQueryProvider itemQueries, LightTrackerItemFamilyStore familyStore,
             TrackerItemCatalogQueryProvider catalog, BusinessTrackerItems businessItems,
             WorkingSetCreationSnapshotStore snapshots, JdbcRequirementRepository requirements,
             IdentifierGenerator ids, @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
-        return new WorkingSetItemIndexer(bindings, trackers, items, catalog, snapshots,
+        return new WorkingSetItemIndexer(bindings, trackers, itemQueries, familyStore, catalog, snapshots,
                 businessItems, id -> new RequirementAdapter(requirements, id), ids, batchSize);
     }
 
@@ -82,10 +85,11 @@ public class ApplicationConfiguration {
             WorkingSetRepository bindings,
             TrackerRepository trackers,
             LightTrackerItemRepository items,
+            LightTrackerItemQueryProvider itemQueries,
             TrackerItemCatalogQueryProvider catalog,
             JdbcRequirementRepository requirements,
             MergeCheckpointRepository store) {
-        return new MergeComparisonService(bindings, trackers, items, catalog,
+        return new MergeComparisonService(bindings, trackers, items, itemQueries, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
     }
 }

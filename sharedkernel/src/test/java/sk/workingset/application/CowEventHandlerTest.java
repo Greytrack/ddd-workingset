@@ -38,7 +38,7 @@ class CowEventHandlerTest {
         Revision after = Revision.of(4);
         Revision own = Revision.of(1);
         LightTrackerItem target = target("258520000000001", source, own, before);
-        when(items.findBySource(source, before)).thenReturn(List.of(target));
+        when(items.findSourceBackedTargets(source, before)).thenReturn(List.of(target));
 
         BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(42, source, source, before, after,
                 LockVersion.of(5), LockVersion.of(6), SnapshotRefEvent.of("258782756974528"), Instant.EPOCH);

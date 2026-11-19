@@ -18,7 +18,7 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     private final JdbcCommonInstanceStore commonInstances;
 
     @Override
-    public Optional<ProductSpace> lockProductSpace(String id) {
+    public Optional<ProductSpace> findById(String id) {
         return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
                 (row, position) -> new ProductSpace(row.getLong(1), row.getString(2)), Long.valueOf(id))
                 .stream().findFirst();
@@ -36,8 +36,8 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
 
     @Override
     @Transactional
-    public void deleteProductSpace(String id) {
-        long numericId = Long.parseLong(id);
+    public void delete(ProductSpace space) {
+        long numericId = space.numericId();
         if (jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", numericId) == 1) {
             commonInstances.remove(numericId);
         }

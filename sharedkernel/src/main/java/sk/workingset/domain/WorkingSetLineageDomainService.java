@@ -12,9 +12,9 @@ import java.util.List;
  * Compare/Merge 的谱系准入。业务能力与比较证据由 T1 执行入口另行校验。
  */
 @Service
-public final class WorkingSetLineagePolicy {
+public final class WorkingSetLineageDomainService {
 
-    private WorkingSetLineagePolicy() {
+    private WorkingSetLineageDomainService() {
     }
 
     /**

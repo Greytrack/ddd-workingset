@@ -35,7 +35,8 @@ public class ProductSpaceCommandService {
 
     @Transactional
     public void delete(String id) {
-        spaces.lockProductSpace(id).orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, id));
+        ProductSpace space = spaces.findById(id)
+                .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, id));
         List<String> bound = workingSets.findWorkingSetsBoundToSpace(id).stream().map(WorkingSetId::value).toList();
         if (!bound.isEmpty()) {
             throw new BindingFailure(Reason.SpaceStillBoundInWorkingSet, id, Map.of("workingSetIds", bound));
@@ -43,6 +44,6 @@ public class ProductSpaceCommandService {
         if (trackers.hasTrackersInSpace(id)) {
             throw new BindingFailure(Reason.SpaceStillHasTrackers, id);
         }
-        spaces.deleteProductSpace(id);
+        spaces.delete(space);
     }
 }

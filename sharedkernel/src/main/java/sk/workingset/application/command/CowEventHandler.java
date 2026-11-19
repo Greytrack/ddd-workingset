@@ -39,7 +39,7 @@ public final class CowEventHandler {
     }
 
     public void onTrackerItemChanged(BusinessObjectUpdateEvent event) {
-        for (LightTrackerItem target : items.findBySource(event.sourceLocalId(), event.beforeRevision())) {
+        for (LightTrackerItem target : items.findSourceBackedTargets(event.sourceLocalId(), event.beforeRevision())) {
             if (target.materialized()) {
                 continue;
             }
