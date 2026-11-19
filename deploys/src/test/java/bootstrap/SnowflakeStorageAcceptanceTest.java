@@ -20,7 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import alm.requirement.adapters.RequirementView;
-import sk.workingset.adapters.WorkingSetController.ProductSpaceView;
+import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.domain.WorkingSetCreation.Status;
@@ -32,7 +32,7 @@ class SnowflakeStorageAcceptanceTest {
 
     @Test
     void storesNumericIdsAndPreservesOneReadOnlyNumberAcrossTheFamily() {
-        org.springframework.http.ResponseEntity<ProductSpaceView> space = rest.postForEntity("/api/worksets/1/product-spaces",
+        org.springframework.http.ResponseEntity<ProductSpaceView> space = rest.postForEntity("/api/product-spaces",
                 Map.of("name", "编号验收"), ProductSpaceView.class);
         assertEquals(HttpStatus.CREATED, space.getStatusCode());
         long spaceId = Long.parseLong(space.getBody().productSpaceId());

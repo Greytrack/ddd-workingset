@@ -21,14 +21,14 @@ public interface TrackerRepository {
 
     Optional<Tracker> findRootFolder(WorkingSetId owner, String spaceId);
 
-    void insertTracker(Tracker tracker);
-
-    void updateName(Tracker tracker);
+    default void save(Tracker tracker) {
+        save(tracker, true, null);
+    }
 
     /**
-     * 扩展任务创建的新 Tracker 在任务终态前不可见。
+     * 保存聚合及其兼容数据；初始可见性只在新建时使用。
      */
-    void insertTrackerForTask(Tracker tracker, boolean visible, long actor);
+    void save(Tracker tracker, boolean initiallyVisible, Long actor);
 
     boolean isVisible(TrackerId trackerId);
 

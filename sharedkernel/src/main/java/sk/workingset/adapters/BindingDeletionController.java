@@ -33,12 +33,6 @@ public class BindingDeletionController {
         deletions.removeSpace(WorkingSetId.of(workingSetId), spaceId);
     }
 
-    @DeleteMapping("/worksets/1/product-spaces/{spaceId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteProductSpace(@PathVariable String spaceId) {
-        deletions.deleteProductSpace(spaceId);
-    }
-
     @DeleteMapping("/worksets/{workingSetId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteWorkingSet(@PathVariable String workingSetId) {

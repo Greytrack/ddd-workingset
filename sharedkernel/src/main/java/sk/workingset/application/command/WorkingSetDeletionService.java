@@ -16,7 +16,6 @@ import sk.workingset.domain.WorkingSet;
 import sk.workingset.domain.WorkingSet.TrackerBinding;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.ProductSpaceRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -37,7 +36,6 @@ import java.util.Map;
 public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
-    private final ProductSpaceRepository spaces;
     private final LightTrackerItemRepository items;
     private final BusinessTrackerItems businessItems;
 
@@ -53,7 +51,9 @@ public class WorkingSetDeletionService {
         TrackerBinding binding = workingSet.trackerBinding(trackerId);
         rejectIndependentFolderRemoval(lockTracker(trackerId));
         checkUnbind(binding);
-        unbind(workingSet, binding);
+        workingSet.unbindTracker(trackerId);
+        workingSets.save(workingSet);
+        deleteOwnedTracker(binding);
     }
 
     @Transactional
@@ -69,19 +69,6 @@ public class WorkingSetDeletionService {
         requireDeletable(tracker);
         workingSets.deleteBindingsToTracker(id);
         trackers.deleteTracker(id);
-    }
-
-    @Transactional
-    public void deleteProductSpace(String id) {
-        spaces.lockProductSpace(id).orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, id));
-        List<String> bound = workingSets.findWorkingSetsBoundToSpace(id).stream().map(WorkingSetId::value).toList();
-        if (!bound.isEmpty()) {
-            throw new BindingFailure(Reason.SpaceStillBoundInWorkingSet, id, Map.of("workingSetIds", bound));
-        }
-        if (trackers.hasTrackersInSpace(id)) {
-            throw new BindingFailure(Reason.SpaceStillHasTrackers, id);
-        }
-        spaces.deleteProductSpace(id);
     }
 
     @Transactional
@@ -103,8 +90,10 @@ public class WorkingSetDeletionService {
         if (!blockers.isEmpty()) {
             throw new BindingFailure(Reason.MemberCannotBeUnbound, id.value(), Map.of("members", blockers));
         }
-        bindings.forEach(binding -> unbind(workingSet, binding));
+        bindings.forEach(binding -> workingSet.unbindTracker(binding.trackerId()));
         workingSet.spaces().forEach(binding -> workingSet.removeSpace(binding.productSpaceId()));
+        workingSets.save(workingSet);
+        bindings.forEach(this::deleteOwnedTracker);
         workingSets.deleteWorkingSet(id);
     }
 
@@ -122,9 +111,7 @@ public class WorkingSetDeletionService {
         }
     }
 
-    private void unbind(WorkingSet workingSet, TrackerBinding binding) {
-        workingSet.unbindTracker(binding.trackerId());
-        workingSets.deleteTrackerBinding(workingSet.id(), binding.trackerId());
+    private void deleteOwnedTracker(TrackerBinding binding) {
         if (binding.sharingMode() == SharingMode.UNSHARED) {
             trackers.deleteTracker(binding.trackerId());
         }
@@ -142,8 +129,10 @@ public class WorkingSetDeletionService {
             }
         }
         members.forEach(this::checkUnbind);
-        members.forEach(binding -> unbind(workingSet, binding));
+        members.forEach(binding -> workingSet.unbindTracker(binding.trackerId()));
         workingSet.removeSpace(spaceId);
+        workingSets.save(workingSet);
+        members.forEach(this::deleteOwnedTracker);
     }
 
     private void requireDeletable(Tracker tracker) {

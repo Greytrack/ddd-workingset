@@ -26,18 +26,17 @@ public interface WorkingSetRepository {
 
     void requireReady(WorkingSetId id);
 
-    boolean insertWorkingSet(WorkingSet workingSet, Long actor);
+    default boolean save(WorkingSet workingSet) {
+        return save(workingSet, null);
+    }
+
+    /** 保存新建或持锁重建的聚合及成员；新建身份冲突时不覆盖现有状态。 */
+    boolean save(WorkingSet workingSet, Long actor);
 
     List<WorkingSetId> findChildren(WorkingSetId id);
 
     List<WorkingSetId> findAncestors(WorkingSetId id);
 
-
-    void insertTrackerBinding(WorkingSet.TrackerBinding binding);
-
-    void setTrackerBindingShown(WorkingSetId id, TrackerId trackerId, boolean shown);
-
-    void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId);
 
     void deleteBindingsToTracker(TrackerId trackerId);
 

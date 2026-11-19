@@ -13,7 +13,9 @@ import sk.workingset.application.command.WorkingSetDeletionService;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.repository.ProductSpaceRepository;
+import sk.productspace.domain.ProductSpace;
+import sk.productspace.domain.repository.ProductSpaceRepository;
+import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 @Service
@@ -23,6 +25,7 @@ public class TrackerCommandService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
+    private final ClassificationCatalog classifications;
     private final IdentifierGenerator ids;
 
     @Transactional
@@ -39,13 +42,13 @@ public class TrackerCommandService {
         ProductSpace space = spaces.lockProductSpace(spaceId)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
         workingSet.requireSpaceBinding(spaceId);
-        Classification classification = spaces.findClassification(classificationId)
+        Classification classification = classifications.findClassification(classificationId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
         Tracker tracker = Tracker.original(TrackerId.of(ids.nextId(null).longValue()), name, space,
                 classification, sharingMode);
-        WorkingSet.TrackerBinding binding = workingSet.bindTracker(tracker, classification, sharingMode);
-        trackers.insertTracker(tracker);
-        workingSets.insertTrackerBinding(binding);
+        workingSet.bindTracker(tracker, classification, sharingMode);
+        trackers.save(tracker);
+        workingSets.save(workingSet);
         return tracker;
     }
 
@@ -56,7 +59,7 @@ public class TrackerCommandService {
                 .orElseThrow(() -> new BindingFailure(Reason.TrackerNotFound, id.value()));
         workingSets.requireReady(tracker.workingSetId());
         if (tracker.rename(name)) {
-            trackers.updateName(tracker);
+            trackers.save(tracker);
         }
         return tracker;
     }

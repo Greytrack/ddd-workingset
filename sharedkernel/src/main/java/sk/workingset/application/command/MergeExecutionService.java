@@ -46,6 +46,7 @@ import java.util.Map;
 public class MergeExecutionService {
 
     private final MergeRepository store;
+    private final MergeCheckpointRepository checkpoints;
     private final MergeComparisonService comparisons;
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
@@ -136,7 +137,7 @@ public class MergeExecutionService {
         MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
         MergeRound round;
         try {
-            round = store.insertOrFindRound(prepared, pair.a(), pair.b()).orElseThrow(
+            round = store.admit(prepared, pair.a(), pair.b()).orElseThrow(
                     () -> new MergeFailure(Reason.Conflict, requestId));
         } catch (DataIntegrityViolationException conflict) {
             throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
@@ -176,10 +177,10 @@ public class MergeExecutionService {
                 throw new MergeFailure(Reason.InvalidDecision, "decision is required");
             }
             request.decision().validate(frozen);
-            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), store.nextDecisionVersion(),
+            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), checkpoints.nextDecisionVersion(),
                     frozen, request.decision(), null));
         }
-        store.updateRound(updated);
+        store.save(updated);
     }
 
     public MergeRound get(String id) {
@@ -188,7 +189,7 @@ public class MergeExecutionService {
 
     @Transactional
     public void revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion) {
-        if (!store.revokeCheckpoint(key, expectedVersion, store.nextDecisionVersion())) {
+        if (!checkpoints.revokeCheckpoint(key, expectedVersion, checkpoints.nextDecisionVersion())) {
             throw new MergeFailure(Reason.Conflict, "checkpoint is missing, superseded or already revoked");
         }
     }
@@ -212,7 +213,7 @@ public class MergeExecutionService {
         }
         if (round.state() == State.Preparing) {
             round = round.start();
-            store.updateRound(round);
+            store.save(round);
         }
         for (Entry entry : round.entries()) {
             if (entry.result() != null || entry.requested()) {
@@ -220,7 +221,7 @@ public class MergeExecutionService {
             }
             if (entry.decision().deferred()) {
                 round = finish(round, entry, result(entry, Outcome.Deferred, "DEFER", null, null, null));
-                store.updateRound(round);
+                store.save(round);
                 continue;
             }
             Difference current = comparisons.current(entry.evidence());
@@ -230,12 +231,12 @@ public class MergeExecutionService {
                 MergeCommitReceipt receipt = new MergeCommitReceipt(null,
                         current.source().revision(), current.target().revision());
                 round = finish(round, entry, confirm(round, entry, receipt));
-                store.updateRound(round);
+                store.save(round);
                 continue;
             }
             events.publishEvent(approve(round, entry, current, operation));
             round = round.request(entry.id());
-            store.updateRound(round);
+            store.save(round);
         }
         completeIfReady(round);
         return round(id, false);
@@ -299,7 +300,7 @@ public class MergeExecutionService {
             round = finish(round, entry, result(entry, outcome(event.outcome()), operation(entry), null,
                     null, event.failure()));
         }
-        store.updateRound(round);
+        store.save(round);
         return completeIfReady(round);
     }
 
@@ -308,7 +309,7 @@ public class MergeExecutionService {
             return null;
         }
         MergeRound finished = round.complete(Instant.now());
-        store.updateRound(finished);
+        store.save(finished);
         try {
             MergeRelationRepairStep.StepResult repair = relationRepair.repair(finished);
             if (repair.failed() > 0) {
@@ -342,7 +343,7 @@ public class MergeExecutionService {
             Revision revisionA = sourceIsA ? receipt.sourceRevision() : receipt.targetRevision();
             Revision revisionB = sourceIsA ? receipt.targetRevision() : receipt.sourceRevision();
             MergeCheckpoint.Direction direction = sourceIsA ? MergeCheckpoint.Direction.A_TO_B : MergeCheckpoint.Direction.B_TO_A;
-            boolean confirmed = store.recordCheckpoint(new MergeCheckpoint(key, entry.decisionVersion(),
+            boolean confirmed = checkpoints.save(new MergeCheckpoint(key, entry.decisionVersion(),
                     revisionA, revisionB, localA, localB, round.id(), entry.evidence().kind(), direction, false,
                     round.caller()));
             return result(entry, confirmed ? Outcome.Confirmed : Outcome.Applied, operation, businessRef,

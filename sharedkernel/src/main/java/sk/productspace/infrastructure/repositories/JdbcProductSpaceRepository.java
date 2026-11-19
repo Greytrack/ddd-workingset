@@ -1,0 +1,45 @@
+package sk.productspace.infrastructure.repositories;
+
+import java.util.Optional;
+
+import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import sk.productspace.domain.ProductSpace;
+import sk.productspace.domain.repository.ProductSpaceRepository;
+
+@Repository
+@RequiredArgsConstructor
+public class JdbcProductSpaceRepository implements ProductSpaceRepository {
+    private final JdbcTemplate jdbc;
+    private final JdbcCommonInstanceStore commonInstances;
+
+    @Override
+    public Optional<ProductSpace> lockProductSpace(String id) {
+        return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
+                (row, position) -> new ProductSpace(row.getLong(1), row.getString(2)), Long.valueOf(id))
+                .stream().findFirst();
+    }
+
+    @Override
+    @Transactional
+    public void save(ProductSpace space) {
+        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
+                space.numericId(), space.name());
+        commonInstances.save(new AirInstCommonPo(space.numericId(), 1003L, 100301L, 10030101L,
+                null, null, space.name(), null, null, 1L, 0, null, null, null, null, null,
+                null, null, null, null, null, 584189545406816L, 1L));
+    }
+
+    @Override
+    @Transactional
+    public void deleteProductSpace(String id) {
+        long numericId = Long.parseLong(id);
+        if (jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", numericId) == 1) {
+            commonInstances.remove(numericId);
+        }
+    }
+}

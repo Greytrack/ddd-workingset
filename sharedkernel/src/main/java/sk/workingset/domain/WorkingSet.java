@@ -2,6 +2,7 @@ package sk.workingset.domain;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
+import sk.productspace.domain.ProductSpace;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
@@ -26,8 +27,10 @@ public final class WorkingSet {
     private final WorkingSetId parentWorkingSetId;
     private final String name;
     private final String color;
+    private final boolean newAggregate;
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
+    private final Map<TrackerId, TrackerBinding> originalTrackers;
 
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
@@ -41,6 +44,11 @@ public final class WorkingSet {
 
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
+        this(id, parentWorkingSetId, name, color, spaces, trackers, false);
+    }
+
+    private WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
+                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers, boolean newAggregate) {
         this.id = Objects.requireNonNull(id, "id");
         if (id.equals(parentWorkingSetId)) {
             throw new BindingFailure(Reason.WorkingSetCycle, id.value());
@@ -51,8 +59,10 @@ public final class WorkingSet {
         this.parentWorkingSetId = parentWorkingSetId;
         this.name = name;
         this.color = color;
+        this.newAggregate = newAggregate;
         spaces.forEach(binding -> this.spaces.put(binding.productSpaceId(), binding));
         trackers.forEach(binding -> this.trackers.put(binding.trackerId(), binding));
+        originalTrackers = Map.copyOf(this.trackers);
     }
 
     public static WorkingSet child(WorkingSetId id, WorkingSetId parentId) {
@@ -65,7 +75,7 @@ public final class WorkingSet {
 
     public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name, String color) {
         return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name,
-                normalizeColor(color), List.of(), List.of());
+                normalizeColor(color), List.of(), List.of(), true);
     }
 
     public static String normalizeColor(String color) {
@@ -89,6 +99,10 @@ public final class WorkingSet {
         return id;
     }
 
+    public boolean isNew() {
+        return newAggregate;
+    }
+
     public WorkingSetId parentWorkingSetId() {
         return parentWorkingSetId;
     }
@@ -107,6 +121,34 @@ public final class WorkingSet {
 
     public List<TrackerBinding> trackers() {
         return List.copyOf(trackers.values());
+    }
+
+    public List<TrackerBinding> addedTrackerBindings() {
+        return trackers.values().stream()
+                .filter(binding -> !originalTrackers.containsKey(binding.trackerId()))
+                .toList();
+    }
+
+    public List<TrackerId> removedTrackerBindings() {
+        return originalTrackers.keySet().stream()
+                .filter(trackerId -> !trackers.containsKey(trackerId))
+                .sorted(Comparator.comparing(TrackerId::numericValue))
+                .toList();
+    }
+
+    public List<TrackerBinding> changedTrackerVisibility() {
+        return trackers.values().stream()
+                .filter(binding -> {
+                    TrackerBinding original = originalTrackers.get(binding.trackerId());
+                    return original != null && original.shown() != binding.shown();
+                })
+                .toList();
+    }
+
+    public void setTrackerShown(TrackerId trackerId, boolean shown) {
+        TrackerBinding binding = trackerBinding(trackerId);
+        trackers.put(trackerId, new TrackerBinding(id, trackerId, binding.numericProductSpaceId(),
+                binding.numericClassificationId(), binding.sharingMode(), binding.origin(), shown));
     }
 
     public SpaceBinding bindSpace(ProductSpace space) {
@@ -216,7 +258,12 @@ public final class WorkingSet {
 
     @Entity
     public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
-                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
+                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin, boolean shown) {
+        public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
+                              Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
+            this(workingSetId, trackerId, numericProductSpaceId, numericClassificationId, sharingMode, origin, true);
+        }
+
         public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
                               String classificationId, SharingMode sharingMode, TrackerOrigin origin) {
             this(workingSetId, trackerId, Long.valueOf(productSpaceId), Long.valueOf(classificationId),

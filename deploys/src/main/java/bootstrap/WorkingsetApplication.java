@@ -15,7 +15,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         "alm.requirement.adapters", "alm.requirement.application", "alm.requirement.infrastructure",
         "sk.workingset.adapters", "sk.workingset.application", "sk.workingset.infrastructure",
         "sk.businessframework.infrastructure.projection",
-        "sk.tracker.adapters", "sk.tracker.application", "sk.tracker.infrastructure"
+        "sk.tracker.adapters", "sk.tracker.application", "sk.tracker.infrastructure",
+        "sk.productspace"
 })
 @MapperScan({
         "sk.workingset.infrastructure.providers",

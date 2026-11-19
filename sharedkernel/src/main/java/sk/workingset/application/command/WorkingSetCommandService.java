@@ -4,16 +4,19 @@ import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
+import sk.productspace.domain.ProductSpace;
+import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.repository.ProductSpaceRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.util.List;
@@ -30,6 +33,7 @@ public class WorkingSetCommandService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
+    private final ClassificationCatalog classifications;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
@@ -58,7 +62,7 @@ public class WorkingSetCommandService {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
         WorkingSet child = WorkingSet.child(newId, parentId, name, color);
-        if (!workingSets.insertWorkingSet(child, actor)) {
+        if (!workingSets.save(child, actor)) {
             List<WorkingSetId> existing = workingSets.findAncestors(newId);
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             Reason reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
@@ -67,32 +71,26 @@ public class WorkingSetCommandService {
         return child;
     }
 
-    /**
-     * 创建产品空间，并将空间和各分类的默认 Tracker 同步纳入默认工作集。
-     *
-     * <p>产品空间只能归属默认工作集：调用方传入的工作集入口仅用于路由，不参与目标选择，
-     * 本方法一律固定使用 {@link WorkingSet#DEFAULT_ID}。入口层不限制调用来源，这是有意设计。
-     */
-    @Transactional
-    public ProductSpace createProductSpace(String name) {
-        ProductSpace space = new ProductSpace(identifierGenerator.nextId(null).longValue(), name);
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void initializeProductSpaceMembership(ProductSpace space) {
         WorkingSet defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
-        spaces.insertProductSpace(space);
         bindSpace(defaultWorkingSet, space, null);
-        for (Classification classification : spaces.findClassifications()) {
+        for (Classification classification : classifications.findClassifications()) {
             if (classification.numericId() == Tracker.FOLDER_CLASSIFICATION_ID) continue;
             Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
                     space, classification, null, true);
-            WorkingSet.TrackerBinding binding = defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
-            trackers.insertTracker(tracker);
-            workingSets.insertTrackerBinding(binding);
+            defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
+            trackers.save(tracker);
         }
-        return space;
+        workingSets.save(defaultWorkingSet);
     }
 
     @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
-        return bindSpace(writable(id), lockSpace(spaceId), null);
+        WorkingSet workingSet = writable(id);
+        WorkingSet.SpaceBinding binding = bindSpace(workingSet, lockSpace(spaceId), null);
+        workingSets.save(workingSet);
+        return binding;
     }
 
     private ProductSpace lockSpace(String spaceId) {
@@ -105,8 +103,7 @@ public class WorkingSetCommandService {
         Tracker folder = trackers.findRootFolder(workingSet.id(), space.id()).orElseGet(() -> {
             Tracker created = Tracker.rootFolder(TrackerId.of(identifierGenerator.nextId(null).longValue()),
                     workingSet.id(), space);
-            if (actor == null) trackers.insertTracker(created);
-            else trackers.insertTrackerForTask(created, true, actor);
+            trackers.save(created, true, actor);
             return created;
         });
         bindTracker(workingSet, folder, SharingMode.UNSHARED);
@@ -115,20 +112,22 @@ public class WorkingSetCommandService {
 
     @Transactional
     public void setTrackerShown(WorkingSetId workingSet, TrackerId tracker, boolean shown) {
-        writable(workingSet).trackerBinding(tracker);
-        workingSets.setTrackerBindingShown(workingSet, tracker, shown);
+        WorkingSet target = writable(workingSet);
+        target.setTrackerShown(tracker, shown);
+        workingSets.save(target);
     }
 
     @Transactional
     public WorkingSet.TrackerBinding bindTrackerShared(WorkingSetId id, TrackerId trackerId) {
         WorkingSet workingSet = writable(id);
-        return bindTracker(workingSet, directParentTracker(workingSet, trackerId), SharingMode.SHARED);
+        WorkingSet.TrackerBinding binding =
+                bindTracker(workingSet, directParentTracker(workingSet, trackerId), SharingMode.SHARED);
+        workingSets.save(workingSet);
+        return binding;
     }
 
     private WorkingSet.TrackerBinding bindTracker(WorkingSet target, Tracker tracker, SharingMode mode) {
-        WorkingSet.TrackerBinding binding = target.bindTracker(tracker, classification(tracker), mode);
-        workingSets.insertTrackerBinding(binding);
-        return binding;
+        return target.bindTracker(tracker, classification(tracker), mode);
     }
 
     // These methods run only under the creation task row lock and the item transaction.
@@ -143,6 +142,7 @@ public class WorkingSetCommandService {
             return false;
         }
         bindSpace(target, space, actor);
+        workingSets.save(target);
         return true;
     }
 
@@ -155,7 +155,7 @@ public class WorkingSetCommandService {
             return false;
         }
         Tracker copy = derivedTracker(target, source);
-        trackers.insertTrackerForTask(copy, visible, actor);
+        trackers.save(copy, visible, actor);
         return true;
     }
 
@@ -172,6 +172,7 @@ public class WorkingSetCommandService {
             return false;
         }
         bindTracker(target, copy, SharingMode.UNSHARED);
+        workingSets.save(target);
         return true;
     }
 
@@ -182,6 +183,7 @@ public class WorkingSetCommandService {
             return false;
         }
         bindTracker(target, source, SharingMode.SHARED);
+        workingSets.save(target);
         return true;
     }
 
@@ -210,7 +212,7 @@ public class WorkingSetCommandService {
     }
 
     private Classification classification(Tracker tracker) {
-        return spaces.findClassification(tracker.classificationId())
+        return classifications.findClassification(tracker.classificationId())
                 .orElseThrow(() -> new BindingFailure(Reason.SharingModeMismatch, tracker.classificationId()));
     }
 

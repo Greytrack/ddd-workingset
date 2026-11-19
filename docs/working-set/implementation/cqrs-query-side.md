@@ -30,6 +30,13 @@ alm.requirement.application.query
 - Controller 暂未拆分，`WorkingSetController` 与 `RequirementController` 同时注入 command/query 服务。
 - 命令侧事务、聚合不变量、JdbcTemplate Repository 未改变。
 
+## Working Set 绑定写入
+
+- `WorkingSetRepository.save` 保存新建根及其成员，或保存持锁重建聚合的成员差量；现有根字段没有修改命令。绑定的增删及 `shown` 修改均经聚合；空间绑定仍由根文件夹关系表示，未变更关系不重写。
+- Tracker 与创建任务也统一用 `save`，保存分支由实现处理。产品空间当前无更新命令；`save` 只写新对象，重复身份不覆盖。跨工作集的 Tracker 删除清理仍由删除用例协调。
+- MergeRound 与 MergeCheckpoint 使用独立仓储。轮次幂等受理及 LTI 原子家族占位保留专用领域语义，不以普通保存替代。
+- 产品空间命令与仓储由独立的 `sk.productspace` 包提供。主入口为 `POST /api/product-spaces` 和 `DELETE /api/product-spaces/{spaceId}`；旧路由由同一控制器兼容。创建仍在同一事务内初始化默认工作集成员，挂载/卸载仍由 Working Set 管理。
+
 ## 后续
 
 - LTI 列表、`resolve`/`read` 的读模型查询迁移到查询端口。

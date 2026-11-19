@@ -95,7 +95,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY, noRollbackFor = RuntimeException.class)
-    public boolean insertIfFamilyAbsent(LightTrackerItem item) {
+    public boolean claimFamily(LightTrackerItem item) {
         boolean inserted = jdbc.update("""
                         INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                             source_local_id, source_revision, materialized)

@@ -202,11 +202,21 @@ class BindingAcceptanceTest {
     @Test
     void sharedUnbindPreservesTrackerItemAndSpaceBinding() {
         bindSpace(ws);
+        String rootFolderRelation = """
+                SELECT id FROM air_ws_workingset_branch_relation
+                WHERE workingset_id = ? AND work_space = ? AND tracker_id IS NOT NULL AND tracker_id <> ?
+                """;
+        Long rootFolderBinding = jdbc.queryForObject(rootFolderRelation, Long.class,
+                Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared));
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
+        assertEquals(rootFolderBinding, jdbc.queryForObject(rootFolderRelation, Long.class,
+                Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         businessItem(fixtureId("ITEM-" + suffix), shared);
         assertFailure(delete(spacePath(ws)), HttpStatus.CONFLICT, "SpaceStillHasTrackers");
 
         assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
+        assertEquals(rootFolderBinding, jdbc.queryForObject(rootFolderRelation, Long.class,
+                Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
@@ -259,7 +269,7 @@ class BindingAcceptanceTest {
     void productSpaceDeletionReportsAllWorksetsIncludingEmptyBindings() {
         bindSpace(ws);
         bindSpace(other);
-        String endpoint = path("1") + "/product-spaces/" + space;
+        String endpoint = "/api/product-spaces/" + space;
         ResponseEntity<Map> blocked = delete(endpoint);
         assertFailure(blocked, HttpStatus.CONFLICT, "SpaceStillBoundInWorkingSet");
         assertEquals(java.util.stream.Stream.of(other, ws).sorted(java.util.Comparator.comparingLong(Long::parseLong))

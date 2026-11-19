@@ -44,7 +44,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.domain.merge.MergeRepository;
+import sk.workingset.domain.merge.MergeCheckpointRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -65,7 +65,7 @@ import sk.workingset.domain.merge.MergeRound.State;
 class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
-    @SpyBean private MergeRepository store;
+    @SpyBean private MergeCheckpointRepository store;
     @Autowired private RequirementCommandService requirements;
     @Autowired private JdbcRequirementRepository repository;
 
@@ -474,7 +474,7 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(
                 "/api/merge-checkpoints/" + key.a().value() + "/" + key.b().value() + "/" + keep + "/revoke",
                 Map.of("expectedDecisionVersion", checkpoint.decisionVersion()), Void.class));
-        assertFalse(store.recordCheckpoint(checkpoint));
+        assertFalse(store.save(checkpoint));
         assertTrue(store.findCheckpoint(key).orElseThrow().revoked());
         assertNotNull(diff(compare("1", child), keep));
     }

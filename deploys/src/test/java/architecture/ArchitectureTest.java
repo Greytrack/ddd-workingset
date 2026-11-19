@@ -14,9 +14,18 @@ import sk.common.error.AppException;
  * AC-01：Working Set 编译期不依赖 ALM 的实现模块或业务聚合类型（A1/T4 §3.1）。
  */
 @AnalyzeClasses(
-        packages = {"sk.workingset", "alm.requirement"},
+        packages = {"sk.workingset", "sk.productspace", "alm.requirement"},
         importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
+
+    @ArchTest
+    static final ArchRule product_space_inner_layers_must_not_depend_on_outer_layers =
+            noClasses()
+                    .that().resideInAnyPackage("sk.productspace.domain..", "sk.productspace.application..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "sk.productspace.infrastructure..", "sk.productspace.adapters..",
+                            "sk.workingset.infrastructure..", "sk.workingset.adapters..",
+                            "sk.tracker.infrastructure..", "sk.tracker.adapters..");
 
     @ArchTest
     static final ArchRule alm_inner_layers_must_not_depend_on_infrastructure =
@@ -68,7 +77,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule domain_must_not_depend_on_persistence_frameworks =
             noClasses()
-                    .that().resideInAnyPackage("sk.workingset.domain..", "alm.requirement.domain..")
+                    .that().resideInAnyPackage("sk.workingset.domain..", "sk.productspace.domain..", "alm.requirement.domain..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.baomidou..", "org.apache.ibatis..", "org.springframework.jdbc..");
 }

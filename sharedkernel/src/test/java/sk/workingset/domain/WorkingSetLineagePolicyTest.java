@@ -1,6 +1,7 @@
 package sk.workingset.domain;
 
 import org.junit.jupiter.api.Test;
+import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.BindingFailure.Reason;

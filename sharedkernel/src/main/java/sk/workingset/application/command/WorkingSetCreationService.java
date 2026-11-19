@@ -89,7 +89,7 @@ public class WorkingSetCreationService {
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
                 request, currentActor(), Instant.now());
-        if (store.insert(creation)) {
+        if (store.save(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
@@ -152,7 +152,7 @@ public class WorkingSetCreationService {
                 List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
                 request, currentActor(), Instant.now());
-        if (store.insert(creation)) {
+        if (store.save(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
@@ -205,7 +205,7 @@ public class WorkingSetCreationService {
         transaction.executeWithoutResult(tx -> {
             WorkingSetCreation creation = lock(id);
             if (creation.status() == Status.Pending) {
-                store.update(creation.start(Instant.now()));
+                store.save(creation.start(Instant.now()));
             }
         });
         boolean running;
@@ -217,7 +217,7 @@ public class WorkingSetCreationService {
                 }
                 WorkingSetCreation updated = creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
                         ? indexer.indexBatch(creation, tx) : executeItem(creation);
-                store.update(updated);
+                store.save(updated);
                 if (updated.status() != Status.Running && updated.request().mode() == Mode.EXTEND) {
                     workingSetService.revealExtensionTrackers(WorkingSetId.of(updated.request().newWorkingSetId()),
                             updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList(),

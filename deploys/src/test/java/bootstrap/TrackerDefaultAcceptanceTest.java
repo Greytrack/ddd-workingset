@@ -30,7 +30,8 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 import sk.workingset.domain.Classification;
-import sk.workingset.domain.ProductSpace;
+import sk.productspace.domain.ProductSpace;
+import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
@@ -191,9 +192,9 @@ class TrackerDefaultAcceptanceTest {
         jdbc.update("INSERT INTO air_inst_common (id, base_class, class, type) VALUES (?, 1003, 100301, 10030101)",
                 id.numericValue());
         try {
-            Tracker tracker = Tracker.reconstitute(id, id, "projection collision", null, WorkingSetId.of(1L),
+            Tracker tracker = new Tracker(id, "projection collision", null, WorkingSetId.of(1L),
                     space, 258519859202016L, Classification.SharingMode.UNSHARED, null, false);
-            assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.insertTracker(tracker));
+            assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                     Integer.class, id.numericValue()));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
@@ -208,10 +209,10 @@ class TrackerDefaultAcceptanceTest {
     void rejectedCompatibilityRowRollsBackRootInsert() {
         long space = Long.parseLong(createSpace("1"));
         TrackerId id = TrackerId.of(fixtureId("TRACKER-ROLLBACK-" + suffix));
-        Tracker tracker = Tracker.reconstitute(id, id, "x".repeat(501), null, WorkingSetId.of(1L),
+        Tracker tracker = new Tracker(id, "x".repeat(501), null, WorkingSetId.of(1L),
                 space, 258519859202016L, Classification.SharingMode.UNSHARED, null, false);
 
-        assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.insertTracker(tracker));
+        assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                 Integer.class, id.numericValue()));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
@@ -363,9 +364,9 @@ class TrackerDefaultAcceptanceTest {
     }
 
     private String createSpace(String workingSet) {
-        org.springframework.http.ResponseEntity<sk.workingset.adapters.WorkingSetController.ProductSpaceView> response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
+        org.springframework.http.ResponseEntity<ProductSpaceView> response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
                 Map.of("name", "新空间-" + suffix),
-                sk.workingset.adapters.WorkingSetController.ProductSpaceView.class);
+                ProductSpaceView.class);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         String id = response.getBody().productSpaceId();
         testSpaces.add(id);

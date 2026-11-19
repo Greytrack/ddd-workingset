@@ -24,7 +24,7 @@ public interface LightTrackerItemRepository {
     List<LightTrackerItem> pageInTracker(TrackerId trackerId, String afterLocalId, int limit);
 
     /** Registers the derived index and its public summary as one unit inside the task's item savepoint. */
-    boolean insertIfFamilyAbsent(LightTrackerItem item);
+    boolean claimFamily(LightTrackerItem item);
 
     boolean hasFamily(WorkingSetId workingSetId, CommonId commonId);
 

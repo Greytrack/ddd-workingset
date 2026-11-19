@@ -218,7 +218,7 @@ public final class WorkingSetItemIndexer {
         } while (id.value().equals(candidate.commonId().value()) || id.equals(candidate.sourceId()));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
                 candidate.revision(), candidate.sourceId(), candidate.sourceRevision());
-        return items.insertIfFamilyAbsent(item)
+        return items.claimFamily(item)
                 ? new Outcome(IndexResult.Indexed, null)
                 : new Outcome(IndexResult.Existing, null);
     }

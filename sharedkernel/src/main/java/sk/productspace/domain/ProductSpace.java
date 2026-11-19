@@ -1,4 +1,4 @@
-package sk.workingset.domain;
+package sk.productspace.domain;
 
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
@@ -8,8 +8,7 @@ import sk.workingset.error.WorkingsetResultCode;
 /**
  * ProductSpace 是 Shared Kernel 独立聚合：只维护稳定归属身份。
  *
- * <p>产品空间只能归属默认工作集；其创建入口中的工作集参数不参与归属选择，
- * 空间绑定与默认 Tracker 投影由默认工作集维护。name 仅用于界面可读展示。
+ * <p>产品空间在默认工作集维护生命周期；空间绑定由各 Working Set 持有。
  */
 @AggregateRoot
 public record ProductSpace(Long numericId, String name) {

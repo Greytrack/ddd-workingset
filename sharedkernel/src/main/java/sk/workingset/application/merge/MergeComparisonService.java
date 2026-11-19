@@ -15,7 +15,7 @@ import sk.workingset.domain.merge.Comparison.*;
 import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeFailure.Reason;
-import sk.workingset.domain.merge.MergeRepository;
+import sk.workingset.domain.merge.MergeCheckpointRepository;
 import sk.workingset.domain.repository.LightTrackerItemRepository;
 import sk.workingset.domain.repository.WorkingSetRepository;
 
@@ -35,11 +35,11 @@ public class MergeComparisonService {
     private final LightTrackerItemRepository items;
     private final TrackerItemCatalogQueryProvider catalog;
     private final Function<LocalId, TrackerItemQueryProvider> readPorts;
-    private final MergeRepository store;
+    private final MergeCheckpointRepository store;
 
     public MergeComparisonService(WorkingSetRepository workingSets, TrackerRepository trackers,
                                   LightTrackerItemRepository items, TrackerItemCatalogQueryProvider catalog,
-                                  Function<LocalId, TrackerItemQueryProvider> readPorts, MergeRepository store) {
+                                  Function<LocalId, TrackerItemQueryProvider> readPorts, MergeCheckpointRepository store) {
         this.workingSets = workingSets;
         this.trackers = trackers;
         this.items = items;

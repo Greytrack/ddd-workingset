@@ -97,14 +97,19 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     @Override
     @Transactional
-    public void insertTracker(Tracker tracker) {
-        insert(tracker, 1, currentActor());
+    public void save(Tracker tracker) {
+        save(tracker, true, null);
     }
 
     @Override
     @Transactional
-    public void insertTrackerForTask(Tracker tracker, boolean visible, long actor) {
-        insert(tracker, visible ? 1 : 0, actor);
+    public void save(Tracker tracker, boolean initiallyVisible, Long actor) {
+        long writeActor = actor == null ? currentActor() : actor;
+        if (tracker.isNew()) {
+            insert(tracker, initiallyVisible ? 1 : 0, writeActor);
+        } else {
+            update(tracker, writeActor);
+        }
     }
 
     private void insert(Tracker tracker, int visible, long actor) {
@@ -139,15 +144,13 @@ public class JdbcTrackerRepository implements TrackerRepository {
         saveCommonInstance(id);
     }
 
-    @Override
-    @Transactional
-    public void updateName(Tracker tracker) {
+    private void update(Tracker tracker, long actor) {
         long id = tracker.trackerId().numericValue();
         requireOne(jdbc.update("""
                         UPDATE air_inst_tracker_rev
                         SET name = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
                         WHERE id = ? AND work_space = ? AND visible = 1 AND delete_flag = 0
-                        """, tracker.name(), Long.toString(currentActor()), System.currentTimeMillis(),
+                        """, tracker.name(), Long.toString(actor), System.currentTimeMillis(),
                 id, tracker.numericProductSpaceId()), id);
         requireOne(jdbc.update("""
                 UPDATE air_ws_tracker c

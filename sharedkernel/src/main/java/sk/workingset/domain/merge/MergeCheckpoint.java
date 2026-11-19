@@ -1,6 +1,6 @@
 package sk.workingset.domain.merge;
 
-import org.jmolecules.ddd.annotation.Entity;
+import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.ValueObject;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
@@ -14,7 +14,7 @@ import sk.workingset.domain.merge.Comparison.ChangeKind;
  * <p>方向只是属性；身份由规范化后的 Tracker 分支对与家族决定，WorkingSet 不参与。
  * decision_version 用于防止晚到确认/撤销覆盖更新的事实。
  */
-@Entity
+@AggregateRoot
 public record MergeCheckpoint(Key key, long decisionVersion, Revision revisionA, Revision revisionB,
                               LocalId localIdA, LocalId localIdB, String roundId, ChangeKind changeKind,
                               Direction direction, boolean revoked, String operator) {

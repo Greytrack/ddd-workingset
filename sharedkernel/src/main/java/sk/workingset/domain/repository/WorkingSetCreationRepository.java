@@ -8,7 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface WorkingSetCreationRepository {
-    boolean insert(WorkingSetCreation creation);
+    /** 保存整个任务；新任务若未取得幂等或活跃任务席位则返回 false。 */
+    boolean save(WorkingSetCreation creation);
 
     Optional<WorkingSetCreation> find(String id, boolean lock);
 
@@ -18,5 +19,4 @@ public interface WorkingSetCreationRepository {
 
     Optional<WorkingSetCreation> findActiveExtension(WorkingSetId target);
 
-    void update(WorkingSetCreation creation);
 }

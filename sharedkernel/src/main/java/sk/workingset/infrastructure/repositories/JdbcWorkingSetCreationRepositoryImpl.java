@@ -22,7 +22,11 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
 
 
     @Override
-    public boolean insert(WorkingSetCreation creation) {
+    public boolean save(WorkingSetCreation creation) {
+        return creation.status() == WorkingSetCreation.Status.Pending ? insert(creation) : update(creation);
+    }
+
+    private boolean insert(WorkingSetCreation creation) {
         WorkingSetCreation.Request request = creation.request();
         return jdbc.update("""
                         INSERT INTO working_set_creations
@@ -69,15 +73,14 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
                 """, target.numericValue());
     }
 
-    @Override
-    public void update(WorkingSetCreation creation) {
-        jdbc.update("""
+    private boolean update(WorkingSetCreation creation) {
+        return jdbc.update("""
                         UPDATE working_set_creations
                         SET status = ?, result = CAST(? AS jsonb), started_at = ?, completed_at = ?
                         WHERE id = ?
                         """, creation.status().name(), encode(creation),
                 Timestamp.from(creation.startedAt()),
-                creation.completedAt() == null ? null : Timestamp.from(creation.completedAt()), creation.numericId());
+                creation.completedAt() == null ? null : Timestamp.from(creation.completedAt()), creation.numericId()) == 1;
     }
 
     private Optional<WorkingSetCreation> load(String sql, Object id) {

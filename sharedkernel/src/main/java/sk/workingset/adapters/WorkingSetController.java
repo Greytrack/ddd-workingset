@@ -31,13 +31,6 @@ public class WorkingSetController {
         this.queries = queries;
     }
 
-    private static String requireText(String value, String name) {
-        if (value == null || value.isBlank()) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, name + " must not be blank");
-        }
-        return value;
-    }
-
     @GetMapping("/{workingSetId}")
     public WorkingSetView find(@PathVariable String workingSetId) {
         return WorkingSetView.from(queries.find(WorkingSetId.of(workingSetId)));
@@ -80,17 +73,6 @@ public class WorkingSetController {
         return BindingsView.from(queries.findBindings(WorkingSetId.of(workingSetId)));
     }
 
-    /**
-     * 创建产品空间。路径中的 {@code workingSetId} 仅是入口占位，不参与目标工作集选择：
-     * 产品空间只能创建在默认工作集，服务层固定使用默认工作集；入口层不做来源限制。
-     */
-    @PostMapping("/{workingSetId}/product-spaces")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ProductSpaceView createProductSpace(@PathVariable String workingSetId,
-                                               @RequestBody CreateProductSpaceRequest request) {
-        return ProductSpaceView.from(commands.createProductSpace(requireText(request.name(), "name")));
-    }
-
     @PostMapping("/{workingSetId}/spaces/{spaceId}")
     @ResponseStatus(HttpStatus.CREATED)
     public SpaceBindingView bindSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
@@ -119,15 +101,6 @@ public class WorkingSetController {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "shown is required");
         }
         commands.setTrackerShown(WorkingSetId.of(workingSetId), TrackerId.of(trackerId), request.shown());
-    }
-
-    public record CreateProductSpaceRequest(String name) {
-    }
-
-    public record ProductSpaceView(String productSpaceId, String name) {
-        static ProductSpaceView from(sk.workingset.domain.ProductSpace space) {
-            return new ProductSpaceView(space.id(), space.name());
-        }
     }
 
     public record CreateChildRequest(String name, String color) {

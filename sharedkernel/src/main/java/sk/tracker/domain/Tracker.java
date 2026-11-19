@@ -1,5 +1,7 @@
 package sk.tracker.domain;
 
+import sk.productspace.domain.ProductSpace;
+
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
 import sk.workingset.domain.*;
@@ -29,6 +31,7 @@ public final class Tracker {
     private final TrackerId parentId;
     private final boolean isDefault;
     private final TrackerCompatibility compatibility;
+    private final boolean newAggregate;
     private String name;
 
     public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
@@ -58,6 +61,13 @@ public final class Tracker {
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
                     WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault) {
+        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
+                numericClassificationId, sharingMode, parentId, isDefault, true);
+    }
+
+    private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
+                    WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                    SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.name = name;
@@ -69,6 +79,7 @@ public final class Tracker {
         this.numericClassificationId = Objects.requireNonNull(numericClassificationId, "classificationId");
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
         this.compatibility = new TrackerCompatibility(trackerId, numericClassificationId);
+        this.newAggregate = newAggregate;
         if (sourceId == null && !trackerId.equals(commonId)) {
             throw new IllegalArgumentException("An original Tracker must use its own ID as common ID");
         }
@@ -86,7 +97,11 @@ public final class Tracker {
     public static Tracker reconstitute(TrackerId id, TrackerId commonId, String name, TrackerId source,
                                        WorkingSetId owner, Long productSpace, Long classification,
                                        SharingMode sharing, TrackerId parent, boolean isDefault) {
-        return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault);
+        return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault, false);
+    }
+
+    public boolean isNew() {
+        return newAggregate;
     }
 
     public static Tracker rootFolder(TrackerId id, WorkingSetId owner, ProductSpace space) {
