@@ -193,6 +193,40 @@ function renderTaskCard(task) {
 }
 
 /* ---------- create working set ---------- */
+const WORKSET_COLOR_PRESETS = [
+  ['白色', '#FFFF'], ['蓝色', '#3478F6'], ['青色', '#0D9488'], ['绿色', '#2E8B57'],
+  ['橙色', '#E88434'], ['玫红', '#CA4B7C'], ['紫色', '#8054BC'], ['深灰', '#475569']
+];
+
+function wireWorksetColor(form) {
+  const picker = form.querySelector('#createColorPicker');
+  const input = form.querySelector('#createColor');
+  const preview = form.querySelector('#createColorPreview');
+  const buttons = [...form.querySelectorAll('[data-workset-color]')];
+  const sync = () => {
+    const color = parseWorksetColor(input.value);
+    preview.style.setProperty('--swatch', color?.hex || 'transparent');
+    for (const button of buttons) {
+      button.setAttribute('aria-pressed', String(button.dataset.worksetColor === color?.hex));
+    }
+    if (color) picker.value = color.rgb;
+  };
+  for (const button of buttons) {
+    button.addEventListener('click', () => {
+      input.value = button.dataset.worksetColor;
+      sync();
+    });
+  }
+  input.addEventListener('input', sync);
+  const pick = () => {
+    input.value = picker.value.toUpperCase();
+    sync();
+  };
+  picker.addEventListener('input', pick);
+  picker.addEventListener('change', pick);
+  sync();
+}
+
 function flattenWorksets(nodes, out = [], depth = 0) {
   for (const node of nodes || []) {
     out.push({ node, depth });
@@ -221,13 +255,22 @@ async function openCreateWorkset() {
           <input id="createName" name="name" placeholder="例如：动力系统 V2 需求工作集" maxlength="255" required>
         </div>
         <div class="field">
-          <label for="createColor">工作集颜色</label>
+          <span id="createColorLabel" class="field-label">工作集颜色</span>
+          <div class="color-palette" role="group" aria-labelledby="createColorLabel">
+            ${WORKSET_COLOR_PRESETS.map(([label, hex]) =>
+              `<button type="button" class="color-swatch" data-workset-color="${hex}" style="--swatch:${hex}"
+                aria-label="${label} ${hex}" title="${label}" aria-pressed="false"></button>`).join('')}
+          </div>
           <div class="color-field">
-            <input id="createColorPicker" type="color" value="#ffffff" aria-label="选择工作集颜色">
-            <input id="createColor" name="color" value="#FFFF" maxlength="9"
+            <label class="color-custom" for="createColorPicker">
+              <span id="createColorPreview" class="color-preview" aria-hidden="true"></span>
+              <span>自定义颜色</span>
+              <input id="createColorPicker" type="color" value="#ffffff" aria-label="打开自定义颜色选择器">
+            </label>
+            <input id="createColor" name="color" value="#FFFF" maxlength="9" spellcheck="false"
+              aria-label="工作集颜色十六进制值"
               pattern="#(?:[0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})" required>
           </div>
-          <span class="hint">可用选择器，或输入十六进制颜色（例如 #3478F6）。</span>
         </div>
         <input type="hidden" name="requestId" value="${escapeHtml(newRequestId())}">
         <div id="createScope"><div class="empty small">加载父工作集范围…</div></div>
@@ -238,17 +281,7 @@ async function openCreateWorkset() {
         <button type="submit" class="btn primary">创建并轮询</button>
       </div>
     </form>`, true);
-  const picker = $('#createColorPicker');
-  const color = $('#createColor');
-  picker.addEventListener('input', () => { color.value = picker.value.toUpperCase(); });
-  color.addEventListener('input', () => {
-    const value = color.value;
-    if (/^#[0-9a-f]{3,4}$/i.test(value)) {
-      picker.value = '#' + [...value.slice(1, 4)].map((digit) => digit.repeat(2)).join('');
-    } else if (/^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)) {
-      picker.value = value.slice(0, 7);
-    }
-  });
+  wireWorksetColor($('#createWorksetForm'));
   const parentSelect = $('#createParent');
   if (parentSelect) await loadCreateScope(parentSelect.value);
 }
@@ -342,6 +375,11 @@ async function submitCreateWorkset(form) {
   const requestId = form.requestId.value.trim();
   const nameInput = form.querySelector('input[name="name"]');
   const workspaceName = nameInput ? nameInput.value.trim() : '';
+  const color = parseWorksetColor(form.elements.namedItem('color').value);
+  if (!color) {
+    if (errorBox) errorBox.textContent = '请选择或输入有效的十六进制颜色。';
+    return;
+  }
   const values = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
   const productSpaceIds = values('productSpaceIds');
   const selectedSpaces = new Set(productSpaceIds);
@@ -356,7 +394,7 @@ async function submitCreateWorkset(form) {
         parentWorkingSetId: parentId,
         requestId,
         name: workspaceName,
-        color: form.elements.namedItem('color').value,
+        color: color.hex,
         productSpaceIds,
         sharedTrackerIds: trackerValues('sharedTrackerIds'),
         unsharedParentTrackerIds: trackerValues('unsharedParentTrackerIds')

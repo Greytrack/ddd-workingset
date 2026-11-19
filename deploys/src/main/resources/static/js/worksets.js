@@ -2,6 +2,50 @@ let worksetRequest = 0;
 let trackerRequest = 0;
 let contentRequest = 0;
 
+function parseWorksetColor(value) {
+  const hex = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  if (!/^#(?:[0-9A-F]{3,4}|[0-9A-F]{6}|[0-9A-F]{8})$/.test(hex)) return null;
+  let digits = hex.slice(1);
+  if (digits.length <= 4) digits = [...digits].map((digit) => digit.repeat(2)).join('');
+  return { hex, rgb: '#' + digits.slice(0, 6), alpha: parseInt(digits.slice(6) || 'FF', 16) / 255 };
+}
+
+function applyWorksetTheme(value) {
+  const color = parseWorksetColor(value) ?? parseWorksetColor('#FFFF');
+  const white = [255, 255, 255];
+  const ink = [0, 0, 0];
+  const mix = (from, to, amount) => from.map((channel, i) => Math.round(channel + (to[i] - channel) * amount));
+  const rgb = [1, 3, 5].map((i) => parseInt(color.rgb.slice(i, i + 2), 16));
+  const fill = mix(white, rgb, color.alpha);
+  const soft = mix(white, fill, .17);
+  const luminance = (channels) => channels.reduce((total, channel, i) => {
+    const x = channel / 255;
+    return total + [0.2126, 0.7152, 0.0722][i] * (x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4);
+  }, 0);
+  let accent = fill;
+  const softLuminance = luminance(soft);
+  while ((softLuminance + .05) / (luminance(accent) + .05) < 4.5) {
+    accent = mix(accent, ink, .18);
+  }
+  const onFill = 1.05 / (luminance(fill) + .05) >= 4.5 ? white : ink;
+  const tones = {
+    '--accent': accent,
+    '--accent-fill': fill,
+    '--accent-on-fill': onFill,
+    '--accent-soft': soft,
+    '--accent-edge': mix(white, accent, .37),
+    '--accent-hover': mix(fill, onFill === white ? ink : white, .12),
+    '--workset-bg': mix([245, 246, 248], fill, .1)
+  };
+  for (const [name, channels] of Object.entries(tones)) {
+    document.documentElement.style.setProperty(name, `rgb(${channels.join(', ')})`);
+  }
+}
+
+function applySelectedWorksetTheme() {
+  applyWorksetTheme(findNode(state.worksets, state.selectedWs)?.ws?.color);
+}
+
 function showPane(pane, moveFocus = false) {
   const layout = $('.layout');
   layout.dataset.activePane = pane;
@@ -45,6 +89,7 @@ async function loadWorksetTree() {
   }
   const root = await build('1');
   state.worksets = root ? [root] : [];
+  applySelectedWorksetTheme();
   renderWorksetTree();
   setStatus(root && !root.error ? '工作集已加载' : '无法加载默认工作集', root && !root.error ? 'ok' : 'error');
 }
@@ -66,10 +111,9 @@ function renderWorksetTree() {
     row.innerHTML = `<span class="tree-dot"></span><span class="tree-label">${escapeHtml(label)}</span>` +
       (node.children.length ? `<span class="badge count">${node.children.length}</span>` : '') +
       (node.error ? '<span class="badge unbound">不可用</span>' : '');
-    const color = node.ws?.color;
-    if (color && /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)) {
-      row.querySelector('.tree-dot').style.backgroundColor = color;
-      row.querySelector('.tree-dot').style.border = '1px solid var(--line)';
+    const color = parseWorksetColor(node.ws?.color);
+    if (color) {
+      row.querySelector('.tree-dot').style.setProperty('--workset-dot', color.hex);
     }
     container.appendChild(row);
     node.children.forEach((child) => walk(child, depth + 1));
@@ -84,6 +128,7 @@ async function selectWorkset(id) {
   ++trackerRequest;
   ++contentRequest;
   state.selectedWs = id;
+  applySelectedWorksetTheme();
   state.selectedSpace = null;
   clearTrackerSelection();
   state.bindings = { spaces: [], trackers: [] };
