@@ -20,6 +20,7 @@ import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;
 
@@ -80,7 +81,13 @@ public class WorkingSetCommandService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void initializeProductSpaceMembership(ProductSpace space) {
         WorkingSet defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
-        bindSpace(defaultWorkingSet, space, null);
+        trackers.findRootFolder(defaultWorkingSet.id(), space.id()).orElseGet(() -> {
+            Tracker folder = Tracker.rootFolder(
+                    TrackerId.of(identifierGenerator.nextId(null).longValue()), defaultWorkingSet.id(), space);
+            trackers.save(folder, true, null);
+            return folder;
+        });
+        bindSpace(defaultWorkingSet, space);
         for (Classification classification : classifications.findClassifications()) {
             if (classification.numericId() == Tracker.FOLDER_CLASSIFICATION_ID) continue;
             Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
@@ -92,9 +99,25 @@ public class WorkingSetCommandService {
     }
 
     @Transactional
+    public WorkingSet updatePresentation(WorkingSetId id, String name, String color) {
+        if (name == null && color == null) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name or color is required");
+        }
+        WorkingSet target = writable(id);
+        if (name != null) {
+            target.rename(name);
+        }
+        if (color != null) {
+            target.recolor(color);
+        }
+        workingSets.save(target);
+        return target;
+    }
+
+    @Transactional
     public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
         WorkingSet workingSet = writable(id);
-        WorkingSet.SpaceBinding binding = bindSpace(workingSet, lockSpace(spaceId), null);
+        WorkingSet.SpaceBinding binding = bindSpace(workingSet, lockSpace(spaceId));
         workingSets.save(workingSet);
         return binding;
     }
@@ -104,14 +127,10 @@ public class WorkingSetCommandService {
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, spaceId));
     }
 
-    private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space, Long actor) {
+    private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space) {
         WorkingSet.SpaceBinding binding = workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
-        Tracker folder = trackers.findRootFolder(workingSet.id(), space.id()).orElseGet(() -> {
-            Tracker created = Tracker.rootFolder(TrackerId.of(identifierGenerator.nextId(null).longValue()),
-                    workingSet.id(), space);
-            trackers.save(created, true, actor);
-            return created;
-        });
+        Tracker folder = trackers.findRootFolder(WorkingSet.DEFAULT_ID, space.id())
+                .orElseThrow(() -> new BindingFailure(Reason.TrackerNotFound, space.id()));
         bindTracker(workingSet, folder, SharingMode.UNSHARED);
         return binding;
     }
@@ -147,7 +166,7 @@ public class WorkingSetCommandService {
         if (target.hasSpaceBinding(spaceId)) {
             return false;
         }
-        bindSpace(target, space, actor);
+        bindSpace(target, space);
         workingSets.save(target);
         return true;
     }

@@ -25,8 +25,8 @@ public final class WorkingSet {
             java.util.regex.Pattern.compile("#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;
-    private final String name;
-    private final String color;
+    private String name;
+    private String color;
     private final boolean newAggregate;
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
@@ -87,6 +87,36 @@ public final class WorkingSet {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "color must be a hexadecimal color");
         }
         return normalized.toUpperCase(Locale.ROOT);
+    }
+
+    public static String normalizeName(String name) {
+        if (name == null) {
+            return null;
+        }
+        String trimmed = name.strip();
+        if (trimmed.isEmpty()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must not be blank");
+        }
+        if (trimmed.length() > 255) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain at most 255 characters");
+        }
+        return trimmed;
+    }
+
+    /** 编辑工作集显示名称；名称是展示属性，不改变谱系、范围或绑定。 */
+    public void rename(String newName) {
+        if (newName == null) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name is required");
+        }
+        this.name = normalizeName(newName);
+    }
+
+    /** 编辑工作集主题色；颜色只影响界面呈现，不参与领域比较或合并。 */
+    public void recolor(String newColor) {
+        if (newColor == null) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "color is required");
+        }
+        this.color = normalizeColor(newColor);
     }
 
     public static void requireDeletable(WorkingSetId id) {

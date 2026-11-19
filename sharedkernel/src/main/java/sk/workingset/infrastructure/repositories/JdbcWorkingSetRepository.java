@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.RequestThreadHolder;
@@ -31,6 +30,12 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     private final JdbcTemplate jdbc;
     private final IdentifierGenerator ids;
     private final JdbcCommonInstanceStore commonInstances;
+
+    /** Full physical row for internal compatibility reads, including soft-deleted rows. */
+    public Optional<WorkingSetRow> findLegacyRow(WorkingSetId id) {
+        return jdbc.query("SELECT * FROM air_inst_workingset WHERE id = ?",
+                (rs, row) -> WorkingSetRow.read(rs), id.numericValue()).stream().findFirst();
+    }
 
     @Override
     public Optional<WorkingSet> findById(WorkingSetId id) {
@@ -87,7 +92,6 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     @Override
-    @Transactional(propagation = Propagation.MANDATORY)
     public void save(WorkingSet workingSet) {
         if (workingSet.isNew()) {
             insert(workingSet);
@@ -176,7 +180,6 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     @Override
-    @Transactional
     public void delete(WorkingSet workingSet) {
         WorkingSetId id = workingSet.id();
         if (jdbc.update("DELETE FROM air_inst_workingset WHERE id = ? AND delete_flag = 0", id.numericValue()) == 1) {

@@ -2,7 +2,6 @@ package alm.requirement.infrastructure.repositories;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 
@@ -60,7 +59,6 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
 
     @Override
-    @Transactional
     public void save(Requirement requirement) {
         long lockVersion = requirement.lockVersion().value();
         if (lockVersion == 0) {
@@ -106,7 +104,6 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     }
 
     @Override
-    @Transactional
     public void purge(Requirement requirement) {
         long id = requirement.localId().numericValue();
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", id);

@@ -187,7 +187,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
             numericProductSpaceIds = normalize(numericProductSpaceIds);
             numericSharedTrackerIds = normalize(numericSharedTrackerIds);
             numericUnsharedTrackerIds = normalize(numericUnsharedTrackerIds);
-            name = normalizeName(name);
+            name = WorkingSet.normalizeName(name);
             mode = mode == null ? Mode.CREATE : mode;
             color = mode == Mode.CREATE ? WorkingSet.normalizeColor(color) : null;
         }
@@ -206,20 +206,6 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
 
         private static List<String> formatIds(List<Long> ids) {
             return ids.stream().map(String::valueOf).toList();
-        }
-
-        private static String normalizeName(String name) {
-            if (name == null) {
-                return null;
-            }
-            String trimmed = name.trim();
-            if (trimmed.isEmpty()) {
-                throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must not be blank");
-            }
-            if (trimmed.length() > 255) {
-                throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain at most 255 characters");
-            }
-            return trimmed;
         }
 
         private static void validateId(String id, String field) {

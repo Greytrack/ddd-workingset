@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
@@ -80,7 +79,6 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     }
 
     @Override
-    @Transactional
     public void remove(LocalId id) {
         long local = id.numericValue();
         List<Boolean> deleted = jdbc.queryForList(

@@ -7,7 +7,6 @@ import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 
@@ -25,7 +24,6 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     }
 
     @Override
-    @Transactional
     public void save(ProductSpace space) {
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
                 space.numericId(), space.name());
@@ -35,7 +33,6 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     }
 
     @Override
-    @Transactional
     public void delete(ProductSpace space) {
         long numericId = space.numericId();
         if (jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", numericId) == 1) {

@@ -36,6 +36,16 @@ public class WorkingSetController {
         return WorkingSetView.from(queries.find(WorkingSetId.of(workingSetId)));
     }
 
+    /**
+     * 编辑工作集显示名称与主题色；请求中缺失的字段保持不变。
+     */
+    @PatchMapping("/{workingSetId}")
+    public WorkingSetView updatePresentation(@PathVariable String workingSetId,
+                                             @RequestBody UpdateWorkingSetRequest request) {
+        return WorkingSetView.from(commands.updatePresentation(WorkingSetId.of(workingSetId),
+                request.name(), request.color()));
+    }
+
     @PostMapping("/{workingSetId}/children")
     @ResponseStatus(HttpStatus.CREATED)
     public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
@@ -104,6 +114,9 @@ public class WorkingSetController {
     }
 
     public record CreateChildRequest(String name, String color) {
+    }
+
+    public record UpdateWorkingSetRequest(String name, String color) {
     }
 
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
