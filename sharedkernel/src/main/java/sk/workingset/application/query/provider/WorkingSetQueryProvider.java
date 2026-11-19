@@ -26,4 +26,6 @@ public interface WorkingSetQueryProvider {
     List<ClassificationSummary> findClassifications();
 
     BindingsView findBindings(long workingSetId);
+
+    List<Long> findWorkingSetsBoundToSpace(String spaceId);
 }

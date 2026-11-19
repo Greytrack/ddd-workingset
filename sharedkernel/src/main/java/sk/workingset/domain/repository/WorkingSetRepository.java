@@ -13,7 +13,7 @@ import java.util.Optional;
  */
 @Repository
 public interface WorkingSetRepository {
-    Optional<WorkingSet> findWorkingSet(WorkingSetId id);
+    Optional<WorkingSet> findById(WorkingSetId id);
 
     Optional<WorkingSet> lockWorkingSet(WorkingSetId id);
 
@@ -33,15 +33,9 @@ public interface WorkingSetRepository {
     /** 保存新建或持锁重建的聚合及成员；新建身份冲突时不覆盖现有状态。 */
     boolean save(WorkingSet workingSet, Long actor);
 
-    List<WorkingSetId> findChildren(WorkingSetId id);
-
-    List<WorkingSetId> findAncestors(WorkingSetId id);
-
 
     void deleteBindingsToTracker(TrackerId trackerId);
 
-
-    List<WorkingSetId> findWorkingSetsBoundToSpace(String spaceId);
 
     void deleteWorkingSet(WorkingSetId id);
 }

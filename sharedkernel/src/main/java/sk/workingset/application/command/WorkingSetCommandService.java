@@ -14,6 +14,7 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.query.provider.ClassificationCatalog;
+import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.*;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
@@ -34,6 +35,7 @@ public class WorkingSetCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
+    private final WorkingSetQueryProvider queries;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
@@ -58,12 +60,12 @@ public class WorkingSetCommandService {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
         writable(parentId);
-        if (workingSets.findAncestors(parentId).contains(newId)) {
+        if (queries.findAncestors(parentId.numericValue()).contains(newId.numericValue())) {
             throw new BindingFailure(Reason.WorkingSetCycle, newId.value());
         }
         WorkingSet child = WorkingSet.child(newId, parentId, name, color);
         if (!workingSets.save(child, actor)) {
-            List<WorkingSetId> existing = workingSets.findAncestors(newId);
+            List<WorkingSetId> existing = queries.findAncestors(newId.numericValue()).stream().map(WorkingSetId::of).toList();
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             Reason reason = differentParent ? Reason.WorkingSetParentImmutable : Reason.WorkingSetAlreadyExists;
             throw new BindingFailure(reason, newId.value());
@@ -188,7 +190,7 @@ public class WorkingSetCommandService {
     }
 
     String trackerSpaceForTask(TrackerId id) {
-        return trackers.findTracker(id).map(Tracker::productSpaceId).orElse(null);
+        return trackers.findById(id).map(Tracker::productSpaceId).orElse(null);
     }
 
     private WorkingSet lockTaskTarget(WorkingSetId id) {

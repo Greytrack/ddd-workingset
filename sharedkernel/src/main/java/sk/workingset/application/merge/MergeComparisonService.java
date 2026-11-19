@@ -125,7 +125,7 @@ public class MergeComparisonService {
         WorkingSet right = workingSet(target);
         WorkingSet child = WorkingSetLineageDomainService.childOf(left, right);
         return WorkingSetLineageDomainService.comparableBindings(left, right).stream().flatMap(binding ->
-                trackers.findTracker(binding.trackerId()).stream()
+                trackers.findById(binding.trackerId()).stream()
                         // The binding must belong to the direct child Working Set; this rejects cross-level
                         // and Shared bindings that happen to carry a sourceId.
                         .filter(tracker -> tracker.workingSetId().equals(child.id()))
@@ -150,7 +150,7 @@ public class MergeComparisonService {
             return false;
         }
         WorkingSet parent = source.id().equals(target.parentWorkingSetId()) ? source : target;
-        return trackers.findTracker(child.sourceId())
+        return trackers.findById(child.sourceId())
                 .filter(sourceTracker -> parent.id().equals(sourceTracker.workingSetId()))
                 .filter(sourceTracker -> WorkingSetLineageDomainService.isDirectDerivation(child, sourceTracker))
                 .filter(sourceTracker -> WorkingSet.DEFAULT_ID.equals(parent.id())
@@ -202,6 +202,6 @@ public class MergeComparisonService {
     }
 
     private WorkingSet workingSet(WorkingSetId id) {
-        return workingSets.findWorkingSet(id).orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, id.value()));
+        return workingSets.findById(id).orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, id.value()));
     }
 }

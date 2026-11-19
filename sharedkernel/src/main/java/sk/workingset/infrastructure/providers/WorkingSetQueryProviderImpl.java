@@ -53,6 +53,11 @@ public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
     }
 
     @Override
+    public List<Long> findWorkingSetsBoundToSpace(String spaceId) {
+        return mapper.findWorkingSetsBoundToSpace(Long.valueOf(spaceId));
+    }
+
+    @Override
     public BindingsView findBindings(long workingSetId) {
         Long workspace = RequestThreadHolder.getWorkspace();
         return new BindingsView(mapper.findSpaceBindings(workingSetId, workspace),

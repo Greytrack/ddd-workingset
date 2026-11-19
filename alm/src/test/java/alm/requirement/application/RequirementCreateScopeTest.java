@@ -59,7 +59,7 @@ class RequirementCreateScopeTest {
     @Test
     void default_working_set_uses_the_same_snowflake_for_both_ids() {
         Tracker tracker = tracker("1", SharingMode.UNSHARED);
-        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
+        when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 
@@ -69,7 +69,7 @@ class RequirementCreateScopeTest {
     @Test
     void non_default_working_set_uses_two_distinct_ids() {
         Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
-        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
+        when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
@@ -79,7 +79,7 @@ class RequirementCreateScopeTest {
     @Test
     void unshared_tracker_must_be_created_from_its_own_working_set() {
         Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
-        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
+        when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         DomainException failure = assertThrows(DomainException.class,
                 () -> service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION));
@@ -90,7 +90,7 @@ class RequirementCreateScopeTest {
     @Test
     void shared_tracker_can_be_created_from_any_working_set() {
         Tracker tracker = tracker("1", SharingMode.SHARED);
-        when(trackers.findTracker(TRACKER)).thenReturn(Optional.of(tracker));
+        when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
@@ -100,7 +100,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void unknown_tracker_is_left_to_persistence_validation() {
-        when(trackers.findTracker(TRACKER)).thenReturn(Optional.empty());
+        when(trackers.findById(TRACKER)).thenReturn(Optional.empty());
 
         alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 

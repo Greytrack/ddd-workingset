@@ -10,6 +10,7 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
@@ -39,6 +40,7 @@ public class WorkingSetDeletionService {
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
     private final LightTrackerItemQueryProvider itemQueries;
+    private final WorkingSetQueryProvider queries;
     private final BusinessTrackerItems businessItems;
 
     private static void rejectIndependentFolderRemoval(Tracker tracker) {
@@ -100,7 +102,7 @@ public class WorkingSetDeletionService {
     }
 
     private void assertNoChildren(WorkingSetId id) {
-        List<String> children = workingSets.findChildren(id).stream().map(WorkingSetId::value).toList();
+        List<String> children = queries.findChildren(id.numericValue()).stream().map(WorkingSetId::of).map(WorkingSetId::value).toList();
         if (!children.isEmpty()) {
             throw new BindingFailure(Reason.WorkingSetHasChildren, id.value(), Map.of("childWorkingSetIds", children));
         }

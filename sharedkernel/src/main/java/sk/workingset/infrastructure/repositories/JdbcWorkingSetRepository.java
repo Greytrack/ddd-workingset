@@ -33,7 +33,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     private final JdbcCommonInstanceStore commonInstances;
 
     @Override
-    public Optional<WorkingSet> findWorkingSet(WorkingSetId id) {
+    public Optional<WorkingSet> findById(WorkingSetId id) {
         return loadReadyWorkingSet(id, false);
     }
 
@@ -137,43 +137,6 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         return inserted;
     }
 
-    @Override
-    public List<WorkingSetId> findChildren(WorkingSetId id) {
-        return jdbc.queryForList("""
-                SELECT w.id FROM air_inst_workingset w
-                WHERE w.parent_id = ? AND w.delete_flag = 0 AND NOT EXISTS (
-                    SELECT 1 FROM working_set_creations c WHERE c.new_working_set_id = w.id
-                    AND c.status IN ('Pending', 'Running')
-                    AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')
-                ORDER BY w.id
-                """, Long.class, id.numericValue()).stream().map(WorkingSetId::of).toList();
-    }
-
-    @Override
-    public List<WorkingSetId> findAncestors(WorkingSetId id) {
-        List<Long> ancestors = jdbc.queryForList("""
-                WITH RECURSIVE lineage(working_set_id, parent_working_set_id, distance) AS (
-                    SELECT id, NULLIF(parent_id, 0), 0
-                    FROM air_inst_workingset WHERE id = ? AND delete_flag = 0
-                    UNION ALL
-                    SELECT parent.id, NULLIF(parent.parent_id, 0), child.distance + 1
-                    FROM air_inst_workingset parent JOIN lineage child ON parent.id = child.parent_working_set_id
-                    WHERE parent.delete_flag = 0
-                ) CYCLE working_set_id SET cyclic USING path
-                SELECT working_set_id FROM lineage
-                WHERE distance > 0 AND NOT EXISTS (
-                    SELECT 1 FROM working_set_creations c
-                    WHERE c.new_working_set_id = lineage.working_set_id
-                    AND c.status IN ('Pending', 'Running')
-                    AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')
-                ORDER BY distance
-                """, Long.class, id.numericValue());
-        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.numericValue().equals(ancestors.getLast())) {
-            throw new BindingFailure(Reason.WorkingSetCycle, id.value());
-        }
-        return ancestors.stream().map(WorkingSetId::of).toList();
-    }
-
     private void updateMembership(WorkingSet workingSet) {
         workingSet.removedTrackerBindings().forEach(trackerId -> deleteTrackerBinding(workingSet.id(), trackerId));
         workingSet.addedTrackerBindings().forEach(this::insertTrackerBinding);
@@ -211,12 +174,6 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     @Override
     public void deleteBindingsToTracker(TrackerId trackerId) {
         jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE tracker_id = ?", trackerId.numericValue());
-    }
-
-    @Override
-    public List<WorkingSetId> findWorkingSetsBoundToSpace(String spaceId) {
-        return jdbc.query("SELECT working_set_id FROM space_bindings WHERE product_space_id = ? ORDER BY working_set_id",
-                (rs, row) -> WorkingSetId.of(rs.getLong(1)), Long.valueOf(spaceId));
     }
 
     @Override

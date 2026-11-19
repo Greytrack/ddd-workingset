@@ -13,7 +13,7 @@ import java.util.Optional;
  */
 @Repository
 public interface TrackerRepository {
-    Optional<Tracker> findTracker(TrackerId id);
+    Optional<Tracker> findById(TrackerId id);
 
     Optional<Tracker> lockTracker(TrackerId id);
 

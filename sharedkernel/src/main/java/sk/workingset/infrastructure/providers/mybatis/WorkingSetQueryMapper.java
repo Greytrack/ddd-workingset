@@ -103,4 +103,8 @@ public interface WorkingSetQueryMapper {
             ORDER BY b.product_space_id, b.classification_id
             """)
     List<TrackerBindingSummary> findTrackerBindings(@Param("id") long id, @Param("workspace") Long workspace);
+
+    @Select("SELECT working_set_id FROM space_bindings WHERE product_space_id = #{spaceId} ORDER BY working_set_id")
+    List<Long> findWorkingSetsBoundToSpace(@Param("spaceId") long spaceId);
+
 }

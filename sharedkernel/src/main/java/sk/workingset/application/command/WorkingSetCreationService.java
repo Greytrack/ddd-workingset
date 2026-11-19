@@ -1,5 +1,7 @@
 package sk.workingset.application.command;
 
+import sk.SharedKernelResultCode;
+
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -116,7 +118,7 @@ public class WorkingSetCreationService {
             throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
         workingSets.requireReady(target);
-        WorkingSet targetSet = workingSets.findWorkingSet(target)
+        WorkingSet targetSet = workingSets.findById(target)
                 .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, target.value()));
         WorkingSetId parentId = targetSet.requireParentId();
         TreeSet<String> requested = new TreeSet<>(parentTrackerIds == null ? List.of() : parentTrackerIds);
@@ -125,7 +127,7 @@ public class WorkingSetCreationService {
         ArrayList<String> unshared = new ArrayList<String>();
         for (String trackerId : requested) {
             TrackerId id = TrackerId.of(trackerId);
-            sk.tracker.domain.Tracker source = trackers.findTracker(id).orElse(null);
+            sk.tracker.domain.Tracker source = trackers.findById(id).orElse(null);
             if (source != null && source.isFolder()) {
                 if (parentId.equals(source.workingSetId()) && !targetSet.hasSpaceBinding(source.productSpaceId())) {
                     spaces.add(source.productSpaceId());
@@ -177,7 +179,7 @@ public class WorkingSetCreationService {
     }
 
     private boolean isBusinessSelection(String id) {
-        return trackers.findTracker(TrackerId.of(id)).map(tracker -> !tracker.isFolder()).orElse(true);
+        return trackers.findById(TrackerId.of(id)).map(tracker -> !tracker.isFolder()).orElse(true);
     }
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
@@ -267,9 +269,9 @@ public class WorkingSetCreationService {
                         creation.request().mode() == Mode.CREATE, Long.parseLong(creation.requestedBy()));
                 case BIND_UNSHARED_TRACKERS -> workingSetService.bindUnsharedTrackerForTask(target, TrackerId.of(item));
                 case BIND_SHARED_TRACKERS -> workingSetService.bindSharedTrackerForTask(target, TrackerId.of(item));
-                case INDEX_UNSHARED_TRACKERS -> throw new IllegalStateException("Indexing requires batch execution");
+                case INDEX_UNSHARED_TRACKERS -> throw DomainException.withMessage(SharedKernelResultCode.EVENT_STATE_INVALID, "Indexing requires batch execution");
                 case PUBLISH_RELATION_EVENTS ->
-                        throw new IllegalStateException("Relation events require batch execution");
+                        throw DomainException.withMessage(SharedKernelResultCode.EVENT_STATE_INVALID, "Relation events require batch execution");
             };
             return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
         } catch (BindingFailure failure) {

@@ -58,7 +58,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    public Optional<Tracker> findTracker(TrackerId id) {
+    public Optional<Tracker> findById(TrackerId id) {
         return load(id, false);
     }
 

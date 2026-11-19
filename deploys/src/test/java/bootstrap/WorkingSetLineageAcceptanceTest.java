@@ -91,8 +91,8 @@ class WorkingSetLineageAcceptanceTest {
 
     @Test
     void persistedEmptyChildHasNoComparableTrackerCandidatesInEitherDirection() {
-        sk.workingset.domain.WorkingSet child = workingSets.findWorkingSet(WorkingSetId.of(create("1", "empty"))).orElseThrow();
-        sk.workingset.domain.WorkingSet root = workingSets.findWorkingSet(WorkingSetId.of("1")).orElseThrow();
+        sk.workingset.domain.WorkingSet child = workingSets.findById(WorkingSetId.of(create("1", "empty"))).orElseThrow();
+        sk.workingset.domain.WorkingSet root = workingSets.findById(WorkingSetId.of("1")).orElseThrow();
 
         assertTrue(WorkingSetLineageDomainService.comparableBindings(root, child).isEmpty());
         assertTrue(WorkingSetLineageDomainService.comparableBindings(child, root).isEmpty());

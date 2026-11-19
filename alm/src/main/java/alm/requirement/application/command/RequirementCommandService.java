@@ -68,7 +68,7 @@ public class RequirementCommandService {
         if (requestedWorkingSetId != null) {
             workingSets.requireReady(requestedWorkingSetId);
         }
-        java.util.Optional<Tracker> tracker = trackers.findTracker(trackerId);
+        java.util.Optional<Tracker> tracker = trackers.findById(trackerId);
         tracker.ifPresent(found -> workingSets.requireReady(found.workingSetId()));
         if (requestedWorkingSetId != null) {
             tracker.ifPresent(current -> {

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
+import sk.common.error.DomainException;
+import sk.SharedKernelResultCode;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
@@ -26,16 +28,16 @@ public class TrackerCreatedBindingListener {
     @ApplicationModuleListener(id = "bootstrap.TrackerCreatedBindingListener.on(sk.workingset.domain.event.TrackerCreatedEvent)")
     public void on(TrackerCreatedEvent event) {
         WorkingSet workingSet = workingSets.lockWorkingSet(event.workingSetId())
-                .orElseThrow(() -> new IllegalStateException(
+                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "working set disappeared: " + event.workingSetId().value()));
         if (workingSet.hasTrackerBinding(event.trackerId())) {
             return;
         }
-        Tracker tracker = trackers.findTracker(event.trackerId())
-                .orElseThrow(() -> new IllegalStateException(
+        Tracker tracker = trackers.findById(event.trackerId())
+                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "tracker disappeared: " + event.trackerId().value()));
         Classification classification = classifications.findClassification(event.classificationId())
-                .orElseThrow(() -> new IllegalStateException(
+                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "classification disappeared: " + event.classificationId()));
         workingSet.bindTracker(tracker, classification, event.sharingMode());
         workingSets.save(workingSet);

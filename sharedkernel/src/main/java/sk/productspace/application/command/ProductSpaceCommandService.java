@@ -11,6 +11,7 @@ import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.WorkingSetId;
@@ -22,6 +23,7 @@ public class ProductSpaceCommandService {
     private final ProductSpaceRepository spaces;
     private final WorkingSetCommandService memberships;
     private final WorkingSetRepository workingSets;
+    private final WorkingSetQueryProvider queries;
     private final TrackerRepository trackers;
     private final IdentifierGenerator ids;
 
@@ -37,7 +39,7 @@ public class ProductSpaceCommandService {
     public void delete(String id) {
         ProductSpace space = spaces.findById(id)
                 .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, id));
-        List<String> bound = workingSets.findWorkingSetsBoundToSpace(id).stream().map(WorkingSetId::value).toList();
+        List<String> bound = queries.findWorkingSetsBoundToSpace(id).stream().map(String::valueOf).toList();
         if (!bound.isEmpty()) {
             throw new BindingFailure(Reason.SpaceStillBoundInWorkingSet, id, Map.of("workingSetIds", bound));
         }
