@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Working Set Explorer</title>
-<link rel="stylesheet" href="/app.css?v=8">
+<link rel="stylesheet" href="/app.css?v=10">
 <link rel="stylesheet" href="/merge.css?v=3">
 </head>
 <body>
@@ -17,13 +17,21 @@
     </div>
   </div>
   <div class="context-pickers">
-    <details id="worksetPicker" name="workspace-context" class="context-picker">
-      <summary><span class="picker-label">工作集</span><strong id="activeWorkset">请选择</strong><span class="picker-chevron" aria-hidden="true"></span></summary>
-      <div class="picker-menu">
-        <div class="panel-head"><h2>切换工作集</h2><span id="worksetCount" class="muted"></span></div>
-        <div id="worksetTree" class="tree"></div>
-      </div>
-    </details>
+    <div class="workset-field">
+      <details id="worksetPicker" name="workspace-context" class="context-picker">
+        <summary><span class="picker-label">工作集</span><strong id="activeWorkset">请选择</strong><span class="picker-chevron" aria-hidden="true"></span></summary>
+        <div class="picker-menu">
+          <div class="panel-head"><h2>切换工作集</h2><span id="worksetCount" class="muted"></span></div>
+          <div id="worksetTree" class="tree"></div>
+        </div>
+      </details>
+      <button id="editWorksetBtn" type="button" class="workset-edit" aria-label="编辑当前工作集" title="编辑工作集名称与颜色" disabled>
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M9.6 2.6 13.4 6.4 5.4 14.4H1.6v-3.8l8-8Z"/>
+          <path d="M8.5 3.7 12.3 7.5"/>
+        </svg>
+      </button>
+    </div>
     <details id="spacePicker" name="workspace-context" class="context-picker">
       <summary><span class="picker-label">产品空间</span><strong id="activeSpace">请选择</strong><span class="picker-chevron" aria-hidden="true"></span></summary>
       <div class="picker-menu">
@@ -83,7 +91,7 @@
       </div>
     </header>
     <div id="itemArea" class="item-area" aria-busy="false"><div class="empty">选择跟踪分类后查看 Item</div></div>
-    <div id="itemDetail" class="item-detail hidden" aria-label="Item 详情" role="region"></div>
+    <div id="itemDetail" class="item-detail" aria-label="Item 详情" role="region" aria-hidden="true"></div>
   </section>
 </main>
 
@@ -100,8 +108,8 @@
 </div>
 
 <script src="/js/core.js?v=6" defer></script>
-<script src="/js/worksets.js?v=11" defer></script>
-<script src="/js/features.js?v=11" defer></script>
+<script src="/js/worksets.js?v=14" defer></script>
+<script src="/js/features.js?v=13" defer></script>
 <script src="/js/merge.js?v=8" defer></script>
 </body>
 </html>

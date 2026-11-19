@@ -14,8 +14,8 @@ WITH source_rows (
            parent_id, 584578917040480, 1
     FROM air_inst_tracker_rev
     UNION ALL
-    SELECT product_space_id, 1003, 100301, 10030101, NULL, NULL, name, NULL, 1, 0, NULL,
-           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 584189545406816, 1
+    SELECT product_space_id, 1003, 100301, 10030101, product_space_id, NULL, name, NULL, 1, 0, NULL,
+           NULL, NULL, NULL, NULL, NULL, NULL, product_space_id, 1, NULL, 584189545406816, 1
     FROM product_spaces
     UNION ALL
     SELECT r.local_id, 1401, 140101, 14010101, t.work_space, r.number, COALESCE(r.name, r.title),

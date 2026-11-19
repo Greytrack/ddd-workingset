@@ -22,6 +22,9 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.transaction.annotation.Transactional;
+import sk.productspace.domain.ProductSpace;
+import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.domain.repository.WorkingSetRepository;
 import sk.workingset.domain.WorkingSetId;
@@ -34,6 +37,7 @@ class WorkingSetLineageAcceptanceTest {
     @Autowired private DataSource dataSource;
     @Autowired private WorkingSetCommandService commands;
     @Autowired private WorkingSetRepository workingSets;
+    @Autowired private ProductSpaceRepository productSpaces;
 
     private final String suffix = UUID.randomUUID().toString();
     private final List<String> created = new ArrayList<>();
@@ -141,6 +145,18 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     @Test
+    @Transactional
+    void productSpaceProjectionUsesOwnIdentityAndDefaultWorkingSet() {
+        long id = Long.parseLong(FixtureIds.fixtureId("product-space-summary-" + suffix));
+        productSpaces.save(new ProductSpace(id, "projection test"));
+
+        assertEquals(List.of(id, id, 1L), jdbc.queryForObject("""
+                SELECT work_space, common_id, workingset_id FROM air_inst_common WHERE id = ?
+                """, (row, index) -> java.util.Arrays.asList(
+                row.getObject(1, Long.class), row.getObject(2, Long.class), row.getObject(3, Long.class)), id));
+    }
+
+    @Test
     void demoRebuildProjectsPhysicalAndInheritedInstances() throws Exception {
         try (java.sql.Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -166,6 +182,16 @@ class WorkingSetLineageAcceptanceTest {
                     assertTrue(rows.next());
                     assertEquals(rows.getLong(1), rows.getLong(2));
                     assertEquals(4, rows.getLong(3));
+                }
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT count(*) FROM product_spaces p
+                        LEFT JOIN air_inst_common c ON c.id = p.product_space_id
+                        WHERE c.work_space IS DISTINCT FROM p.product_space_id
+                           OR c.common_id IS DISTINCT FROM p.product_space_id
+                           OR c.workingset_id IS DISTINCT FROM 1
+                        """)) {
+                    assertTrue(rows.next());
+                    assertEquals(0, rows.getLong(1));
                 }
                 try (java.sql.ResultSet rows = sql.executeQuery("""
                         SELECT to_regclass('air_inst_common_source') IS NULL

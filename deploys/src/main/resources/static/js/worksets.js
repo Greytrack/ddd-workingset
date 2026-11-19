@@ -46,6 +46,18 @@ function applySelectedWorksetTheme() {
   applyWorksetTheme(findNode(state.worksets, state.selectedWs)?.ws?.color);
 }
 
+/** 用编辑结果刷新本地树、主题与顶部/范围/Item 中的工作集名称。 */
+function applyWorksetEdit(updated) {
+  const node = findNode(state.worksets, updated.workingSetId);
+  if (node) node.ws = { ...(node.ws || {}), ...updated };
+  renderWorksetTree();
+  if (state.selectedWs !== updated.workingSetId) return;
+  $('#activeWorkset').textContent = worksetLabel(updated.workingSetId);
+  applySelectedWorksetTheme();
+  renderSpaceTrackers();
+  renderTracker();
+}
+
 function showPane(pane, moveFocus = false) {
   const layout = $('.layout');
   layout.dataset.activePane = pane;
@@ -123,7 +135,7 @@ function renderWorksetTree() {
   if (!count) container.innerHTML = '<div class="empty">暂无工作集</div>';
 }
 
-async function selectWorkset(id) {
+async function selectWorkset(id, { autoSelect = true } = {}) {
   const request = ++worksetRequest;
   ++trackerRequest;
   ++contentRequest;
@@ -135,6 +147,7 @@ async function selectWorkset(id) {
   state.trackers = [];
   $('#activeWorkset').textContent = worksetLabel(id);
   $('#createWorksetBtn').classList.toggle('hidden', id !== '1');
+  $('#editWorksetBtn').disabled = false;
   $('#extendWorksetBtn').classList.toggle('hidden', !findNode(state.worksets, id)?.ws?.parentWorkingSetId);
   renderWorksetTree();
   renderSpaces();
@@ -153,6 +166,7 @@ async function selectWorkset(id) {
     renderSpaceTrackers();
     const bound = (state.bindings.trackers || []).length;
     setStatus('已加载 ' + (state.bindings.spaces || []).length + ' 个空间 · ' + state.trackers.length + ' 个 跟踪分类（绑定 ' + bound + '）', 'ok');
+    if (autoSelect) await selectDefaultRange();
   } catch (error) {
     if (request !== worksetRequest) return;
     renderSpaces();
@@ -272,6 +286,43 @@ function selectSpace(spaceId) {
     renderItems();
   }
   renderSpaceTrackers();
+}
+
+function boundTrackerIds() {
+  return new Set((state.bindings?.trackers || []).map((binding) => binding.trackerId));
+}
+
+function hasBusinessTracker(spaceId, boundIds) {
+  return state.trackers.some((tracker) => tracker.productSpaceId === spaceId
+    && tracker.classificationId !== FOLDER_CLASSIFICATION_ID
+    && boundIds.has(tracker.trackerId));
+}
+
+/** 默认范围：优先工作集下第一个可展示业务 跟踪分类 的产品空间。 */
+function defaultSpaceId() {
+  const boundIds = boundTrackerIds();
+  const boundSpaces = (state.bindings?.spaces || []).map((space) => space.productSpaceId);
+  const preferred = boundSpaces.find((spaceId) => hasBusinessTracker(spaceId, boundIds)) || boundSpaces[0];
+  if (preferred) return preferred;
+  const spaces = [...currentSpaces().keys()];
+  return spaces.find((spaceId) => hasBusinessTracker(spaceId, boundIds)) || spaces[0];
+}
+
+function defaultTrackerFor(spaceId) {
+  const boundIds = boundTrackerIds();
+  const candidates = state.trackers.filter((tracker) => tracker.productSpaceId === spaceId
+    && tracker.classificationId !== FOLDER_CLASSIFICATION_ID);
+  return candidates.find((tracker) => boundIds.has(tracker.trackerId)) || candidates[0];
+}
+
+/** 首次进入时选中默认产品空间及其第一个 跟踪分类，避免空白页。 */
+async function selectDefaultRange() {
+  if (!state.selectedWs) return;
+  const spaceId = defaultSpaceId();
+  if (!spaceId) return;
+  selectSpace(spaceId);
+  const tracker = defaultTrackerFor(spaceId);
+  if (tracker) await selectTracker(tracker.trackerId);
 }
 
 function renderTrackerTree(trackers, boundIds) {
@@ -436,8 +487,8 @@ function renderItems() {
     const selected = state.selectedItem?.localId === item.localId ? ' selected' : '';
     return `
       <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
-        <td><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || shortId(item.commonId))}</button>
-          <div class="item-identity mono" title="${escapeHtml(item.localId)}">${escapeHtml(item.number || shortId(item.localId))}</div></td>
+        <td class="item-number mono" title="${escapeHtml(item.number || item.localId)}">${escapeHtml(item.number || shortId(item.localId))}</td>
+        <td class="item-name"><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || shortId(item.commonId))}</button></td>
         <td class="item-revision">${escapeHtml(item.revision)}</td>
         <td>${item.materialized ? '<span class="badge shared">本地物化</span>' : '<span class="badge source">来源继承</span>'}</td>
         <td><div class="row-actions">
@@ -451,22 +502,43 @@ function renderItems() {
   area.innerHTML = `
     <table class="item-table">
       <thead>
-        <tr><th>名称 / 编号</th><th class="item-revision">版次</th><th>内容状态</th><th>操作</th></tr>
+        <tr><th class="item-number">编号</th><th class="item-name">名称</th><th class="item-revision">版次</th><th>内容状态</th><th>操作</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
 
+/** 详情抽屉覆盖列表底部时，把选中行滚到抽屉上方，避免打开后看不见。 */
+function revealActiveItemRow() {
+  const area = $('#itemArea');
+  const row = area?.querySelector('[data-local-id].selected');
+  const detail = $('#itemDetail');
+  if (!area || !row || !detail) return;
+  const areaRect = area.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const limit = areaRect.bottom - detail.offsetHeight - 8;
+  const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  if (rowRect.bottom > limit) {
+    area.scrollTo({ top: area.scrollTop + (rowRect.bottom - limit), behavior });
+  } else if (rowRect.top < areaRect.top) {
+    area.scrollTo({ top: area.scrollTop - (areaRect.top - rowRect.top) - 8, behavior });
+  }
+}
+
 function renderItemDetail() {
   const detail = $('#itemDetail');
   const item = state.selectedItem;
-  detail.classList.toggle('hidden', !item);
+  const open = Boolean(item);
+  detail.classList.toggle('open', open);
+  detail.setAttribute('aria-hidden', String(!open));
+  $('#itemsPanel').classList.toggle('detail-open', open);
   detail.setAttribute('aria-busy', String(state.contentLoading));
   $('#itemArea').querySelectorAll('[data-local-id]').forEach((row) => {
     const active = row.dataset.localId === item?.localId;
     row.classList.toggle('selected', active);
     row.querySelector('.item-open').setAttribute('aria-expanded', String(active));
   });
+  if (open && !state.contentLoading) revealActiveItemRow();
   if (!item) {
     detail.innerHTML = '';
     return;

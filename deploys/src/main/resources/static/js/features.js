@@ -198,10 +198,10 @@ const WORKSET_COLOR_PRESETS = [
   ['橙色', '#E88434'], ['玫红', '#CA4B7C'], ['紫色', '#8054BC'], ['深灰', '#475569']
 ];
 
-function wireWorksetColor(form) {
-  const picker = form.querySelector('#createColorPicker');
-  const input = form.querySelector('#createColor');
-  const preview = form.querySelector('#createColorPreview');
+function wireWorksetColor(form, prefix = 'create') {
+  const picker = form.querySelector('#' + prefix + 'ColorPicker');
+  const input = form.querySelector('#' + prefix + 'Color');
+  const preview = form.querySelector('#' + prefix + 'ColorPreview');
   const buttons = [...form.querySelectorAll('[data-workset-color]')];
   const sync = () => {
     const color = parseWorksetColor(input.value);
@@ -225,6 +225,27 @@ function wireWorksetColor(form) {
   picker.addEventListener('input', pick);
   picker.addEventListener('change', pick);
   sync();
+}
+
+function worksetColorField(prefix, value = '#FFFF') {
+  return `<div class="field">
+    <span id="${prefix}ColorLabel" class="field-label">工作集颜色</span>
+    <div class="color-palette" role="group" aria-labelledby="${prefix}ColorLabel">
+      ${WORKSET_COLOR_PRESETS.map(([label, hex]) =>
+        `<button type="button" class="color-swatch" data-workset-color="${hex}" style="--swatch:${hex}"
+          aria-label="${label} ${hex}" title="${label}" aria-pressed="false"></button>`).join('')}
+    </div>
+    <div class="color-field">
+      <label class="color-custom" for="${prefix}ColorPicker">
+        <span id="${prefix}ColorPreview" class="color-preview" aria-hidden="true"></span>
+        <span>自定义颜色</span>
+        <input id="${prefix}ColorPicker" type="color" value="#ffffff" aria-label="打开自定义颜色选择器">
+      </label>
+      <input id="${prefix}Color" name="color" value="${escapeHtml(value)}" maxlength="9" spellcheck="false"
+        aria-label="工作集颜色十六进制值"
+        pattern="#(?:[0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})" required>
+    </div>
+  </div>`;
 }
 
 function flattenWorksets(nodes, out = [], depth = 0) {
@@ -254,24 +275,7 @@ async function openCreateWorkset() {
           <label for="createName">工作集名称</label>
           <input id="createName" name="name" placeholder="例如：动力系统 V2 需求工作集" maxlength="255" required>
         </div>
-        <div class="field">
-          <span id="createColorLabel" class="field-label">工作集颜色</span>
-          <div class="color-palette" role="group" aria-labelledby="createColorLabel">
-            ${WORKSET_COLOR_PRESETS.map(([label, hex]) =>
-              `<button type="button" class="color-swatch" data-workset-color="${hex}" style="--swatch:${hex}"
-                aria-label="${label} ${hex}" title="${label}" aria-pressed="false"></button>`).join('')}
-          </div>
-          <div class="color-field">
-            <label class="color-custom" for="createColorPicker">
-              <span id="createColorPreview" class="color-preview" aria-hidden="true"></span>
-              <span>自定义颜色</span>
-              <input id="createColorPicker" type="color" value="#ffffff" aria-label="打开自定义颜色选择器">
-            </label>
-            <input id="createColor" name="color" value="#FFFF" maxlength="9" spellcheck="false"
-              aria-label="工作集颜色十六进制值"
-              pattern="#(?:[0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})" required>
-          </div>
-        </div>
+        ${worksetColorField('create')}
         <input type="hidden" name="requestId" value="${escapeHtml(newRequestId())}">
         <div id="createScope"><div class="empty small">加载父工作集范围…</div></div>
         <div id="createFormError" class="form-error"></div>
@@ -409,6 +413,71 @@ async function submitCreateWorkset(form) {
     setStatus('创建任务已提交：' + shortId(creation.creationId), 'ok');
   } catch (error) {
     if (errorBox) errorBox.textContent = reasonText(error.body) || error.message;
+  }
+}
+
+/* ---------- edit working set ---------- */
+function openWorksetEdit() {
+  const id = state.selectedWs;
+  const node = findNode(state.worksets, id);
+  if (!id || !node) return;
+  const ws = node.ws || {};
+  const color = parseWorksetColor(ws.color)?.hex || '#FFFF';
+  openModal(`${modalHeader('编辑工作集', '修改名称与主题色，不影响已绑定的范围')}
+    <form id="editWorksetForm">
+      <div class="modal-body">
+        <div class="field">
+          <label for="editName">工作集名称</label>
+          <input id="editName" name="name" maxlength="255" required
+            value="${escapeHtml(ws.name || '')}" placeholder="例如：动力系统 V2 需求工作集">
+        </div>
+        ${worksetColorField('edit', color)}
+        <div class="form-error" role="alert"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-close-modal>取消</button>
+        <button type="submit" class="btn primary">保存</button>
+      </div>
+    </form>`);
+  const form = $('#editWorksetForm');
+  form.dataset.workingSetId = id;
+  wireWorksetColor(form, 'edit');
+  form.querySelector('#editName').focus();
+}
+
+async function submitWorksetEdit(form) {
+  const errorBox = form.querySelector('.form-error');
+  const nameInput = form.querySelector('#editName');
+  const name = nameInput.value.trim();
+  const color = parseWorksetColor(form.querySelector('#editColor').value);
+  if (!name) {
+    errorBox.textContent = '请输入工作集名称';
+    nameInput.focus();
+    return;
+  }
+  if (!color) {
+    errorBox.textContent = '请选择或输入有效的十六进制颜色。';
+    return;
+  }
+  const workingSetId = form.dataset.workingSetId;
+  const submit = form.querySelector('[type="submit"]');
+  errorBox.textContent = '';
+  submit.disabled = true;
+  submit.textContent = '保存中…';
+  try {
+    const updated = await api('/api/worksets/' + encodeURIComponent(workingSetId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, color: color.hex })
+    });
+    applyWorksetEdit(updated);
+    if (form.isConnected) closeModal();
+    setStatus('工作集已更新', 'ok');
+  } catch (error) {
+    errorBox.textContent = reasonText(error.body) || error.message;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = '保存';
   }
 }
 
@@ -743,14 +812,24 @@ async function refreshSelectedRange() {
   const filter = $('#itemFilter').value;
   const target = current && findNode(state.worksets, current) ? current : state.worksets[0]?.id;
   if (!target) return;
-  await selectWorkset(target);
-  if (state.selectedWs !== target || target !== current || state.selectedSpace) return;
-  if (currentSpaces().has(space)) selectSpace(space);
-  if (!tracker || !state.trackers.some((candidate) => candidate.trackerId === tracker)) return;
-  $('#itemFilter').value = filter;
-  await selectTracker(tracker, { keepFilter: true });
-  const selected = state.items.find((candidate) => candidate.localId === item);
-  if (selected && !state.selectedItem) await loadContent(selected.localId, selected.workingSetId);
+  const keepSelection = current === target;
+  await selectWorkset(target, { autoSelect: false });
+  if (state.selectedWs !== target) return;
+
+  if (keepSelection && currentSpaces().has(space)) {
+    selectSpace(space);
+    if (tracker && state.trackers.some((candidate) => candidate.trackerId === tracker)) {
+      $('#itemFilter').value = filter;
+      await selectTracker(tracker, { keepFilter: true });
+      const selected = state.items.find((candidate) => candidate.localId === item);
+      if (selected && !state.selectedItem) await loadContent(selected.localId, selected.workingSetId);
+      return;
+    }
+    const fallback = defaultTrackerFor(space);
+    if (fallback) await selectTracker(fallback.trackerId);
+    return;
+  }
+  await selectDefaultRange();
 }
 
 function bindEvents() {
@@ -839,6 +918,7 @@ function bindEvents() {
   });
 
   $('#createWorksetBtn').addEventListener('click', openCreateWorkset);
+  $('#editWorksetBtn').addEventListener('click', openWorksetEdit);
   $('#extendWorksetBtn').addEventListener('click', openExtendWorkset);
   $('#createTrackerBtn').addEventListener('click', openTrackerCreate);
   $('#taskCenterBtn').addEventListener('click', openTaskCenter);
@@ -895,6 +975,10 @@ function bindEvents() {
     if (event.target.id === 'createWorksetForm') {
       event.preventDefault();
       submitCreateWorkset(event.target);
+    }
+    if (event.target.id === 'editWorksetForm') {
+      event.preventDefault();
+      submitWorksetEdit(event.target);
     }
     if (event.target.id === 'requirementForm') {
       event.preventDefault();

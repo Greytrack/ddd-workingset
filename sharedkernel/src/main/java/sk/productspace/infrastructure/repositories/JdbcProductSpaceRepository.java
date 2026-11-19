@@ -25,11 +25,11 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
 
     @Override
     public void save(ProductSpace space) {
-        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
-                space.numericId(), space.name());
-        commonInstances.save(new AirInstCommonPo(space.numericId(), 1003L, 100301L, 10030101L,
-                null, null, space.name(), null, null, 1L, 0, null, null, null, null, null,
-                null, null, null, null, null, 584189545406816L, 1L));
+        long id = space.numericId();
+        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", id, space.name());
+        commonInstances.save(new AirInstCommonPo(id, 1003L, 100301L, 10030101L,
+                id, null, space.name(), null, null, 1L, 0, null, null, null, null, null,
+                null, null, id, 1L, null, 584189545406816L, 1L));
     }
 
     @Override
