@@ -102,7 +102,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 ### 4.4 新建原生跟踪分类（Tracker）
 
 - `GET /api/worksets/metadata/classifications` 返回可选的 `classificationId` 及元数据的 `sharingMode`，供创建表单按 [POL-003](facts.md) 显示可选共享方式。
-- `POST /api/worksets/{workingSetId}/trackers` 接收 `productSpaceId`、`name`、`classificationId`、`sharingMode`。工作集必须为默认工作集，产品空间必须已绑定。2026-11-19 裁定：Tracker 创建与 WorkingSet 绑定属于两个聚合，分别提交并通过可靠事件协作，禁止同事务完成。原 `201` 同步完成语义及绑定失败/处理中响应需重新评审，尚未修改实现；见 [反模式审查](../reviews/2026-11-19-ddd-anti-pattern-scan.md)。
+- `POST /api/worksets/{workingSetId}/trackers` 仍只允许在默认工作集创建业务原生 Tracker，产品空间必须已绑定。Tracker 独立提交后发布 `TrackerCreatedEvent`，监听器另行保存 WorkingSet 绑定；`201` 不保证绑定已收敛，绑定失败的公开语义待评审。产品空间独立创建/删除入口见 [实现边界](../implementation/current-boundaries.md)。
 - 名称必填，去除首尾空白后最多 255 个字符，同一产品空间及所属分类内重名返回 `409`。在子工作集请求原生创建返回 `409`，不相容的共享方式返回 `422`。手动新建不设置默认标记。
 
 ## 5. 移除 / 删除 / 软删 / 彻底删除（K1，用户确认）

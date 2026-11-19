@@ -15,7 +15,7 @@
 | 两个已登记轮次竞争同族 | 一次业务写入成功，另一条目因目标出现返回 StaleEvidence；Apply 仍按 T1 返回逐条结果。同轮执行权冲突仍是 HTTP 409。 |
 | 非默认父侧新建 | 新变体依 D15-B 通过事件纳入 LTI。事件失败后重投、业务提交后轮次恢复沿用 T6-B 验收。 |
 
-实现证据见 [MergeAcceptanceTest](../../../deploys/src/test/java/bootstrap/MergeAcceptanceTest.java) 与 [MergeExecutionService](../../../sharedkernel/src/main/java/sk/workingset/application/MergeExecutionService.java)。ALM 参考适配器在条目事务内锁定家族席位并返回实际身份。沿用已有数据库约束与 Merge 审计，无 schema 变更。
+实现证据见 [MergeAcceptanceTest](../../../deploys/src/test/java/bootstrap/MergeAcceptanceTest.java) 与 `MergeExecutionService.java`（当时路径）。ALM 参考适配器在条目事务内锁定家族席位并返回实际身份。沿用已有数据库约束与 Merge 审计，无 schema 变更。
 
 建模方法采用 Lattice `domain-driven-design`（`D:\coding\IdeaProjects\union\airedge\.agents\skills\domain-driven-design`），恢复与内容更新由目标业务聚合保证同一提交边界。
 

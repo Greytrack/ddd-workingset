@@ -28,7 +28,7 @@ Part 通过共享 Tracker 接入 Working Set。PLM 在默认工作集下独立�
 - 替换准备期间继续使用当前完整内容并允许编辑；全部准备成功后整体切换，期间编辑可被覆盖；准备失败保留当前内容及已保存编辑。
 - 替换是 GateFlow 的独立合同，不是直接父子 Merge 准入的例外；旧元素物理清理、外部引用与切换瞬间并发协议由 GateFlow 专项继续设计。
 
-历史输入 [V4 内容替换](../../../pre-design/workingsetModel-V4/06-workingset-content-replacement.md) 中的写入屏障、身份再生等候选未采纳，保留为历史证据。
+写入屏障、身份再生等候选未采纳；现行语义以本节和关联场景为准。
 
 <a id="dqa-共享查看范围用户已确认"></a>
 ## DQA 共享查看（已确认）
@@ -67,7 +67,7 @@ Shared Tracker 从子工作集移除仅解除 TrackerBinding，聚合保留；�
 
 - **K1″**：Shared Kernel 定义只读 `TrackerItemQueryProvider` 与能力声明；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属 BC 执行。SK 可协调 COW/Merge，但不能绕过 BC 聚合、领域规则或 Repository 通用 Save。
 - **K2″**：九分类公共失败语义（`NotFound`、`NotIncluded`、`Denied`、`Deleted`、`HistoryUnavailable`、`Preparing`、`CapabilityNotSupported`、`DependencyUnavailable`、`Unknown`）是跨 BC 词汇表，不是聚合生命周期；每个用例只暴露适用子集。
-- **两层接口**：业务聚合实现领域接口 `TrackerItem`（并继承 `BusinessObject`）；BC Adapter 另行实现只读 Port 与写入协作 Port。聚合不实现应用层 Port，也不向 SK 开放 Repository。
+- **两层接口**：业务聚合实现领域接口 `TrackerItem`（并继承 `BusinessObject`）；BC Adapter 另行实现只读契约。跨聚合写入通过请求和结果事件；聚合不实现应用层 Port，也不向 SK 开放 Repository。
 - **K3″ 保持 Open**：Shared Kernel 的版本治理、兼容期与变更审批需四 BC 共同评审，不阻塞当前实现。
 
 完整职责、六个用例、失败矩阵与 Port 结构见 [T4 跨 BC 契约](cross-bc-contract-v1.md)。

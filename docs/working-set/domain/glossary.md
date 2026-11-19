@@ -66,7 +66,7 @@
 3. **已处理** 是 Checkpoint 记录的用户确认。**内容相等** 是 Compare 的判断。适用性见 [T1 Checkpoint](merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)。
 4. **Tracker 组织树**（`parentId`）与**Tracker 派生链**（`sourceId`）是两个维度；前者表达同工作集结构父，后者表达直接父级工作集来源。二者不互相替代。
 5. **Working Set 谱系**（`parentWorkingSetId`）与 Tracker 派生链也是不同维度；Compare/Merge 只允许直属父子工作集。
-6. **VIRTUAL** 是 V4 历史术语，现行模型用 Source-backed 表达“未物化但存在”；不得把“无本地内容行”当作不存在。
+6. **Source-backed** 表达“未物化但存在”；不得把无本地内容行当作不存在。
 7. **分类共享特性**是分类出厂设定，**Tracker 共享特性**是创建时确定的协作方式。允许的组合见 [POL-003](facts.md)。
 
 ## 历史术语（仅追溯，不作为当前模型）

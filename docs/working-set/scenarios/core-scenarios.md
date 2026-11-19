@@ -8,7 +8,7 @@
 
 本轮新增确认场景（2026-11-11）：SCN-072/073 见文末；其余候选场景不随之整体接受。
 
-**来源**：`EXT-ARCH §7.3`、`V4-LRT §1-9`；**状态**：Reported / Pending。
+**来源**：[阶段 2 候选记录](../reviews/2026-11-09-stage-2-domain-discovery-review.md)；**状态**：Reported / Pending。
 
 - **Given** 父 Working Set 已有可选择 Tracker，创建请求固定了输入、来源切点和幂等键。
 - **When** 用户创建子 Working Set。
@@ -74,7 +74,7 @@
 
 ## `SCN-005` 多次扩展 Working Set
 
-**来源**：`V4-LRT §10`、`EXT-ARCH §8`；**状态**：Reported / Pending。
+**来源**：[阶段 2 候选记录](../reviews/2026-11-09-stage-2-domain-discovery-review.md)；**状态**：Reported / Pending。
 
 - **Given** Working Set 已发布一部分范围，并存在合法悬空关系。
 - **When** 用户增量纳入新的 Tracker 或 Item。
@@ -131,7 +131,7 @@
 
 ## `SCN-010` 并发修改与并发合并
 
-**来源**：`EXT-ARCH §8`；**状态**：Candidate。
+**来源**：[阶段 2 候选记录](../reviews/2026-11-09-stage-2-domain-discovery-review.md)；**状态**：Candidate。
 
 - **Given** 用户审阅完差异后，target 被另一命令修改，同时有重复 Merge 请求。
 - **When** 两个执行者提交相同或不同决定。
@@ -869,7 +869,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 **责任已确认（2026-11-11 用户选择 B）；验收表述 Draft，未运行测试。** 依据：D-007、ADR-0002、[T4 §3.1](../domain/cross-bc-contract-v1.md)。
 
-- Given 业务 BC 的 Requirement 聚合实现 TrackerItem，BC Adapter 实现 TrackerItemReadPort 与适用写入 Port。
+- Given 业务 BC 的 Requirement 聚合实现 TrackerItem，BC Adapter 实现 `TrackerItemQueryProvider`，跨聚合写入通过请求和结果事件协作。
 - When SK 发起读取或物化请求。
 - Then 请求通过 Adapter 进入 BC；聚合提供公共领域能力，应用层处理协作，业务 BC 校验并决定提交。
 - 反例：不能因聚合实现 TrackerItem 就允许 SK 调用通用 Save、访问 BC Repository 或绕过聚合规则；也不要求聚合实现应用层 Port。

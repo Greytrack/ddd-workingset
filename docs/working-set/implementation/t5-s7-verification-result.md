@@ -8,7 +8,7 @@
 
 ## S7-A · Compare 与 ComparisonToken
 
-[Compare 服务](../../../sharedkernel/src/main/java/sk/workingset/application/MergeComparisonService.java) 通过 S6 的谱系准入选择直属父子非共享 Tracker 对，按 CommonId 匹配业务身份，通过 TrackerItemReadPort 读取内容。比较区分现存、缺失、标记删除及不可读。不可读侧携带原因，例如 `HISTORY_UNAVAILABLE`。空范围返回空候选和空差异。
+Compare 服务（当时的 `MergeComparisonService.java`） 通过 S6 的谱系准入选择直属父子非共享 Tracker 对，按 CommonId 匹配业务身份，通过 TrackerItemReadPort 读取内容。比较区分现存、缺失、标记删除及不可读。不可读侧携带原因，例如 `HISTORY_UNAVAILABLE`。空范围返回空候选和空差异。
 
 ComparisonToken 引用 `merge_comparisons` 中的冻结清单，含双侧 LocalId、业务及内容版次、发布版本、乐观锁与字段证据。分页读取同一份清单。登记复核双侧证据；执行使用用户裁定的分界。一个比较凭据对应至多一个轮次。
 
@@ -20,8 +20,8 @@ ComparisonToken 引用 `merge_comparisons` 中的冻结清单，含双侧 LocalI
 
 ## S7-C · Checkpoint、ALM 写入与生命周期
 
-- [Checkpoint 映射](../../../sharedkernel/src/main/java/sk/workingset/infrastructure/repositories/JdbcMergeRepository.java) 按有向源、目标及 CommonId 保存决定版本与双侧业务 Revision。确认和撤销按版本单调更新，已处理的同版次差异可由 Compare 隐藏。旧确认无法覆盖更新的撤销。
-- [ALM Merge 写入](../../../alm/src/main/java/alm/requirement/application/RequirementMergeWriter.java) 通过 RequirementWritePort 接收操作身份、决定和证据，调用聚合行为并整体校验。未物化目标用目标原有有效内容构建聚合并保存，再沿用 LightTrackerItem 的本地切换行为。轮次行锁与每条结果同事务落库提供 `mergeRoundId + entryId` 幂等边界。
+- Checkpoint 映射（当时的 `JdbcMergeRepository.java`） 按有向源、目标及 CommonId 保存决定版本与双侧业务 Revision。确认和撤销按版本单调更新，已处理的同版次差异可由 Compare 隐藏。旧确认无法覆盖更新的撤销。
+- ALM Merge 写入（当时的 `RequirementMergeWriter.java`） 通过 RequirementWritePort 接收操作身份、决定和证据，调用聚合行为并整体校验。未物化目标用目标原有有效内容构建聚合并保存，再沿用 LightTrackerItem 的本地切换行为。轮次行锁与每条结果同事务落库提供 `mergeRoundId + entryId` 幂等边界。
 - [Requirement 生命周期](../../../alm/src/main/java/alm/requirement/adapters/RequirementController.java) 增加 `delete`、`undelete`、`delete2`。标记删除用 `requirements.delete_flag` 保留业务行，正常读取返回 410。永久删除清除业务行、该对象的业务快照和对应 LightTrackerItem；未物化依赖仍需要内容时返回 `PREPARING`。T1 已冻结的比较与结果证据作为执行审计保留。
 - [schema.sql](../../../deploys/src/main/resources/schema.sql) 新增 `merge_comparisons`、`merge_rounds`、`merge_checkpoints`、决定版本序列和 `delete_flag`，并建立 Tracker 内 Requirement 家族唯一索引。已有库如含同 Tracker、同 CommonId 的重复 Requirement，初始化前须按真实身份事实消解。
 

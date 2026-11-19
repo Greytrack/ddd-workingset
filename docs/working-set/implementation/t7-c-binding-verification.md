@@ -11,7 +11,7 @@
 | 目标已存在与父创建中 | 目标 ID 已存在时受理直接 409 `WorkingSetAlreadyExists`，该 WS 仍可普通查询；父 WS 在另一任务中时以它为父返回 409 `Preparing`。 |
 | 查询过滤与任务视图 | 目标创建中时普通详情返回 `Preparing`，子级/祖先不包含目标；`GET /api/working-set-creations/{id}/working-set` 可读目标视图。 |
 
-[任务服务](../../../sharedkernel/src/main/java/sk/workingset/application/WorkingSetCreationService.java) 用任务行锁串行化每项推进。每项写入与进度同事务提交。已存在的副本或绑定计入跳过，已提交进度的事件重投从剩余项继续。PostgreSQL 任务表结构沿用 T7-B，既有任务 JSON 缺少 `stageProgress` 时按本体阶段恢复。
+任务服务（当时的 `WorkingSetCreationService.java`） 用任务行锁串行化每项推进。每项写入与进度同事务提交。已存在的副本或绑定计入跳过，已提交进度的事件重投从剩余项继续。PostgreSQL 任务表结构沿用 T7-B，既有任务 JSON 缺少 `stageProgress` 时按本体阶段恢复。
 
 验收入口见 [WorkingSetCreationAcceptanceTest](../../../deploys/src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)。本记录覆盖绑定阶段，后续索引行为见 [T7-D 验收](t7-d-index-verification.md)。
 

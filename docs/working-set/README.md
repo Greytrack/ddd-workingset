@@ -14,4 +14,4 @@
 
 ## 决策与历史
 
-[ADR](adr/README.md) 和 [评审](reviews/README.md) 保存裁定依据。[领域资料索引](domain/README.md) 收录事实与来源，[提案](proposals/README.md) 和 [pre-design](../../pre-design/README.md) 保存探索材料。状态和阅读规则见 [AGENTS.md](../../AGENTS.md)。
+[ADR](adr/README.md) 和 [评审](reviews/README.md) 保存裁定依据。[领域资料索引](domain/README.md) 收录事实与来源，[提案](proposals/README.md) 保存探索材料。状态和阅读规则见 [AGENTS.md](../../AGENTS.md)。

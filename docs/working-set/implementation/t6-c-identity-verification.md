@@ -13,10 +13,10 @@
 
 ## 2. 实现
 
-- [RequirementApplicationService](../../../alm/src/main/java/alm/requirement/application/RequirementApplicationService.java)：创建入口按 `TrackerScopePort` 判定归属工作集，生成同一或两个不等雪花；显式指定非默认工作集时，非共享 Tracker 必须属于该工作集。
+- `RequirementApplicationService.java`（当时路径）：创建入口按 `TrackerScopePort` 判定归属工作集，生成同一或两个不等雪花；显式指定非默认工作集时，非共享 Tracker 必须属于该工作集。
 - [CreateRequirementRequest](../../../alm/src/main/java/alm/requirement/adapters/CreateRequirementRequest.java)：不再包含 `commonId`，身份由服务端分配。
-- [MergeExecutionService](../../../sharedkernel/src/main/java/sk/workingset/application/MergeExecutionService.java)：`CREATE` 到默认工作集时使用 CommonId 作为 LocalId，保证二者相等；非默认工作集使用新雪花。
-- [WorkingSetApplicationService](../../../sharedkernel/src/main/java/sk/workingset/application/WorkingSetApplicationService.java)：派生生成新 LocalId，并确保与来源 CommonId 不等。
+- `MergeExecutionService.java`（当时路径）：`CREATE` 到默认工作集时使用 CommonId 作为 LocalId，保证二者相等；非默认工作集使用新雪花。
+- `WorkingSetApplicationService.java`（当时路径）：派生生成新 LocalId，并确保与来源 CommonId 不等。
 - Tracker 不存在时不提前拦截身份分配，交由持久化层按既有约束返回冲突（与 D10 的兼容行为一致）。
 
 ## 3. 验收

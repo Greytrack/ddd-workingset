@@ -19,7 +19,7 @@
 | `FACT-001` | Working Set 是选择 Tracker 并形成有效工作范围的工作视图/范围清单，不是分支本体。 | 用户确认（2026-11-12 关闭 `QUESTION-001`） | [S1～S7 验收](../implementation/README.md) |
 | `FACT-002` | Shared Tracker 及其 Item 的新增、修改实际归属默认工作集，所有已绑定工作集同时可见，不产生子工作集独有副本。 | 用户已确认 | `POL-008`；权限与读取面指标待设计 |
 | `FACT-003` | 非共享 Tracker 派生产生新的独立业务身份；`sourceId` 指向直接父级 Working Set 下的来源 Tracker，逐级追溯；`parentId` 另表达同工作集直属结构父。 | 用户确认 D-002/D-003 | `INV-014`～`INV-018` |
-| `FACT-004` | V4 的 VIRTUAL Item 表示没有本地业务内容行但仍存在的逻辑条目。 | 历史术语；现行模型由 Source-backed LTI 表达 | D-008；不得把“无本地行”当作不存在 |
+| `FACT-004` | Source-backed 变体没有本地业务内容行，仍有稳定的逻辑身份。 | 现行领域语义 | D-008 |
 | `FACT-005` | `CommonId` 关联同族变体，`LocalId` 标识具体变体；实例化不更换 `LocalId`。 | Accepted 子集：R05 身份关系；实例化稳定性已由 T3 兑现 | [身份规则](glossary.md#item-身份规则已确认) |
 | `FACT-006` | 普通字段按来源 Revision 读取并在首次 COW 固定；附件与关系固定为派生时状态；来源删除不得破坏首次编辑所需事实的可读性。 | Accepted 限定范围 R07/R19；机制见 T3 | [T3 §2.1](lighttrackeritem-materialization-contract-v1.md) |
 | `FACT-007` | 直接父子工作集支持双向 Compare/Merge；任一方向的新增、删除、修改均可经用户选择应用到接收方；`source/target` 是本轮角色。 | 用户已确认 | `POL-004`；目标 BC 校验提交 |
@@ -93,8 +93,3 @@
 | `TC-003` | 现有业务内容可能采用覆盖式表结构，历史读取能力有限。 | 历史能力盘点；T3 快照表已提供最小证据 |
 | `TC-004` | 旧实现存在 Long 主键、旧 branch 字段、SDK/Biz 分层。 | 只作为迁移证据，不定义领域身份 |
 | `TC-005` | 事件可能至少一次投递，投影存在延迟。 | 幂等键、因果序列、最大延迟 |
-| `TC-006` | `pre-design/` 历史材料存在失效相对链接。 | 不影响语义；导航以当前文档为准 |
-
-## 与历史材料的边界
-
-`pre-design/` 中的 V4 模型是历史设计输入，不是当前基线。V4 的 Manifest/ItemVariant/Tracker Branch 等概念已被 D-001/D-010 排除或改由现行模型承担；保留原文用于追溯，不据此新增当前字段或聚合。

@@ -124,3 +124,16 @@ sequenceDiagram
 K1（仅删除不可恢复、软删/归档/恢复不纳入、不强制物理 DELETE）、K2（组织子级/派生子级/有 Item 禁止删除、不级联/不断链/重挂）、K3（子 WS 删除的成员关系约束与解除顺序）均已由用户正式确认，本图与[契约 v1](../domain/binding-deletion-contract-v1.md)同步冻结；WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定）。
 
 图本身仍为 `Draft / Candidate`：Mermaid 实际渲染未验证（环境无 `mmdc`），纳入正式基线与发布前须在可渲染环境复核。
+
+## 事务边界补充
+
+普通 Tracker 创建已按下图解耦；ProductSpace 初始化和跨聚合删除尚不能以此图宣称已完成拆分，见 [实现边界](../implementation/current-boundaries.md)。
+
+```mermaid
+sequenceDiagram
+    participant T as Tracker 命令
+    participant W as Working Set 绑定消费
+    T->>T: 保存 Tracker 与事件发布记录
+    T--)W: TrackerCreatedEvent（提交后）
+    W->>W: 按身份去重并保存 WorkingSet 聚合
+```

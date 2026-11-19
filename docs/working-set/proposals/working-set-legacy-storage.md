@@ -2,7 +2,7 @@
 
 **Status: Draft**
 
-本方案基于 [当前设计基线](../BASELINE.md) 与 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)。Working Set 聚合根改用旧表 `air_inst_workingset`，保留工作集身份、不可变父级、默认工作集保护、创建任务可见性以及绑定语义。旧表结构见[附件](../../../pre-design/工作集表结构.txt)。新库初始化和应用读写已按确认映射接入；存量库切换待单独对账和演练。
+本方案基于 [当前设计基线](../BASELINE.md) 与 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)。Working Set 聚合根改用旧表 `air_inst_workingset`，保留工作集身份、不可变父级、默认工作集保护、创建任务可见性以及绑定语义。现行映射见 [`schema.sql`](../../../deploys/src/main/resources/schema.sql)。新库初始化和应用读写已按确认映射接入；存量库切换待单独对账和演练。
 
 | 项目 | 推荐做法 / 待核实事实 |
 | --- | --- |

@@ -70,14 +70,14 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 1. **复核证据**：以用户提交并随 MergeRound 持久化的所选差异证据与当前双侧状态比对；不一致 → `StaleEvidence`，不写任何内容，要求重新比较。
 2. **确定目标操作**：依 `ItemMergeDecision` 得到目标操作——字段赋值集合、显式存在性操作（创建或删除，回并恢复原变体见 §8）、或「无写入」（`KEEP_TARGET`）、或「保持未完成」（`DEFER`）。
-3. **调用业务 BC**：以目标 BC 的公开写能力提交（携带期望版本与证据引用）；BC 构建目标聚合并**整体校验**；成功 → Save 并返回真实结果与业务 Revision；拒绝 → `Rejected`（保留决定与拒绝原因，目标不得部分写入，INV-009）。
+3. **请求业务 BC 执行**：通过可靠事件提交（携带期望版本与证据引用）；BC 构建目标聚合并**整体校验**；成功 → Save 并返回真实结果与业务 Revision；拒绝 → `Rejected`（保留决定与拒绝原因，目标不得部分写入，INV-009）。
 4. **维护 LightTrackerItem**：目标若尚未物化，业务聚合 Save 成功后按既定机制转为 Local-backed（有效来源=自身、Revision=自身 Revision，D-012/D-018/D-019）；**不新增 Merge 专用物化协议**。
 5. **确认（按 `markAsMerged`）**：为 `true` 且条目终态为 `Applied` 时，请求 `MergeCheckpoint.confirm`；为 `false` 时不确认。
 6. **记录结果**：写 `EntryResult`（终态、目标操作、BC 结果引用、Checkpoint 结果、失败分类），更新 `RoundProgress`。
 
 ## 5. MergeEntry 生命周期
 
-**D15-B（2026-11-13 用户裁定，已落地）**：条目业务应用由目标 BC 在**独立事务**提交；目标变体的切换/创建由 `RequirementMergeAppliedEvent` 事件在 SK 独立事务完成（异步、幂等，失败可由 Modulith 未完成事件重投）。两者不再共用条目事务，`ApplyResult` 仍以业务 apply 的结果为准。
+**D15-B（业务提交与 LTI 切换分离）**：ALM 消费 `MergeEntryApprovedEvent`，独立提交业务结果与回执，发布 `MergeEntryResolvedEvent`。SK 消费结果推进轮次，适用时再发布 `MergeAppliedEvent`，由 LTI 独立事务切换。`ApplyResult` 不等待 LTI；Checkpoint 与轮次同写仍是 [TC-002 实现差距](../implementation/current-boundaries.md)。
 
 状态（Entity 内的状态机，候选）：
 
@@ -175,7 +175,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 - 同一轮次只允许一个 Apply 请求推进。执行权仍被持有时，其他 Apply 返回 HTTP 409 `RoundInProgress`（T1 轮次冲突）。终态重提返回原 `ApplyResult`。
 - Apply 受理后先持久化 `Running`。执行者退出后，调用者可用原轮次 ID 再次 Apply，接续已受理的同一次执行。恢复跳过已记录结果的条目。
-- 以轮次 ID 和条目 ID 查询业务提交凭据。业务提交、凭据和适用的 `RequirementMergeAppliedEvent` 发布记录同事务落库。若凭据已存在，只补 Checkpoint 和条目结果，即使比较后的业务内容已经改变。若事务未提交且没有凭据，则在原决定下执行尚未完成的条目。
+- 以轮次 ID 和条目 ID 查询业务提交回执；BC 业务提交、回执和 `MergeEntryResolvedEvent` 发布记录同事务保存。重复交付以回执兑现已提交结果，不重写业务对象。待派发与已派发但等待结果应分别核对。
 - 已受理的轮次在提交或结果暂时无法确认时保留 `Running`，按 T4 返回 `Unknown`。恢复以持久化凭据判定，业务拒绝等已记录结果遵循 Q4。旧版未终态轮次缺少提交凭据，须先核对已有业务事实。
 - LTI 切换仍按 D15-B 独立异步收敛。2026-11-18 用户裁定移除 `/api/cow/recover/incomplete`；切换失败不再提供恢复入口。轮次结果以业务提交事实为准。
 

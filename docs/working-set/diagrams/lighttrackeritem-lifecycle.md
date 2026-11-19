@@ -2,7 +2,7 @@
 
 **状态：Draft（D-008、D-012～D-015 配套图）**
 
-本页展示派生身份、有效来源及多级依赖。双态切换和消费时匹配见 [T3 物化图](lighttrackeritem-materialization.md)，单实例乱序和失败恢复证据见 [S4 验证](../implementation/t5-s4-verification-result.md)。
+本页展示派生身份、有效来源及多级依赖。双态切换和消费时匹配见 [T3 物化图](lighttrackeritem-materialization.md)，旧单实例顺序与恢复行为见 [S4 历史验证](../implementation/t5-s4-verification-result.md)。
 
 派生分配 LocalId、继承 CommonId 并记录实际内容来源。读路径和写入责任见 [T4](../domain/cross-bc-contract-v1.md)。
 

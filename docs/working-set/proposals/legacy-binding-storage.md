@@ -21,6 +21,6 @@ flowchart LR
     TB -. 一条有效关系 .-> SQL
 ```
 
-新库仅创建一张绑定实表 air_ws_workingset_branch_relation；旧 V4 绑定名仅为查询视图。基线字段不参与域内唯一性和范围重建。启动不会清空已有表；专用 Demo 支持重建，客户现场需先运行[只读核对](../../../deploys/db/verification/legacy-binding-preflight.sql)检查重复键、空引用、错空间和根文件夹，并确认是否仍有绕过 V4 的旧写入。
+新库仅创建一张绑定实表 air_ws_workingset_branch_relation；`tracker_bindings` / `space_bindings`仅为查询视图。基线字段不参与域内唯一性和范围重建。启动不会清空已有表；专用 Demo 支持重建，客户现场需先运行[只读核对](../../../deploys/db/verification/legacy-binding-preflight.sql)检查重复键、空引用、错空间和根文件夹，并确认是否仍有绕过当前关系表契约的旧写入。
 
 验收以 [TrackerDefaultAcceptanceTest](../../../deploys/src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java) 的公共挂载、隐藏恢复及卸载入口为准。有效范围、跨聚合 ID 引用和显式删除依据 [绑定与删除契约](../domain/binding-deletion-contract-v1.md)；参考本地 DDD 的聚合章节及《实现领域驱动设计》的“通过标识引用其他聚合”，并应用 domain-modeling、ubiquitous-language、domain-driven-design 的术语和聚合检查。

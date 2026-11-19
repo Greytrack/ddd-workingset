@@ -4,7 +4,7 @@
 
 ## 范围
 
-对 `docs/working-set/` 做一次去重、去历史套话和状态修正，保留有实质价值的证据、反例、备选方案与历史裁定。未删除 `pre-design/` 历史材料；新增 [pre-design/README.md](../../../pre-design/README.md) 标明其 Historical 定位。
+对 `docs/working-set/` 做一次去重、去历史套话和状态修正，保留有实质价值的证据、反例、备选方案与历史裁定。未删除 `pre-design/` 历史材料；当时将探索资料标为 Historical（该目录后来由 `25e6271` 移除）。
 
 ## 主要改动
 

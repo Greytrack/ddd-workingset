@@ -19,7 +19,7 @@
 
 Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）之间的公共契约面：
 
-1. `TrackerItem` **只读**能力契约与**写入协作 Port** 的结构；
+1. 领域 `TrackerItem`、只读应用契约与写入事件边界；
 2. 六个用例的边界：`create` 工作范围、`create` 业务对象并纳入、`extend`、`resolve`、`diff`、`merge`；
 3. **九分类公共失败语义**及其在各用例上的适用子集；
 4. Shared Kernel 的契约版本治理（`QUESTION-014`，团队开放项）。
@@ -42,7 +42,7 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 | 绑定移除/删除语义（POL-014 修订、2026-11-11 K1～K3）：Shared 移除仅解绑、非共享删除受三项检查、删除不可恢复 | POL-014、POL-016、T2 契约 |
 | 分类共享特性不可变；Tracker 共享特性创建时确定、不可修改 | POL-003 |
 
-## 3. 契约结构：只读应用 Port + 写入协作 Port
+## 3. 契约结构：只读 Provider 与写入事件
 
 **K1″（用户确认，2026-11-11）**：Shared Kernel 定义 `TrackerItem` 公共能力契约与只读应用 Port；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属业务 BC 执行。SK 可以协调 COW、Merge 等跨 BC 流程，但**不能绕过**业务 BC 聚合、领域规则或 Repository 执行通用 Save。
 
@@ -50,7 +50,7 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 ### 3.1 `TrackerItemQueryProvider`（SK 定义，各 BC 实现，**只读**）
 
-**两层接口并存（用户确认，2026-11-11，选择 B）**：业务聚合继续实现领域公共接口 `TrackerItem`（D-007）；BC Adapter 另行实现应用层 `TrackerItemQueryProvider` 与适用的写入协作 Port。前者表达对象的公共领域能力，后者承接跨 BC 调用、授权与适配；聚合不因此实现应用层 Port，也不向 SK 开放 Repository 或通用 Save。字段/方法的精确签名留实现契约，不从两层接口推导新的业务能力。见[裁定依据](../reviews/2026-11-11-consistency-reconciliation.md)、SCN-073。
+**两层接口并存（用户确认，2026-11-11，选择 B）**：业务聚合继续实现领域公共接口 `TrackerItem`（D-007）；BC Adapter 另行实现应用层 `TrackerItemQueryProvider`；写入改由请求与结果事件协作。前者表达对象的公共领域能力，后者承接跨 BC 调用、授权与适配；聚合不因此实现应用层 Port，也不向 SK 开放 Repository 或通用 Save。字段/方法的精确签名留实现契约，不从两层接口推导新的业务能力。见[裁定依据](../reviews/2026-11-11-consistency-reconciliation.md)、SCN-073。
 
 | 能力 | 语义 | 归属 |
 | --- | --- | --- |
@@ -62,23 +62,16 @@ Shared Kernel（Working Set）与四个业务 BC（GateFlow、ALM、DQA、PLM）
 
 **明确不属于 `TrackerItemQueryProvider`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见 §3.3），不是只读契约的方法。
 
-**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；`BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemQueryProvider` 仍保持只读；写入协作仍走各 BC 的 WritePort。`Requirement` 作为 ALM 实现已具备该能力，`RequirementLifecycleService.delete2` 先调用聚合 guard 再删除。设计见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
+**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；`BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemQueryProvider` 仍保持只读；写入由各 BC 自管，跨聚合协作使用事件。`Requirement` 作为 ALM 实现已具备该能力，`RequirementLifecycleService.delete2` 先调用聚合 guard 再删除。设计见[BusinessObject 生命周期能力设计](business-object-lifecycle-design.md)。
 
-**2026-11-12 D4 用户裁定（方案 A：移回 SK）**：`Tracker` 与 `LightTrackerItem` 两个聚合及其仓储归 SK 独占；业务 BC **不得**注入 `TrackerRepository` / `LightTrackerItemRepository`，也不接收 SK 聚合对象。物化所需的 Tracker 锁定与目标变体读取由 SK 应用层完成，业务 BC 只接收值对象 `TargetIdentity`（localId / trackerId / commonId / revision / materialized）。业务对象永久删除后的 LTI 清理由 SK 定义、业务 BC 发布的 `CompleteDeleteEvent` 事件驱动，SK 侧处理幂等。协作接口为 SK 定义的 `TrackerItemLifecyclePort`（`lockMaterializationTarget` / `assertPurgeable` / `removePurged`，由 SK 实现），不走通用 Save 或聚合透传。实现证据见 [S7 验证](../implementation/t5-s7-verification-result.md)与 [D4 边界验证](../implementation/t5-d4-sk-boundary-verification.md)。
+**D4（所有权约束）**：Tracker、LTI 及其仓储归 SK；业务 BC 不直接读写这些仓储，不接收 SK 聚合作为写入对象。协作传递身份和证据。业务对象永久删除后由 ALM 发布 `CompleteDeleteEvent`，SK 异步清理 LTI。当前 ALM 尚有直接仓储读取偏差，见 [实现边界](../implementation/current-boundaries.md)。
 
-### 3.2 写入协作 Port（SK 定义 Outbound Port，BC 通过 Adapter 实现）
+### 3.2 写入协作（事件）
 
-- **每个 BC 一个专用 Port**（如 `RequirementWritePort`），**不是**具有通用 CRUD 权限的 `TrackerItem` 接口。
-- 请求载荷（契约级，非最终 API）：目标身份、业务 `Revision`、独立的乐观锁版本（`lock_version`）/写入前置证据、字段与存在性决定、审阅证据引用、操作身份（幂等）、调用者上下文。业务 Revision 与发布 `version` 不充当乐观锁；证据形式留实现契约确定（CONCEPT-009、ADR-0005）。
-- 返回（契约级）：成功 + 提交后的业务 `Revision`（普通编辑不升级版次）；或业务拒绝 / 冲突 / 未知结果等（见 §5）。并发控制不得改变 T1 已确认的决策优先与执行语义。
-- 结构可具有 **SPI 扩展特征**（按能力声明发现可用实现），但**不强制** Java `ServiceLoader` 或动态插件机制。
-
-参见 [跨 BC 依赖图](../diagrams/cross-bc-contract.md)。
-
-- **D3-B（2026-11-12 用户裁定）**：COW 物化的业务保存由业务 BC **独立提交**；SK 的物化凭据与 LightTrackerItem 切换在独立事务中进行，**不要求跨 BC 同事务**。**2026-11-18 用户裁定**：移除 COW Recovery；凭据/切换失败即终态，不重投、不补切换，业务保存按目标身份与快照证据幂等。
-- **D15-B（2026-11-13 用户裁定）**：Merge 的条目应用同样独立提交；目标变体切换/创建由 `RequirementMergeAppliedEvent` 事件在 SK 独立事务完成，与 COW 采用同一异步模式；LTI 切换失败不再提供恢复入口。
-- **未物化子需求的直接编辑**：调用者以子变体的 `LocalId` 提交标题，或同时提交标题和描述。业务 BC 以来源 ID 和版次取得初始内容并在自身聚合事务中保存子变体，可靠事件触发 SK 在独立事务中切换 LTI。来源变体不被修改。2026-11-19 用户裁定替代此前“同事务切换”的实现承诺；业务保存、LTI 切换和读取收敛不得合并为原子成功。收敛前的公开响应与可见性需专项契约评审，不能沿用旧的立即可读承诺；见 [偏差与待办](../reviews/2026-11-19-ddd-anti-pattern-scan.md)。
-- Merge 执行中断的业务提交凭据和恢复结果见 [T1 §8.1](merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b)。返回值与失败语义沿用 §5。
+- SK 负责范围、变体身份和执行请求；目标业务 BC 整体校验并独立提交聚合，发布业务结果。请求不是完成事实；不提供通用写端口或跨 BC 聚合透传。
+- ALM 切片：Merge 使用 `MergeEntryApprovedEvent` / `MergeEntryResolvedEvent`；COW 使用 `TrackerItemMaterializationRequestedEvent` / `TrackerItemMaterializationCompletedEvent`。Merge 结果由 SK 接收，适用时再经 `MergeAppliedEvent` 切换 LTI。
+- 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectUpdateEvent` 触发 SK 独立切换 LTI；不修改来源，不保证两边原子可见。
+- 每个写事务最多修改一个聚合（TC-002）。事件交付、失败与实现差距见 [实现边界](../implementation/current-boundaries.md)、[T1](merge-execution-contract-v1.md)、[T3](lighttrackeritem-materialization-contract-v1.md) 和 [跨 BC 图](../diagrams/cross-bc-contract.md)。
 
 ### 3.3 业务 BC 必须拥有的职责
 
@@ -121,7 +114,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 **不要求每个接口统一返回九类**：§5.2 是适用分类的唯一矩阵。原本节三个创建/扩展用例遗漏 `Preparing` 的摘要按该矩阵及 T4 评审 §3 校正。
 
-**工作集入口（D10，2026-11-13 已实现）**：`CreateRequirementRequest` 增加 `workingSetId`（为空时默认默认工作集）；共享 Tracker 实际归属默认工作集、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建，否则返回 `NotIncluded`。业务 BC 通过 SK 的 `TrackerScopePort` 解析归属，不直接访问 SK 仓储；实际 `working_set_id` 仍由 Tracker 派生。
+**工作集入口（D10，2026-11-13 已实现）**：`CreateRequirementRequest` 增加 `workingSetId`（为空时默认默认工作集）；共享 Tracker 实际归属默认工作集、请求可来自任意绑定工作集；非共享 Tracker 必须由它所在的工作集创建，否则返回 `NotIncluded`。业务 BC 应通过 SK 只读契约解析归属；当前 ALM 直接注入仓储属于 [D4 实现差距](../implementation/current-boundaries.md)；实际 `working_set_id` 仍由 Tracker 派生。
 
 **原生创建的 LTI 登记**：业务 BC 在保存事务中发布 `TrackerItemCreatedEvent`，Modulith 持久化投递记录。业务提交后，SK 在独立事务中幂等登记 Local-backed LTI；失败可重投，业务对象已永久删除时跳过。创建返回成功表示业务对象已提交，依赖 LTI 的工作集读取在登记后可见。
 
@@ -241,7 +234,7 @@ SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 | 内容 | 性质 |
 | --- | --- |
 | 四 BC 提交权与校验职责、Part/DQA 接入范围与不参与派生/比对/合并、GateFlow 版次链、共享可见性、创建入口归属、直接父子双向准入、共享特性不可变 | **已确认**（AC-001、D-007、QUESTION-013、POL-002/003/004/007/008、FACT-007/011/012） |
-| 只读 `TrackerItemQueryProvider` + 独立写入协作 Port；整体校验与提交归 BC | **用户确认**（2026-11-11，K1″） |
+| 只读 `TrackerItemQueryProvider`；整体校验与提交归 BC（当前写协作见 §3.2） | **用户确认**（2026-11-11，K1″） |
 | 九分类公共失败语义与「跨 BC 词汇表而非生命周期」定位 | **用户确认**（2026-11-11，K2″） |
 | 数值错误码、响应结构与稳定性规则（§5.4） | **API 契约 v1**（2026-11-17 登记；新增/变更需 T4 评审） |
 | 六个用例的边界划分与适用分类矩阵 | **契约 v1（本文件冻结）** |

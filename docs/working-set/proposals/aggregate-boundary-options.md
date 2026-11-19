@@ -38,7 +38,7 @@
 
 **状态：Draft，当前不采用（D-010 已确认不再引入 Manifest、ItemVariant）；以下保留历史方案及权衡。**
 
-**核心**：Working Set 根只原子切换已准备好的 Manifest revision；Binding 可分片准备，Tracker 谱系和 Item Variant 各自管理身份与来源。该方案吸收 `EXT-ARCH §6 方案 A`，但不接受其推荐结论。
+**核心**：Working Set 根只原子切换已准备好的 Manifest revision；Binding 可分片准备，Tracker 谱系和 Item Variant 各自管理身份与来源。该方案未被采纳，不作为实施输入。
 
 - **保护**：发布指针与封闭清单一致；Tracker 谱系规则；Item Variant 身份与 Source Cut 稳定。
 - **优点**：兼顾混合共享／派生、大规模准备和稳定身份；长流程可恢复。
@@ -49,7 +49,7 @@
 
 ## 补充基准：不可变 ContentVersion + Overlay
 
-`EXT-ARCH §6 方案 B` 是长期基准：派生只继承不可变版本指针，本地写创建新版本。它显著简化历史证据和 fan-out，但对覆盖式存储、附件、关系和搜索改造最大。本阶段保留为重新评估条件，不另编号为当前聚合候选。
+不可变内容版本是曾比较的备选：派生只继承不可变版本指针，本地写创建新版本。它显著简化历史证据和 fan-out，但对覆盖式存储、附件、关系和搜索改造最大。本阶段保留为重新评估条件，不另编号为当前聚合候选。
 
 ## 比较矩阵
 

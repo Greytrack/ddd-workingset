@@ -14,7 +14,7 @@
 
 ## 一致性与升级
 
-[MergeExecutionService](../../../sharedkernel/src/main/java/sk/workingset/application/MergeExecutionService.java) 使用 PostgreSQL 每轮次独占锁保护 Apply 入口，使用短事务中的轮次行锁序列化条目结果和提交凭据。相较于带超时的持久租约，数据库事务锁无需为失联执行者引入续约与超时接管策略。每个活动执行者会占用一个外层锁事务连接，内部写入另用连接。并行轮次数量和连接池容量需在 T6-E 规模验证中核对。
+`MergeExecutionService.java`（当时路径） 使用 PostgreSQL 每轮次独占锁保护 Apply 入口，使用短事务中的轮次行锁序列化条目结果和提交凭据。相较于带超时的持久租约，数据库事务锁无需为失联执行者引入续约与超时接管策略。每个活动执行者会占用一个外层锁事务连接，内部写入另用连接。并行轮次数量和连接池容量需在 T6-E 规模验证中核对。
 
 [schema.sql](../../../deploys/src/main/resources/schema.sql) 为轮次补独立锁键与凭据协议标识，按 `(round_id, entry_id)` 保存业务提交凭据。业务写入、凭据与适用的事件发布记录一起提交，Checkpoint 与单项结果随后提交。凭据记录提交时的双侧版次，避免恢复时将更晚的修改认成原决定处理的事实。
 

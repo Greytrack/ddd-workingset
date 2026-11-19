@@ -2,7 +2,7 @@
 
 **状态：Draft / Candidate（T4 契约配套图；K1″/K2″ 已由用户 2026-11-11 确认，K3″ 团队开放项；图本身未纳入正式基线）**
 
-- 目的：表达**只读契约 + 写入协作 Port** 的依赖方向、能力声明，以及九分类公共失败语义在各用例上的适用范围。
+- 目的：表达**只读 Provider + 写入事件协作** 的依赖方向、能力声明，以及九分类公共失败语义在各用例上的适用范围。
 - 适用范围：阶段 5 T4 跨 BC 公共契约（已冻结）；四 BC 接入范围以已确认边界为准。
 - 依据：[跨 BC 公共契约 v1](../domain/cross-bc-contract-v1.md)、AC-001、D-007、FACT-011/012、QUESTION-013/014、POL-002/003/004/007/008、[Shared Kernel 边界](../domain/shared-kernel-boundary.md)、B01～B12、SCN-069～071。
 - 不表达：具体 API 签名、包名、Maven 模块、Spring Bean 装配、传输协议、事务实现、权限缓存时效。
@@ -10,37 +10,24 @@
 ## 图例
 
 - 实线＝依赖方向；虚线＝由 Adapter 实现的关系。
-- SK 只依赖两个 Port（只读 + 写入协作），**不依赖 BC 内部聚合**。
+- SK 通过只读契约和消息与业务 BC 协作，不依赖其内部聚合。
 - BC 内部（聚合构建、整体校验、持久化、领域事件）在图中只作汇总节点，不展开。
 
-## 1. Port / Adapter 依赖方向（K1″）
-
-2026-11-11 用户选择 B：图中 Adapter 实现应用层 Port；业务聚合另行实现领域公共接口 TrackerItem，两层同时保留。该实现关系见[领域契约图](trackeritem-contract.md)，职责定义见 T4 §3.1。
+## 1. 读依赖与写入协作（K1″ / TC-002）
 
 ```mermaid
 flowchart LR
-    subgraph SKAPP["Shared Kernel 应用层"]
-        SK["范围 / 身份 / 证据 / 协调 / 结果"]
-    end
-
-    subgraph PORTS["SK 定义的 Outbound Port"]
-        RP["TrackerItemReadPort<br/>只读：身份 / Revision / 内容解析 / 能力声明 / 授权"]
-        WP["BC WritePort<br/>写入协作：期望版本 + 决定 + 证据 + 操作身份"]
-    end
-
-    subgraph BCI["业务 BC（以 ALM 为例）"]
-        ADP["Adapter<br/>实现两个 Port"]
-        AGG["聚合 + 应用服务<br/>整体校验 / 持久化 / 领域事件"]
-    end
-
-    SK -->|"依赖（读）"| RP
-    SK -->|"依赖（写请求）"| WP
-    ADP -.->|"实现读 Port"| RP
-    ADP -.->|"实现写 Port"| WP
-    ADP -->|"调用业务能力"| AGG
+    SK["SK：范围、身份、决定与索引"]
+    RP["TrackerItemQueryProvider：只读契约"]
+    ADP["ALM 查询适配器"]
+    BC["ALM：业务聚合与独立提交"]
+    SK -->|"读取"| RP
+    ADP -.->|"实现"| RP
+    SK -->|"Merge / COW 请求消息"| BC
+    BC -->|"业务结果提交后投递"| SK
 ```
 
-要点：`TrackerItemQueryProvider` **不含**整体校验、提交、删除等写入方法；写入只能经 `<BC>WritePort` 进入 BC 的聚合与应用服务。
+聚合实现领域公共接口，适配器实现只读契约；消息不传聚合实例。实现差距见 [当前实现边界](../implementation/current-boundaries.md)。
 
 ## 2. 能力声明
 

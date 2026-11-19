@@ -45,26 +45,27 @@ sequenceDiagram
             E-->>R: Deferred
         else 执行准入通过
             opt 决定要求写入
-                R->>BC: ACCEPT 取源最新值，或提交显式存在性决定
-                BC-->>R: 整体校验及独立事务提交结果
+                R--)BC: MergeEntryApprovedEvent（决定、字段与证据）
+                BC->>BC: 校验并独立提交业务结果与回执
+                BC--)R: MergeEntryResolvedEvent
             end
             alt 业务拒绝
                 R->>E: Rejected 保留原因
             else 成功或 KEEP_TARGET
                 par 轮次记录执行结果
                     opt markAsMerged 且 Applied
-                        R->>C: 确认处理事实
+                        R--)C: 确认处理事实（TC-002 目标：独立写事务）
                         C-->>R: Checkpoint 结果
                     end
                     R->>E: 记录单项结果
                 and LTI 独立收敛（仅适用的业务写入）
-                    BC--)H: RequirementMergeAppliedEvent（业务提交后异步投递）
+                    R--)H: MergeAppliedEvent（业务结果已消费）
                     H->>L: 在 SK 独立事务中维护 LTI
                 end
             end
         end
     end
-    Note over R,H: 记录条目结果无需等待 LTI 事件处理完成
+    Note over R,H: 条目结果不等待 LTI；Checkpoint 与轮次同写为当前偏差
     U->>R: GET 轮次状态与结果
     R-->>U: 终态时返回唯一 ApplyResult
 
