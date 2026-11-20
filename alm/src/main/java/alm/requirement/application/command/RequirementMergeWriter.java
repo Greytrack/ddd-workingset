@@ -1,5 +1,7 @@
 package alm.requirement.application.command;
 
+import sk.workingset.error.MergeResCode;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,8 +16,6 @@ import sk.workingset.domain.Version;
 import sk.workingset.domain.event.MergeEntryApprovedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
-import sk.workingset.domain.merge.MergeFailure;
-import sk.workingset.domain.merge.MergeFailure.Reason;
 
 import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.LockVersionConflictException;
@@ -47,10 +47,10 @@ public final class RequirementMergeWriter {
             return applied;
         } catch (LockVersionConflictException failure) {
             return rejected(command, Outcome.CONFLICT, failure.getMessage());
-        } catch (MergeFailure failure) {
-            return rejected(command, failure.reason() == Reason.Conflict ? Outcome.CONFLICT : Outcome.REJECTED,
+        } catch (DomainException failure) {
+            return rejected(command, failure.getResCode() == MergeResCode.CONFLICT ? Outcome.CONFLICT : Outcome.REJECTED,
                     failure.getMessage());
-        } catch (DomainException | IllegalArgumentException | IllegalStateException failure) {
+        } catch (IllegalArgumentException | IllegalStateException failure) {
             return rejected(command, Outcome.REJECTED, failure.getMessage());
         }
     }
@@ -66,7 +66,7 @@ public final class RequirementMergeWriter {
         java.util.Optional<Requirement> existing = repository.lockById(command.localId());
         if (command.expectedLockVersion() == null && existing.isPresent()
                 || command.expectedLockVersion() != null && existing.isEmpty()) {
-            throw new MergeFailure(Reason.Conflict, "target business state changed");
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "target business state changed");
         }
         if (existing.isEmpty()) {
             Requirement created = create(command);
@@ -80,7 +80,7 @@ public final class RequirementMergeWriter {
         }
         Requirement current = existing.orElseThrow();
         if (!current.trackerId().equals(command.trackerId()) || !current.commonId().equals(command.commonId())) {
-            throw new MergeFailure(Reason.Conflict, "target identity changed");
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "target identity changed");
         }
         LockVersion expected = LockVersion.of(command.expectedLockVersion());
         Requirement changed = switch (command.operation()) {
@@ -89,7 +89,7 @@ public final class RequirementMergeWriter {
                     text(command.acceptedFields(), "description", current.description()), expected);
             case DELETE -> current.delete(expected);
             case RESTORE -> current.undelete(expected);
-            case CREATE -> throw new MergeFailure(Reason.Conflict, "target already exists");
+            case CREATE -> throw DomainException.withMessage(MergeResCode.CONFLICT, "target already exists");
         };
         requirements.saveChange(current, changed);
         return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
@@ -99,7 +99,7 @@ public final class RequirementMergeWriter {
 
     private MergeEntryResolvedEvent restoreMergeBack(MergeEntryApprovedEvent command, Requirement current) {
         if (!current.deleted() || !current.trackerId().equals(command.trackerId())) {
-            throw new MergeFailure(Reason.Conflict, "target working set family is already occupied");
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "target working set family is already occupied");
         }
         Requirement changed = current.restoreContent(text(command.baseFields(), "title", null),
                 text(command.baseFields(), "description", null), current.lockVersion());
@@ -117,7 +117,7 @@ public final class RequirementMergeWriter {
 
     private static Requirement create(MergeEntryApprovedEvent command) {
         if (command.operation() == MergeEntryApprovedEvent.Operation.RESTORE) {
-            throw new MergeFailure(Reason.Conflict, "deleted target is absent");
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "deleted target is absent");
         }
         return Requirement.create(command.localId(), command.commonId(), command.trackerId(),
                 text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),

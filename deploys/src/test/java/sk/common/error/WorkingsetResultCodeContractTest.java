@@ -14,6 +14,7 @@ import alm.requirement.domain.RequirementResultCode;
 import bootstrap.web.ApiExceptionHandler;
 import sk.workingset.application.FailureReason;
 import sk.workingset.error.BindingResCode;
+import sk.workingset.error.MergeResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 /** T4 §5.4: numeric API codes are stable, unique, and assigned to fixed ranges. */
@@ -32,6 +33,16 @@ class WorkingsetResultCodeContractTest {
     }
 
     @Test
+    void mergeFailureResponseKeepsItsPublicReasonAndFallbackMessage() {
+        var error = DomainException.withMessage(MergeResCode.STALE_EVIDENCE, null);
+
+        var response = new ApiExceptionHandler().handleDomainFailure(error);
+
+        assertEquals(409, response.getStatusCode().value());
+        assertEquals(Map.of("code", 1306, "reason", "StaleEvidence", "message", "StaleEvidence"), response.getBody());
+    }
+
+    @Test
     void domainErrorKeepsBusinessCodeWhenStatusIsOverridden() {
         IllegalStateException cause = new IllegalStateException("original failure");
         DomainException error = new DomainException(DomainErrorType.CONFLICT, WorkingsetResultCode.BAD_REQUEST,
@@ -46,7 +57,7 @@ class WorkingsetResultCodeContractTest {
     @Test
     void codesAreUniqueAndInsideDeclaredPublicRanges() {
         java.util.List<Integer> codes = java.util.stream.Stream.of(WorkingsetResultCode.values(),
-                        BindingResCode.values(), RequirementResultCode.values())
+                        BindingResCode.values(), MergeResCode.values(), RequirementResultCode.values())
                 .flatMap(Arrays::stream).map(DomainResCode::getCode).toList();
         assertEquals(codes.size(), new HashSet<>(codes).size(), "duplicate public error code");
         assertTrue(codes.stream().allMatch(code -> code >= 1000 && code <= 1499),
@@ -77,8 +88,9 @@ class WorkingsetResultCodeContractTest {
         for (BindingResCode code : BindingResCode.values()) {
             assertRange(code, 1200, 1299);
         }
-        assertRange(WorkingsetResultCode.MERGE_PAIR_MERGE_IN_PROGRESS, 1300, 1399);
-        assertRange(WorkingsetResultCode.MERGE_STALE_EVIDENCE, 1300, 1399);
+        for (MergeResCode code : MergeResCode.values()) {
+            assertRange(code, 1300, 1399);
+        }
         assertRange(WorkingsetResultCode.MATERIALIZATION_REJECTED, 1400, 1499);
         assertEquals(1403, RequirementResultCode.LOCK_VERSION_CONFLICT.getCode());
     }

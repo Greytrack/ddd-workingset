@@ -1,5 +1,9 @@
 package sk.workingset.application.eventhandler;
 
+import sk.workingset.error.MergeResCode;
+
+import sk.common.error.DomainException;
+
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,7 +11,6 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.domain.event.MergeRoundSubmittedEvent;
-import sk.workingset.domain.merge.MergeFailure;
 
 /**
  * Merge LRO 的异步执行入口：提交决策后由事件驱动逐条推进。
@@ -26,9 +29,9 @@ public class MergeRoundSubmittedListener {
     public void on(MergeRoundSubmittedEvent event) {
         try {
             rounds.apply(event.roundId());
-        } catch (MergeFailure failure) {
+        } catch (DomainException failure) {
             // A deleted/cleaned-up round makes the event moot; don't retry it forever.
-            if (failure.reason() != MergeFailure.Reason.RoundNotFound) {
+            if (failure.getResCode() != MergeResCode.ROUND_NOT_FOUND) {
                 throw failure;
             }
             log.info("Merge round {} no longer exists; submitted event ignored", event.roundId());

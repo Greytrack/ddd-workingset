@@ -1,5 +1,9 @@
 package sk.workingset.domain.merge;
 
+import sk.workingset.error.MergeResCode;
+
+import sk.common.error.DomainException;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jmolecules.ddd.annotation.AggregateRoot;
@@ -7,7 +11,6 @@ import org.jmolecules.ddd.annotation.Entity;
 import org.jmolecules.ddd.annotation.ValueObject;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.Difference;
-import sk.workingset.domain.merge.MergeFailure.Reason;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,7 +48,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public MergeRound register(Entry entry) {
         if (state != State.Preparing) {
-            throw new MergeFailure(Reason.RoundClosed, id());
+            throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
         ArrayList<MergeRound.Entry> updated = new ArrayList<>(entries);
         updated.add(entry);
@@ -61,7 +64,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public MergeRound finishEntry(Entry entry, ItemResult itemResult) {
         if (state != State.Running) {
-            throw new MergeFailure(Reason.RoundClosed, id());
+            throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
         List<MergeRound.Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entry.id())
                 ? candidate.finish(itemResult) : candidate).toList();
@@ -80,7 +83,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public MergeRound complete(Instant completedAt) {
         if (state != State.Running || entries.stream().anyMatch(entry -> entry.result() == null)) {
-            throw new MergeFailure(Reason.RoundClosed, id());
+            throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
         List<MergeRound.ItemResult> results = entries.stream().map(Entry::result).toList();
         long successful = results.stream().filter(ItemResult::succeeded).count();
@@ -112,7 +115,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
         Entry finish(ItemResult result) {
             if (this.result != null) {
-                throw new MergeFailure(Reason.RoundClosed, id());
+                throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
             }
             return new Entry(numericId, decisionVersion, evidence, decision, result, requested);
         }

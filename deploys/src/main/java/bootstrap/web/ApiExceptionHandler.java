@@ -4,6 +4,7 @@ import sk.common.error.APIException;
 import sk.common.error.AppException;
 import sk.common.error.DomainException;
 import sk.workingset.error.BindingResCode;
+import sk.workingset.error.MergeResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.LinkedHashMap;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import alm.requirement.domain.LockVersionConflictException;
-import sk.workingset.domain.merge.MergeFailure;
 
 /**
  * REST 错误映射：保留 NotFound 与 NotIncluded 的区分，乐观锁冲突显式返回 409。
@@ -29,12 +29,6 @@ import sk.workingset.domain.merge.MergeFailure;
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {
-
-    @ExceptionHandler(MergeFailure.class)
-    public ResponseEntity<?> handleMergeFailure(MergeFailure failure) {
-        return domainResponse(failure, Map.of("code", failure.getCode(), "reason", failure.reason().name(),
-                "message", failure.getMessage() == null ? failure.reason().name() : failure.getMessage()));
-    }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation() {
@@ -57,14 +51,16 @@ public class ApiExceptionHandler {
         sk.common.error.ResCode resultCode = failure.getResCode();
         String reason = switch (resultCode) {
             case BindingResCode binding -> binding.reason();
+            case MergeResCode merge -> merge.reason();
             case Enum<?> value -> value.name();
             default -> failure.getType().name();
         };
         Map<String, Object> body = new LinkedHashMap<>(failure.getContext());
         body.put("code", failure.getCode());
         body.put("reason", reason);
-        body.put("message", failure.getType().httpStatus() >= 500 || failure.getMessage() == null
-                ? "Unexpected error" : failure.getMessage());
+        String fallbackMessage = resultCode instanceof MergeResCode ? reason : "Unexpected error";
+        body.put("message", failure.getType().httpStatus() >= 500 ? "Unexpected error"
+                : java.util.Objects.toString(failure.getMessage(), fallbackMessage));
         return domainResponse(failure, body);
     }
 

@@ -1,5 +1,9 @@
 package sk.workingset.domain.merge;
 
+import sk.workingset.error.MergeResCode;
+
+import sk.common.error.DomainException;
+
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.ValueObject;
 import sk.tracker.domain.TrackerId;
@@ -23,7 +27,7 @@ public record MergeCheckpoint(Key key, long decisionVersion, Revision revisionA,
     /** 撤销当前已处理事实；预期版本不一致或已撤销时拒绝。 */
     public MergeCheckpoint revoke(long expectedVersion, long newVersion) {
         if (revoked || decisionVersion != expectedVersion) {
-            throw new MergeFailure(MergeFailure.Reason.Conflict,
+            throw DomainException.withMessage(MergeResCode.CONFLICT,
                     "checkpoint is missing, superseded or already revoked");
         }
         return new MergeCheckpoint(key, newVersion, revisionA, revisionB, localIdA, localIdB,

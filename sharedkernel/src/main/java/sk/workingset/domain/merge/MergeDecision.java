@@ -1,9 +1,12 @@
 package sk.workingset.domain.merge;
 
+import sk.workingset.error.MergeResCode;
+
+import sk.common.error.DomainException;
+
 import org.jmolecules.ddd.annotation.ValueObject;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
-import sk.workingset.domain.merge.MergeFailure.Reason;
 
 import java.util.Map;
 import java.util.Set;
@@ -26,8 +29,8 @@ public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction exi
         };
     }
 
-    private static MergeFailure invalid(String message) {
-        return new MergeFailure(Reason.InvalidDecision, message);
+    private static DomainException invalid(String message) {
+        return DomainException.withMessage(MergeResCode.INVALID_DECISION, message);
     }
 
     public boolean deferred() {

@@ -1,5 +1,7 @@
 package sk.workingset.application.merge;
 
+import sk.workingset.error.MergeResCode;
+
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
@@ -15,8 +17,6 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.*;
 import sk.workingset.domain.merge.MergeCheckpoint;
-import sk.workingset.domain.merge.MergeFailure;
-import sk.workingset.domain.merge.MergeFailure.Reason;
 import sk.workingset.domain.merge.MergeCheckpointRepository;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
@@ -59,7 +59,7 @@ public class MergeComparisonService {
     private static void putFamily(Map<CommonId, LocalId> families, CommonId family, LocalId id) {
         LocalId previous = families.putIfAbsent(family, id);
         if (previous != null && !previous.equals(id)) {
-            throw new MergeFailure(Reason.Conflict, "multiple variants in family " + family.value());
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "multiple variants in family " + family.value());
         }
     }
 
@@ -82,7 +82,7 @@ public class MergeComparisonService {
                               TrackerId targetTracker) {
         TrackerPair pair = new TrackerPair(source, sourceTracker, target, targetTracker);
         if (!candidates(source, target).contains(pair)) {
-            throw new MergeFailure(Reason.MergeNotAllowed, "trackers must form a direct derivation pair in the supplied working sets");
+            throw DomainException.withMessage(MergeResCode.NOT_ALLOWED, "trackers must form a direct derivation pair in the supplied working sets");
         }
         ArrayList<Difference> differences = new ArrayList<Difference>();
         Map<CommonId, LocalId> sources = familyIds(pair.source());

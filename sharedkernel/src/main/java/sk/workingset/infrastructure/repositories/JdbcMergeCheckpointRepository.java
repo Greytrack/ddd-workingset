@@ -1,5 +1,9 @@
 package sk.workingset.infrastructure.repositories;
 
+import sk.workingset.error.MergeResCode;
+
+import sk.common.error.DomainException;
+
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
@@ -10,7 +14,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.MergeCheckpoint;
-import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeCheckpoint.Direction;
 import sk.workingset.domain.merge.MergeCheckpointRepository;
 
@@ -69,7 +72,7 @@ public class JdbcMergeCheckpointRepository implements MergeCheckpointRepository 
                 checkpoint.direction().name(), checkpoint.decisionVersion(), checkpoint.revoked(),
                 checkpoint.operator());
         if (updated != 1) {
-            throw new MergeFailure(MergeFailure.Reason.Conflict,
+            throw DomainException.withMessage(MergeResCode.CONFLICT,
                     "checkpoint is superseded by a newer decision");
         }
     }

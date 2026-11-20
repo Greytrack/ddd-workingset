@@ -1,5 +1,8 @@
 package bootstrap;
 
+import sk.common.error.DomainException;
+import sk.workingset.error.MergeResCode;
+
 import static bootstrap.FixtureIds.fixtureId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -472,7 +475,8 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(
                 "/api/merge-checkpoints/" + key.a().value() + "/" + key.b().value() + "/" + keep + "/revoke",
                 Map.of("expectedDecisionVersion", checkpoint.decisionVersion()), Void.class));
-        assertThrows(sk.workingset.domain.merge.MergeFailure.class, () -> store.save(checkpoint));
+        var failure = assertThrows(DomainException.class, () -> store.save(checkpoint));
+        assertEquals(MergeResCode.CONFLICT, failure.getResCode());
         assertTrue(store.findById(key).orElseThrow().revoked());
         assertNotNull(diff(compare("1", child), keep));
     }

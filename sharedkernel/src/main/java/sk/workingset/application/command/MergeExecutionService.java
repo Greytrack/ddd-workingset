@@ -1,5 +1,7 @@
 package sk.workingset.application.command;
 
+import sk.workingset.error.MergeResCode;
+
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +24,6 @@ import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Side;
 import sk.workingset.domain.merge.*;
 import sk.workingset.domain.merge.MergeDecision.FieldAction;
-import sk.workingset.domain.merge.MergeFailure.Reason;
 import sk.workingset.domain.merge.MergeRound.Entry;
 import sk.workingset.domain.merge.MergeRound.ItemResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
@@ -57,7 +58,7 @@ public class MergeExecutionService {
     private static MergeCheckpoint.Key trackerPair(List<EntryRequest> decisions) {
         Difference evidence = decisions.getFirst().evidence();
         if (evidence == null) {
-            throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
+            throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "evidence is required");
         }
         MergeCheckpoint.Key pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
                 evidence.family());
@@ -82,7 +83,7 @@ public class MergeExecutionService {
 
     private static MergeRound matching(MergeRound round, WorkingSetId source, WorkingSetId target) {
         if (!round.source().equals(source) || !round.target().equals(target)) {
-            throw new MergeFailure(Reason.Conflict, "requestId is already used by another merge round");
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "requestId is already used by another merge round");
         }
         return round;
     }
@@ -139,14 +140,14 @@ public class MergeExecutionService {
         // 先占幂等键：并发提交同一 requestId 时，save 保留先到轮次，后到请求直接返回该轮次。
         store.save(prepared);
         MergeRound winner = store.findByRequestId(requestId)
-                .orElseThrow(() -> new MergeFailure(Reason.Conflict, requestId));
+                .orElseThrow(() -> DomainException.withMessage(MergeResCode.CONFLICT, requestId));
         if (!winner.id().equals(prepared.id())) {
             return matching(winner, source, target);
         }
         try {
             registerDecisions(prepared, decisions);
         } catch (DataIntegrityViolationException conflict) {
-            throw new MergeFailure(Reason.PairMergeInProgress, pair.a().value() + "/" + pair.b().value());
+            throw DomainException.withMessage(MergeResCode.PAIR_MERGE_IN_PROGRESS, pair.a().value() + "/" + pair.b().value());
         }
         events.publishEvent(new MergeRoundSubmittedEvent(prepared.id()));
         return round(prepared.id());
@@ -161,22 +162,22 @@ public class MergeExecutionService {
         for (EntryRequest request : requests) {
             Difference frozen = request.evidence();
             if (frozen == null) {
-                throw new MergeFailure(Reason.InvalidDecision, "evidence is required");
+                throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "evidence is required");
             }
             sk.workingset.domain.merge.Comparison.TrackerPair pair = frozen.trackers();
             if (!pair.sourceWorkingSetId().equals(round.source())
                     || !pair.targetWorkingSetId().equals(round.target())) {
-                throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
+                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
             }
             if (!candidates.contains(pair)) {
-                throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
+                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
             }
             Difference current = comparisons.current(frozen);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
-                throw new MergeFailure(Reason.StaleEvidence, frozen.family().value());
+                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
             }
             if (request.decision() == null) {
-                throw new MergeFailure(Reason.InvalidDecision, "decision is required");
+                throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "decision is required");
             }
             request.decision().validate(frozen);
             updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), decisionVersions.nextDecisionVersion(),
@@ -193,7 +194,7 @@ public class MergeExecutionService {
     @Transactional
     public void revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion) {
         MergeCheckpoint checkpoint = checkpoints.findById(key)
-                .orElseThrow(() -> new MergeFailure(Reason.Conflict,
+                .orElseThrow(() -> DomainException.withMessage(MergeResCode.CONFLICT,
                         "checkpoint is missing, superseded or already revoked"));
         checkpoints.save(checkpoint.revoke(expectedVersion, decisionVersions.nextDecisionVersion()));
     }
@@ -285,7 +286,7 @@ public class MergeExecutionService {
     private MergeRound.ApplyResult resolve(MergeEntryResolvedEvent event) {
         MergeRound round = round(event.roundId());
         Entry entry = round.entries().stream().filter(candidate -> candidate.id().equals(event.entryId()))
-                .findFirst().orElseThrow(() -> new MergeFailure(Reason.RoundNotFound, event.entryId()));
+                .findFirst().orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, event.entryId()));
         if (entry.result() != null) {
             return round.result();
         }
@@ -328,7 +329,7 @@ public class MergeExecutionService {
     private void verifyCurrent(Entry entry, Difference current) {
         if (!entry.evidence().source().sameExecutionShape(current.source())
                 || !entry.evidence().target().sameExecutionShape(current.target())) {
-            throw new MergeFailure(Reason.StaleEvidence, "identity, revision, presence or readability changed");
+            throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, "identity, revision, presence or readability changed");
         }
     }
 
@@ -363,7 +364,7 @@ public class MergeExecutionService {
     }
 
     private MergeRound round(String id) {
-        return store.findById(id).orElseThrow(() -> new MergeFailure(Reason.RoundNotFound, id));
+        return store.findById(id).orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, id));
     }
 
     /**
