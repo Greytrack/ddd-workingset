@@ -614,27 +614,44 @@ CREATE INDEX IF NOT EXISTS idx_requirements_tracker ON requirements (tracker_id)
 CREATE INDEX IF NOT EXISTS idx_requirement_active_tracker_local
     ON requirements (tracker_id, local_id) WHERE NOT delete_flag;
 
-CREATE TABLE IF NOT EXISTS light_tracker_items (
-    local_id        BIGINT PRIMARY KEY,
-    common_id       BIGINT NOT NULL,
-    tracker_id      BIGINT NOT NULL,
-    working_set_id  BIGINT NOT NULL,
-    revision        INTEGER NOT NULL,
-    source_local_id BIGINT NOT NULL,
-    source_revision INTEGER NOT NULL,
-    materialized    BOOLEAN NOT NULL,
-    FOREIGN KEY (tracker_id, working_set_id)
-        REFERENCES air_inst_tracker_rev (id, workingset_id),
-    CHECK ((materialized = FALSE AND source_local_id <> local_id)
-        OR (materialized = TRUE AND source_local_id = local_id AND source_revision = revision))
+-- An existing V4 physical index requires an explicit migration before startup.
+DO 'BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass(''light_tracker_items'') AND relkind IN (''r'', ''p'')) THEN
+        RAISE EXCEPTION ''V4 light_tracker_items exists; migrate the index before startup.'';
+    END IF;
+END';
+
+CREATE TABLE IF NOT EXISTS air_ws_items_index (
+    id BIGINT PRIMARY KEY,
+    work_space_id BIGINT, workingset_id BIGINT, master_id BIGINT, parent_branch_id BIGINT, branch_id BIGINT,
+    common_id BIGINT, local_id BIGINT, parent_local_id BIGINT, source_local_id BIGINT,
+    revision INTEGER, has_copied SMALLINT, flags INTEGER, lock_version BIGINT,
+    created_by VARCHAR(255), created_time BIGINT, updated_by VARCHAR(255), updated_time BIGINT,
+    source_revision INTEGER, sub_class_id BIGINT, effective_revision INTEGER, effective_flags VARCHAR(256),
+    flag1 BOOLEAN, flag2 BOOLEAN, flag3 BOOLEAN, flag4 BOOLEAN, flag5 BOOLEAN, effective_checked_out SMALLINT,
+    CHECK (local_id IS NOT NULL AND common_id IS NOT NULL AND branch_id IS NOT NULL AND workingset_id IS NOT NULL
+        AND revision > 0 AND revision IS NOT NULL AND source_revision > 0 AND source_revision IS NOT NULL
+        AND source_local_id IS NOT NULL AND has_copied IS NOT NULL AND
+        ((has_copied = 0 AND source_local_id <> local_id)
+        OR (has_copied = 1 AND source_local_id = local_id AND source_revision = revision)))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_lti_working_set_family
-    ON light_tracker_items (working_set_id, common_id);
-CREATE INDEX IF NOT EXISTS idx_lti_source ON light_tracker_items (source_local_id, source_revision);
-CREATE INDEX IF NOT EXISTS idx_lti_tracker ON light_tracker_items (tracker_id, working_set_id);
-CREATE INDEX IF NOT EXISTS idx_lti_tracker_local
-    ON light_tracker_items (tracker_id, local_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_local ON air_ws_items_index (local_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_family ON air_ws_items_index (workingset_id, common_id);
+CREATE INDEX IF NOT EXISTS idx_air_ws_items_source ON air_ws_items_index (source_local_id, source_revision);
+CREATE INDEX IF NOT EXISTS idx_air_ws_items_branch ON air_ws_items_index (branch_id, local_id);
+
+CREATE TABLE IF NOT EXISTS air_ws_items_revision_index (
+    id BIGINT PRIMARY KEY,
+    work_space_id BIGINT, workingset_id BIGINT, master_id BIGINT, branch_id BIGINT, common_id BIGINT,
+    local_id BIGINT NOT NULL,
+    revision INTEGER NOT NULL CHECK (revision > 0), flags INTEGER, lock_version BIGINT,
+    created_by VARCHAR(255), created_time BIGINT, updated_by VARCHAR(255), updated_time BIGINT,
+    sub_class_id BIGINT,
+    CONSTRAINT fk_air_ws_items_revision_owner
+        FOREIGN KEY (local_id) REFERENCES air_ws_items_index (local_id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_revision ON air_ws_items_revision_index (local_id, revision);
 
 CREATE TABLE IF NOT EXISTS requirement_snapshots (
     snapshot_ref BIGINT PRIMARY KEY,
@@ -845,10 +862,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_air_inst_common_workingset_family
     ON air_inst_common (workingset_id, common_id);
 CREATE INDEX IF NOT EXISTS idx_air_inst_common_tracker_workingset
     ON air_inst_common (tracker, workingset_id);
-
--- Remove database helpers installed by the earlier common-index implementation.
-DROP VIEW IF EXISTS air_inst_common_source;
-DROP FUNCTION IF EXISTS put_air_inst_common(jsonb);
 
 -- Bootstrap only the missing default root summary.
 INSERT INTO air_inst_common (

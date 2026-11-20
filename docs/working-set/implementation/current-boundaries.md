@@ -20,6 +20,7 @@
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
 
+- LightTrackerItem 的当前索引和版次成员分别写入两张旧索引表，由同一次聚合保存提交；已落地动作与未决撤销规则见[双表索引与版次成员](../domain/lighttrackeritem-materialization-contract-v1.md#31-双表索引与版次成员)。
 - ALM 等业务 BC 可以**只读**使用 SK 的共享聚合和聚合仓储（如 `LightTrackerItemRepository.findById`、`WorkingSetRepository.requireReady`、`TrackerRepository` 读取），用于完成自身用例所需的身份和来源校验。
 - 不再为单个查询方法新增专用同步 Port；`TrackerItemLifecyclePort` 及其 `findInheritedTarget` 已移除。集合读取和读模型查询使用 `application/query/provider` 下的 Provider。
 - 直接读取不等于获得写入权：业务 BC **不得**调用 SK 聚合仓储的 `save`、`delete`、`remove` 或修改 SK 聚合状态；跨聚合状态变化仍必须通过可靠事件和各自独立事务完成（TC-002）。

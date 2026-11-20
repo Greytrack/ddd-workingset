@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -53,6 +54,7 @@ class RequirementAcceptanceTest {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transaction;
     @SpyBean private LightTrackerItemRepository items;
+    @Autowired private sk.workingset.application.command.TrackerItemLifecycleService indexLifecycle;
 
     private RootTrackerFixture fixture;
     private String localId;
@@ -100,6 +102,7 @@ class RequirementAcceptanceTest {
 
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 1);
         assertEquals(1, indexedRows());
+        assertEquals(List.of(3), indexedRevisions());
         TrackerItemCreatedEvent event = new TrackerItemCreatedEvent(LocalId.of(localId), CommonId.of(localId), TrackerId.of(trackerId),
                 WorkingSet.DEFAULT_ID, Revision.of(3));
         transaction.executeWithoutResult(status -> events.publishEvent(event));
@@ -118,6 +121,33 @@ class RequirementAcceptanceTest {
         transaction.executeWithoutResult(status -> events.publishEvent(event));
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 3);
         assertEquals(0, indexedRows());
+        assertTrue(indexedRevisions().isEmpty());
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void committedUpgradeUpdatesBothLegacyIndexesAndPreservesPreviousRevision() {
+        String trackerId = fixtureId("revision-tracker-" + UUID.randomUUID());
+        new RootTrackerFixture(jdbc, trackerId).provision();
+        LocalId id = LocalId.of(fixtureId("revision-item-" + UUID.randomUUID()));
+        items.save(sk.workingset.domain.lighttrackeritem.LightTrackerItem.local(id, CommonId.of(id.value()),
+                TrackerId.of(trackerId), WorkingSet.DEFAULT_ID, Revision.of(3)));
+
+        indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));
+        indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));
+
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM air_ws_items_index WHERE local_id = ? AND revision = 4
+                    AND source_local_id = local_id AND source_revision = 4 AND has_copied = 1
+                """, Integer.class, id.numericValue()));
+        assertEquals(List.of(3, 4), jdbc.queryForList("""
+                SELECT revision FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision
+                """, Integer.class, id.numericValue()));
+    }
+
+    private List<Integer> indexedRevisions() {
+        return jdbc.queryForList("SELECT revision FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision",
+                Integer.class, Long.valueOf(localId));
     }
 
     private int indexedRows() {

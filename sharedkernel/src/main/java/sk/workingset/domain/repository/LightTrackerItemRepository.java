@@ -16,6 +16,8 @@ public interface LightTrackerItemRepository {
 
     Optional<LightTrackerItem> findById(LocalId localId);
 
+    Optional<LightTrackerItem> findByIdForUpdate(LocalId localId);
+
     /**
      * COW 命令侧领域 finder：按来源切点定位尚未物化的目标聚合。
      */

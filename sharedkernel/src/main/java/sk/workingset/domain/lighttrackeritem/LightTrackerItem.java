@@ -9,6 +9,9 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -21,7 +24,7 @@ import java.util.Objects;
  *   <li>{@code materialized=true} → Local-backed：{@code sourceLocalId == localId} 且
  *       {@code sourceRevision == revision}。</li>
  * </ul>
- * 三字段只在 {@link #switchToLocalBacked(Revision)} 中一次更新；不提供单独 setter。
+ * 首次物化原子切换三字段；显式升版同步推进本地来源版次与成员索引。
  */
 @AggregateRoot
 public final class LightTrackerItem {
@@ -30,7 +33,8 @@ public final class LightTrackerItem {
     private final CommonId commonId;
     private final TrackerId trackerId;
     private final WorkingSetId workingSetId;
-    private final Revision revision;
+    private Revision revision;
+    private final Map<Revision, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
 
     private LocalId sourceLocalId;
     private Revision sourceRevision;
@@ -49,6 +53,7 @@ public final class LightTrackerItem {
         this.trackerId = trackerId;
         this.workingSetId = workingSetId;
         this.revision = revision;
+        this.revisions.put(revision, new LightTrackerItemRevisionEntity(revision));
         this.sourceLocalId = sourceLocalId;
         this.sourceRevision = sourceRevision;
         this.materialized = materialized;
@@ -134,6 +139,47 @@ public final class LightTrackerItem {
         this.sourceLocalId = localId;
         this.sourceRevision = revision;
         checkInvariants();
+    }
+
+    public static LightTrackerItem restore(LocalId localId, CommonId commonId, TrackerId trackerId,
+                                           WorkingSetId workingSetId, Revision revision, LocalId sourceLocalId,
+                                           Revision sourceRevision, boolean materialized, List<Revision> indexedRevisions) {
+        LightTrackerItem item = restore(localId, commonId, trackerId, workingSetId, revision,
+                sourceLocalId, sourceRevision, materialized);
+        item.revisions.clear();
+        for (Revision indexed : indexedRevisions) {
+            item.revisions.put(indexed, new LightTrackerItemRevisionEntity(indexed));
+        }
+        if (!item.revisions.containsKey(revision)) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Current revision is missing from the index");
+        }
+        return item;
+    }
+
+    public List<LightTrackerItemRevisionEntity> revisions() {
+        return List.copyOf(revisions.values());
+    }
+
+    public LightTrackerItemRevisionEntity currentRevisionIndex() {
+        return revisions.get(revision);
+    }
+
+    /** Apply a committed explicit upgrade of this item's own business revision. */
+    public boolean advanceRevision(Revision before, Revision after) {
+        if (after.value() != (long) before.value() + 1) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step revision upgrade");
+        }
+        if (revision.value() >= after.value()) {
+            return false;
+        }
+        if (!revision.equals(before) || !materialized) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Revision predecessor is not ready");
+        }
+        revisions.put(after, new LightTrackerItemRevisionEntity(after));
+        revision = after;
+        sourceRevision = after;
+        checkInvariants();
+        return true;
     }
 
     private void checkInvariants() {

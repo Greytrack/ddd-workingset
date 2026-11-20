@@ -25,6 +25,10 @@ public class TrackerItemLocalizedListener {
 
     @ApplicationModuleListener(id = "bootstrap.TrackerItemLocalizedListener.on(sk.workingset.domain.event.BusinessObjectUpdateEvent)")
     public void on(BusinessObjectUpdateEvent event) {
+        if (!event.beforeRevision().equals(event.afterRevision())) {
+            lifecycle.applyCommittedUpgrade(event.sourceLocalId(), event.beforeRevision(), event.afterRevision());
+            return;
+        }
         LightTrackerItem item = items.findById(event.sourceLocalId()).orElse(null);
         if (item != null && !item.materialized()) {
             lifecycle.completeInheritedEdit(event.sourceLocalId(), event.afterRevision());

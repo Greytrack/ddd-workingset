@@ -588,7 +588,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Given R0 处于 Revision 3；R1 未物化，SourceLocalId=R0、SourceRevision=3、自身 Revision=1。
 - When R0 显式升级业务 Revision 3→4（内容可能不变），发布来源变更事件。
 - Then（已确认）Revision 升级触发 R1 的 COW（与普通修改一样受 COW 保护）。
-- When R1 物化后，SourceRevision 指向来源，但 LightTrackerItem 的 Revision 与 SourceRevision 不是始终同步（派生初期 SourceRevision=3、Revision=1）。
+- Then R1 物化前仍以 R0@3 作为来源，自身版次为 1；物化切换后以 R1@1 为来源，R1 自身版次不因 R0 升版而变化。
 - 边界：LightTrackerItem 自身 Revision 与业务 BC 的 TrackerItem Revision 通过事件同步（细节不细化）。
 
 <a id="scn-050"></a>

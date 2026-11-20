@@ -38,6 +38,19 @@ public class TrackerItemLifecycleService {
     }
 
     @Transactional
+    public void applyCommittedUpgrade(LocalId id, Revision before, Revision after) {
+        LightTrackerItem item = items.findByIdForUpdate(id)
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
+                        "item index missing for committed revision: " + id.value()));
+        if (!item.materialized()) {
+            item.switchToLocalBacked(before);
+        }
+        if (item.advanceRevision(before, after)) {
+            items.save(item);
+        }
+    }
+
+    @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);
     }

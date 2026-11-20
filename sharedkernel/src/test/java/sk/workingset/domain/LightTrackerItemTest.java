@@ -69,6 +69,17 @@ class LightTrackerItemTest {
     }
 
     @Test
+    void explicitUpgradeRetainsPreviousRevisionAndIgnoresReplay() {
+        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3);
+        Revision r4 = Revision.of(4);
+        assertThrows(DomainException.class, () -> item.advanceRevision(r4, Revision.of(5)));
+        assertTrue(item.advanceRevision(R3, r4));
+        assertFalse(item.advanceRevision(R3, r4));
+        assertEquals(java.util.List.of(R3, r4), item.revisions().stream().map(member -> member.revision()).toList());
+        assertEquals(r4, item.effectiveContentRevision());
+    }
+
+    @Test
     void restore_keeps_identity_and_state() {
         LightTrackerItem item = LightTrackerItem.restore(L1, C1, T1, WS1, R3, L0, R3, false);
 

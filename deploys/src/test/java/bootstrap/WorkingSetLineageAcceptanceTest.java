@@ -165,17 +165,14 @@ class WorkingSetLineageAcceptanceTest {
                 sql.execute("CREATE SCHEMA " + schema);
                 sql.execute("SET LOCAL search_path TO " + schema);
                 ResourceDatabasePopulator rebuild = new ResourceDatabasePopulator(
-                        new ClassPathResource("reset-demo-schema.sql"), new ClassPathResource("schema.sql"),
-                        new ClassPathResource("tracker-fixtures.sql"), new ClassPathResource("demo-data.sql"),
-                        new ClassPathResource("common-index-backfill.sql"));
-                rebuild.populate(connection);
+                        new ClassPathResource("schema.sql"), new ClassPathResource("demo-data.sql"));
                 rebuild.populate(connection);
                 try (java.sql.ResultSet rows = sql.executeQuery("""
                         SELECT (SELECT count(*) FROM air_inst_workingset)
                                + (SELECT count(*) FROM air_inst_tracker_rev)
                                + (SELECT count(*) FROM product_spaces)
                                + (SELECT count(*) FROM requirements)
-                               + (SELECT count(*) FROM light_tracker_items WHERE NOT materialized),
+                               + (SELECT count(*) FROM air_ws_items_index WHERE has_copied = 0),
                                count(*), count(DISTINCT base_class)
                         FROM air_inst_common
                         """)) {

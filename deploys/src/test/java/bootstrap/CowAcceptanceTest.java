@@ -75,7 +75,8 @@ class CowAcceptanceTest {
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws);
         }
         jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id = ?", tracker);
-        jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
+        jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
+        jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM classifications WHERE classification_id = ?", classification);
     }
@@ -281,6 +282,7 @@ class CowAcceptanceTest {
     private void createSource() {
         jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
         jdbc.update("INSERT INTO classifications VALUES (?, 'UNSHARED')", classification);
+        mountSpaceWithLocalFolder("1");
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
@@ -294,6 +296,19 @@ class CowAcceptanceTest {
                 "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE local_id = ?)", Boolean.class, source)));
     }
 
+    // COW starts with a valid mounted space; mounting itself is a separate use case.
+    private void mountSpaceWithLocalFolder(String workingSetId) {
+        String folderId = fixtureId("folder-" + workingSetId + "-" + space);
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode, is_default)
+                VALUES (?, '文件夹', ?, ?, 10070101, 'UNSHARED', TRUE)
+                """, folderId, workingSetId, space);
+        jdbc.update("""
+                INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id)
+                VALUES (?, ?, ?)
+                """, workingSetId, folderId, space);
+    }
+
     private Target derive() {
         return derive("1", tracker, source);
     }
@@ -302,8 +317,7 @@ class CowAcceptanceTest {
         String ws = fixtureId("WS-" + UUID.randomUUID());
         FixtureIds.insertWorkingSet(jdbc, parent, ws);
         worksets.add(ws);
-        assertEquals(HttpStatus.CREATED,
-                rest.postForEntity("/api/worksets/" + ws + "/spaces/" + space, null, Void.class).getStatusCode());
+        mountSpaceWithLocalFolder(ws);
         DeriveFixture.Result result = DeriveFixture.derive(jdbc, ws, sourceTracker, sourceLocalId, Revision.of(3), CommonId.of(common));
         String id = result.item().localId().value();
         targets.add(id);

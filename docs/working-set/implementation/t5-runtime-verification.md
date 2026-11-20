@@ -54,7 +54,7 @@ EVENT:    listener_id=bootstrap.RequirementChangedListener.on(sk.workingset.appl
 `schema.sql` 创建三张表：
 
 - `requirements`：聚合内容、`revision`、可空发布大版本 `version`、`lock_version`
-- `light_tracker_items`：身份/来源/`materialized` 三字段
+- `light_tracker_items`：本次历史实验使用的原物理表。现行映射见[双表索引与版次成员](../domain/lighttrackeritem-materialization-contract-v1.md#31-双表索引与版次成员)。
 - `requirement_snapshots`：修改前不可变快照
 
 实测数据库记录：

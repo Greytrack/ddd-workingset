@@ -17,11 +17,11 @@ public class JdbcMergeCheckpointCleanupStore implements MergeCheckpointCleanupSt
         return jdbc.update("""
                 DELETE FROM merge_checkpoints c
                 WHERE c.revoked = FALSE
-                  AND EXISTS (SELECT 1 FROM light_tracker_items a
-                              WHERE a.tracker_id = c.tracker_a_id AND a.common_id = c.common_id
+                  AND EXISTS (SELECT 1 FROM air_ws_items_index a
+                              WHERE a.branch_id = c.tracker_a_id AND a.common_id = c.common_id
                                 AND a.revision > c.revision_a)
-                  AND EXISTS (SELECT 1 FROM light_tracker_items b
-                              WHERE b.tracker_id = c.tracker_b_id AND b.common_id = c.common_id
+                  AND EXISTS (SELECT 1 FROM air_ws_items_index b
+                              WHERE b.branch_id = c.tracker_b_id AND b.common_id = c.common_id
                                 AND b.revision > c.revision_b)
                 """);
     }

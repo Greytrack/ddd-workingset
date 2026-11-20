@@ -14,18 +14,13 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 @RequiredArgsConstructor
 public class JdbcLightTrackerItemFamilyStore implements LightTrackerItemFamilyStore {
     private final JdbcTemplate jdbc;
+    private final JdbcLightTrackerItemRepositoryImpl index;
     private final JdbcCommonInstanceStore commonInstances;
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY, noRollbackFor = RuntimeException.class)
     public boolean claim(LightTrackerItem item) {
-        boolean inserted = jdbc.update("""
-                        INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                            source_local_id, source_revision, materialized)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT (working_set_id, common_id) DO NOTHING
-                        """, item.localId().numericValue(), item.commonId().numericValue(), item.trackerId().numericValue(),
-                item.workingSetId().numericValue(), item.revision().value(), item.sourceLocalId().numericValue(),
-                item.sourceRevision().value(), item.materialized()) == 1;
+        boolean inserted = index.claimFamily(item);
         if (inserted && !item.materialized()) {
             saveInheritedCommonInstance(item);
         }
