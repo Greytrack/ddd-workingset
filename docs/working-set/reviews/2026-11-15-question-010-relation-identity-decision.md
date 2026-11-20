@@ -34,7 +34,7 @@
 
 ## 相关材料
 
-- [T7 设计 §4.6](../domain/working-set-creation-lro-design.md#46-关系引用构建)
+- [T7 设计 §4.6](../domain/working-set-creation-lro-design.md#46-关系事件发布)
 - [T7-E 守卫裁决草案](2026-11-17-t7-e-relation-guards-decision.md)
 - [T7-E 后续计划](../implementation/t7-implementation-prompt.md)
 - [FACT-009 / HYP-007](../domain/facts.md)

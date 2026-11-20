@@ -10,22 +10,11 @@
 
 ## 设计原则
 
-四个业务 BC 对参与 Working Set 的对象**统一负责校验整个业务对象并决定是否提交**，各自保留专有校验规则；Working Set 负责用户选择、执行协调与结果记录。共用 API 只统一协作语言、证据和结果结构，不假定四类对象具有相同领域行为。
-
-> Working Set Shared Kernel 管理跨四个业务 BC 共同成立的工作集语义和通用机制；业务对象的专有状态机、字段规则和整体合法性仍由对应业务 BC 拥有。
+Working Set 管理工作范围、用户选择、执行协调与结果；业务对象的状态机、字段规则及整体合法性由所属 BC 校验并提交。公共契约统一协作语言、证据与结果，不统一四个 BC 的内部模型。
 
 ### SK 内部模块（实现边界）
 
-当前 `sharedkernel` 源码按以下包组织。它们是 Shared Kernel 的内部模块，不自动升级为独立限界上下文或微服务，也不改变 `AC-001` 的企业边界：
-
-| 包 | 地位 | 当前约束 |
-| --- | --- | --- |
-| `sk.businessframework` | Shared Kernel 的通用业务对象/版次/属性能力 | 不是 Working Set 业务模型，不得反向依赖各 BC；`validation` 子包存在迁移期旧栈依赖例外。 |
-| `sk.tracker` | Tracker 聚合及其命令/查询/事件处理 | Tracker 是独立聚合；当前仍使用 `sk.workingset` 的 WorkingSet/Classification 类型，包拆分不等于已完成跨 BC 契约收敛。 |
-| `sk.productspace` | ProductSpace 聚合及其命令/仓储 | ProductSpace 是独立聚合；产品空间创建的默认工作集初始化仍存在跨聚合同事务，见[实现边界](../implementation/current-boundaries.md)。 |
-| `sk.workingset` | WorkingSet、LightTrackerItem、COW、创建 LRO、Compare/Merge、关系与查询 Provider | Working Set 核心能力；命令仓储与查询 Provider 分开。 |
-
-**读取与写入**：业务 BC 可以只读使用 SK 共享聚合/仓储完成身份和来源校验；不得直接保存、删除或修改 SK 聚合。跨聚合状态变化通过可靠事件和独立事务完成（TC-002）。单个查询方法不再新增同步 Port，集合读取使用 `application/query/provider`。详见 [T4 D4](cross-bc-contract-v1.md) 和[当前实现边界](../implementation/current-boundaries.md)。
+源码包的职责、读取边界与待整改项统一见[当前实现边界](../implementation/current-boundaries.md)。包拆分不改变 `AC-001`，也不代表新增限界上下文；跨 BC 读写契约见 [T4](cross-bc-contract-v1.md)。
 
 <a id="plm-part-的接入范围用户已确认"></a>
 ## PLM Part（已确认）
@@ -76,14 +65,9 @@ Shared Tracker 从子工作集移除仅解除 TrackerBinding，聚合保留；�
 
 分类的共享特性是固定出厂设定，不允许修改，与是否已创建 Tracker 无关。Tracker 的共享特性创建时确定，后续不可变。非共享分类允许创建共享或非共享 Tracker；共享分类只能创建共享 Tracker。
 
-## 跨 BC 契约结论（T4）
+## 跨 BC 契约
 
-- **K1″**：Shared Kernel 定义只读 `TrackerItemQueryProvider` 与能力声明；完整业务聚合的创建、物化、修改、删除、整体校验与提交由所属 BC 执行。SK 可协调 COW/Merge，但不能绕过 BC 聚合、领域规则或 Repository 通用 Save。
-- **K2″**：九分类公共失败语义（`NotFound`、`NotIncluded`、`Denied`、`Deleted`、`HistoryUnavailable`、`Preparing`、`CapabilityNotSupported`、`DependencyUnavailable`、`Unknown`）是跨 BC 词汇表，不是聚合生命周期；每个用例只暴露适用子集。
-- **两层接口**：业务聚合实现领域接口 `TrackerItem`（并继承 `BusinessObject`）；BC Adapter 另行实现只读契约。跨聚合写入通过请求和结果事件；聚合不实现应用层 Port，也不向 SK 开放 Repository。
-- **K3″ 保持 Open**：Shared Kernel 的版本治理、兼容期与变更审批需四 BC 共同评审，不阻塞当前实现。
-
-完整职责、六个用例、失败矩阵与 Port 结构见 [T4 跨 BC 契约](cross-bc-contract-v1.md)。
+公共能力、两层接口、九分类失败语义与事件协作统一见 [T4 跨 BC 契约](cross-bc-contract-v1.md)。本页只定义各 BC 的接入范围；契约版本治理仍为开放项。
 
 ## 当前未决
 

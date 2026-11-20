@@ -6,7 +6,7 @@
 
 ## S6-A · 谱系、创建和回填
 
-- [WorkingSet](../../../sharedkernel/src/main/java/sk/workingset/domain/WorkingSet.java) 保存单一、创建后不可变的 `parentWorkingSetId`。仅默认根 `1` 的父级为空。创建子级校验父存在、自指和反向父子，数据库唯一键处理并发重复创建。创建接口不复制绑定。同父重复创建返回 `WorkingSetAlreadyExists`，以创建请求重挂现有子级返回 `WorkingSetParentImmutable`。
+- [WorkingSet](../../../sharedkernel/src/main/java/sk/workingset/domain/workingset/WorkingSet.java) 保存单一、创建后不可变的 `parentWorkingSetId`。仅默认根 `1` 的父级为空。创建子级校验父存在、自指和反向父子，数据库唯一键处理并发重复创建。创建接口不复制绑定。同父重复创建返回 `WorkingSetAlreadyExists`，以创建请求重挂现有子级返回 `WorkingSetParentImmutable`。
 - 仓储及 JDBC 映射（当时的 `JdbcBindingRepositories.java`） 提供直属子级与祖先查询。祖先从直属父到根排列，递归查询带防环。
 - [schema.sql](../../../deploys/src/main/resources/schema.sql) 增加父级列、自引用外键、根与非根约束及索引。S5 无父级的非根数据回填为首层子级，已存在的父级保持原值。
 - [HTTP](../../../sharedkernel/src/main/java/sk/workingset/adapters/WorkingSetController.java) 提供 `POST /api/worksets/{parentId}/children`，请求体为 `{"workingSetId":"CHILD"}`，并提供 `GET /api/worksets/{id}/children` 与 `GET /api/worksets/{id}/ancestors`。现有详情增加父级字段。

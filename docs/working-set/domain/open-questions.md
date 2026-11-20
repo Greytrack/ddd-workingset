@@ -45,7 +45,7 @@
 | `QUESTION-005` | 原生新建 Item 由服务端分配身份；回并经直属父子 Merge CREATE 承载 | D10、T6-C、T6-D |
 | `QUESTION-007` | Compare/Merge 只允许直属父子双向，兄弟/跨代拒绝 | POL-004、FACT-007 |
 | `QUESTION-008` | 字段级 Merge 的执行部分已由 S7 落地；剩余并发恢复转 `QUESTION-008.a` | [S7 验证](../implementation/t5-s7-verification-result.md) |
-| `QUESTION-008.c` | Checkpoint 按双方变体自身业务版次命中；继承内容按来源版次回读 | [T1 §6](merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量) |
+| `QUESTION-008.c` | Checkpoint 按双方变体自身业务版次命中；继承内容按来源版次回读 | [T1 §6](merge-execution-contract-v1.md#6-合并确认与跨轮次查询) |
 | `QUESTION-008.a` | 执行中断后接续原轮次；并发 Apply 返回 `RoundInProgress`；业务提交凭据恢复 | T6-B、T1 §8.1 |
 | `QUESTION-009` | 仅支持不可恢复的领域删除；软删/归档/恢复不纳入 T2 本版；绑定移除与聚合删除分开 | T2 K1～K3、POL-016 |
 | `QUESTION-009.a` | WorkingSet/Tracker 不存在“停用”生命周期 | 2026-11-12 用户裁定 |
@@ -54,7 +54,7 @@
 | `QUESTION-015` | Diff/Merge 行为契约关闭；Q1～Q4 已裁定，重做须新建轮次 | T1、ADR-0005 |
 | T6-E | Compare 不持久化；一页 1～50 条决策；`requestId` 幂等；异步 LRO | [2026-11-15 裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)、[T6-E 验收](../implementation/t6-e-merge-round-verification.md) |
 | T6-F | Shared 允许悬挂；同槽多 Tracker（独立分类投影）+ `is_default`；`sourceId` 不可变；派生链 1:1；完成即可见 | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
-| Checkpoint | 身份 = 两侧 Tracker 分支 + 家族；方向只是属性；WorkingSet 不参与；同一 Tracker 对禁止并发合并 | [Checkpoint 修正](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md) |
+| 合并确认 | 确认归 MergeEntry；跨轮次当前基准使用只读查询，替代独立 Checkpoint 聚合 | [ADR-0006](../adr/0006-merge-confirmation-ownership.md)；身份裁定历史见 [Checkpoint 修正](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md) |
 
 
 
