@@ -9,9 +9,9 @@ import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
-import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.util.List;

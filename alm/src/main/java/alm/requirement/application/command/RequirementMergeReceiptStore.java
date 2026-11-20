@@ -1,8 +1,8 @@
 package alm.requirement.application.command;
 
-import java.util.Optional;
-
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
+
+import java.util.Optional;
 
 /** ALM 对 Merge 条目的幂等结果记录。 */
 public interface RequirementMergeReceiptStore {

@@ -119,7 +119,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 - 当前**仅支持不可恢复的领域删除**；恢复能力不属于本版契约。
 - 「领域彻底删除」＝该聚合不再作为有效业务对象存在、业务上不可访问、不可恢复；**不强制映射为数据库物理 `DELETE`**。实现层可保留审计副本、延迟清理或历史归档，但不得让业务侧产生「可恢复」的预期。
 - 三类删除/移除必须分开表达：绑定移除、聚合删除、业务 TrackerItem 删除。
-- **业务 TrackerItem 的永久删除（D7，2026-11-12 用户裁定）**：删除后不保留墓碑、内容或历史；查询返回 `NotFound` 是正确语义（`Deleted` 只用于软删对象）。本契约不约束该生命周期，由业务 BC 的 `BusinessObject.delete2` guard 与自身应用服务编排。
+- **业务 TrackerItem 的永久删除（D7，2026-11-12 用户裁定）**：删除后不保留墓碑、内容或历史；查询返回 `NotFound` 是正确语义（`Deleted` 只用于软删对象）。本契约不约束该生命周期，由业务 BC 的 `BusinessObject.delete2` guard 与自身应用服务编排。来源须先软删并完成依赖物化，见 [T3 保护规则](lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)。
 - **软删与家族身份（D16，2026-11-13 用户裁定）**：软删即**占用**家族身份。同一工作集内同 CommonId 在软删期间不能新建第二个变体，`undelete` 恢复原变体，`delete2` 释放身份。常规创建冲突返回 HTTP 409 `DATA_INTEGRITY_CONFLICT`。用户选择回并时恢复原变体的规则见 [T1 §8](merge-execution-contract-v1.md#8-轮次终态与结果表达)。
 
 ## 6. 级联边界（K2 / K3，用户确认）

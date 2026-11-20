@@ -1,35 +1,28 @@
 package alm.requirement.application;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.Optional;
-
+import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.domain.RequirementRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
-
-import alm.requirement.domain.RequirementRepository;
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.domain.RequirementSnapshotStore;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.FailureReason;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetRepository;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /** T6-C：创建时的身份分配与工作集归属。 */
 class RequirementCreateScopeTest {

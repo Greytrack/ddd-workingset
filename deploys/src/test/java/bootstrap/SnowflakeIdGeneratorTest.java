@@ -1,15 +1,13 @@
 package bootstrap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SnowflakeIdGeneratorTest {
 

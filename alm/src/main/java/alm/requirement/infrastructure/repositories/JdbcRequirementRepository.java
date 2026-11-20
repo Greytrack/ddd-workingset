@@ -1,26 +1,20 @@
 package alm.requirement.infrastructure.repositories;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
-import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
-
-import java.util.Optional;
-
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-
+import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
-import alm.requirement.application.port.RequirementMutationStore;
+import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Repository;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Version;
+import sk.workingset.application.FailureReason;
+import sk.workingset.domain.*;
+
+import java.util.Optional;
 
 /**
  * Requirement 的 PostgreSQL/Spring JDBC 仓储。

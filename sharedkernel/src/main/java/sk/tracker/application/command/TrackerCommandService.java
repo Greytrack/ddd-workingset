@@ -1,28 +1,27 @@
 package sk.tracker.application.command;
 
-import sk.workingset.error.BindingResCode;
-
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
+import sk.productspace.domain.ProductSpace;
+import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.domain.*;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.productspace.domain.ProductSpace;
-import sk.productspace.domain.repository.ProductSpaceRepository;
-import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
+import sk.workingset.domain.Classification;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.BindingResCode;
 
 @Service
 @RequiredArgsConstructor

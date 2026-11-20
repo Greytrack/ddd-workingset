@@ -1,30 +1,9 @@
 package bootstrap;
 
 
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.awaitility.Awaitility.await;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
+import alm.requirement.adapters.RequirementView;
 import alm.requirement.application.command.RequirementCommandService;
 import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
-import sk.workingset.adapters.LightTrackerItemView;
-import sk.workingset.adapters.MergeController.ComparisonPage;
-import alm.requirement.adapters.RequirementView;
-import sk.workingset.adapters.WorkingSetController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,22 +17,38 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.adapters.LightTrackerItemView;
+import sk.workingset.adapters.MergeController.ComparisonPage;
+import sk.workingset.adapters.WorkingSetController;
+import sk.workingset.application.query.MergeCheckpoint;
 import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
-import sk.workingset.application.query.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.ApplyResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
 import sk.workingset.domain.merge.MergeRound.State;
+import sk.workingset.domain.workingset.WorkingSetId;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class MergeAcceptanceTest {

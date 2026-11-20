@@ -1,17 +1,15 @@
 package alm.requirement.infrastructure.repositories;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
-import java.util.Optional;
-
-import org.springframework.jdbc.core.JdbcTemplate;
-
 import alm.requirement.application.command.RequirementMergeReceiptStore;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
+
+import java.util.Optional;
 
 /** requirement_merge_receipts 的 JDBC 存储。 */
 @Component

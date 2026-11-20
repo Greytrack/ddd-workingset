@@ -1,16 +1,12 @@
 package sk.workingset.application.eventhandler;
 
-import sk.workingset.error.MergeResCode;
-
-import sk.common.error.DomainException;
-
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
+import sk.common.error.DomainException;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.domain.event.MergeRoundSubmittedEvent;
+import sk.workingset.error.MergeResCode;
 
 /**
  * Merge LRO 的异步执行入口：提交决策后由事件驱动逐条推进。

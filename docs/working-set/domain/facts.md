@@ -21,7 +21,7 @@
 | `FACT-003` | 非共享 Tracker 派生产生新的独立业务身份；`sourceId` 指向直接父级 Working Set 下的来源 Tracker，逐级追溯；`parentId` 另表达同工作集直属结构父。 | 用户确认 D-002/D-003 | `INV-014`～`INV-018` |
 | `FACT-004` | Source-backed 变体没有本地业务内容行，仍有稳定的逻辑身份。 | 现行领域语义 | D-008 |
 | `FACT-005` | `CommonId` 关联同族变体，`LocalId` 标识具体变体；实例化不更换 `LocalId`。 | Accepted 子集：R05 身份关系；实例化稳定性已由 T3 兑现 | [身份规则](glossary.md#item-身份规则已确认) |
-| `FACT-006` | 普通字段按来源 Revision 读取并在首次 COW 固定；附件与关系固定为派生时状态；来源删除不得破坏首次编辑所需事实的可读性。 | Accepted 限定范围 R07/R19；机制见 T3 | [T3 §2.1](lighttrackeritem-materialization-contract-v1.md) |
+| `FACT-006` | 普通字段按来源 Revision 读取并在首次 COW 固定；附件与关系固定为派生时状态；来源删除不得破坏首次编辑所需事实的可读性。 | Accepted 限定范围 R07/R19；软删触发物化与删除守卫见 T3 的 QUESTION-006 裁定 | [T3 §2.1](lighttrackeritem-materialization-contract-v1.md) |
 | `FACT-007` | 直接父子工作集支持双向 Compare/Merge；任一方向的新增、删除、修改均可经用户选择应用到接收方；`source/target` 是本轮角色。 | 用户已确认 | `POL-004`；目标 BC 校验提交 |
 | `FACT-008` | Merge 数据选择、实际 Apply Result 与处理确认是不同事实。 | Accepted 子集 R08～R11；新版二元决策及确认规则见 T1 §7（`QUESTION-008.b` 已关闭） | [T1](merge-execution-contract-v1.md) |
 | `FACT-009` | Reference 可在逻辑目标有效但物理端点暂不可解析时保持有效悬空状态。 | Reported / Pending | `QUESTION-010` 剩余可见性/守卫 |

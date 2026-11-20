@@ -1,22 +1,19 @@
 package bootstrap;
 
-import sk.workingset.error.BindingResCode;
-
+import org.springframework.jdbc.core.JdbcTemplate;
 import sk.common.error.DomainException;
-
-import static bootstrap.FixtureIds.fixtureId;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.error.BindingResCode;
 
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.workingset.WorkingSetId;
+import static bootstrap.FixtureIds.fixtureId;
 
 /**
  * 测试夹具：直接建立一个非共享派生 Tracker 及其 Source-backed LTI。

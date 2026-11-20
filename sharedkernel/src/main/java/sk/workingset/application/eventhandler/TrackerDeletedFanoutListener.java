@@ -4,12 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.event.TrackerBindingRemovalRequestedEvent;
-import sk.workingset.domain.event.TrackerDeletionRequestedEvent;
 import sk.workingset.domain.event.TrackerDeletedEvent;
+import sk.workingset.domain.event.TrackerDeletionRequestedEvent;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** Tracker 删除后，把解绑工作拆成每个 Working Set 一个独立事件。 */
 @Component

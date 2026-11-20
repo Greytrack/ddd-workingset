@@ -1,30 +1,5 @@
 package bootstrap;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.common.error.DomainException;
-
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import javax.sql.DataSource;
-
-import sk.workingset.adapters.WorkingSetController.WorkingSetView;
-import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
-import sk.workingset.adapters.LightTrackerItemView;
-import sk.workingset.adapters.WorkingSetController.TrackerView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,18 +11,36 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
-import sk.workingset.domain.event.TrackerItemsIndexedEvent;
+import org.springframework.transaction.support.TransactionTemplate;
+import sk.common.error.DomainException;
+import sk.workingset.adapters.LightTrackerItemView;
+import sk.workingset.adapters.WorkingSetController.BindingsView;
+import sk.workingset.adapters.WorkingSetController.TrackerView;
+import sk.workingset.adapters.WorkingSetController.WorkingSetView;
+import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.application.command.WorkingSetCreationService;
-import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.event.TrackerItemsIndexedEvent;
+import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetCreation.Mode;
 import sk.workingset.domain.workingset.WorkingSetCreation.Request;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
+import sk.workingset.error.BindingResCode;
+
+import javax.sql.DataSource;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "workingset.creation.index-batch-size=2")

@@ -98,7 +98,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 ## 6. 合并确认与跨轮次查询
 
-**身份与命中**：跨轮次查询以数值规范化的 Tracker 对和家族定位当前确认。最新记录只有状态为 `MERGED` 且双侧业务 Revision 匹配时才命中。先选最新再校验状态；最新为 `REVOKED` 时不回退到上一条确认。方向和 LocalId 留作证据，WorkingSet 不进入身份。确认不证明内容相同，普通编辑不改变命中版次。
+**身份与命中**：跨轮次查询以数值规范化的 Tracker 对和家族定位当前确认。最新记录只有状态为 `MERGED` 且双方当前存在、**各自的业务 Revision** 匹配时才命中。对 Source-backed 侧，变体自身版次取 LTI，`SourceRevision` 只用于读取继承内容；例如自身为 1、来源为 3，确认与命中使用 1，回读使用 3。切换为本地承载不改变自身版次；任一侧自身显式升版使旧确认过时。先选最新再校验状态；最新为 `REVOKED` 时不回退到上一条确认。方向和 LocalId 留作证据，WorkingSet 不进入身份。确认不证明内容相同，普通编辑不改变命中版次。
 
 **确认归属（[ADR-0006](../adr/0006-merge-confirmation-ownership.md)）**：确认是 MergeEntry 持有的值对象。轮次仓储将轮次状态与所需确认行一并提交。查询侧 `MergeCheckpointQuery` 可直接读取已提交的成员行，不建第二张表，也不提供独立修改入口。
 
@@ -177,7 +177,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 - Merge 不改变 `LocalId`/`CommonId`（INV-040）；`SourceLocalId`/`SourceRevision` 由既有 COW 机制维护（D-012/D-017）。
 - 未物化目标被 Merge 修改：在 merge 中构建业务聚合并正常 Save，随后按既有机制转为 Local-backed（D-019、INV-062）——这是「物化与修改一体」，不是第三条物化路径。
 - 业务对象的 `Revision` 由业务 BC 拥有；LightTrackerItem 的 `Revision` 通过事件同步（D-018）；Merge 不直接写 LightTrackerItem 的 Revision。
-- Checkpoint 使用**业务 Revision**（显式升级的版次），不使用 `SourceRevision`（R11；`QUESTION-015` 第 4 项）。
+- Checkpoint 与内容回读的版次口径见 §6（`QUESTION-008.c` 已关闭），验收见 [MergeAcceptanceTest](../../../deploys/src/test/java/bootstrap/MergeAcceptanceTest.java)。
 - 共享 Tracker 不参与 Merge；非共享只允许直接父子准入（D-019、POL-004）。
 
 ## 10. 已确认规则与契约候选的区分

@@ -1,33 +1,25 @@
 package bootstrap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import sk.common.error.DomainException;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.application.FailureReason;
+import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.application.query.provider.WorkingSetQueryProvider;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.WorkingSetQueryService;
-import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.workingset.WorkingSetId;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /** S1 应用层读取/解析测试：不依赖已退役的单 Item 派生入口。 */
 class WorkingSetSliceIntegrationTest {

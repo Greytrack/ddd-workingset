@@ -7,13 +7,16 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.CowEventHandler;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.repository.CowMaterializationStore;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Instant;

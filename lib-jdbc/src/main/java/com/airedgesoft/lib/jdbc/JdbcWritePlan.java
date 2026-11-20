@@ -1,16 +1,12 @@
 package com.airedgesoft.lib.jdbc;
 
 import java.math.BigDecimal;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.UUID;
-import java.sql.Types;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 固化编译后的操作顺序与标量值，避免执行阶段再读取可变领域对象，使校验结果与实际写入分离。

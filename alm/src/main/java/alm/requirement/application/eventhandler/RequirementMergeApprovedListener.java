@@ -1,10 +1,9 @@
 package alm.requirement.application.eventhandler;
 
+import alm.requirement.application.command.RequirementMergeWriter;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
-import alm.requirement.application.command.RequirementMergeWriter;
 import sk.workingset.domain.event.MergeEntryApprovedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 

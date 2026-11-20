@@ -1,11 +1,11 @@
 package sk.tracker.infrastructure.repositories;
 
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.IncorrectUpdateSemanticsDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.RequestThreadHolder;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;

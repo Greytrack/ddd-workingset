@@ -1,7 +1,5 @@
 package sk.workingset.application.query;
 
-import sk.workingset.error.BindingResCode;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,11 +13,12 @@ import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.*;
+import sk.workingset.domain.LocalId;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.error.BindingResCode;
 
 import java.util.List;
 import java.util.Objects;

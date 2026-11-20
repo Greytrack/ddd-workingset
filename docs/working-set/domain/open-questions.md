@@ -8,10 +8,8 @@
 
 | 优先级 | 编号 | 问题 | 可选答案 | 影响与阻塞 | 建议验证 |
 | --- | --- | --- | --- | --- | --- |
-| P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
 | P0 | `QUESTION-010` | **关系服务的可见性、删除守卫与接入** | 身份裁定 C 见 [原裁定](../reviews/2026-11-15-question-010-relation-identity-decision.md)。WorkingSet 侧事件已实现；[消费守卫矩阵](../reviews/2026-11-17-t7-e-relation-guards-decision.md#5-关系服务侧的守卫矩阵)待确认和接入 | 影响真实关系数据的创建、悬空引用修复及消费契约 | 对缺失、软删、永久删除、后续纳入、钉版不可读做端到端验收 |
 | P1 | `QUESTION-004` | **CommonId 跨实例并发与去重协议** | 已确认：默认 WS 同一雪花、非默认两个不等雪花、派生继承 CommonId、软删占键、冲突 409。剩余：多实例并发生成/校验、重试与唯一约束的兜底边界 | 决定唯一索引、ID 生成器与冲突重试；不重开身份语义 | 并发创建/派生/回并 + 唯一约束冲突注入 |
-| P1 | `QUESTION-008.c` | **Checkpoint 命中使用的“版次”口径** | A 统一用变体业务 Revision（Source-backed 侧为 LTI Revision；当前实现）；B 用实际读取的内容版次（Source-backed 侧为 `SourceRevision`）；C 双侧分别按状态取版次并同时保存两者 | 决定 Compare 隐藏已处理差异与 Confirm 写入的 revisionA/B 是否总能对齐；D-018 允许 LTI Revision 与业务 Revision 不同步 | 以 Source-backed 目标 + 普通编辑 + 显式升级三类组合验证命中/过时 |
 | P1 | `QUESTION-011` | **业务 Baseline 的含义** | A Snapshot；B 发布清单；C Merge Base；D 多概念并存但分别命名 | 决定不可变性、保留、引用语义；避免与仓库 Design Baseline、Merge Base 混淆 | 收集业务人员使用“基线”的原句与操作；T6-G |
 | P2 | `QUESTION-012` | **Working Set 与 Binding 的规模、并发上限** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备 + 发布指针 | 决定 WorkingSet 聚合装载/热点与是否引入 Manifest；不阻塞当前语义 | 采集 P95/P99 数量、写并发、发布频率与允许时延 |
 | P2 | `QUESTION-014` | **四个 BC 共同依赖的 Shared Kernel 如何治理版本与兼容性** | A 共同发布；B 版本化 Published Language；C Adapter/ACL 隔离演进 | 团队治理待办，不阻塞 T5/T6/T7 当前实现 | 访谈四 BC 的发布责任、升级节奏、兼容期限和变更审批者 |
@@ -43,9 +41,11 @@
 | `QUESTION-002.j` | Compare/Merge 候选对按 Tracker 的直接 `sourceId` 派生关系确定：只允许直属派生父子，不允许跨级，不允许派生兄弟节点互配，不做同槽全组合 | 2026-11-17 用户裁定 |
 | `QUESTION-002.l` | 创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO，独立批量派生入口另行定义 | 2026-11-17 用户裁定 |
 | `QUESTION-003` | 现阶段不接入权限；`Caller`/`authorize` 占位已于 2026-11-19 移除，待权限模型完成后重新设计接入边界 | D11（2026-11-12）；2026-11-19 实现清理 |
+| `QUESTION-006` | 软删保留首次物化所需快照并触发派生；永久删除须先软删，并等待仍依赖该来源的索引切换到本地，再清除来源历史 | [T3 删除与来源保留](lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006) |
 | `QUESTION-005` | 原生新建 Item 由服务端分配身份；回并经直属父子 Merge CREATE 承载 | D10、T6-C、T6-D |
 | `QUESTION-007` | Compare/Merge 只允许直属父子双向，兄弟/跨代拒绝 | POL-004、FACT-007 |
 | `QUESTION-008` | 字段级 Merge 的执行部分已由 S7 落地；剩余并发恢复转 `QUESTION-008.a` | [S7 验证](../implementation/t5-s7-verification-result.md) |
+| `QUESTION-008.c` | Checkpoint 按双方变体自身业务版次命中；继承内容按来源版次回读 | [T1 §6](merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量) |
 | `QUESTION-008.a` | 执行中断后接续原轮次；并发 Apply 返回 `RoundInProgress`；业务提交凭据恢复 | T6-B、T1 §8.1 |
 | `QUESTION-009` | 仅支持不可恢复的领域删除；软删/归档/恢复不纳入 T2 本版；绑定移除与聚合删除分开 | T2 K1～K3、POL-016 |
 | `QUESTION-009.a` | WorkingSet/Tracker 不存在“停用”生命周期 | 2026-11-12 用户裁定 |

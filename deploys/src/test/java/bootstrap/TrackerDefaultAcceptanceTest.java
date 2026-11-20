@@ -1,24 +1,6 @@
 package bootstrap;
 
-import static bootstrap.FixtureIds.fixtureId;
-import static org.awaitility.Awaitility.await;
-
-import sk.common.error.DomainException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.UUID;
-
 import alm.requirement.adapters.RequirementView;
-import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetController.ClassificationView;
-import sk.workingset.adapters.WorkingSetController.TrackerView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +11,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
-import sk.workingset.domain.Classification;
-import sk.productspace.domain.ProductSpace;
+import sk.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
+import sk.common.error.DomainException;
 import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
+import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
+import sk.workingset.adapters.WorkingSetController.BindingsView;
+import sk.workingset.adapters.WorkingSetController.ClassificationView;
+import sk.workingset.adapters.WorkingSetController.TrackerView;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSetId;
+
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.UUID;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 /** T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。 */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

@@ -90,6 +90,7 @@
 | 2026-11-17 | T7-G 扩展入口和部分成功边界见 [T7 §12A](domain/working-set-creation-lro-design.md)；T7-E 工作集侧发布已接入，消费守卫仍见 [开放问题](domain/open-questions.md)。 |
 | 2026-11-17 | 数值雪花身份和 Requirement 家族只读编号见 [T4](domain/cross-bc-contract-v1.md)；创建任务由服务端分配目标 ID，见 [T7 REST](domain/working-set-creation-lro-design.md#73-rest)。 |
 | 2026-11-17 | T6 收尾：B/C/D/E/F 完成；i（批量派生整批原子）被 T7-G 部分成功语义取代；`/derive` 公开入口已删除；T6-G 待 QUESTION-011／014；规模/保留转专题。见 [T6 收尾](implementation/t6-next-stage-outline.md)。 |
+| 2026-11-20 | 关闭 QUESTION-006 与 QUESTION-008.c：先软删触发物化，依赖切换后才可永久删除；Checkpoint 用自身业务版次，回读用来源版次。见 [T3](domain/lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)、[T1 §6](domain/merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)。 |
 | 2026-11-20 | QUESTION-008.b 已关闭：合并只接受或忽略；新增接收含软删恢复自动确认，删除从不确认，更新按行标志确认。见 [T1 §7](domain/merge-execution-contract-v1.md#7-接收忽略与行级确认)。 |
 | 2026-11-20 | 确认改归 MergeEntry；轮次仓储同事务保存确认和轮次状态，跨轮次比较只读旧表。见 [ADR-0006](adr/0006-merge-confirmation-ownership.md)。 |
 | 2026-11-16 | Checkpoint 身份修正（该行物理表和撤销入口已由 11-20 方案替换）：以**两侧 Tracker 分支**（`tracker_a_id`/`tracker_b_id`）+ 家族 + 双侧版次定位，**WorkingSet 不参与**；`round_id` 取 `MergeRound`（旧 `batch_id` 无对应语义）；唯一键 `(tracker_a_id, tracker_b_id, common_id)`；同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；撤销方向无关。见 [裁定](reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)。 |

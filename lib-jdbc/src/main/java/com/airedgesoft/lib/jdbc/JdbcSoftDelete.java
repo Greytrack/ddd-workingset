@@ -1,9 +1,9 @@
 package com.airedgesoft.lib.jdbc;
 
-import java.util.List;
-
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.util.List;
 
 /**
  * 软删除写路径的语句构建与执行工具：软删 / 恢复 / 物理删除 / 删除时刻探测均为<b>仓储显式调用</b>的受控语句， 不存在任何 SQL 自动改写通道——删除语义是领域决策，由仓储语句明说，本类只提供列模型安全的语句积木。

@@ -1,22 +1,5 @@
 package bootstrap;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.common.error.DomainException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.sql.DataSource;
-
-import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,13 +10,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.transaction.annotation.Transactional;
+import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
+import sk.workingset.adapters.WorkingSetController.BindingsView;
+import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.domain.workingset.WorkingSet;
-import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
+import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.BindingResCode;
+
+import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WorkingSetLineageAcceptanceTest {

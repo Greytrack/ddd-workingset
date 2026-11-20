@@ -4,15 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
-import sk.common.error.DomainException;
 import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.domain.Classification;
-import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.event.TrackerCreatedEvent;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
 /** Tracker 创建后，WorkingSet 在自己的事务中完成绑定。 */

@@ -16,7 +16,7 @@
 | `INV-001` | Shared 的所有绑定解析到同一权威 Tracker、同一 Item 变体和同一权威内容。 | Candidate；FACT-002；`POL-008` 的可见性要求已确认 | 跨 WS 并发写；列表/搜索读取面 |
 | `INV-002` | 非共享派生后，目标本地修改不回写来源，来源变化不覆盖目标已提交本地事实。 | Candidate；FACT-003 | 来源写/目标写交错 |
 | `INV-003` | Item 变体的家族身份、`LocalId` 和所属 Tracker 在查询、重试、物化时保持稳定。 | Candidate；FACT-004/005；T3 已兑现 `LocalId` 稳定 | 重试与 COW |
-| `INV-004` | 未物化变体的固定来源在依赖存续期间可按 Source Cut 回读；历史缺失不得以当前值冒充。 | Candidate；FACT-006；`QUESTION-006` 保留期 | 历史、附件、关系、删除态 |
+| `INV-004` | 未物化变体的固定来源在依赖存续期间可按 Source Cut 回读；历史缺失不得以当前值冒充。 | FACT-006；`QUESTION-006` 已裁定软删除物化与永久删除守卫 | 历史、附件、关系、删除态 |
 | `INV-005` | COW 只改变内容承载，不改变既有逻辑变体身份与直接来源。 | Candidate；D-012/D-013 | 并发首次写 |
 | `INV-006` | Compare/Merge 的方向、范围与双侧证据固定；执行读取源最新值并另记实际证据。 | Candidate；FACT-007；R08/B09 | 反向与过期证据 |
 | `INV-007` | 存在性差异必须显式裁决；一侧缺失不能自动推导 CREATE、RESTORE 或 DELETE。 | Candidate；FACT-007；T1 §7 | 来源删除、目标已编辑反例 |

@@ -1,13 +1,12 @@
 package alm.requirement.infrastructure.providers;
 
+import alm.requirement.application.query.model.RequirementDetail;
+import alm.requirement.application.query.provider.RequirementQueryProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-
-import alm.requirement.application.query.model.RequirementDetail;
-import alm.requirement.application.query.provider.RequirementQueryProvider;
 
 /** Requirement MyBatis-Plus 查询适配器；只读。 */
 @Component

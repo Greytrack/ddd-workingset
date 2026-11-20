@@ -1,9 +1,9 @@
 package sk.workingset.domain.event;
 
-import java.util.Objects;
-
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.workingset.WorkingSetId;
+
+import java.util.Objects;
 
 /** 请求某个 Working Set 解除已删除 Tracker 的绑定。 */
 public record TrackerBindingRemovalRequestedEvent(WorkingSetId workingSetId, TrackerId trackerId) {

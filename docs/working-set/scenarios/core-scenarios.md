@@ -65,6 +65,8 @@
 
 ## `SCN-004` 首次修改 VIRTUAL Item 触发 COW
 
+**来源删除验收（QUESTION-006）**：来源先软删；派生项切换完成前，永久删除返回 `Preparing` 并保留快照。切换后永久删除清除来源及其历史，派生项仍按原 LocalId 和自身版次可编辑。见 [T3](../domain/lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)。
+
 **来源**：`INV-003/004/005`；**状态**：Candidate。
 
 - **Given** 目标 Item Variant 已存在、无本地内容，并有可回读 Source Cut。

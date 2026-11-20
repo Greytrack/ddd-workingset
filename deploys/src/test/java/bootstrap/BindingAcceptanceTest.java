@@ -1,33 +1,5 @@
 package bootstrap;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.common.error.DomainException;
-
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.awaitility.Awaitility.await;
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.time.Duration;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetController.TrackerBindingView;
-import sk.workingset.adapters.WorkingSetController.TrackerView;
-import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,9 +11,27 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.common.error.DomainException;
+import sk.workingset.adapters.WorkingSetController.BindingsView;
+import sk.workingset.adapters.WorkingSetController.TrackerBindingView;
+import sk.workingset.adapters.WorkingSetController.TrackerView;
+import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.error.BindingResCode;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BindingAcceptanceTest {

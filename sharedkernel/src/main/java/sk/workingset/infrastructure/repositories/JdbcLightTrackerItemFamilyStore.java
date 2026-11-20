@@ -5,7 +5,6 @@ import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
 import sk.workingset.application.port.LightTrackerItemFamilyStore;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 

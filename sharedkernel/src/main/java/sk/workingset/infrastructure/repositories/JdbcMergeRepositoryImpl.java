@@ -1,8 +1,5 @@
 package sk.workingset.infrastructure.repositories;
 
-import sk.SharedKernelResultCode;
-import sk.common.error.DomainException;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -10,12 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison;
-import sk.workingset.error.MergeResCode;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.merge.MergeRound;
+import sk.workingset.error.MergeResCode;
 
 import java.util.HashSet;
 import java.util.List;

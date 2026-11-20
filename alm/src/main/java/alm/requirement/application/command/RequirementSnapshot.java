@@ -1,14 +1,10 @@
 package alm.requirement.application.command;
 
-import java.util.Objects;
-
 import alm.requirement.domain.Requirement;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Version;
+import sk.workingset.domain.*;
+
+import java.util.Objects;
 
 /**
  * ALM 自有的不可变内容快照（P4）：捕获「修改前」的完整字段，不由 SK 解释。

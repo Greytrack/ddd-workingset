@@ -3,7 +3,6 @@ package sk.workingset.application.eventhandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.event.TrackerDeletedEvent;
 

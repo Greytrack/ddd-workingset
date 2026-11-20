@@ -1,7 +1,6 @@
 package alm.requirement.domain;
 
 import sk.common.error.DomainException;
-
 import sk.workingset.domain.LockVersion;
 
 /**

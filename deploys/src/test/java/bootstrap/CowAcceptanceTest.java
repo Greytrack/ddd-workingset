@@ -1,21 +1,7 @@
 package bootstrap;
 
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doAnswer;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import sk.workingset.adapters.LightTrackerItemView;
 import alm.requirement.adapters.RequirementView;
+import alm.requirement.application.command.RequirementCommandService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,13 +14,26 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sk.workingset.adapters.LightTrackerItemView;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
-import alm.requirement.application.command.RequirementCommandService;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CowAcceptanceTest {
@@ -255,6 +254,47 @@ class CowAcceptanceTest {
         assertEquals(1, read(target).contentRevision());
         assertEquals(3, jdbc.queryForObject("SELECT revision FROM requirement_snapshots WHERE local_id = ?",
                 Integer.class, source));
+    }
+
+    @Test
+    void permanentDeletionWaitsForSoftDeleteMaterializationAndChildStaysEditable() throws InterruptedException {
+        createSource();
+        Target target = derive();
+        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
+        var reachedSwitch = new java.util.concurrent.CountDownLatch(1);
+        var releaseSwitch = new java.util.concurrent.CountDownLatch(1);
+        doAnswer(invocation -> {
+            reachedSwitch.countDown();
+            if (!releaseSwitch.await(8, java.util.concurrent.TimeUnit.SECONDS)) {
+                throw new IllegalStateException("materialization gate timed out");
+            }
+            return invocation.callRealMethod();
+        }).when(items).save(argThat(item -> item != null && item.materialized()
+                && item.localId().value().equals(target.id())));
+
+        String path = "/api/requirements/" + source;
+        assertEquals(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class).getStatusCode());
+        try {
+            assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete", null, Void.class).getStatusCode());
+            assertTrue(reachedSwitch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class).getStatusCode());
+            assertEquals(HttpStatus.GONE, rest.getForEntity(path, Map.class).getStatusCode());
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
+                    Integer.class, source));
+        } finally {
+            releaseSwitch.countDown();
+        }
+
+        await().atMost(Duration.ofSeconds(8)).until(() -> read(target).materialized());
+        assertLocalContent(target, "A");
+        assertEquals(1, read(target).contentRevision());
+        assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete2", null, Void.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class).getStatusCode());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
+                Integer.class, source));
+        var edited = requirements.changeTitle(LocalId.of(target.id()), "editable after purge", LockVersion.of(0));
+        assertEquals("editable after purge", edited.title());
+        assertEquals(Revision.of(1), edited.revision());
     }
 
     private void failNextSwitch(Target target) {

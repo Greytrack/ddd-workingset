@@ -1,13 +1,11 @@
 package sk.workingset.domain.workingset;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.common.error.DomainException;
-
 import org.jmolecules.ddd.annotation.Service;
+import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
+import sk.workingset.error.BindingResCode;
 
 import java.util.List;
 

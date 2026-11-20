@@ -1,17 +1,15 @@
 package sk.workingset.domain.merge;
 
-import sk.workingset.error.MergeResCode;
-
-import sk.common.error.DomainException;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
 import org.jmolecules.ddd.annotation.ValueObject;
-import sk.workingset.domain.workingset.WorkingSetId;
+import sk.common.error.DomainException;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison.Difference;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.error.MergeResCode;
 
 import java.time.Instant;
 import java.util.ArrayList;

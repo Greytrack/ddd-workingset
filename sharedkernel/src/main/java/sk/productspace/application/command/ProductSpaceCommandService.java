@@ -1,22 +1,20 @@
 package sk.productspace.application.command;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.common.error.DomainException;
-
-import java.util.List;
-import java.util.Map;
-
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
-import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.BindingResCode;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor

@@ -1,21 +1,18 @@
 package sk.common.error;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import alm.requirement.domain.RequirementResultCode;
+import bootstrap.web.ApiExceptionHandler;
+import org.junit.jupiter.api.Test;
+import sk.workingset.application.FailureReason;
+import sk.workingset.error.BindingResCode;
+import sk.workingset.error.MergeResCode;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
-import alm.requirement.domain.RequirementResultCode;
-import bootstrap.web.ApiExceptionHandler;
-import sk.workingset.application.FailureReason;
-import sk.workingset.error.BindingResCode;
-import sk.workingset.error.MergeResCode;
-import sk.workingset.error.WorkingsetResultCode;
+import static org.junit.jupiter.api.Assertions.*;
 
 /** T4 §5.4: numeric API codes are stable, unique, and assigned to fixed ranges. */
 class WorkingsetResultCodeContractTest {

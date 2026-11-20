@@ -1,17 +1,16 @@
 package alm.requirement.infrastructure.providers;
 
-import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor

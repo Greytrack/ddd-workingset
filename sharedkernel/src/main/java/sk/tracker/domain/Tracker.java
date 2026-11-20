@@ -1,15 +1,13 @@
 package sk.tracker.domain;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.productspace.domain.ProductSpace;
-
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
-import sk.workingset.domain.*;
+import sk.productspace.domain.ProductSpace;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;

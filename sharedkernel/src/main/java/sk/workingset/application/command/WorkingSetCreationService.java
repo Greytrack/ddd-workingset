@@ -1,9 +1,5 @@
 package sk.workingset.application.command;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.SharedKernelResultCode;
-
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,21 +9,19 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.RequestThreadHolder;
+import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.workingset.WorkingSet;
-import sk.workingset.domain.workingset.WorkingSetCreation;
-import sk.workingset.domain.workingset.WorkingSetCreation.*;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
-import sk.workingset.application.query.provider.TrackerQueryProvider;
-import sk.workingset.domain.workingset.WorkingSetCreationRepository;
-import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.domain.workingset.*;
+import sk.workingset.domain.workingset.WorkingSetCreation.*;
+import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.time.Instant;

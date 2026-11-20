@@ -1,8 +1,7 @@
 package sk.workingset.domain.merge;
 
-import sk.common.error.DomainException;
-
 import org.jmolecules.ddd.annotation.Repository;
+import sk.common.error.DomainException;
 
 import java.util.Optional;
 

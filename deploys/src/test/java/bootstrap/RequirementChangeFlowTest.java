@@ -1,42 +1,27 @@
 package bootstrap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
-import java.util.Optional;
-
+import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.application.command.RequirementSnapshot;
+import alm.requirement.domain.LockVersionConflictException;
+import alm.requirement.domain.Requirement;
+import alm.requirement.domain.RequirementRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
-
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.domain.LockVersionConflictException;
-import alm.requirement.domain.Requirement;
-import alm.requirement.domain.RequirementRepository;
-import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.domain.RequirementSnapshotStore;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.*;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Version;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /** 验证来源修改命令与仓储、快照和发布端口的协作。 */
 class RequirementChangeFlowTest {

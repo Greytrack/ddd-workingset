@@ -1,9 +1,9 @@
 package sk.workingset.application.query.provider;
 
+import sk.workingset.domain.Classification;
+
 import java.util.List;
 import java.util.Optional;
-
-import sk.workingset.domain.Classification;
 
 public interface ClassificationCatalog {
     Optional<Classification> findClassification(String id);

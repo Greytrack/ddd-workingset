@@ -1,26 +1,23 @@
 package alm.requirement.adapters.workingset;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import alm.requirement.application.command.RequirementMaterializationService;
+import alm.requirement.application.command.RequirementSnapshot;
+import alm.requirement.domain.Requirement;
+import alm.requirement.domain.RequirementRepository;
+import alm.requirement.domain.RequirementSnapshotStore;
+import org.junit.jupiter.api.Test;
+import sk.common.error.DomainException;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.application.command.dto.MaterializeRequest;
+import sk.workingset.application.common.TargetIdentity;
+import sk.workingset.domain.*;
+import sk.workingset.domain.event.SnapshotRefEvent;
 
 import java.util.Optional;
 
-import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.application.command.RequirementMaterializationService;
-import alm.requirement.domain.RequirementSnapshotStore;
-import alm.requirement.domain.Requirement;
-import alm.requirement.domain.RequirementRepository;
-import org.junit.jupiter.api.Test;
-import sk.workingset.domain.event.SnapshotRefEvent;
-import sk.common.error.DomainException;
-import sk.workingset.application.command.dto.MaterializeRequest;
-import sk.workingset.application.common.TargetIdentity;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Version;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.*;
 
 class RequirementMaterializationAdapterTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);

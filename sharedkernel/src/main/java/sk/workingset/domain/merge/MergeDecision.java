@@ -1,12 +1,10 @@
 package sk.workingset.domain.merge;
 
-import sk.workingset.error.MergeResCode;
-
-import sk.common.error.DomainException;
-
 import org.jmolecules.ddd.annotation.ValueObject;
+import sk.common.error.DomainException;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
+import sk.workingset.error.MergeResCode;
 
 import java.util.Map;
 import java.util.Set;

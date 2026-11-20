@@ -1,7 +1,5 @@
 package sk.workingset.application.command;
 
-import sk.workingset.error.MergeResCode;
-
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,18 +15,19 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.workingset.WorkingSet;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.event.*;
+import sk.workingset.domain.merge.*;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Side;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
-import sk.workingset.domain.merge.*;
 import sk.workingset.domain.merge.MergeDecision.FieldAction;
 import sk.workingset.domain.merge.MergeRound.Entry;
 import sk.workingset.domain.merge.MergeRound.ItemResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
 import sk.workingset.domain.merge.MergeRound.State;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.error.MergeResCode;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;

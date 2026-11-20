@@ -1,7 +1,7 @@
 package bootstrap.configuration;
 
-import java.time.Duration;
-
+import alm.requirement.adapters.workingset.RequirementAdapter;
+import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -9,23 +9,22 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import alm.requirement.adapters.workingset.RequirementAdapter;
-import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
+import sk.tracker.domain.TrackerId;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
 import sk.workingset.application.command.WorkingSetItemIndexer;
 import sk.workingset.application.merge.MergeComparisonService;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.port.LightTrackerItemFamilyStore;
+import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.LocalId;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetCreationSnapshotStore;
-import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+
+import java.time.Duration;
 
 /**
  * 组合根只保留需要运行时参数、条件装配或 lambda 的 Bean。

@@ -1,5 +1,13 @@
 package bootstrap.web;
 
+import alm.requirement.domain.LockVersionConflictException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import sk.common.error.APIException;
 import sk.common.error.AppException;
 import sk.common.error.DomainException;
@@ -9,17 +17,6 @@ import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import org.springframework.dao.DataIntegrityViolationException;
-
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import alm.requirement.domain.LockVersionConflictException;
 
 /**
  * REST 错误映射：保留 NotFound 与 NotIncluded 的区分，乐观锁冲突显式返回 409。

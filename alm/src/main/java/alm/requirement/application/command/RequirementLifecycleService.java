@@ -1,24 +1,22 @@
 package alm.requirement.application.command;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.time.Instant;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.annotation.Transactional;
-
 import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementResultCode;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import sk.workingset.domain.event.CompleteDeleteEvent;
 import sk.workingset.domain.LifecycleCommand;
 import sk.workingset.domain.LifecycleResult;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.event.CompleteDeleteEvent;
+
+import java.time.Instant;
 
 @Slf4j
 @Service

@@ -1,28 +1,23 @@
 package alm.requirement.infrastructure;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.UUID;
-
+import alm.requirement.application.command.RequirementSnapshot;
+import alm.requirement.domain.Requirement;
 import alm.requirement.infrastructure.repositories.JdbcRequirementSnapshotStore;
 import bootstrap.WorkingsetApplication;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.domain.Requirement;
-import sk.workingset.domain.event.SnapshotRefEvent;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Version;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import sk.workingset.domain.*;
+import sk.workingset.domain.event.SnapshotRefEvent;
+
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = WorkingsetApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class JdbcSnapshotStoreTest {

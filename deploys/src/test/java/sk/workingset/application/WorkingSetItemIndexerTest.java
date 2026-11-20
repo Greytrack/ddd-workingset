@@ -1,27 +1,24 @@
 package sk.workingset.application;
 
-import sk.workingset.application.command.*;
-
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
-
+import sk.workingset.application.command.WorkingSetItemIndexer;
 import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetCreation.Progress;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** H1 回归：目标已有同族 LTI 时，来源后来软删也只能计为跳过，不得转成排除/失败。 */
 @SpringBootTest(classes = bootstrap.WorkingsetApplication.class)

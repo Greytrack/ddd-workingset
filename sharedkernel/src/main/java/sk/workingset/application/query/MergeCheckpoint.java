@@ -1,9 +1,5 @@
 package sk.workingset.application.query;
 
-import sk.workingset.error.MergeResCode;
-
-import sk.common.error.DomainException;
-
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;

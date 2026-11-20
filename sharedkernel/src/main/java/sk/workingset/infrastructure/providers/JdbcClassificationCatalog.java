@@ -1,8 +1,5 @@
 package sk.workingset.infrastructure.providers;
 
-import java.util.List;
-import java.util.Optional;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -10,6 +7,9 @@ import org.springframework.stereotype.Component;
 import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
+
+import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor

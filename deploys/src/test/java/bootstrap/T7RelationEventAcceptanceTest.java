@@ -1,17 +1,5 @@
 package bootstrap;
 
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,20 +12,26 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import sk.workingset.domain.event.AssociationCreationRequestedEvent;
-import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
-import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
-import sk.workingset.domain.event.ReferenceEndpointEvent;
-import sk.workingset.domain.event.AssociationEndpointEvent;
-import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.event.*;
+import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetCreation;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(T7RelationEventAcceptanceTest.RelationConfiguration.class)

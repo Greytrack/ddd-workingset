@@ -1,9 +1,9 @@
 package bootstrap;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
 import java.nio.charset.StandardCharsets;
 import java.util.zip.CRC32;
-
-import org.springframework.jdbc.core.JdbcTemplate;
 
 public final class FixtureIds {
     private FixtureIds() {}

@@ -3,8 +3,8 @@ package sk.workingset.application.eventhandler;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 import sk.workingset.application.command.TrackerItemLifecycleService;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 /**

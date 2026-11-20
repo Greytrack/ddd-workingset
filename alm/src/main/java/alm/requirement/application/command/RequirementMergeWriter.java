@@ -1,25 +1,20 @@
 package alm.requirement.application.command;
 
-import sk.workingset.error.MergeResCode;
-
+import alm.requirement.application.port.RequirementMutationStore;
+import alm.requirement.domain.LockVersionConflictException;
+import alm.requirement.domain.Requirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
-
 import sk.common.error.DomainException;
-import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.Revision;
 import sk.workingset.domain.Version;
 import sk.workingset.domain.event.MergeEntryApprovedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
+import sk.workingset.error.MergeResCode;
 
-import alm.requirement.application.port.RequirementMutationStore;
-import alm.requirement.domain.LockVersionConflictException;
-import alm.requirement.domain.Requirement;
+import java.util.Map;
 
 /** ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。 */
 @Slf4j

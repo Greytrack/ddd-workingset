@@ -1,33 +1,22 @@
 package alm.requirement.adapters;
 
+import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.application.command.RequirementLifecycleService;
+import alm.requirement.application.query.RequirementQueryService;
+import alm.requirement.application.query.model.RequirementDetail;
+import alm.requirement.domain.Requirement;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 import sk.common.error.DomainException;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;
 import java.util.Objects;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.application.query.RequirementQueryService;
-import alm.requirement.application.query.model.RequirementDetail;
-import alm.requirement.application.command.RequirementLifecycleService;
-import alm.requirement.domain.Requirement;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.workingset.WorkingSetId;
 
 /**
  * Requirement 的最小 REST 入口：创建、普通修改标题、按 LocalId 查询。

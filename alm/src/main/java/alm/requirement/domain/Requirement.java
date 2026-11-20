@@ -1,19 +1,11 @@
 package alm.requirement.domain;
 
 import sk.common.error.DomainException;
-
-import java.util.Objects;
-import java.util.Locale;
-
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LifecycleCommand;
-import sk.workingset.domain.LifecycleResult;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.TrackerItem;
-import sk.workingset.domain.Version;
+import sk.workingset.domain.*;
+
+import java.util.Locale;
+import java.util.Objects;
 
 /** ALM Requirement。业务版次、发布版本与乐观锁分别维护。 */
 public final class Requirement implements TrackerItem {

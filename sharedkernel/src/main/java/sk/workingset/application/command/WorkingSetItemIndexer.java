@@ -15,13 +15,15 @@ import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.*;
 import sk.workingset.domain.workingset.WorkingSetCreation.Failure;
 import sk.workingset.domain.workingset.WorkingSetCreation.IndexProgress;
 import sk.workingset.domain.workingset.WorkingSetCreation.ItemOutcome;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 
 import java.time.Instant;
 import java.util.ArrayList;

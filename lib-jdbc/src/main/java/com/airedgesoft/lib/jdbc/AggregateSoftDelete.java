@@ -1,14 +1,14 @@
 package com.airedgesoft.lib.jdbc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.relational.core.mapping.RelationalPersistentEntity;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.common.error.DomainException;
 import sk.common.error.PersistenceResultCode;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Spring Data JDBC 写模型的聚合软删除生命周期操作（软删除 / 恢复 / 物理删除）：<b>表名、主键列、版本列全部取自实体元数据</b> （{@code @Table} / {@code @Id} /

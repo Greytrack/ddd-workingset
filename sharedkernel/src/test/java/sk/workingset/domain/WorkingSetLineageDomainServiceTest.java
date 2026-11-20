@@ -1,10 +1,7 @@
 package sk.workingset.domain;
 
-import sk.workingset.error.BindingResCode;
-
-import sk.common.error.DomainException;
-
 import org.junit.jupiter.api.Test;
+import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
@@ -13,6 +10,7 @@ import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSet.*;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
+import sk.workingset.error.BindingResCode;
 
 import java.util.List;
 

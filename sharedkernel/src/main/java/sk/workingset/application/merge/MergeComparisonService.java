@@ -1,7 +1,5 @@
 package sk.workingset.application.merge;
 
-import sk.workingset.error.MergeResCode;
-
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
@@ -9,20 +7,22 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.query.MergeCheckpoint;
+import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.*;
-import sk.workingset.application.query.MergeCheckpoint;
-import sk.workingset.application.query.MergeCheckpointQuery;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.MergeResCode;
 
 import java.time.Instant;
 import java.util.*;

@@ -3,7 +3,6 @@ package sk.workingset.infrastructure.providers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
 import sk.RequestThreadHolder;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.TrackerQueryProvider;

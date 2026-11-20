@@ -1,17 +1,18 @@
 package sk.workingset.infrastructure.repositories;
 
-import sk.SharedKernelResultCode;
-import sk.common.error.DomainException;
-
+import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetId;

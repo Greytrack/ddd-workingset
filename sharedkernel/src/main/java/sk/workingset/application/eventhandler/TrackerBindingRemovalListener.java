@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
 import sk.workingset.application.command.WorkingSetBindingRemovalService;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.event.TrackerBindingRemovalRequestedEvent;

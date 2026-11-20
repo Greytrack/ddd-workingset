@@ -1,20 +1,18 @@
 package alm.requirement.application.command;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.Objects;
-import java.util.Optional;
-
-import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.domain.RequirementSnapshotStore;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 import sk.common.error.DomainException;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.error.WorkingsetResultCode;
+
+import java.util.Objects;
+import java.util.Optional;
 
 /** ALM 物化服务：只负责业务对象保存与身份校验。 */
 @Slf4j

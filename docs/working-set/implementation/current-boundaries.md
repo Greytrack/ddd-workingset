@@ -37,7 +37,7 @@
 | Merge 条目批准 | SK `MergeEntryApprovedEvent` | ALM 校验并保存目标 Requirement，发布 `MergeEntryResolvedEvent` |
 | Merge 条目结果与确认 | ALM `MergeEntryResolvedEvent` | SK 在同一轮次事务持久化条目结果和所需确认，按需发布 `MergeAppliedEvent`；确认写失败时轮次不结束 |
 | Merge 目标 LTI | SK `MergeAppliedEvent` | SK 独立事务切换/创建 LTI |
-| 永久删除 | ALM `CompleteDeleteEvent` | SK 异步清理 LTI |
+| 来源软删 / 永久删除 | ALM `BusinessObjectUpdateEvent` / `CompleteDeleteEvent` | 软删保存快照并触发物化；仍有来源依赖时拒绝永久删除，完成后 SK 异步清理来源 LTI |
 
 事件只表达已发生事实；请求不是完成事实。以上流程不引入通用写 Port，也不要求消息代理或事件溯源。
 
@@ -48,7 +48,6 @@
 | ProductSpace 创建 | `ProductSpaceCommandService.create` 在同一应用事务中保存 ProductSpace 并调用 Working Set 初始化默认成员关系 | 跨聚合写仍在一个事务；应拆为 ProductSpace 保存 + 可靠事件驱动 Working Set 初始化，并定义部分失败与重投。 |
 | T7 创建/扩展 | LTI 批量索引与任务进度仍可能在同一批处理事务中推进 | 按 [反模式审查](../reviews/2026-11-19-ddd-anti-pattern-scan.md) 拆为 LTI 结果事件与任务进度独立提交。 |
 | Tracker 创建 | TrackerCommandService 仅持久化 Tracker，绑定由 `TrackerCreatedEvent` 的监听器在 Working Set 事务中完成 | 主路径已事件化；仍需验证监听失败、重复投递、绑定拒绝和运维可观察性。ProductSpace 初始化不在该路径内。 |
-| COW 收据与请求 | `CowEventHandler` 先独立事务写 PENDING 收据，再发布请求事件 | 收据与请求不是同一次提交；重放可能跳过已留收据但未投递的目标。业务失败终态仍保留，不恢复已废弃的 COW Recovery。 |
 | 继承编辑 | ALM 保存后由 `BusinessObjectUpdateEvent` 异步切换 LTI | 保存成功不保证 LTI 立即 Local-backed；读取方需容忍短暂 Source-backed。切换失败不回滚业务保存。 |
 
 ## 5. 已移除的旧声明

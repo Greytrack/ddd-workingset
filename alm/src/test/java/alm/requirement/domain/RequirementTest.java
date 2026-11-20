@@ -1,21 +1,11 @@
 package alm.requirement.domain;
 
-import sk.common.error.DomainException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.Test;
-
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
+import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Version;
+import sk.workingset.domain.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class RequirementTest {
 

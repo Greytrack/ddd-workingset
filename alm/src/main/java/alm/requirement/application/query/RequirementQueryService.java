@@ -1,27 +1,25 @@
 package alm.requirement.application.query;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
-
 import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.application.FailureReason;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+
+import java.util.List;
+import java.util.Optional;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
 @Slf4j

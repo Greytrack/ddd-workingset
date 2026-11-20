@@ -1,39 +1,37 @@
 package alm.requirement.application.command;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.time.Instant;
-import java.util.Objects;
-import java.util.function.UnaryOperator;
-
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.annotation.Transactional;
-
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.domain.RequirementSnapshotStore;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import sk.workingset.domain.event.SnapshotRefEvent;
-import sk.workingset.domain.event.TrackerItemCreatedEvent;
-import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LockVersion;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.workingset.WorkingSetRepository;
-import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.application.FailureReason;
+import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
+import sk.workingset.domain.event.SnapshotRefEvent;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetRepository;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.function.UnaryOperator;
 
 /**
  * ALM Requirement 命令侧应用服务：创建、普通修改（修改前快照 + 保存成功后发布来源事件）。

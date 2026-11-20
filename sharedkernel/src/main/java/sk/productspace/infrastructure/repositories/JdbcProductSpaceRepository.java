@@ -1,7 +1,5 @@
 package sk.productspace.infrastructure.repositories;
 
-import java.util.Optional;
-
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +7,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
+
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor

@@ -1,8 +1,5 @@
 package alm.requirement.adapters.workingset;
 
-import java.util.Map;
-import java.util.Objects;
-
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import sk.common.error.DomainException;
@@ -11,6 +8,9 @@ import sk.workingset.application.TrackerItemContent;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * ALM 侧的 Adapter：实现 SK 定义的只读应用层 Port（T4 §3.1 两层接口并存）。

@@ -2,9 +2,9 @@ package sk.workingset.application.common;
 
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 
 /**
  * 业务 BC 可观察的变体身份证据（D4：LTI 聚合留在 SK，BC 只接收值对象，不接触 SK 聚合）。

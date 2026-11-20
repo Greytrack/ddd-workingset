@@ -3,11 +3,11 @@ package sk.workingset.infrastructure.providers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import sk.workingset.application.query.MergeCheckpoint;
+import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
-import sk.workingset.application.query.MergeCheckpoint;
-import sk.workingset.application.query.MergeCheckpointQuery;
 
 import java.util.Optional;
 

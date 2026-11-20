@@ -1,17 +1,7 @@
 package bootstrap;
 
-import static bootstrap.FixtureIds.fixtureId;
-import static org.awaitility.Awaitility.await;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-
+import alm.requirement.application.command.RequirementCommandService;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -19,17 +9,23 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import alm.requirement.application.command.RequirementCommandService;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
-import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
-import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
+import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.workingset.WorkingSetId;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Spring Boot 上下文与事件发布检查（S2/S3：上下文可加载、事件发布；Modulith 在提交后异步消费）。

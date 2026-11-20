@@ -1,12 +1,11 @@
 package alm.requirement.infrastructure.providers;
 
+import alm.requirement.application.query.model.RequirementDetail;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-
-import alm.requirement.application.query.model.RequirementDetail;
 
 /** Requirement 查询 Mapper；仅包含 SELECT。 */
 @Mapper

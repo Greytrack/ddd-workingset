@@ -1,10 +1,10 @@
 package com.airedgesoft.lib.jdbc;
 
-import static com.airedgesoft.lib.jdbc.AggregateMapping.*;
-import static com.airedgesoft.lib.jdbc.JdbcWritePlan.*;
-
 import java.util.*;
 import java.util.function.Supplier;
+
+import static com.airedgesoft.lib.jdbc.AggregateMapping.*;
+import static com.airedgesoft.lib.jdbc.JdbcWritePlan.*;
 
 /**
  * 仓储可选使用的纯写入计划工具；不注册 hook，不重建领域对象，不访问数据库。 仓储也可以直接构造 Create / Update / NoChanges，而不使用本工具的比较及复制协议。

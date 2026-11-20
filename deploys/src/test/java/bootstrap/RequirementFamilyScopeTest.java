@@ -1,16 +1,7 @@
 package bootstrap;
 
-import static bootstrap.FixtureIds.fixtureId;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.UUID;
-
+import alm.requirement.domain.Requirement;
+import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,14 +9,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import alm.requirement.domain.Requirement;
-import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+
+import java.util.List;
+import java.util.UUID;
+
+import static bootstrap.FixtureIds.fixtureId;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * D2：Requirement 家族唯一性按 WorkingSet 作用域，而不是按 Tracker。

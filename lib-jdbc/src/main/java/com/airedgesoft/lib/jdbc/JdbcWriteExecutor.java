@@ -1,6 +1,11 @@
 package com.airedgesoft.lib.jdbc;
 
-import static com.airedgesoft.lib.jdbc.JdbcWritePlan.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import sk.common.error.DomainException;
+import sk.common.error.PersistenceResultCode;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -8,12 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import sk.common.error.DomainException;
-import sk.common.error.PersistenceResultCode;
+
+import static com.airedgesoft.lib.jdbc.JdbcWritePlan.*;
 
 /**
  * 将 PostgreSQL 方言与参数绑定集中在执行边界，避免领域映射混入 SQL 拼装和驱动细节。 本类不建立事务；多步写入的原子性依赖调用方提供的事务。 保持包级可见，让写入经 Store 协调加载资格、根 CAS
