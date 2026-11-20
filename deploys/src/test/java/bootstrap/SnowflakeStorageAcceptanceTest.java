@@ -23,7 +23,7 @@ import alm.requirement.adapters.RequirementView;
 import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
-import sk.workingset.domain.WorkingSetCreation.Status;
+import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SnowflakeStorageAcceptanceTest {

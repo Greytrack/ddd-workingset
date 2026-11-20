@@ -9,9 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.repository.WorkingSetCreationRepository;
+import sk.workingset.domain.workingset.WorkingSetCreation;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetCreationRepository;
 
 import java.sql.Timestamp;
 import java.util.Optional;

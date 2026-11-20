@@ -27,7 +27,7 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /**
  * Requirement 的最小 REST 入口：创建、普通修改标题、按 LocalId 查询。

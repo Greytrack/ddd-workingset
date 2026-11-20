@@ -1,7 +1,7 @@
 package sk.workingset.application.query.provider;
 
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** Tracker 的只读存在性/可见性查询；命令侧聚合重建仍走 TrackerRepository。 */
 public interface TrackerQueryProvider {

@@ -5,7 +5,7 @@ import java.util.List;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** LightTrackerItem 的只读查询；列表、分页和存在性判断不进入聚合仓储。 */
 public interface LightTrackerItemQueryProvider {

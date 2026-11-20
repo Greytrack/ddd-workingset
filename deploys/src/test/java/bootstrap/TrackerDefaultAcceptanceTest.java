@@ -36,7 +36,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。 */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

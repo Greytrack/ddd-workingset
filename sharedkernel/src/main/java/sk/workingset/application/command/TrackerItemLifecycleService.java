@@ -14,7 +14,7 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.MergeTargetEvent;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 /**
  * SK 内部的 LTI 生命周期处理服务。

@@ -3,7 +3,7 @@ package sk.tracker.domain;
 import org.junit.jupiter.api.Test;
 import sk.workingset.domain.Classification;
 import sk.productspace.domain.ProductSpace;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

@@ -8,7 +8,7 @@ import sk.workingset.application.query.provider.RelationSourceQueryProvider.Refe
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.event.*;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 

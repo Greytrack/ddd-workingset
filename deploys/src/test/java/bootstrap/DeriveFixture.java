@@ -1,5 +1,9 @@
 package bootstrap;
 
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
+
 import static bootstrap.FixtureIds.fixtureId;
 
 import java.util.Map;
@@ -7,13 +11,12 @@ import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /**
  * 测试夹具：直接建立一个非共享派生 Tracker 及其 Source-backed LTI。
@@ -33,21 +36,21 @@ final class DeriveFixture {
         if (!"1".equals(targetParent) && !exists(jdbc, """
                 SELECT 1 FROM tracker_bindings WHERE working_set_id = ? AND tracker_id = ?
                 """, Long.valueOf(targetParent), Long.valueOf(sourceTrackerId))) {
-            throw new BindingFailure(BindingFailure.Reason.SourceTrackerNotFound, sourceTrackerId);
+            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceTrackerId);
         }
         if (!"UNSHARED".equals(source.get("sharing_mode"))) {
-            throw new BindingFailure(BindingFailure.Reason.SharingModeMismatch, sourceTrackerId);
+            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, sourceTrackerId);
         }
         if (exists(jdbc, """
                 SELECT 1 FROM tracker_bindings
                 WHERE working_set_id = ? AND tracker_id IN
                     (SELECT tracker_id FROM trackers WHERE source_id = ?)
                 """, Long.valueOf(targetWorkingSet), Long.valueOf(sourceTrackerId))) {
-            throw new BindingFailure(BindingFailure.Reason.TrackerAlreadyBound, sourceTrackerId);
+            throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, sourceTrackerId);
         }
         if (!exists(jdbc, "SELECT 1 FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
                 Long.valueOf(targetWorkingSet), Long.valueOf(source.get("product_space_id").toString()))) {
-            throw new BindingFailure(BindingFailure.Reason.MissingSpaceBinding, targetWorkingSet);
+            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, targetWorkingSet);
         }
 
         String trackerId = fixtureId("DERIVED-T-" + UUID.randomUUID());
@@ -93,7 +96,7 @@ final class DeriveFixture {
                 FROM trackers WHERE tracker_id = ?
                 """, Long.valueOf(trackerId));
         if (rows.isEmpty()) {
-            throw new BindingFailure(BindingFailure.Reason.SourceTrackerNotFound, trackerId);
+            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, trackerId);
         }
         return rows.getFirst();
     }
@@ -108,13 +111,13 @@ final class DeriveFixture {
                     FROM light_tracker_items WHERE local_id = ?
                     """, Long.valueOf(sourceLocalId));
             if (rows.isEmpty()) {
-                throw new BindingFailure(BindingFailure.Reason.SourceItemNotFound, sourceLocalId);
+                throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
             }
             Map<String,Object> row = rows.getFirst();
             if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                     || !commonId.value().equals(row.get("common_id").toString())
                     || revision.value() != ((Number) row.get("revision")).intValue()) {
-                throw new BindingFailure(BindingFailure.Reason.SourceItemMismatch, sourceLocalId);
+                throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
             }
             boolean materialized = (Boolean) row.get("materialized");
             return new Content(materialized ? sourceLocalId : row.get("source_local_id").toString(),
@@ -124,12 +127,12 @@ final class DeriveFixture {
                 SELECT tracker_id, common_id FROM requirements WHERE local_id = ?
                 """, Long.valueOf(sourceLocalId));
         if (rows.isEmpty()) {
-            throw new BindingFailure(BindingFailure.Reason.SourceItemNotFound, sourceLocalId);
+            throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
         }
         Map<String,Object> row = rows.getFirst();
         if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                 || !commonId.value().equals(row.get("common_id").toString())) {
-            throw new BindingFailure(BindingFailure.Reason.SourceItemMismatch, sourceLocalId);
+            throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
         }
         return new Content(sourceLocalId, revision);
     }

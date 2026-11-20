@@ -30,7 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import alm.requirement.application.command.RequirementCommandService;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;

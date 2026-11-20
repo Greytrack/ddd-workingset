@@ -1,12 +1,18 @@
 package sk.workingset.domain;
 
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
+
 import org.junit.jupiter.api.Test;
 import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet.*;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSet.*;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
 
 import java.util.List;
 
@@ -18,9 +24,9 @@ class WorkingSetLineageDomainServiceTest {
     private final WorkingSetId grandchildId = WorkingSetId.of("265077320994752");
 
     private static void assertNotAdjacent(WorkingSet source, WorkingSet target) {
-        BindingFailure failure = assertThrows(BindingFailure.class,
+        DomainException failure = assertThrows(DomainException.class,
                 () -> WorkingSetLineageDomainService.comparableBindings(source, target));
-        assertEquals(Reason.WorkingSetsNotAdjacent, failure.reason());
+        assertEquals(BindingResCode.WORKING_SETS_NOT_ADJACENT, failure.getResCode());
     }
 
     @Test

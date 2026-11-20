@@ -11,7 +11,8 @@ import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.*;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.List;
 import java.util.Optional;

@@ -19,9 +19,9 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 /** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
 @Slf4j

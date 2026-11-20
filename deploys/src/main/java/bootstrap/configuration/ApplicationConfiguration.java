@@ -22,10 +22,10 @@ import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.merge.MergeCheckpointRepository;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetCreationSnapshotStore;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 /**
  * 组合根只保留需要运行时参数、条件装配或 lambda 的 Bean。

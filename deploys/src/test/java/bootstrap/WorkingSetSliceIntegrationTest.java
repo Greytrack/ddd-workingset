@@ -21,13 +21,13 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** S1 应用层读取/解析测试：不依赖已退役的单 Item 派生入口。 */
 class WorkingSetSliceIntegrationTest {

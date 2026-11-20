@@ -35,6 +35,8 @@ import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.Version;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 /** 验证来源修改命令与仓储、快照和发布端口的协作。 */
 class RequirementChangeFlowTest {
@@ -50,8 +52,8 @@ class RequirementChangeFlowTest {
     private final RequirementCommandService service = new RequirementCommandService(
             requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher,
             mock(sk.tracker.domain.repository.TrackerRepository.class),
-            mock(sk.workingset.domain.repository.WorkingSetRepository.class),
-            mock(sk.workingset.domain.repository.LightTrackerItemRepository.class));
+            mock(WorkingSetRepository.class),
+            mock(LightTrackerItemRepository.class));
     private final Requirement before = Requirement.create(
             L0, CommonId.of("265506033508288"), TrackerId.of("264905365135296"), "A", "source description", R3, Version.of("1.2"));
 

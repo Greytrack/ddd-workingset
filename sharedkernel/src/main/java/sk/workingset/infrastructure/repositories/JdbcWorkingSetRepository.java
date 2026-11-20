@@ -1,11 +1,12 @@
 package sk.workingset.infrastructure.repositories;
 
+import sk.workingset.error.BindingResCode;
+
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Propagation;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import sk.RequestThreadHolder;
@@ -13,9 +14,10 @@ import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.*;
-import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -112,7 +114,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                         WHERE id = ? AND delete_flag = 0
                         """, workingSet.name(), workingSet.color(), actor, now, id.numericValue());
         if (updated != 1) {
-            throw new BindingFailure(Reason.WorkingSetNotFound, id.value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value());
         }
         jdbc.update("""
                 UPDATE air_inst_common
@@ -138,7 +140,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                         """, id, id, id, id, workingSet.parentWorkingSetId().numericValue(), workingSet.name(), "WS-" + id,
                 workingSet.color(), owner, auditActor, now, auditActor, now) == 1;
         if (!inserted) {
-            throw new BindingFailure(Reason.WorkingSetAlreadyExists, workingSet.id().value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, workingSet.id().value());
         }
         commonInstances.save(new AirInstCommonPo(id, 1008L, 100801L, 10080101L, null,
                 "WS-" + id, workingSet.name(), null, null, 1L, 0, 0L, auditActor, now, auditActor, now,

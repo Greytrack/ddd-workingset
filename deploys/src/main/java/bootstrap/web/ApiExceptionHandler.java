@@ -3,6 +3,7 @@ package bootstrap.web;
 import sk.common.error.APIException;
 import sk.common.error.AppException;
 import sk.common.error.DomainException;
+import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.LinkedHashMap;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import alm.requirement.domain.LockVersionConflictException;
-import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.merge.MergeFailure;
 
 /**
@@ -34,15 +34,6 @@ public class ApiExceptionHandler {
     public ResponseEntity<?> handleMergeFailure(MergeFailure failure) {
         return domainResponse(failure, Map.of("code", failure.getCode(), "reason", failure.reason().name(),
                 "message", failure.getMessage() == null ? failure.reason().name() : failure.getMessage()));
-    }
-
-    @ExceptionHandler(BindingFailure.class)
-    public ResponseEntity<?> handleBindingFailure(BindingFailure failure) {
-        Map<String, Object> body = new LinkedHashMap<>(failure.context());
-        body.put("code", failure.getCode());
-        body.put("reason", failure.reason().name());
-        body.put("message", failure.getMessage());
-        return domainResponse(failure, body);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -64,8 +55,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<?> handleDomainFailure(DomainException failure) {
         sk.common.error.ResCode resultCode = failure.getResCode();
-        String reason = resultCode instanceof Enum<?> value ? value.name() : failure.getType().name();
-        LinkedHashMap<String,Object> body = new LinkedHashMap<String, Object>();
+        String reason = switch (resultCode) {
+            case BindingResCode binding -> binding.reason();
+            case Enum<?> value -> value.name();
+            default -> failure.getType().name();
+        };
+        Map<String, Object> body = new LinkedHashMap<>(failure.getContext());
         body.put("code", failure.getCode());
         body.put("reason", reason);
         body.put("message", failure.getType().httpStatus() >= 500 || failure.getMessage() == null
@@ -92,7 +87,7 @@ public class ApiExceptionHandler {
         sk.common.error.ResCode resultCode = failure instanceof AppException app ? app.getResCode() : null;
         int status = switch (resultCode) {
             case WorkingsetResultCode.BAD_REQUEST -> 400;
-            case WorkingsetResultCode.WORKING_SET_NOT_EXISTS -> 404;
+            case BindingResCode.WORKING_SET_NOT_EXISTS -> 404;
             case WorkingsetResultCode.MATERIALIZATION_REJECTED -> 409;
             case null, default -> 500;
         };

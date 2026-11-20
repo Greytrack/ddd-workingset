@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import sk.workingset.application.command.TrackerItemLifecycleService;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 /**
  * 业务对象普通修改提交后，SK 根据来源事件完成首次继承编辑的本地内容切换。

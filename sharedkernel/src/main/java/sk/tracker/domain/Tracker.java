@@ -1,11 +1,15 @@
 package sk.tracker.domain;
 
+import sk.workingset.error.BindingResCode;
+
 import sk.productspace.domain.ProductSpace;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
 import sk.workingset.domain.*;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Objects;
@@ -129,7 +133,7 @@ public final class Tracker {
                                    SharingMode sharingMode) {
         String normalizedName = normalizeName(name);
         if (!classification.allows(sharingMode)) {
-            throw new BindingFailure(BindingFailure.Reason.SharingModeMismatch, classification.id());
+            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
         }
         return new Tracker(id, normalizedName, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
                 sharingMode, null, false);
@@ -223,13 +227,13 @@ public final class Tracker {
 
     public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {
         if (hasItems) {
-            throw new BindingFailure(BindingFailure.Reason.TrackerHasItems, trackerId.value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_HAS_ITEMS, trackerId.value());
         }
         if (hasOrgChildren) {
-            throw new BindingFailure(BindingFailure.Reason.TrackerHasOrgChildren, trackerId.value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_HAS_ORG_CHILDREN, trackerId.value());
         }
         if (hasDerivedChildren) {
-            throw new BindingFailure(BindingFailure.Reason.TrackerHasDerivedChildren, trackerId.value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_HAS_DERIVED_CHILDREN, trackerId.value());
         }
     }
 

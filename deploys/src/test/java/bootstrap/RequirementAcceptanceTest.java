@@ -34,9 +34,9 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 /**
  * 验收测试：真实启动内嵌 Tomcat + PostgreSQL + Redis，通过 HTTP 创建需求、修改标题，

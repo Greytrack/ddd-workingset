@@ -1,10 +1,13 @@
-package sk.workingset.domain;
+package sk.workingset.domain.workingset;
+
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
 
 import org.jmolecules.ddd.annotation.Service;
 import sk.tracker.domain.Tracker;
-import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet.TrackerBinding;
+import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
 
 import java.util.List;
 
@@ -27,7 +30,7 @@ public final class WorkingSetLineageDomainService {
         if (target.id().equals(source.parentWorkingSetId())) {
             return source;
         }
-        throw new BindingFailure(Reason.WorkingSetsNotAdjacent, source.id().value() + "/" + target.id().value());
+        throw DomainException.withMessage(BindingResCode.WORKING_SETS_NOT_ADJACENT, source.id().value() + "/" + target.id().value());
     }
 
     /**

@@ -1,5 +1,9 @@
 package bootstrap;
 
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,9 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.workingset.application.command.WorkingSetCommandService;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.WorkingSetLineageDomainService;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WorkingSetLineageAcceptanceTest {
@@ -95,8 +100,8 @@ class WorkingSetLineageAcceptanceTest {
 
     @Test
     void persistedEmptyChildHasNoComparableTrackerCandidatesInEitherDirection() {
-        sk.workingset.domain.WorkingSet child = workingSets.findById(WorkingSetId.of(create("1", "empty"))).orElseThrow();
-        sk.workingset.domain.WorkingSet root = workingSets.findById(WorkingSetId.of("1")).orElseThrow();
+        WorkingSet child = workingSets.findById(WorkingSetId.of(create("1", "empty"))).orElseThrow();
+        WorkingSet root = workingSets.findById(WorkingSetId.of("1")).orElseThrow();
 
         assertTrue(WorkingSetLineageDomainService.comparableBindings(root, child).isEmpty());
         assertTrue(WorkingSetLineageDomainService.comparableBindings(child, root).isEmpty());
@@ -215,9 +220,9 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     private void assertCreateFailure(String parent, String child, String reason) {
-        sk.workingset.domain.BindingFailure failure = org.junit.jupiter.api.Assertions.assertThrows(sk.workingset.domain.BindingFailure.class,
+        DomainException failure = org.junit.jupiter.api.Assertions.assertThrows(DomainException.class,
                 () -> commands.createChildWorkingSet(WorkingSetId.of(parent), WorkingSetId.of(child)));
-        assertEquals(reason, failure.reason().name());
+        assertEquals(reason, ((BindingResCode) failure.getResCode()).reason());
     }
 
     private static String path(String id) {

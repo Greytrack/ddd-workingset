@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import sk.RequestThreadHolder;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** Tracker 只读布尔查询的 JDBC 适配器。 */
 @Component

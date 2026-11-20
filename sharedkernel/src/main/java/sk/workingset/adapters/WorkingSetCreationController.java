@@ -3,7 +3,7 @@ package sk.workingset.adapters;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sk.workingset.application.command.WorkingSetCreationService;
-import sk.workingset.domain.WorkingSetCreation;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 
 import java.net.URI;
 import java.time.Instant;

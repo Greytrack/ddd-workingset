@@ -1,5 +1,7 @@
 package sk.workingset.application.command;
 
+import sk.workingset.error.BindingResCode;
+
 import sk.SharedKernelResultCode;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
@@ -15,19 +17,17 @@ import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetCreation.*;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetCreation;
+import sk.workingset.domain.workingset.WorkingSetCreation.*;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
-import sk.workingset.domain.repository.WorkingSetCreationRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetCreationRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.time.Instant;
@@ -88,7 +88,7 @@ public class WorkingSetCreationService {
             return replay(previous.orElseThrow(), request);
         }
         if (workingSets.findByIdForCreation(target).isPresent()) {
-            throw new BindingFailure(Reason.WorkingSetAlreadyExists, target.value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, target.value());
         }
         workingSets.requireReady(WorkingSetId.of(request.parentWorkingSetId()));
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
@@ -121,7 +121,7 @@ public class WorkingSetCreationService {
         }
         workingSets.requireReady(target);
         WorkingSet targetSet = workingSets.findById(target)
-                .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, target.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, target.value()));
         WorkingSetId parentId = targetSet.requireParentId();
         TreeSet<String> requested = new TreeSet<>(parentTrackerIds == null ? List.of() : parentTrackerIds);
         TreeSet<String> spaces = new TreeSet<String>();
@@ -150,7 +150,7 @@ public class WorkingSetCreationService {
             if (source != null) spaces.add(source.productSpaceId());
         }
         if (shared.isEmpty() && unshared.isEmpty() && spaces.isEmpty()) {
-            throw new BindingFailure(Reason.NoDerivableTracker, target.value());
+            throw DomainException.withMessage(BindingResCode.NO_DERIVABLE_TRACKER, target.value());
         }
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
                 List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
@@ -186,7 +186,7 @@ public class WorkingSetCreationService {
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
         if (!existing.request().equals(request)) {
-            throw new BindingFailure(Reason.WorkingSetAlreadyExists, request.newWorkingSetId());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, request.newWorkingSetId());
         }
         return existing;
     }
@@ -276,9 +276,10 @@ public class WorkingSetCreationService {
                         throw DomainException.withMessage(SharedKernelResultCode.EVENT_STATE_INVALID, "Relation events require batch execution");
             };
             return creation.advance(written ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
-        } catch (BindingFailure failure) {
-            return recordFailure(creation, item, failure.reason().name());
         } catch (DomainException failure) {
+            if (failure.getResCode() instanceof BindingResCode binding) {
+                return recordFailure(creation, item, binding.reason());
+            }
             FailureReason reason = FailureReason.of(failure);
             if (reason == FailureReason.PREPARING) {
                 throw failure;

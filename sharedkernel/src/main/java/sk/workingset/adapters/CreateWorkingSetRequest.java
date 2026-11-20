@@ -1,6 +1,6 @@
 package sk.workingset.adapters;
 
-import sk.workingset.domain.WorkingSetCreation;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 
 import java.util.List;
 

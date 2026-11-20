@@ -12,8 +12,9 @@ import sk.workingset.application.query.provider.RelationSourceQueryProvider.Asso
 import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import sk.workingset.domain.*;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet.TrackerBinding;
-import sk.workingset.domain.WorkingSet.TrackerOrigin;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
+import sk.workingset.domain.workingset.WorkingSet.TrackerOrigin;
 import sk.workingset.domain.event.AssociationCreationRequestedEvent;
 import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
 import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
@@ -22,7 +23,8 @@ import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.util.ArrayList;
 import java.util.List;

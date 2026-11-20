@@ -8,7 +8,7 @@ import sk.tracker.application.command.TrackerCommandService;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 @RestController

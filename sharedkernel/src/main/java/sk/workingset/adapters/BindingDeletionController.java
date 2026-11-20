@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.WorkingSetDeletionService;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /**
  * 绑定解除与聚合删除的 HTTP 入口。

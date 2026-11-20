@@ -16,13 +16,12 @@ import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.*;
-import sk.workingset.domain.WorkingSetCreation.Failure;
-import sk.workingset.domain.WorkingSetCreation.IndexProgress;
-import sk.workingset.domain.WorkingSetCreation.ItemOutcome;
-import sk.workingset.domain.WorkingSetCreation.Stage;
+import sk.workingset.domain.workingset.*;
+import sk.workingset.domain.workingset.WorkingSetCreation.Failure;
+import sk.workingset.domain.workingset.WorkingSetCreation.IndexProgress;
+import sk.workingset.domain.workingset.WorkingSetCreation.ItemOutcome;
+import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.repository.WorkingSetCreationSnapshotStore;
-import sk.workingset.domain.repository.WorkingSetRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -132,7 +131,7 @@ public final class WorkingSetItemIndexer {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
         Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
-        sk.workingset.domain.WorkingSet targetSet = workingSets.findByIdForCreation(target).orElseThrow();
+        WorkingSet targetSet = workingSets.findByIdForCreation(target).orElseThrow();
         if (child == null || !targetSet.hasTrackerBinding(child.trackerId())) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }

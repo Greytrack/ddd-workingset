@@ -1,8 +1,6 @@
-package sk.workingset.domain.repository;
+package sk.workingset.domain.workingset;
 
 import org.jmolecules.ddd.annotation.Repository;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetId;
 
 import java.util.Optional;
 

@@ -18,6 +18,8 @@ import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.Entry;
 import sk.workingset.domain.merge.MergeRound.ItemResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Instant;
 import java.util.ArrayList;

@@ -10,7 +10,7 @@ import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import sk.workingset.domain.repository.CowMaterializationStore;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 import java.time.Instant;
 

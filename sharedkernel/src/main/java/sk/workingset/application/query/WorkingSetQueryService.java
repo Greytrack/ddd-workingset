@@ -1,5 +1,7 @@
 package sk.workingset.application.query;
 
+import sk.workingset.error.BindingResCode;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,9 +16,10 @@ import sk.workingset.application.query.model.TrackerSummary;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.*;
-import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +40,7 @@ public class WorkingSetQueryService {
     public WorkingSetSummary find(WorkingSetId id) {
         requireReady(id);
         return query.find(id.numericValue())
-                .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -51,7 +54,7 @@ public class WorkingSetQueryService {
         find(id);
         List<Long> ancestors = query.findAncestors(id.numericValue());
         if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.numericValue().equals(ancestors.getLast())) {
-            throw new BindingFailure(Reason.WorkingSetCycle, id.value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, id.value());
         }
         return ancestors;
     }

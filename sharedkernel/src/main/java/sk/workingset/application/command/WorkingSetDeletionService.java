@@ -1,5 +1,7 @@
 package sk.workingset.application.command;
 
+import sk.workingset.error.BindingResCode;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,14 +14,12 @@ import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSet.TrackerBinding;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Comparator;
@@ -79,12 +79,15 @@ public class WorkingSetDeletionService {
         for (TrackerBinding binding : bindings) {
             try {
                 checkUnbind(binding);
-            } catch (BindingFailure failure) {
-                blockers.put(binding.trackerId().value(), failure.reason().name());
+            } catch (DomainException failure) {
+                if (!(failure.getResCode() instanceof BindingResCode code)) {
+                    throw failure;
+                }
+                blockers.put(binding.trackerId().value(), code.reason());
             }
         }
         if (!blockers.isEmpty()) {
-            throw new BindingFailure(Reason.MemberCannotBeUnbound, id.value(), Map.of("members", blockers));
+            throw DomainException.withMessage(BindingResCode.MEMBER_CANNOT_BE_UNBOUND, id.value(), Map.of("members", blockers));
         }
         bindings.forEach(binding -> workingSet.unbindTracker(binding.trackerId()));
         workingSet.spaces().forEach(binding -> workingSet.removeSpace(binding.productSpaceId()));
@@ -96,7 +99,7 @@ public class WorkingSetDeletionService {
     private void assertNoChildren(WorkingSetId id) {
         List<String> children = queries.findChildren(id.numericValue()).stream().map(WorkingSetId::of).map(WorkingSetId::value).toList();
         if (!children.isEmpty()) {
-            throw new BindingFailure(Reason.WorkingSetHasChildren, id.value(), Map.of("childWorkingSetIds", children));
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN, id.value(), Map.of("childWorkingSetIds", children));
         }
     }
 
@@ -115,13 +118,13 @@ public class WorkingSetDeletionService {
 
     private void removeSpace(WorkingSet workingSet, String spaceId) {
         if (!workingSet.hasSpaceBinding(spaceId)) {
-            throw new BindingFailure(Reason.SpaceBindingNotFound, spaceId);
+            throw DomainException.withMessage(BindingResCode.SPACE_BINDING_NOT_FOUND, spaceId);
         }
         List<TrackerBinding> members = workingSet.trackers().stream()
                 .filter(binding -> binding.productSpaceId().equals(spaceId)).toList();
         for (TrackerBinding binding : members) {
             if (!lockTracker(binding.trackerId()).isRootFolder()) {
-                throw new BindingFailure(Reason.SpaceStillHasTrackers, spaceId);
+                throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);
             }
         }
         members.forEach(this::checkUnbind);
@@ -139,11 +142,11 @@ public class WorkingSetDeletionService {
 
     private WorkingSet lockWorkingSet(WorkingSetId id) {
         return workingSets.findById(id)
-                .orElseThrow(() -> new BindingFailure(Reason.WorkingSetNotFound, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
     }
 
     private Tracker lockTracker(TrackerId id) {
         return trackers.lockTracker(id)
-                .orElseThrow(() -> new BindingFailure(Reason.TrackerNotFound, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
     }
 }

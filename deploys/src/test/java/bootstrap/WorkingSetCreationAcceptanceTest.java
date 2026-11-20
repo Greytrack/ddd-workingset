@@ -1,5 +1,9 @@
 package bootstrap;
 
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
+
 import static bootstrap.FixtureIds.fixtureId;
 
 import static org.awaitility.Awaitility.await;
@@ -39,11 +43,11 @@ import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.WorkingSetCreation;
-import sk.workingset.domain.WorkingSetCreation.Mode;
-import sk.workingset.domain.WorkingSetCreation.Request;
-import sk.workingset.domain.WorkingSetCreation.Stage;
-import sk.workingset.domain.WorkingSetCreation.Status;
+import sk.workingset.domain.workingset.WorkingSetCreation;
+import sk.workingset.domain.workingset.WorkingSetCreation.Mode;
+import sk.workingset.domain.workingset.WorkingSetCreation.Request;
+import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
+import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "workingset.creation.index-batch-size=2")
@@ -245,9 +249,9 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void rejectsExistingTargetWithoutMarkingItPreparing() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", child);
-        sk.workingset.domain.BindingFailure failure = assertThrows(sk.workingset.domain.BindingFailure.class, () ->
+        DomainException failure = assertThrows(DomainException.class, () ->
                 creations.submit(new Request("1", child, "existing-target", List.of(), List.of(), List.of())));
-        assertEquals("WorkingSetAlreadyExists", failure.reason().name());
+        assertEquals(BindingResCode.WORKING_SET_ALREADY_EXISTS, failure.getResCode());
         assertEquals(HttpStatus.OK, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
     }
 

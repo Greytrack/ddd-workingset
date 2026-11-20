@@ -1,5 +1,9 @@
 package sk.productspace.application.command;
 
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
+
 import java.util.List;
 import java.util.Map;
 
@@ -12,10 +16,7 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.BindingFailure;
-import sk.workingset.domain.BindingFailure.Reason;
-import sk.workingset.domain.WorkingSetId;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -38,13 +39,13 @@ public class ProductSpaceCommandService {
     @Transactional
     public void delete(String id) {
         ProductSpace space = spaces.findById(id)
-                .orElseThrow(() -> new BindingFailure(Reason.ProductSpaceNotFound, id));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, id));
         List<String> bound = queries.findWorkingSetsBoundToSpace(id).stream().map(String::valueOf).toList();
         if (!bound.isEmpty()) {
-            throw new BindingFailure(Reason.SpaceStillBoundInWorkingSet, id, Map.of("workingSetIds", bound));
+            throw DomainException.withMessage(BindingResCode.SPACE_STILL_BOUND_IN_WORKING_SET, id, Map.of("workingSetIds", bound));
         }
         if (trackerQueries.hasTrackersInSpace(id)) {
-            throw new BindingFailure(Reason.SpaceStillHasTrackers, id);
+            throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, id);
         }
         spaces.delete(space);
     }

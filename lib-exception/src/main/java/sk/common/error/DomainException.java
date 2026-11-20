@@ -1,6 +1,7 @@
 package sk.common.error;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class DomainException extends APIException {
@@ -9,6 +10,7 @@ public class DomainException extends APIException {
     private final DomainErrorType type;
     private final ResCode resCode;
     private List<FieldViolation> fieldViolations = List.of();
+    private Map<String, Object> context = Map.of();
 
     public DomainException(DomainResCode code, Object... args) {
         this(code.getType(), code, args);
@@ -25,6 +27,16 @@ public class DomainException extends APIException {
     /** Creates a domain failure with a concrete message instead of formatting the code description. */
     public static DomainException withMessage(DomainResCode code, String message) {
         return new DomainException(code.getType(), code, message, null);
+    }
+
+    public static DomainException withMessage(DomainResCode code, String message, Map<String, Object> context) {
+        DomainException exception = withMessage(code, message);
+        exception.context = Map.copyOf(context);
+        return exception;
+    }
+
+    public Map<String, Object> getContext() {
+        return context;
     }
 
     public DomainException(DomainErrorType type, ResCode code, Throwable cause, Object... args) {

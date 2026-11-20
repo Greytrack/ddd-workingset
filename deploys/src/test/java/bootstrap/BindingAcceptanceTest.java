@@ -1,5 +1,9 @@
 package bootstrap;
 
+import sk.workingset.error.BindingResCode;
+
+import sk.common.error.DomainException;
+
 import static bootstrap.FixtureIds.fixtureId;
 
 import static org.awaitility.Awaitility.await;
@@ -35,7 +39,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.domain.BindingFailure;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -171,8 +174,8 @@ class BindingAcceptanceTest {
     void doesNotCreateSecondDerivationForTheSameParentTracker() {
         bindSpace(ws);
         derive(ws, unshared, sourceItem);
-        BindingFailure failure = assertThrows(BindingFailure.class, () -> derive(ws, unshared, sourceItem));
-        assertEquals(BindingFailure.Reason.TrackerAlreadyBound, failure.reason());
+        DomainException failure = assertThrows(DomainException.class, () -> derive(ws, unshared, sourceItem));
+        assertEquals(BindingResCode.TRACKER_ALREADY_BOUND, failure.getResCode());
     }
 
     @Test
@@ -440,8 +443,8 @@ class BindingAcceptanceTest {
     }
 
     private static void assertDirectSourceFailure(org.junit.jupiter.api.function.Executable action) {
-        BindingFailure failure = org.junit.jupiter.api.Assertions.assertThrows(BindingFailure.class, action);
-        assertEquals(BindingFailure.Reason.SourceTrackerNotFound, failure.reason());
+        DomainException failure = org.junit.jupiter.api.Assertions.assertThrows(DomainException.class, action);
+        assertEquals(BindingResCode.SOURCE_TRACKER_NOT_FOUND, failure.getResCode());
     }
 
     private String spacePath(String id) {

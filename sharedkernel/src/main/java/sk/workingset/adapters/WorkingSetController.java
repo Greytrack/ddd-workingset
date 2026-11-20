@@ -10,8 +10,8 @@ import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.WorkingSet;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;

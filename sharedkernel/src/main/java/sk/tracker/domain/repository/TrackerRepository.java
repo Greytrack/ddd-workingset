@@ -3,7 +3,7 @@ package sk.tracker.domain.repository;
 import org.jmolecules.ddd.annotation.Repository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.List;
 import java.util.Optional;

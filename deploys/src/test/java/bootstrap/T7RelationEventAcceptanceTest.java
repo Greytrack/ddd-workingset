@@ -32,13 +32,12 @@ import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.AssociationEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(T7RelationEventAcceptanceTest.RelationConfiguration.class)
@@ -79,7 +78,7 @@ class T7RelationEventAcceptanceTest {
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
 
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                assertEquals(sk.workingset.domain.WorkingSetCreation.Status.Succeeded,
+                assertEquals(WorkingSetCreation.Status.Succeeded,
                         creation(accepted.getBody().creationId()).status()));
 
         assertEquals(1, relationEvents.references().size());

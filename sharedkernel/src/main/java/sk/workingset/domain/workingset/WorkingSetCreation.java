@@ -1,4 +1,4 @@
-package sk.workingset.domain;
+package sk.workingset.domain.workingset;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;

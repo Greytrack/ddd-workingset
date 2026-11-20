@@ -29,11 +29,11 @@ import sk.workingset.domain.Revision;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.WorkingSet;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /**
  * ALM Requirement 命令侧应用服务：创建、普通修改（修改前快照 + 保存成功后发布来源事件）。

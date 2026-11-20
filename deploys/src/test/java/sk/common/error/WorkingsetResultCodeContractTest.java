@@ -11,11 +11,25 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import alm.requirement.domain.RequirementResultCode;
+import bootstrap.web.ApiExceptionHandler;
 import sk.workingset.application.FailureReason;
+import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 /** T4 §5.4: numeric API codes are stable, unique, and assigned to fixed ranges. */
 class WorkingsetResultCodeContractTest {
+
+    @Test
+    void bindingFailureResponseKeepsItsPublicReasonAndContext() {
+        var error = DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN,
+                "42", Map.of("childWorkingSetIds", java.util.List.of("43")));
+
+        var response = new ApiExceptionHandler().handleDomainFailure(error);
+
+        assertEquals(409, response.getStatusCode().value());
+        assertEquals(Map.of("code", 1207, "reason", "WorkingSetHasChildren", "message", "42",
+                "childWorkingSetIds", java.util.List.of("43")), response.getBody());
+    }
 
     @Test
     void domainErrorKeepsBusinessCodeWhenStatusIsOverridden() {
@@ -31,8 +45,9 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void codesAreUniqueAndInsideDeclaredPublicRanges() {
-        java.util.List<Integer> codes = java.util.stream.Stream.concat(Arrays.stream(WorkingsetResultCode.values()),
-                Arrays.stream(RequirementResultCode.values())).map(DomainResCode::getCode).toList();
+        java.util.List<Integer> codes = java.util.stream.Stream.of(WorkingsetResultCode.values(),
+                        BindingResCode.values(), RequirementResultCode.values())
+                .flatMap(Arrays::stream).map(DomainResCode::getCode).toList();
         assertEquals(codes.size(), new HashSet<>(codes).size(), "duplicate public error code");
         assertTrue(codes.stream().allMatch(code -> code >= 1000 && code <= 1499),
                 "public error code outside 1000-1499");
@@ -59,17 +74,17 @@ class WorkingsetResultCodeContractTest {
     void representativeCodesStayInTheirContractRanges() {
         assertRange(WorkingsetResultCode.BAD_REQUEST, 1000, 1099);
         assertRange(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT, 1000, 1099);
-        assertRange(WorkingsetResultCode.WORKING_SET_NOT_EXISTS, 1200, 1299);
-        assertRange(WorkingsetResultCode.TRACKER_HAS_ITEMS, 1200, 1299);
-        assertRange(WorkingsetResultCode.NO_DERIVABLE_TRACKER, 1200, 1299);
+        for (BindingResCode code : BindingResCode.values()) {
+            assertRange(code, 1200, 1299);
+        }
         assertRange(WorkingsetResultCode.MERGE_PAIR_MERGE_IN_PROGRESS, 1300, 1399);
         assertRange(WorkingsetResultCode.MERGE_STALE_EVIDENCE, 1300, 1399);
         assertRange(WorkingsetResultCode.MATERIALIZATION_REJECTED, 1400, 1499);
         assertEquals(1403, RequirementResultCode.LOCK_VERSION_CONFLICT.getCode());
     }
 
-    private static void assertRange(WorkingsetResultCode code, int from, int to) {
+    private static void assertRange(DomainResCode code, int from, int to) {
         assertTrue(code.getCode() >= from && code.getCode() <= to,
-                code.name() + " -> " + code.getCode() + " outside " + from + "-" + to);
+                code + " -> " + code.getCode() + " outside " + from + "-" + to);
     }
 }

@@ -27,8 +27,9 @@ import sk.workingset.domain.Revision;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** T6-C：创建时的身份分配与工作集归属。 */
 class RequirementCreateScopeTest {
@@ -42,7 +43,7 @@ class RequirementCreateScopeTest {
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
             repository, mock(RequirementSnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackers,
-            workingSets, mock(sk.workingset.domain.repository.LightTrackerItemRepository.class));
+            workingSets, mock(LightTrackerItemRepository.class));
 
     private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
         Tracker tracker = mock(Tracker.class);

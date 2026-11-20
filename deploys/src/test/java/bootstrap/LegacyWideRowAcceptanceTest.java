@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.infrastructure.repositories.JdbcTrackerRepository;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
 
 import java.math.BigDecimal;

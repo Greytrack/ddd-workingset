@@ -18,8 +18,11 @@ import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeFailure;
 import sk.workingset.domain.merge.MergeFailure.Reason;
 import sk.workingset.domain.merge.MergeCheckpointRepository;
-import sk.workingset.domain.repository.LightTrackerItemRepository;
-import sk.workingset.domain.repository.WorkingSetRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSet;
+import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
+import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.time.Instant;
 import java.util.*;

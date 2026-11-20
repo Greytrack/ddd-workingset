@@ -4,7 +4,7 @@ import java.util.Objects;
 
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.WorkingSetId;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /** Tracker 聚合已创建；WorkingSet 绑定由 SK 监听事件后独立完成。 */
 public record TrackerCreatedEvent(TrackerId trackerId,

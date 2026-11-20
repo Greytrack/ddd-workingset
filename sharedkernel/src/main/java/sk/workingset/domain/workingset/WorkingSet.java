@@ -1,4 +1,6 @@
-package sk.workingset.domain;
+package sk.workingset.domain.workingset;
+
+import sk.workingset.error.BindingResCode;
 
 import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
@@ -6,7 +8,7 @@ import sk.productspace.domain.ProductSpace;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.BindingFailure.Reason;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -51,7 +53,7 @@ public final class WorkingSet {
                        Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers, boolean newAggregate) {
         this.id = Objects.requireNonNull(id, "id");
         if (id.equals(parentWorkingSetId)) {
-            throw new BindingFailure(Reason.WorkingSetCycle, id.value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, id.value());
         }
         if (DEFAULT_ID.equals(id) != (parentWorkingSetId == null)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "only the default Working Set has no parent");
@@ -121,7 +123,7 @@ public final class WorkingSet {
 
     public static void requireDeletable(WorkingSetId id) {
         if (DEFAULT_ID.equals(id)) {
-            throw new BindingFailure(Reason.DefaultWorkingSetUndeletable, id.value());
+            throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, id.value());
         }
     }
 
@@ -188,7 +190,7 @@ public final class WorkingSet {
     public SpaceBinding bindSpace(ProductSpace space, SpaceOrigin origin) {
         WorkingSet.SpaceBinding binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
         if (spaces.putIfAbsent(space.id(), binding) != null) {
-            throw new BindingFailure(Reason.AlreadyBound, space.id());
+            throw DomainException.withMessage(BindingResCode.ALREADY_BOUND, space.id());
         }
         return binding;
     }
@@ -196,7 +198,7 @@ public final class WorkingSet {
     public TrackerBinding trackerBinding(TrackerId trackerId) {
         WorkingSet.TrackerBinding binding = trackers.get(trackerId);
         if (binding == null) {
-            throw new BindingFailure(Reason.TrackerBindingNotFound, trackerId.value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, trackerId.value());
         }
         return binding;
     }
@@ -208,16 +210,16 @@ public final class WorkingSet {
 
     public void removeSpace(String spaceId) {
         if (trackers.values().stream().anyMatch(binding -> binding.productSpaceId().equals(spaceId))) {
-            throw new BindingFailure(Reason.SpaceStillHasTrackers, spaceId);
+            throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);
         }
         if (spaces.remove(spaceId) == null) {
-            throw new BindingFailure(Reason.SpaceBindingNotFound, spaceId);
+            throw DomainException.withMessage(BindingResCode.SPACE_BINDING_NOT_FOUND, spaceId);
         }
     }
 
     public WorkingSetId requireParentId() {
         if (parentWorkingSetId == null) {
-            throw new BindingFailure(Reason.WorkingSetNotWritable, "default Working Set cannot bind upstream Trackers");
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "default Working Set cannot bind upstream Trackers");
         }
         return parentWorkingSetId;
     }
@@ -232,7 +234,7 @@ public final class WorkingSet {
 
     public void requireSpaceBinding(String spaceId) {
         if (!hasSpaceBinding(spaceId)) {
-            throw new BindingFailure(Reason.MissingSpaceBinding, spaceId);
+            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, spaceId);
         }
     }
 
@@ -242,7 +244,7 @@ public final class WorkingSet {
         // 默认根的原生 Tracker 直接来自平台投影。子工作集的有效范围由绑定定义。
         boolean inParentRange = DEFAULT_ID.equals(parentId) ? ownedByParent : boundInParent;
         if (!inParentRange || (source.sharingMode() == SharingMode.UNSHARED && !ownedByParent)) {
-            throw new BindingFailure(Reason.SourceTrackerNotFound, source.trackerId().value());
+            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, source.trackerId().value());
         }
     }
 
@@ -250,10 +252,10 @@ public final class WorkingSet {
         requireSpaceBinding(tracker.productSpaceId());
         if (!tracker.classificationId().equals(classification.id())
                 || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
-            throw new BindingFailure(Reason.SharingModeMismatch, classification.id());
+            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
         }
         if (trackers.containsKey(tracker.trackerId())) {
-            throw new BindingFailure(Reason.TrackerAlreadyBound, tracker.trackerId().value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, tracker.trackerId().value());
         }
         WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
         WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.id(),
