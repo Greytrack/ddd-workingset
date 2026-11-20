@@ -157,11 +157,7 @@ function renderTaskCard(task) {
   const processed = (progress.succeeded || 0) + (progress.failed || 0) + (progress.skipped || 0);
   const percent = total ? Math.min(100, Math.round(processed * 100 / total)) : (isTerminal(status) ? 100 : 6);
 
-  const hasLegacyBindings = LEGACY_BINDING_STAGES.some((stage) => task.stageProgress?.[stage]);
-  const order = hasLegacyBindings
-    ? STAGES.flatMap((stage) => stage === 'BIND_PRODUCT_AND_TRACKER' ? LEGACY_BINDING_STAGES : [stage])
-    : STAGES;
-  const stages = order.filter((stage) => task.mode !== 'EXTEND' || stage !== 'CREATE_WORKING_SET').map((stage) => {
+  const stages = STAGES.filter((stage) => task.mode !== 'EXTEND' || stage !== 'CREATE_WORKING_SET').map((stage) => {
     const p = task.stageProgress?.[stage];
     const stageProcessed = p ? (p.succeeded || 0) + (p.failed || 0) + (p.skipped || 0) : 0;
     const stageTotal = p && p.total != null ? p.total : null;

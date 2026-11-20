@@ -5,11 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.SavepointManager;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.RequestThreadHolder;
-import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
@@ -27,6 +27,7 @@ import sk.workingset.error.BindingResCode;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -245,14 +246,12 @@ public class WorkingSetCreationService {
     private boolean advanceOneStepInTransaction(String id) {
         return Boolean.TRUE.equals(transaction.execute(tx -> {
             // 每步重新锁定任务并读取进度，事件重投也从已提交的位置继续。
-            WorkingSetCreation current = lock(id).resumeWithCurrentBindingStage();
+            WorkingSetCreation current = lock(id);
             if (current.status() != Status.Running) {
                 return false;
             }
 
-            WorkingSetCreation updated = current.stage() == Stage.INDEX_UNSHARED_TRACKERS
-                    ? indexer.indexBatch(current, tx)
-                    : executeItem(current);
+            WorkingSetCreation updated = executeStageStep(current, tx);
             store.save(updated);
 
             revealTrackersWhenExtensionFinishes(updated);
@@ -284,42 +283,37 @@ public class WorkingSetCreationService {
     }
 
     /**
-     * 执行当前阶段的一项，阶段推进由 WorkingSetCreation 记录处理结果时决定。
+     * 分派本次事务处理的阶段。索引每次最多执行一页，其余阶段执行当前项。
      */
-    private WorkingSetCreation executeItem(WorkingSetCreation creation) {
+    private WorkingSetCreation executeStageStep(WorkingSetCreation creation, SavepointManager savepoints) {
         String item = creation.currentItem();
         Request request = creation.request();
         WorkingSetId target = WorkingSetId.of(request.numericTargetWorkingSetId());
-        WorkingSetCreation.Stage stage = creation.stage();
-        if (stage == Stage.PUBLISH_RELATION_EVENTS) {
-            OriginType originType = creation.request().mode() == Mode.CREATE ? OriginType.CREATION : OriginType.EXTENSION;
-            RelationEventStep.StepResult result = relationEvents.publish(target, TrackerId.of(item), originType, creation.id());
-            if (result.failed() > 0) {
-                return recordFailure(creation, item, "RELATION_EVENT_FAILED");
-            }
-            return creation.advance(result.skipped() ? ItemOutcome.Skipped : ItemOutcome.Succeeded, null,
-                    Instant.now());
-        }
+        return switch (creation.stage()) {
+            case CREATE_WORKING_SET -> executeScopeWrite(creation, item, () -> {
+                workingSetService.createChildForTask(
+                        WorkingSetId.of(request.numericParentWorkingSetId()), target,
+                        request.name(), request.color(), Long.valueOf(creation.requestedBy()));
+                return creation.advance(ItemOutcome.Succeeded, null, Instant.now());
+            });
+            case COPY_UNSHARED_TRACKERS -> executeScopeWrite(creation, item, () -> {
+                boolean copied = workingSetService.deriveUnsharedTrackerForTask(target, TrackerId.of(item),
+                        request.productSpaceIds(), request.mode() == Mode.CREATE,
+                        Long.parseLong(creation.requestedBy()));
+                return creation.advance(copied ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
+            });
+            case BIND_PRODUCT_AND_TRACKER ->
+                    executeScopeWrite(creation, item, () -> bindProductAndTrackers(creation, target));
+            case INDEX_UNSHARED_TRACKERS -> indexer.indexBatch(creation, savepoints);
+            case PUBLISH_RELATION_EVENTS -> publishRelations(creation, target, item);
+        };
+    }
+
+    /** 将本体创建、派生和绑定的领域拒绝记录到任务；索引与关系事件各自处理失败。 */
+    private WorkingSetCreation executeScopeWrite(WorkingSetCreation creation, String item,
+                                                 Supplier<WorkingSetCreation> action) {
         try {
-            return switch (stage) {
-                case CREATE_WORKING_SET -> {
-                    workingSetService.createChildForTask(
-                            WorkingSetId.of(request.numericParentWorkingSetId()), target,
-                            request.name(), request.color(), Long.valueOf(creation.requestedBy()));
-                    yield creation.advance(ItemOutcome.Succeeded, null, Instant.now());
-                }
-                case COPY_UNSHARED_TRACKERS -> {
-                    boolean copied = workingSetService.deriveUnsharedTrackerForTask(target, TrackerId.of(item),
-                            request.productSpaceIds(), request.mode() == Mode.CREATE,
-                            Long.parseLong(creation.requestedBy()));
-                    yield creation.advance(copied ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
-                }
-                case BIND_PRODUCT_AND_TRACKER -> bindProductAndTrackers(creation, target);
-                case INDEX_UNSHARED_TRACKERS, PUBLISH_RELATION_EVENTS,
-                     BIND_PRODUCT_SPACES, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS ->
-                        throw DomainException.withMessage(
-                                SharedKernelResultCode.EVENT_STATE_INVALID, "Unexpected item execution stage: " + stage);
-            };
+            return action.get();
         } catch (DomainException failure) {
             if (failure.getResCode() instanceof BindingResCode binding) {
                 return recordFailure(creation, item, binding.reason());
@@ -330,6 +324,15 @@ public class WorkingSetCreationService {
             }
             return recordFailure(creation, item, reason.name());
         }
+    }
+
+    private WorkingSetCreation publishRelations(WorkingSetCreation creation, WorkingSetId target, String item) {
+        OriginType originType = creation.request().mode() == Mode.CREATE ? OriginType.CREATION : OriginType.EXTENSION;
+        RelationEventStep.StepResult result = relationEvents.publish(target, TrackerId.of(item), originType, creation.id());
+        if (result.failed() > 0) {
+            return recordFailure(creation, item, "RELATION_EVENT_FAILED");
+        }
+        return creation.advance(result.skipped() ? ItemOutcome.Skipped : ItemOutcome.Succeeded, null, Instant.now());
     }
 
     private WorkingSetCreation bindProductAndTrackers(WorkingSetCreation creation, WorkingSetId target) {

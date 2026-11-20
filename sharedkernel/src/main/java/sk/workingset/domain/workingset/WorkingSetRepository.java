@@ -17,10 +17,7 @@ public interface WorkingSetRepository {
 
     /**
      * 创建任务上下文重建：不检查 Preparing。
-     *
-     * @deprecated 待迁移到 WorkingSetQueryProvider / 任务专用 Store；当前仅为兼容保留。
      */
-    @Deprecated(since = "2026-11-20", forRemoval = false)
     Optional<WorkingSet> findByIdForCreation(WorkingSetId id);
 
     /**

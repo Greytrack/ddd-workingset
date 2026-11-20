@@ -87,28 +87,6 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         return advance(outcome, bindingFailures, now);
     }
 
-    /**
-     * 历史阶段名保留用于读取旧任务，运行中的任务从已保存的绑定继续。
-     */
-    public WorkingSetCreation resumeWithCurrentBindingStage() {
-        if ((status != Status.Pending && status != Status.Running)
-                || !(stage.isLegacyBinding() || stageProgress.keySet().stream().anyMatch(Stage::isLegacyBinding))) {
-            return this;
-        }
-        EnumMap<Stage, Progress> updated = new EnumMap<>(Stage.class);
-        updated.putAll(stageProgress);
-        updated.keySet().removeIf(Stage::isLegacyBinding);
-        if (stage == Stage.INDEX_UNSHARED_TRACKERS || stage == Stage.PUBLISH_RELATION_EVENTS) {
-            updated.put(Stage.BIND_PRODUCT_AND_TRACKER, new Progress(0, 0, 1, 1));
-        }
-        Stage next = stage.isLegacyBinding() ? nextUnfinishedStage(updated) : stage;
-        Progress totals = new Progress(updated.values().stream().mapToInt(Progress::succeeded).sum(),
-                updated.values().stream().mapToInt(Progress::failed).sum(),
-                updated.values().stream().mapToInt(Progress::skipped).sum(), total(request));
-        return new WorkingSetCreation(numericId, request, requestedBy, status, next, totals, failures,
-                createdAt, startedAt, completedAt, updated, indexProgress);
-    }
-
     public WorkingSetCreation recordIndexBatch(IndexProgress batch, List<Failure> batchFailures,
                                                boolean finished, Instant now) {
         if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
@@ -159,7 +137,6 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
     private Stage nextUnfinishedStage(EnumMap<Stage, Progress> updatedProgress) {
         // 按执行顺序找第一项未完成的阶段，保留已提交的阶段进度。
         for (Stage candidate : Stage.values()) {
-            if (candidate.isLegacyBinding()) continue;
             int totalItems = request.items(candidate).size();
             Progress checkpoint = updatedProgress.computeIfAbsent(candidate, ignored -> new Progress(0, 0, 0, totalItems));
             if (checkpoint.processed() < totalItems) {
@@ -187,14 +164,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         COPY_UNSHARED_TRACKERS,
         BIND_PRODUCT_AND_TRACKER,
         INDEX_UNSHARED_TRACKERS,
-        PUBLISH_RELATION_EVENTS,
-
-        // 旧任务 JSON 仍可能引用这些值。
-        BIND_PRODUCT_SPACES, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS;
-
-        public boolean isLegacyBinding() {
-            return this == BIND_PRODUCT_SPACES || this == BIND_UNSHARED_TRACKERS || this == BIND_SHARED_TRACKERS;
-        }
+        PUBLISH_RELATION_EVENTS
     }
 
     public enum ItemOutcome {Succeeded, Failed, Skipped}
@@ -295,7 +265,6 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                         && unsharedParentTrackerIds().isEmpty() ? List.of() : List.of(newWorkingSetId());
                 case COPY_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS,
                      PUBLISH_RELATION_EVENTS -> unsharedParentTrackerIds();
-                case BIND_PRODUCT_SPACES, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS -> List.of();
             };
         }
     }

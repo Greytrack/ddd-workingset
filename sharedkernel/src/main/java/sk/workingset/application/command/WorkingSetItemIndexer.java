@@ -132,8 +132,7 @@ public final class WorkingSetItemIndexer {
         TrackerId parent = TrackerId.of(creation.currentItem());
         WorkingSetId target = WorkingSetId.of(creation.request().newWorkingSetId());
         if (creation.failures().stream().anyMatch(failure -> parent.value().equals(failure.trackerId())
-                && (failure.stage() == Stage.COPY_UNSHARED_TRACKERS || failure.stage() == Stage.BIND_PRODUCT_AND_TRACKER
-                || failure.stage() == Stage.BIND_UNSHARED_TRACKERS))) {
+                && (failure.stage() == Stage.COPY_UNSHARED_TRACKERS || failure.stage() == Stage.BIND_PRODUCT_AND_TRACKER))) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
         Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
