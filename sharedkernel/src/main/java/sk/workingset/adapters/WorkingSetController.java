@@ -8,8 +8,6 @@ import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
@@ -17,7 +15,7 @@ import sk.workingset.error.WorkingsetResultCode;
 import java.util.List;
 
 /**
- * Working Set 的查询、绑定、解析与读取入口。批量派生走 T7 扩展任务，不再提供单 Item 派生入口。
+ * Working Set 的查询与管理入口。范围纳入由创建和扩展任务处理。
  */
 @RestController
 @RequestMapping("/api/worksets")
@@ -102,35 +100,6 @@ public class WorkingSetController {
     }
 
     /**
-     * 把产品空间绑定到工作集，建立 SpaceBinding；随后由事件为（工作集，产品空间）创建 Folder Tracker。
-     */
-    @PostMapping("/{workingSetId}/spaces/{spaceId}")
-    @ResponseStatus(HttpStatus.CREATED)
-    public SpaceBindingView bindSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
-        return SpaceBindingView.from(commands.bindSpace(WorkingSetId.of(workingSetId), spaceId));
-    }
-
-    /**
-     * 以共享方式纳入 Tracker，复用上游 trackerId 建立 TrackerBinding。
-     */
-    @PostMapping("/{workingSetId}/trackers/shared/{trackerId}")
-    @ResponseStatus(HttpStatus.CREATED)
-    public TrackerBindingView bindTrackerShared(@PathVariable String workingSetId, @PathVariable String trackerId) {
-        return TrackerBindingView.from(commands.bindTrackerShared(
-                WorkingSetId.of(workingSetId), TrackerId.of(trackerId)));
-    }
-
-    /**
-     * 按工作集与 LocalId 解析 LightTrackerItem，返回其身份、来源与物化状态。
-     */
-    @GetMapping("/{workingSetId}/items/{localId}")
-    public LightTrackerItemView resolve(@PathVariable("workingSetId") String workingSetId,
-                                        @PathVariable("localId") String localId) {
-        LightTrackerItem item = queries.resolve(WorkingSetId.of(workingSetId), LocalId.of(localId));
-        return LightTrackerItemView.from(item);
-    }
-
-    /**
      * 切换 Tracker 在工作集的显示状态。
      */
     @PatchMapping("/{workingSetId}/trackers/{trackerId}/visibility")
@@ -174,11 +143,6 @@ public class WorkingSetController {
     }
 
     public record SpaceBindingView(String productSpaceId, String name, String origin, String state) {
-        static SpaceBindingView from(WorkingSet.SpaceBinding binding) {
-            return new SpaceBindingView(binding.productSpaceId(), binding.name(),
-                    binding.origin().name(), binding.state().name());
-        }
-
         static SpaceBindingView from(SpaceBindingSummary summary) {
             return new SpaceBindingView(String.valueOf(summary.productSpaceId()), summary.name(),
                     summary.origin(), summary.state());
@@ -190,11 +154,6 @@ public class WorkingSetController {
 
     public record TrackerBindingView(String trackerId, String productSpaceId, String classificationId,
                                      String sharingMode, String origin, boolean shown, boolean folderTracker) {
-        static TrackerBindingView from(WorkingSet.TrackerBinding binding) {
-            return new TrackerBindingView(binding.trackerId().value(), binding.productSpaceId(),
-                    binding.classificationId(), binding.sharingMode().name(), binding.origin().name(), true, false);
-        }
-
         static TrackerBindingView from(TrackerBindingSummary summary) {
             return new TrackerBindingView(String.valueOf(summary.trackerId()),
                     String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),

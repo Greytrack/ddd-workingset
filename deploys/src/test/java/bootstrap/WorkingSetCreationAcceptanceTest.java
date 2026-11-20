@@ -14,7 +14,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.common.error.DomainException;
-import sk.workingset.adapters.LightTrackerItemView;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetController.WorkingSetView;
@@ -61,6 +63,7 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private TransactionTemplate transaction;
     @Autowired private IndexEvents indexEvents;
     @Autowired private WorkingSetCreationService creations;
+    @Autowired private WorkingSetQueryService workingSetQueries;
     @Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
 
     @AfterEach
@@ -72,15 +75,15 @@ class WorkingSetCreationAcceptanceTest {
                 space, otherSpace);
         jdbc.update("""
                 DELETE FROM event_publication WHERE serialized_event LIKE ANY (
-                    SELECT '%' || id || '%' FROM working_set_creations WHERE new_working_set_id = ?)
-                """, child);
+                    SELECT '%' || id || '%' FROM working_set_creations WHERE new_working_set_id IN (?, ?))
+                """, child, parent);
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", parent);
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", parent);
-        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
+        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE product_space_id IN (?, ?)", space, otherSpace);
         jdbc.update("DELETE FROM classifications WHERE classification_id IN (?, ?)", shared, unshared);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id IN (?, ?)", space, otherSpace);
@@ -110,9 +113,10 @@ class WorkingSetCreationAcceptanceTest {
                         Map.of("workingSetId", fixtureId("unused-" + child)), Map.class);
                 assertEquals(HttpStatus.CONFLICT, use.getStatusCode());
                 assertEquals("PREPARING", use.getBody().get("reason"));
-                org.springframework.http.ResponseEntity<Map> bind = rest.postForEntity("/api/worksets/" + child + "/spaces/" + space, null, Map.class);
-                assertEquals(HttpStatus.CONFLICT, bind.getStatusCode());
-                assertEquals("PREPARING", bind.getBody().get("reason"));
+                var extension = rest.postForEntity("/api/worksets/" + child + "/extensions",
+                        Map.of("requestId", "pending-" + child, "trackerIds", List.of(shared)), Map.class);
+                assertEquals(HttpStatus.CONFLICT, extension.getStatusCode());
+                assertEquals("PREPARING", extension.getBody().get("reason"));
                 org.springframework.http.ResponseEntity<Map> createItem = rest.postForEntity("/api/requirements", Map.of("workingSetId", child,
                         "trackerId", shared, "title", "item", "description", "description", "revision", 1), Map.class);
                 assertEquals(HttpStatus.CONFLICT, createItem.getStatusCode());
@@ -183,6 +187,11 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(bindings, bindings());
         assertEquals(java.util.Set.of(unshared, firstFolder, secondFolder), new java.util.HashSet<>(jdbc.queryForList(
                 "SELECT source_id FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL", String.class, child)));
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM air_inst_tracker_rev r JOIN air_ws_tracker t ON t.id = r.id
+                WHERE r.workingset_id = ? AND r.tracker_class = 10070101 AND t.sub_class_id = r.tracker_class
+                  AND r.base_class = 1007 AND r.class = 100701 AND r.type = 10070101
+                """, Integer.class, Long.valueOf(child)));
     }
 
     @Test
@@ -209,11 +218,7 @@ class WorkingSetCreationAcceptanceTest {
     void rejectsSpaceAndSharedTrackerOutsideTheDirectParentsBindings() {
         seedRange();
         FixtureIds.insertWorkingSet(jdbc, "1", parent);
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
-                null, Map.class).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1,
-                jdbc.queryForObject("SELECT count(*) FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
-                        Integer.class, parent, space)));
+        FixtureIds.extendWithRootFolder(rest, jdbc, parent, space);
         CreationView completed = awaitStatus(submit(new Request(parent, child, "outside-parent",
                 List.of(space, otherSpace), List.of(shared), List.of())), Status.PartiallySucceeded);
         assertEquals(List.of("NOT_INCLUDED", "SourceTrackerNotFound"),
@@ -363,12 +368,12 @@ class WorkingSetCreationAcceptanceTest {
         for (int index = 0; index < families.size(); index++) {
             String family = families.get(index);
             String localId = indexed.get(index);
-            LightTrackerItemView item = rest.getForObject("/api/worksets/" + child + "/items/" + localId, LightTrackerItemView.class);
-            assertEquals(family, item.commonId());
-            assertFalse(family.equals(item.localId()));
-            assertEquals(3, item.revision());
-            assertEquals(family, item.sourceLocalId());
-            assertEquals(3, item.sourceRevision());
+            var item = workingSetQueries.resolve(WorkingSetId.of(child), LocalId.of(localId));
+            assertEquals(family, item.commonId().value());
+            assertFalse(family.equals(item.localId().value()));
+            assertEquals(3, item.revision().value());
+            assertEquals(family, item.sourceLocalId().value());
+            assertEquals(3, item.sourceRevision().value());
             assertFalse(item.materialized());
         }
     }
@@ -377,11 +382,7 @@ class WorkingSetCreationAcceptanceTest {
     void indexesDerivedParentAndExcludesDeletedSourcesWhileRecordingMissingSources() {
         seedRange();
         FixtureIds.insertWorkingSet(jdbc, "1", parent);
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
-                null, Map.class).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1,
-                jdbc.queryForObject("SELECT count(*) FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
-                        Integer.class, Long.valueOf(parent), Long.valueOf(space))));
+        FixtureIds.extendWithRootFolder(rest, jdbc, parent, space);
         String nativeId = fixtureId("root-" + child);
         seedItem(unshared, nativeId, nativeId, false);
         DeriveFixture.Result derive = DeriveFixture.derive(jdbc, parent, unshared, nativeId, Revision.of(3), CommonId.of(nativeId));
@@ -428,9 +429,10 @@ class WorkingSetCreationAcceptanceTest {
         });
         String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
                 String.class, child, nativeId);
-        LightTrackerItemView item = rest.getForObject("/api/worksets/" + child + "/items/" + local, LightTrackerItemView.class);
-        assertEquals(nativeId, item.sourceLocalId());
-        assertEquals(3, item.sourceRevision());
+        var item = workingSetQueries.resolve(WorkingSetId.of(child), LocalId.of(local));
+        assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child + "/items/" + local, Map.class).getStatusCode());
+        assertEquals(nativeId, item.sourceLocalId().value());
+        assertEquals(3, item.sourceRevision().value());
     }
 
     @Test
@@ -459,7 +461,7 @@ class WorkingSetCreationAcceptanceTest {
                 String firstLocal = jdbc.queryForObject(
                         "SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
                         String.class, child, first);
-                org.springframework.http.ResponseEntity<Map> response = rest.getForEntity("/api/worksets/" + child + "/items/" + firstLocal, Map.class);
+                org.springframework.http.ResponseEntity<Map> response = rest.getForEntity("/api/requirements/" + firstLocal, Map.class);
                 assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
                 assertEquals("PREPARING", response.getBody().get("reason"));
                 assertEquals(HttpStatus.OK, rest.getForEntity(CREATIONS + "/" + id + "/working-set", Map.class).getStatusCode());

@@ -10,8 +10,6 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.query.provider.ClassificationCatalog;
-import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
@@ -24,11 +22,6 @@ public class DefaultTrackersBindingListener {
     private final WorkingSetRepository workingSets;
     private final ProductSpaceRepository spaces;
     private final TrackerRepository trackers;
-    private final ClassificationCatalog classifications;
-
-    private static boolean isFolder(String classificationId) {
-        return Long.toString(Tracker.FOLDER_CLASSIFICATION_ID).equals(classificationId);
-    }
 
     @ApplicationModuleListener(id = "bootstrap.DefaultTrackersBindingListener.on(sk.tracker.domain.event.DefaultTrackersProvisionedEvent)")
     public void on(DefaultTrackersProvisionedEvent event) {
@@ -49,14 +42,7 @@ public class DefaultTrackersBindingListener {
             Tracker tracker = trackers.findById(trackerId)
                     .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                             "tracker disappeared: " + trackerId.value()));
-            Classification classification = isFolder(tracker.classificationId())
-                    ? new Classification(Tracker.FOLDER_CLASSIFICATION_ID,
-                    Classification.SharingMode.UNSHARED, "文件夹")
-                    : classifications.findClassification(tracker.classificationId())
-                    .orElseThrow(() -> DomainException.withMessage(
-                            SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                            "classification disappeared: " + tracker.classificationId()));
-            workingSet.bindTracker(tracker, classification, tracker.sharingMode());
+            workingSet.bindTracker(tracker, tracker.classification(), tracker.sharingMode());
         }
         workingSets.save(workingSet);
     }

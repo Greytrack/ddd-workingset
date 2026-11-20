@@ -46,7 +46,7 @@ class RelationEventStepTest {
     @Test
     void publishesCreationAssociationAndRepairForEveryIndexedItem() {
         Tracker parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
-                new Classification("266673196957632", SharingMode.UNSHARED), null);
+                new Classification(266673196957632L, SharingMode.UNSHARED, "测试分类", 11L, 111L, 1111L, false), null);
         Tracker child = Tracker.derived(childId, parent, target, true);
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
@@ -90,7 +90,7 @@ class RelationEventStepTest {
     @Test
     void recordsFailureWithoutThrowingWhenRelationSourceFails() {
         Tracker parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
-                new Classification("266673196957632", SharingMode.UNSHARED), null);
+                new Classification(266673196957632L, SharingMode.UNSHARED, "测试分类", 11L, 111L, 1111L, false), null);
         Tracker child = Tracker.derived(childId, parent, target, true);
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,

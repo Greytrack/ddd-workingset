@@ -69,9 +69,10 @@ INSERT INTO air_inst_tracker_rev
     (id, instance_id, common_id, source_branch_id, workingset_id, work_space, name, number, tracker_class,
      share, is_default, base_class, class, type, tracker, owner, revision, delete_flag, lock_version,
      created_by, created_time, updated_by, updated_time)
-SELECT id, id, common_id, source_id, owner_ws, work_space, name, 'TR-' || id, classification, share, is_default,
-       1009, 100901, 10090101, 584578917040480, 1, 1, 0, 0, 'demo', 1704067200000, 'demo', 1704067200000
-FROM demo_tracker_rows;
+SELECT t.id, t.id, t.common_id, t.source_id, t.owner_ws, t.work_space, t.name, 'TR-' || t.id, t.classification,
+       t.share, t.is_default, c.base_class, c.class, c.type,
+       584578917040480, 1, 1, 0, 0, 'demo', 1704067200000, 'demo', 1704067200000
+FROM demo_tracker_rows t JOIN classifications c ON c.classification_id = t.classification;
 
 INSERT INTO air_ws_tracker
     (id, workingset_id, sub_class_id, source_branch_id, name, number, shared, is_default, visible, locked,

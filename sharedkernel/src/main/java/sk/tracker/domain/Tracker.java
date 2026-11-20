@@ -22,13 +22,12 @@ import java.util.Objects;
  */
 @AggregateRoot
 public final class Tracker {
-    public static final long FOLDER_CLASSIFICATION_ID = 10070101L;
     private final TrackerId trackerId;
     private final TrackerId commonId;
     private final TrackerId sourceId;
     private final WorkingSetId workingSetId;
     private final Long numericProductSpaceId;
-    private final Long numericClassificationId;
+    private final Classification classification;
     private final SharingMode sharingMode;
     private final TrackerId parentId;
     private final boolean isDefault;
@@ -39,45 +38,28 @@ public final class Tracker {
     private String name;
 
     public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
-                   String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId,
-                   boolean isDefault) {
-        this(trackerId, name, sourceId, workingSetId, Long.valueOf(productSpaceId),
-                Long.valueOf(classificationId), sharingMode, parentId, isDefault);
-    }
-
-    public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
-                   String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
-        this(trackerId, name, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId, false);
-    }
-
-    public Tracker(TrackerId trackerId, TrackerId sourceId, WorkingSetId workingSetId,
-                   String productSpaceId, String classificationId, SharingMode sharingMode, TrackerId parentId) {
-        this(trackerId, null, sourceId, workingSetId, productSpaceId, classificationId, sharingMode, parentId, false);
-    }
-
-    public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
-                   Long numericProductSpaceId, Long numericClassificationId, SharingMode sharingMode,
+                   Long numericProductSpaceId, Classification classification, SharingMode sharingMode,
                    TrackerId parentId, boolean isDefault) {
         this(trackerId, trackerId, name, sourceId, workingSetId, numericProductSpaceId,
-                numericClassificationId, sharingMode, parentId, isDefault);
+                classification, sharingMode, parentId, isDefault);
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
-                    WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                    WorkingSetId workingSetId, Long numericProductSpaceId, Classification classification,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault) {
         this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
-                numericClassificationId, sharingMode, parentId, isDefault, true);
+                classification, sharingMode, parentId, isDefault, true);
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
-                    WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                    WorkingSetId workingSetId, Long numericProductSpaceId, Classification classification,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate) {
-        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId, numericClassificationId,
+        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId, classification,
                 sharingMode, parentId, isDefault, newAggregate, true, null);
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
-                    WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                    WorkingSetId workingSetId, Long numericProductSpaceId, Classification classification,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate,
                     boolean initiallyVisible, Long createdBy) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
@@ -88,9 +70,9 @@ public final class Tracker {
         this.isDefault = isDefault;
         this.workingSetId = Objects.requireNonNull(workingSetId, "workingSetId");
         this.numericProductSpaceId = Objects.requireNonNull(numericProductSpaceId, "productSpaceId");
-        this.numericClassificationId = Objects.requireNonNull(numericClassificationId, "classificationId");
+        this.classification = Objects.requireNonNull(classification, "classification");
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
-        this.compatibility = new TrackerCompatibility(trackerId, numericClassificationId);
+        this.compatibility = new TrackerCompatibility(trackerId, classification.numericId());
         this.newAggregate = newAggregate;
         this.initiallyVisible = initiallyVisible;
         this.createdBy = createdBy;
@@ -109,13 +91,16 @@ public final class Tracker {
     }
 
     public static Tracker reconstitute(TrackerId id, TrackerId commonId, String name, TrackerId source,
-                                       WorkingSetId owner, Long productSpace, Long classification,
+                                       WorkingSetId owner, Long productSpace, Classification classification,
                                        SharingMode sharing, TrackerId parent, boolean isDefault) {
         return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault, false);
     }
 
-    public static Tracker folderTracker(TrackerId id, WorkingSetId owner, ProductSpace space) {
-        return new Tracker(id, id, "文件夹", null, owner, space.numericId(), FOLDER_CLASSIFICATION_ID,
+    public static Tracker folderTracker(TrackerId id, WorkingSetId owner, ProductSpace space, Classification classification) {
+        if (!classification.folder()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Folder Tracker requires a folder classification");
+        }
+        return new Tracker(id, id, classification.name(), null, owner, space.numericId(), classification,
                 SharingMode.UNSHARED, null, true);
     }
 
@@ -131,7 +116,7 @@ public final class Tracker {
      */
     public static Tracker original(TrackerId id, ProductSpace space, Classification classification, TrackerId parentId,
                                    boolean isDefault) {
-        return new Tracker(id, null, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
+        return new Tracker(id, id, null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
                 classification.sharingMode(), parentId, isDefault);
     }
 
@@ -141,7 +126,7 @@ public final class Tracker {
         if (!classification.allows(sharingMode)) {
             throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
         }
-        return new Tracker(id, normalizedName, null, WorkingSet.DEFAULT_ID, space.id(), classification.id(),
+        return new Tracker(id, id, normalizedName, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
                 sharingMode, null, false);
     }
 
@@ -156,7 +141,7 @@ public final class Tracker {
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault,
                                   boolean initiallyVisible, Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
-                source.numericProductSpaceId(), source.numericClassificationId(), source.sharingMode(), null,
+                source.numericProductSpaceId(), source.classification(), source.sharingMode(), null,
                 isDefault, true, initiallyVisible, createdBy);
     }
 
@@ -185,7 +170,7 @@ public final class Tracker {
     }
 
     public boolean isFolder() {
-        return numericClassificationId == FOLDER_CLASSIFICATION_ID;
+        return classification.folder();
     }
 
     public TrackerId trackerId() {
@@ -212,8 +197,12 @@ public final class Tracker {
         return numericProductSpaceId;
     }
 
+    public Classification classification() {
+        return classification;
+    }
+
     public Long numericClassificationId() {
-        return numericClassificationId;
+        return classification.numericId();
     }
 
     public SharingMode sharingMode() {
@@ -246,7 +235,7 @@ public final class Tracker {
     }
 
     public String classificationId() {
-        return numericClassificationId.toString();
+        return classification.id();
     }
 
     public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {

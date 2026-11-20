@@ -15,19 +15,21 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class JdbcClassificationCatalog implements ClassificationCatalog {
     private static final RowMapper<Classification> CLASSIFICATION = (row, position) ->
-            new Classification(row.getLong(1), SharingMode.valueOf(row.getString(2)), row.getString(3));
+            new Classification(row.getLong(1), SharingMode.valueOf(row.getString(2)), row.getString(3),
+                    row.getLong(4), row.getLong(5), row.getLong(6), row.getBoolean(7));
+    private static final String SELECT = "SELECT classification_id, sharing_mode, name, base_class, class, type, folder_tracker FROM classifications";
 
     private final JdbcTemplate jdbc;
 
     @Override
     public Optional<Classification> findClassification(String id) {
-        return jdbc.query("SELECT classification_id, sharing_mode, name FROM classifications WHERE classification_id = ?",
+        return jdbc.query(SELECT + " WHERE classification_id = ?",
                 CLASSIFICATION, Long.valueOf(id)).stream().findFirst();
     }
 
     @Override
     public List<Classification> findClassifications() {
-        return jdbc.query("SELECT classification_id, sharing_mode, name FROM classifications ORDER BY classification_id",
+        return jdbc.query(SELECT + " ORDER BY classification_id",
                 CLASSIFICATION);
     }
 }

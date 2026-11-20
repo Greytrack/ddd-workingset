@@ -3,7 +3,6 @@ package sk.workingset.application.command;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
@@ -13,7 +12,6 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.Classification;
@@ -42,10 +40,8 @@ public class WorkingSetCommandService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
-    private final ClassificationCatalog classifications;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
-    private final ApplicationEventPublisher events;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
@@ -139,23 +135,11 @@ public class WorkingSetCommandService {
     /**
      * 把产品空间绑定到工作集，保存后发布空间绑定事件。
      */
-    @Transactional
-    public WorkingSet.SpaceBinding bindSpace(WorkingSetId id, String spaceId) {
-        WorkingSet workingSet = writable(id);
-        WorkingSet.SpaceBinding binding = bindSpace(workingSet, lockSpace(spaceId));
-        workingSets.save(workingSet);
-        events.publishEvent(new sk.workingset.domain.event.WorkingSetSpaceBoundEvent(id, spaceId));
-        return binding;
-    }
-
     private ProductSpace lockSpace(String spaceId) {
         return spaces.findById(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
     }
 
-    private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space) {
-        return workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
-    }
 
     /**
      * 切换 Tracker 在工作集的显示状态。
@@ -165,22 +149,6 @@ public class WorkingSetCommandService {
         WorkingSet target = writable(workingSet);
         target.setTrackerShown(tracker, shown);
         workingSets.save(target);
-    }
-
-    /**
-     * 以共享方式纳入直属父 Tracker，复用上游 trackerId。
-     */
-    @Transactional
-    public WorkingSet.TrackerBinding bindTrackerShared(WorkingSetId id, TrackerId trackerId) {
-        WorkingSet workingSet = writable(id);
-        WorkingSet.TrackerBinding binding =
-                bindTracker(workingSet, directParentTracker(workingSet, trackerId), SharingMode.SHARED);
-        workingSets.save(workingSet);
-        return binding;
-    }
-
-    private WorkingSet.TrackerBinding bindTracker(WorkingSet target, Tracker tracker, SharingMode mode) {
-        return target.bindTracker(tracker, classification(tracker), mode);
     }
 
     // These methods run only under the creation task row lock and the item transaction.
@@ -212,7 +180,7 @@ public class WorkingSetCommandService {
                 }
                 if (!target.hasSpaceBinding(spaceId)) {
                     requireTrackerCopies(spaceId, candidates, requiredClassifications);
-                    bindSpace(target, space);
+                    target.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
                 }
                 for (TrackerToBind candidate : candidates) {
                     Tracker tracker = candidate.tracker();
@@ -245,7 +213,7 @@ public class WorkingSetCommandService {
             }
             Tracker tracker = mode == SharingMode.SHARED ? source : trackers.findDerivedTracker(target.id(), id)
                     .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceId));
-            Classification classification = classification(tracker);
+            Classification classification = tracker.classification();
             if (tracker.sharingMode() != mode || !classification.allows(mode)) {
                 throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
             }
@@ -297,11 +265,6 @@ public class WorkingSetCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, id.value()));
         target.requireDirectParent(source, boundInParent);
         return source;
-    }
-
-    private Classification classification(Tracker tracker) {
-        return classifications.findClassification(tracker.classificationId())
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, tracker.classificationId()));
     }
 
     private Tracker derivedTracker(WorkingSet target, Tracker source, boolean visible, long actor) {

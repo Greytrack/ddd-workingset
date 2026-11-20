@@ -18,7 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.adapters.LightTrackerItemView;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.adapters.MergeController.ComparisonPage;
 import sk.workingset.adapters.WorkingSetController;
 import sk.workingset.application.query.MergeCheckpoint;
@@ -53,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
+    @Autowired private WorkingSetQueryService workingSetQueries;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MergeCheckpointQuery checkpoints;
     @Autowired private org.springframework.modulith.events.IncompleteEventPublications publications;
@@ -89,7 +91,7 @@ class MergeAcceptanceTest {
         String source = seed(rootTracker, anchor, "same");
         MergeAcceptanceTest.Derived derived = derive(child, rootTracker, source, anchor);
         childTracker = derived.trackerId();
-        childAnchor = derived.item().localId();
+        childAnchor = derived.item().localId().value();
     }
 
     @AfterEach
@@ -125,6 +127,7 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", workset);
+            jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", workset);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", workset);
         }
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
@@ -391,8 +394,8 @@ class MergeAcceptanceTest {
         assertEquals(source.title(), target.title());
         assertEquals(created, apply(round));
         if (!"1".equals(parent)) {
-            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertStatus(HttpStatus.OK,
-                    rest.getForEntity(ws(parent) + "/items/" + parentLocal, Map.class)));
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertEquals(parentLocal,
+                    workingSetQueries.resolve(WorkingSetId.of(parent), LocalId.of(parentLocal)).localId().value()));
         }
 
         change(source.localId(), "updated child", 0);
@@ -561,7 +564,7 @@ class MergeAcceptanceTest {
         String parentLocal = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE tracker_id = ?",
                 String.class, parentItem);
         MergeAcceptanceTest.Derived grand = derive(grandchild, childTracker, parentLocal, anchor);
-        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", grand.item().localId());
+        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", grand.item().localId().value());
 
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
@@ -572,14 +575,14 @@ class MergeAcceptanceTest {
 
         ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
         Difference item = diff(compared, anchor);
-        assertEquals(grand.item().localId(), item.target().localId().value());
+        assertEquals(grand.item().localId().value(), item.target().localId().value());
         assertFalse(item.target().localId().equals(item.target().contentId()));
         assertEquals(Revision.of(1), item.target().revision());
         assertEquals(Revision.of(3), item.target().contentRevision());
         assertEquals("same", item.target().fields().get("title"));
         String round = submit(grandchild, compared, field(item, "ACCEPT", true));
         assertEquals(Outcome.Confirmed, awaitResult(round).itemResults().getFirst().outcome());
-        assertEquals("parent local", requirement(grand.item().localId()).title());
+        assertEquals("parent local", requirement(grand.item().localId().value()).title());
         var key = new MergeCheckpoint.Key(TrackerId.of(childTracker), TrackerId.of(grand.trackerId()), CommonId.of(anchor));
         var checkpoint = checkpoints.findLatest(key).orElseThrow();
         boolean sourceIsA = key.a().equals(TrackerId.of(childTracker));
@@ -587,15 +590,15 @@ class MergeAcceptanceTest {
         assertEquals(Revision.of(1), sourceIsA ? checkpoint.revisionB() : checkpoint.revisionA());
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT materialized FROM light_tracker_items WHERE local_id = ?",
-                Boolean.class, grand.item().localId())));
-        change(grand.item().localId(), "ordinary target edit", 0);
+                Boolean.class, grand.item().localId().value())));
+        change(grand.item().localId().value(), "ordinary target edit", 0);
         assertTrue(compare(child, grandchild, childTracker, grand.trackerId()).differences().stream()
                 .noneMatch(candidate -> anchor.equals(candidate.family().value())));
         requirements.upgradeRevision(LocalId.of(parentLocal), LockVersion.of(0));
         assertNotNull(diff(compare(child, grandchild, childTracker, grand.trackerId()), anchor));
-        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity("/api/requirements/" + grand.item().localId()
+        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity("/api/requirements/" + grand.item().localId().value()
                 + "/delete", null, Void.class));
-        assertStatus(HttpStatus.GONE, rest.getForEntity(ws(grandchild) + "/items/" + grand.item().localId(), Map.class));
+        assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + grand.item().localId().value(), Map.class));
     }
 
     @Test
@@ -612,7 +615,7 @@ class MergeAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'SHARED')
                 """, shared, space, sharedClassification);
-        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(child) + "/trackers/shared/" + shared, null, Void.class));
+        FixtureIds.extendScope(rest, child, sk.workingset.domain.workingset.WorkingSetCreation.Status.Succeeded, shared);
         RequirementView sharedItem = createRequirement(child, shared, "shared child entry");
         assertEquals(sharedItem.localId(), sharedItem.commonId());
         assertTrue(compare(child, "1").differences().stream()
@@ -843,10 +846,10 @@ class MergeAcceptanceTest {
 
     private Derived derive(String target, String tracker, String source, String family) {
         DeriveFixture.Result result = DeriveFixture.derive(jdbc, target, tracker, source, Revision.of(3), CommonId.of(family));
-        return new Derived(result.trackerId(), result.sourceTrackerId(), LightTrackerItemView.from(result.item()));
+        return new Derived(result.trackerId(), result.sourceTrackerId(), result.item());
     }
 
-    private record Derived(String trackerId, String sourceTrackerId, LightTrackerItemView item) {}
+    private record Derived(String trackerId, String sourceTrackerId, LightTrackerItem item) {}
 
     private void createChild(String parent, String next) {
         FixtureIds.insertWorkingSet(jdbc, parent, next);

@@ -62,6 +62,6 @@
 - 领域术语：[glossary](../domain/glossary.md)
 - 聚合边界：[aggregate-model](../domain/aggregate-model.md)
 - 绑定契约：[binding-deletion-contract-v1](../domain/binding-deletion-contract-v1.md)
-- 实现入口：`WorkingSetCommandService#bindSpace`、`SpaceBoundFolderTrackerListener`、`TrackerCommandService#delete`
+- 实现入口：产品空间创建后的默认 Tracker 绑定、[T7 创建和扩展](../domain/working-set-creation-lro-design.md#42-步骤与状态机)、`TrackerCommandService#delete`。
 - 验收：每个 `(WS, ProductSpace)` 一个 Folder Tracker；不可独立删除；Folder 单版次可编辑/删除/树结构；不进 Compare/Merge。
 - 重新评估条件：Folder 需要多版次、跨工作集共享，或需要参与 Compare/Merge 时。

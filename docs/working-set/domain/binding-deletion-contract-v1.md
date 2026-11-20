@@ -83,8 +83,8 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 
 | 操作 | 入参 | 前置 | 后置 / 结果 | 失败语义 |
 | --- | --- | --- | --- | --- |
-| `bindSpace` | workingSetId、productSpaceId | WorkingSet 可用；ProductSpace 存在；同 WS 无同空间的有效 SpaceBinding（INV-055） | 建立 SpaceBinding；提交后通过独立事件为 `(WS, ProductSpace)` 创建 Folder Tracker，再由 Tracker 创建事件建立绑定 | `AlreadyBound`、`ProductSpaceNotFound`、`WorkingSetNotWritable` |
-| `bindTracker`（Shared） | workingSetId、trackerId | 同 WS 已有该空间 SpaceBinding（INV-053）；未重复纳入；共享特性相容 | 建立 TrackerBinding，复用上游 `trackerId` | `MissingSpaceBinding`、`TrackerAlreadyBound`、`SharingModeMismatch` |
+| 纳入产品空间 | 创建产品空间，或在工作集创建、扩展任务中选择范围 | 产品空间创建后由默认 Tracker 初始化流程建立根工作集范围；子工作集由任务校验直属父范围 | WorkingSet 在事件消费或任务绑定阶段建立空间与 Tracker 成员关系 | 创建、扩展任务的逐项失败见 [T7 阶段契约](working-set-creation-lro-design.md#42-步骤与状态机) |
+| 纳入共享 Tracker | 工作集创建或扩展任务中的 Tracker 选择 | 来源已纳入直属父工作集范围；共享特性相容 | 在范围绑定阶段建立 TrackerBinding，复用上游 `trackerId` | [任务逐项失败](working-set-creation-lro-design.md#43-失败明细) |
 | `bindTracker`（非共享派生） | workingSetId、productSpaceId、classificationId | 同上；来源为直接上游 Tracker | 创建新 Tracker 聚合（直接 `sourceId`）+ 新 TrackerBinding | 同上 + `SourceTrackerNotFound` |
 
 ### 4.2 绑定移除（按共享策略分别约束）
@@ -113,6 +113,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 
 - `GET /api/worksets/metadata/classifications` 返回可选的 `classificationId` 及元数据的 `sharingMode`，供创建表单按 [POL-003](facts.md) 显示可选共享方式。
 - `POST /api/worksets/{workingSetId}/trackers` 仍只允许在默认工作集创建业务原生 Tracker，产品空间必须已绑定。Tracker 独立提交后发布 `TrackerCreatedEvent`，监听器另行保存 WorkingSet 绑定；`201` 不保证绑定已收敛，绑定失败的公开语义待评审。产品空间独立创建/删除入口见 [实现边界](../implementation/current-boundaries.md)。
+- Tracker 绑定来自产品空间创建后的异步初始化、工作集创建或扩展任务，以及空间内新建 Tracker 后发布的事件。
 - 名称必填，去除首尾空白后最多 255 个字符，同一产品空间及所属分类内重名返回 `409`。在子工作集请求原生创建返回 `409`，不相容的共享方式返回 `422`。手动新建不设置默认标记。
 
 ## 5. 移除 / 删除 / 软删 / 彻底删除（K1，用户确认）

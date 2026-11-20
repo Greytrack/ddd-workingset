@@ -12,6 +12,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.ResultSet;
@@ -29,12 +30,16 @@ import java.util.Optional;
 public class JdbcTrackerRepository implements TrackerRepository {
     private static final String COLUMNS = """
             t.id, t.common_id, t.name, t.source_branch_id, t.workingset_id, t.work_space,
-            t.tracker_class, t.share, NULLIF(t.parent_id, 0) AS parent_id, t.is_default
+            t.tracker_class, t.share, NULLIF(t.parent_id, 0) AS parent_id, t.is_default,
+            c.sharing_mode, c.name AS classification_name, t.base_class, t.class, t.type, c.folder_tracker
             """;
+    private static final String FROM_TRACKER = " FROM air_inst_tracker_rev t JOIN classifications c ON c.classification_id = t.tracker_class ";
     private static final RowMapper<Tracker> MAPPER = (rs, row) -> Tracker.reconstitute(
             TrackerId.of(rs.getLong("id")), TrackerId.of(rs.getLong("common_id")),
             rs.getString("name"), optionalId(rs, "source_branch_id"), WorkingSetId.of(rs.getLong("workingset_id")),
-            rs.getLong("work_space"), rs.getLong("tracker_class"),
+            rs.getLong("work_space"), new Classification(rs.getLong("tracker_class"),
+                    SharingMode.valueOf(rs.getString("sharing_mode")), rs.getString("classification_name"),
+                    rs.getLong("base_class"), rs.getLong("class"), rs.getLong("type"), rs.getBoolean("folder_tracker")),
             rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
             optionalId(rs, "parent_id"), rs.getInt("is_default") == 1);
 
@@ -92,17 +97,16 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     private Optional<Tracker> load(TrackerId id, boolean lock) {
-        return jdbc.query("SELECT " + COLUMNS + """
-                        FROM air_inst_tracker_rev t WHERE t.id = ? AND t.delete_flag = 0
+        return jdbc.query("SELECT " + COLUMNS + FROM_TRACKER + """
+                        WHERE t.id = ? AND t.delete_flag = 0
                         AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
-                        """ + (lock ? " FOR UPDATE" : ""), MAPPER, id.numericValue(), RequestThreadHolder.getWorkspace())
+                        """ + (lock ? " FOR UPDATE OF t" : ""), MAPPER, id.numericValue(), RequestThreadHolder.getWorkspace())
                 .stream().findFirst();
     }
 
     @Override
     public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
-        return jdbc.query("SELECT " + COLUMNS + """
-                        FROM air_inst_tracker_rev t
+        return jdbc.query("SELECT " + COLUMNS + FROM_TRACKER + """
                         WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0
                           AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
                         """, MAPPER, target.numericValue(), source.numericValue(), RequestThreadHolder.getWorkspace())
@@ -110,12 +114,11 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    public Optional<Tracker> findFolderTracker(WorkingSetId owner, String spaceId) {
-        return jdbc.query("SELECT " + COLUMNS + """
-                        FROM air_inst_tracker_rev t
+    public Optional<Tracker> findDefaultTracker(WorkingSetId owner, String spaceId, long classificationId) {
+        return jdbc.query("SELECT " + COLUMNS + FROM_TRACKER + """
                         WHERE t.workingset_id = ? AND t.work_space = ? AND t.tracker_class = ?
-                          AND NULLIF(t.parent_id, 0) IS NULL AND t.share = 0 AND t.delete_flag = 0
-                        """, MAPPER, owner.numericValue(), Long.valueOf(spaceId), Tracker.FOLDER_CLASSIFICATION_ID)
+                          AND t.is_default = 1 AND t.delete_flag = 0
+                        """, MAPPER, owner.numericValue(), Long.valueOf(spaceId), classificationId)
                 .stream().findFirst();
     }
 
@@ -139,24 +142,25 @@ public class JdbcTrackerRepository implements TrackerRepository {
         long workset = tracker.workingSetId().numericValue();
         int shared = tracker.sharingMode() == SharingMode.SHARED ? 1 : 0;
         int defaultFlag = tracker.isDefault() ? 1 : 0;
+        Classification classification = tracker.classification();
         jdbc.update("""
                         INSERT INTO air_inst_tracker_rev (id, instance_id, common_id, workingset_id, work_space,
                             base_class, class, type, tracker_class, tracker, default_layout, instance_type,
                             name, number, owner, share, revision_id, revision, version_type,
                             parent_id, source_branch_id, is_default, visible, locked, delete_flag, lock_version,
                             created_by, created_time, updated_by, updated_time)
-                        VALUES (?, ?, ?, ?, ?, 1009, 100901, 10090101, ?, 584578917040480, 584532998805760, 0,
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 584578917040480, 584532998805760, 0,
                             ?, ?, ?, ?, NULL, 1, 10001, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
                         """, id, id, tracker.commonId().numericValue(), workset, tracker.numericProductSpaceId(),
-                tracker.numericClassificationId(), tracker.name(), number, actor, shared, parent, source,
-                defaultFlag, visible, auditActor, now, auditActor, now);
+                classification.baseClassId(), classification.classId(), classification.typeId(), classification.numericId(),
+                tracker.name(), number, actor, shared,
+                parent, source, defaultFlag, visible, auditActor, now, auditActor, now);
         jdbc.update("""
                         INSERT INTO air_ws_tracker (id, workingset_id, sub_class_id, name, number,
                             parent_id, source_branch_id, shared, is_default, visible, locked, delete_flag, lock_version,
                             created_by, created_time, updated_by, updated_time)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
-                        """, tracker.compatibility().trackerId().numericValue(), workset,
-                tracker.compatibility().originalClassificationId(), tracker.name(), number,
+                        """, id, workset, classification.numericId(), tracker.name(), number,
                 parent, source, shared, defaultFlag, visible, auditActor, now, auditActor, now);
         saveCommonInstance(id);
     }

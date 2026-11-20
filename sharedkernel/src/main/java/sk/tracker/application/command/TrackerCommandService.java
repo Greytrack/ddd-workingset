@@ -18,6 +18,7 @@ import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.event.TrackerCreatedEvent;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
@@ -48,7 +49,9 @@ public class TrackerCommandService {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "只允许在默认工作集新建跟踪分类");
         }
-        if (Long.parseLong(classificationId) == Tracker.FOLDER_CLASSIFICATION_ID) {
+        Classification classification = classifications.findClassification(classificationId)
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
+        if (classification.folder()) {
             throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "文件夹 Tracker 随产品空间创建");
         }
         WorkingSet workingSet = workingSets.findById(id)
@@ -56,13 +59,11 @@ public class TrackerCommandService {
         ProductSpace space = spaces.findById(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
         workingSet.requireSpaceBinding(spaceId);
-        Classification classification = classifications.findClassification(classificationId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
         Tracker tracker = Tracker.original(TrackerId.of(ids.nextId(null).longValue()), name, space,
                 classification, sharingMode);
         workingSet.bindTracker(tracker, classification, sharingMode);
         trackers.save(tracker);
-        events.publishEvent(new sk.workingset.domain.event.TrackerCreatedEvent(
+        events.publishEvent(new TrackerCreatedEvent(
                 tracker.trackerId(), workingSet.id(), space.id(), classification.id(), sharingMode));
         return tracker;
     }

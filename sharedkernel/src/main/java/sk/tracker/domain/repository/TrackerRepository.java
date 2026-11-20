@@ -19,7 +19,7 @@ public interface TrackerRepository {
 
     Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source);
 
-    Optional<Tracker> findFolderTracker(WorkingSetId owner, String spaceId);
+    Optional<Tracker> findDefaultTracker(WorkingSetId owner, String spaceId, long classificationId);
 
     /**
      * 保存聚合及其兼容数据；初始可见性与创建人由聚合自身携带。

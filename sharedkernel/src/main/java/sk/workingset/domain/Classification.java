@@ -10,15 +10,8 @@ import java.util.Objects;
  * 最小分类元数据。共享策略由分类初始化时确定。
  */
 @ValueObject
-public record Classification(Long numericId, SharingMode sharingMode, String name) {
-    public Classification(String id, SharingMode sharingMode) {
-        this(Long.valueOf(id), sharingMode, null);
-    }
-
-    public Classification(Long id, SharingMode sharingMode) {
-        this(id, sharingMode, null);
-    }
-
+public record Classification(Long numericId, SharingMode sharingMode, String name,
+                             long baseClassId, long classId, long typeId, boolean folder) {
     public Classification {
         if (numericId == null || numericId <= 0) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "classificationId must be positive");

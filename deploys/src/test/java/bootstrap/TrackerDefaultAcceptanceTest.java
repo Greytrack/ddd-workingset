@@ -39,6 +39,7 @@ class TrackerDefaultAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TrackerRepository trackerRepository;
+    @Autowired private sk.workingset.application.query.provider.ClassificationCatalog classifications;
     @Autowired private LiteBusinessObjectProvider instanceSummaries;
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -52,10 +53,12 @@ class TrackerDefaultAcceptanceTest {
             jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)", space);
             jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)", space);
             jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
+            jdbc.update("DELETE FROM trackers WHERE product_space_id = ? AND working_set_id = ?", space, child);
             jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
             jdbc.update("DELETE FROM space_bindings WHERE product_space_id = ?", space);
             jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
         }
+        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM classifications WHERE classification_id = ?", sharedClassification);
     }
@@ -76,18 +79,28 @@ class TrackerDefaultAcceptanceTest {
         java.util.List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
-        assertEquals(classifications, jdbc.queryForObject("""
+        // 默认 Tracker 使用 Tracker 自举实例类型；文件夹 Tracker 单独使用文件夹实例类型（1007/100701/10070101）。
+        assertEquals(classifications - 1, jdbc.queryForObject("""
                 SELECT count(*)
                 FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id
                 WHERE r.work_space = ? AND r.workingset_id = 1 AND c.workingset_id = 1
                   AND r.id = r.instance_id AND r.id = r.common_id
                   AND r.revision = 1 AND r.revision_id IS NULL AND r.version_type = 10001
+                  AND r.tracker_class <> 10070101
                   AND r.base_class = 1009 AND r.class = 100901 AND r.type = 10090101
                   AND r.tracker = 584578917040480 AND r.default_layout = 584532998805760
                   AND r.owner = ? AND r.number = c.number AND r.tracker_class = c.sub_class_id
                   AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
                   AND r.created_time = c.created_time AND r.created_by = c.created_by
                 """, Integer.class, Long.valueOf(spaceId), sk.RequestThreadHolder.getLongUserId()));
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*)
+                FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id
+                WHERE r.work_space = ? AND r.workingset_id = 1 AND c.workingset_id = 1
+                  AND r.tracker_class = 10070101 AND c.sub_class_id = 10070101
+                  AND r.base_class = 1007 AND r.class = 100701 AND r.type = 10070101
+                  AND r.tracker = 584578917040480 AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
+                """, Integer.class, Long.valueOf(spaceId)));
         for (TrackerView tracker : trackers) {
             org.springframework.http.ResponseEntity<String> items = rest.getForEntity(
                     "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class);
@@ -119,14 +132,13 @@ class TrackerDefaultAcceptanceTest {
     void keepsSpaceMountedWithOnlyItsLocalFolderEvenWhenHidden() {
         String space = createSpace("1");
         FixtureIds.insertWorkingSet(jdbc, "1", child);
-        assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/spaces/" + space,
-                null, Map.class).getStatusCode());
+        FixtureIds.extendWithRootFolder(rest, jdbc, child, space);
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
             long folderId = jdbc.queryForObject("""
                     SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
                     JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
                     WHERE r.workingset_id = ? AND r.work_space = ? AND t.tracker_class = 10070101
-                      AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NULL AND t.share = 0
+                      AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NOT NULL AND t.share = 0
                       AND NULLIF(t.parent_id, 0) IS NULL AND t.name = '文件夹'
                     """, Long.class, Long.valueOf(child), Long.valueOf(space));
             assertTrue(folderId > 0);
@@ -135,7 +147,7 @@ class TrackerDefaultAcceptanceTest {
                 SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
                 JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
                 WHERE r.workingset_id = ? AND r.work_space = ? AND t.tracker_class = 10070101
-                  AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NULL AND t.share = 0
+                  AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NOT NULL AND t.share = 0
                   AND NULLIF(t.parent_id, 0) IS NULL AND t.name = '文件夹'
                 """, Long.class, Long.valueOf(child), Long.valueOf(space));
         RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
@@ -153,9 +165,11 @@ class TrackerDefaultAcceptanceTest {
                 .retrieve().toBodilessEntity().getStatusCode());
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
         rest.delete(path + "/spaces/" + space);
-        assertTrue(rest.getForObject(path + "/bindings", BindingsView.class).spaces().isEmpty());
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
-                Integer.class, folder));
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertTrue(rest.getForObject(path + "/bindings", BindingsView.class).spaces().isEmpty());
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
+                    Integer.class, folder));
+        });
     }
 
     @Test
@@ -198,7 +212,8 @@ class TrackerDefaultAcceptanceTest {
                 id.numericValue());
         try {
             Tracker tracker = new Tracker(id, "projection collision", null, WorkingSetId.of(1L),
-                    space, 258519859202016L, Classification.SharingMode.UNSHARED, null, false);
+                    space, classifications.findClassification("258519859202016").orElseThrow(),
+                    Classification.SharingMode.UNSHARED, null, false);
             assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                     Integer.class, id.numericValue()));
@@ -215,7 +230,8 @@ class TrackerDefaultAcceptanceTest {
         long space = Long.parseLong(createSpace("1"));
         TrackerId id = TrackerId.of(fixtureId("TRACKER-ROLLBACK-" + suffix));
         Tracker tracker = new Tracker(id, "x".repeat(501), null, WorkingSetId.of(1L),
-                space, 258519859202016L, Classification.SharingMode.UNSHARED, null, false);
+                space, classifications.findClassification("258519859202016").orElseThrow(),
+                Classification.SharingMode.UNSHARED, null, false);
 
         assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
@@ -243,6 +259,10 @@ class TrackerDefaultAcceptanceTest {
             assertEquals(mode.name(), tracker.sharingMode());
             assertEquals("项目-" + mode, tracker.name());
             assertFalse(tracker.isDefault());
+            await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+                BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+                assertTrue(bindings.trackers().stream().anyMatch(binding -> tracker.trackerId().equals(binding.trackerId())));
+            });
             assertEquals(HttpStatus.OK, rest.getForEntity(
                     "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class)
                     .getStatusCode());
@@ -250,10 +270,9 @@ class TrackerDefaultAcceptanceTest {
 
             if (mode == Classification.SharingMode.SHARED) {
                 FixtureIds.insertWorkingSet(jdbc, "1", child);
-                assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/spaces/" + spaceId,
-                        null, Map.class).getStatusCode());
-                assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/trackers/shared/"
-                        + tracker.trackerId(), null, Map.class).getStatusCode());
+                FixtureIds.extendWithRootFolder(rest, jdbc, child, spaceId);
+                FixtureIds.extendScope(rest, child,
+                        sk.workingset.domain.workingset.WorkingSetCreation.Status.Succeeded, tracker.trackerId());
                 assertEquals(1L, jdbc.queryForObject("""
                         SELECT r.workingset_id FROM air_inst_tracker_rev r
                         JOIN air_ws_tracker c ON c.id = r.id AND c.workingset_id = r.workingset_id
@@ -341,10 +360,11 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
         ProductSpace space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
-        Classification classification = new Classification("258831141156800", Classification.SharingMode.UNSHARED);
+        Classification classification = new Classification(258831141156800L, Classification.SharingMode.UNSHARED,
+                "测试分类", 11L, 111L, 1111L, false);
         assertThrows(DomainException.class, () -> new Tracker(
                 TrackerId.of(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
-                WorkingSetId.of(child), space.id(), classification.id(), classification.sharingMode(), null, false));
+                WorkingSetId.of(child), space.numericId(), classification, classification.sharingMode(), null, false));
     }
 
     @Test

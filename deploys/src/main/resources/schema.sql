@@ -223,8 +223,17 @@ CREATE TABLE IF NOT EXISTS classifications (
     classification_id BIGINT PRIMARY KEY,
     sharing_mode      VARCHAR(8) NOT NULL CHECK (sharing_mode IN ('SHARED', 'UNSHARED')),
     name              VARCHAR(200) NOT NULL DEFAULT '需求',
+    base_class        BIGINT NOT NULL DEFAULT 1009,
+    class             BIGINT NOT NULL DEFAULT 100901,
+    type              BIGINT NOT NULL DEFAULT 10090101,
+    folder_tracker    BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (classification_id, sharing_mode)
 );
+
+ALTER TABLE classifications ADD COLUMN IF NOT EXISTS base_class BIGINT NOT NULL DEFAULT 1009;
+ALTER TABLE classifications ADD COLUMN IF NOT EXISTS class BIGINT NOT NULL DEFAULT 100901;
+ALTER TABLE classifications ADD COLUMN IF NOT EXISTS type BIGINT NOT NULL DEFAULT 10090101;
+ALTER TABLE classifications ADD COLUMN IF NOT EXISTS folder_tracker BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Base requirement category. Demo-only categories are added by demo-data.sql.
 INSERT INTO classifications (classification_id, name, sharing_mode)
@@ -510,7 +519,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_name ON air_inst_tracker_rev (w
     WHERE name IS NOT NULL AND source_branch_id IS NULL AND delete_flag = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_source ON air_inst_tracker_rev (workingset_id, source_branch_id)
     WHERE source_branch_id IS NOT NULL AND delete_flag = 0;
-INSERT INTO classifications (classification_id, sharing_mode, name) VALUES (10070101, 'UNSHARED', '文件夹') ON CONFLICT (classification_id) DO NOTHING;
+INSERT INTO classifications (classification_id, sharing_mode, name, base_class, class, type, folder_tracker)
+VALUES (10070101, 'UNSHARED', '文件夹', 1007, 100701, 10070101, TRUE)
+ON CONFLICT (classification_id) DO UPDATE SET base_class = EXCLUDED.base_class,
+    class = EXCLUDED.class, type = EXCLUDED.type, folder_tracker = EXCLUDED.folder_tracker;
 
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_parent ON air_inst_tracker_rev (parent_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_source ON air_inst_tracker_rev (source_branch_id);

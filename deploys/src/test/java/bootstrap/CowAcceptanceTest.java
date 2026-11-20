@@ -14,7 +14,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.adapters.LightTrackerItemView;
+import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
@@ -41,6 +42,7 @@ class CowAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private CowFailureLogQueryProvider failures;
     @Autowired private RequirementCommandService requirements;
+    @Autowired private WorkingSetQueryService workingSetQueries;
     @SpyBean private LightTrackerItemRepository items;
 
     private final List<String> targets = new ArrayList<>();
@@ -388,13 +390,12 @@ class CowAcceptanceTest {
 
     private ReadContent read(Target target) {
         RequirementView requirement = rest.getForObject("/api/requirements/" + target.id(), RequirementView.class);
-        LightTrackerItemView item = rest.getForObject("/api/worksets/" + target.ws() + "/items/" + target.id(),
-                LightTrackerItemView.class);
+        var item = workingSetQueries.resolve(WorkingSetId.of(target.ws()), LocalId.of(target.id()));
         boolean materialized = item.materialized();
         return new ReadContent(
                 Map.<String, Object>of("title", requirement.title(), "description", requirement.description()),
-                materialized ? item.revision() : item.sourceRevision(),
-                materialized ? target.id() : item.sourceLocalId(),
+                materialized ? item.revision().value() : item.sourceRevision().value(),
+                materialized ? target.id() : item.sourceLocalId().value(),
                 materialized);
     }
 

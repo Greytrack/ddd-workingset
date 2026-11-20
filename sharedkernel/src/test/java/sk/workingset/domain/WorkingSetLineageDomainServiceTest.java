@@ -45,7 +45,8 @@ class WorkingSetLineageDomainServiceTest {
     @Test
     void directDerivationRequiresChildSourceIdToBeTheImmediateParent() {
         ProductSpace productSpace = new ProductSpace("259944010602432");
-        Classification classification = new Classification("266673196957632", SharingMode.UNSHARED);
+        Classification classification = new Classification(266673196957632L, SharingMode.UNSHARED,
+                "测试分类", 11L, 111L, 1111L, false);
         Tracker parent = Tracker.original(TrackerId.of("260634912653248"), productSpace, classification, null);
         Tracker child = Tracker.derived(TrackerId.of("259712159403968"), parent, childId);
         Tracker sibling = Tracker.derived(TrackerId.of("263561533034432"), parent, childId);

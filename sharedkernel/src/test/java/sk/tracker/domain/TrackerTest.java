@@ -10,8 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TrackerTest {
     @Test
     void descendantsKeepFamilyIdentityAndLinkToTheirImmediateSource() {
+        var classification = new Classification(301L, Classification.SharingMode.UNSHARED, "分类",
+                11L, 111L, 1111L, false);
         Tracker root = Tracker.original(TrackerId.of(101), new ProductSpace("201"),
-                new Classification("301", Classification.SharingMode.UNSHARED), null);
+                classification, null);
         Tracker child = Tracker.derived(TrackerId.of(102), root, WorkingSetId.of(2L));
         Tracker grandchild = Tracker.derived(TrackerId.of(103), child, WorkingSetId.of(3L));
 
@@ -19,6 +21,7 @@ class TrackerTest {
         assertEquals(root.commonId(), child.commonId());
         assertEquals(root.commonId(), grandchild.commonId());
         assertEquals(child.trackerId(), grandchild.sourceId());
+        assertEquals(classification, grandchild.classification());
         assertEquals(TrackerId.of(103), grandchild.compatibility().trackerId());
         assertEquals(301L, grandchild.compatibility().originalClassificationId());
     }

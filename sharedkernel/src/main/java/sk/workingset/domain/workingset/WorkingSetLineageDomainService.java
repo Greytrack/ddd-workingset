@@ -37,7 +37,6 @@ public final class WorkingSetLineageDomainService {
     public static List<TrackerBinding> comparableBindings(WorkingSet source, WorkingSet target) {
         return childOf(source, target).trackers().stream()
                 .filter(binding -> binding.sharingMode() == SharingMode.UNSHARED)
-                .filter(binding -> binding.numericClassificationId() != Tracker.FOLDER_CLASSIFICATION_ID)
                 .toList();
     }
 

@@ -21,7 +21,6 @@ import sk.workingset.error.BindingResCode;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 产品空间默认 Tracker 批量创建。
@@ -48,14 +47,15 @@ public class DefaultTrackerInitCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
         List<TrackerId> created = new ArrayList<>();
         List<Tracker> pending = new ArrayList<>();
-        Optional<Tracker> existingFolder = trackers.findFolderTracker(WorkingSet.DEFAULT_ID, spaceId);
-        existingFolder.map(Tracker::trackerId).ifPresent(created::add);
-        if (existingFolder.isEmpty()) {
-            pending.add(Tracker.folderTracker(TrackerId.of(ids.nextId(null).longValue()),
-                    WorkingSet.DEFAULT_ID, space));
-        }
         for (Classification classification : classifications.findClassifications()) {
-            if (classification.numericId() == Tracker.FOLDER_CLASSIFICATION_ID) {
+            if (classification.folder()) {
+                var existing = trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId());
+                if (existing.isPresent()) {
+                    created.add(existing.orElseThrow().trackerId());
+                } else {
+                    pending.add(Tracker.folderTracker(TrackerId.of(ids.nextId(null).longValue()),
+                            WorkingSet.DEFAULT_ID, space, classification));
+                }
                 continue;
             }
             if (trackerQueries.existsDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.id())) {
