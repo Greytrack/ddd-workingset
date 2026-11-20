@@ -32,11 +32,17 @@ public class TrackerItemLifecycleService {
     private final BusinessTrackerItems businessItems;
 
 
+    /**
+     * 继承编辑完成：把未物化的目标变体切换为 Local-backed。
+     */
     @Transactional
     public void completeInheritedEdit(LocalId localId, Revision revision) {
         switchToLocalContent(localId, revision);
     }
 
+    /**
+     * 应用已提交的显式升版：必要时先物化，再推进版次并登记新成员。
+     */
     @Transactional
     public void applyCommittedUpgrade(LocalId id, Revision before, Revision after) {
         LightTrackerItem item = items.findByIdForUpdate(id)
@@ -50,6 +56,9 @@ public class TrackerItemLifecycleService {
         }
     }
 
+    /**
+     * 按当前业务状态同步变体软删标记；当前状态优先于事件到达顺序。
+     */
     @Transactional
     public void synchronizeDeletion(LocalId id) {
         if (!businessItems.lockContentSource(id)) {
@@ -63,11 +72,17 @@ public class TrackerItemLifecycleService {
         });
     }
 
+    /**
+     * 移除已彻底删除变体的索引。
+     */
     @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);
     }
 
+    /**
+     * 幂等登记原生创建产生的 Local-backed LTI；须在调用方事务内执行。
+     */
     @Transactional(propagation = Propagation.MANDATORY)
     public void registerCreated(TrackerItemCreatedEvent event) {
         // Match delete2's lock order so a late creation event cannot restore a purged index.
@@ -79,6 +94,9 @@ public class TrackerItemLifecycleService {
                 event.workingSetId(), event.revision()));
     }
 
+    /**
+     * 按合并目标事件物化继承变体或新建 Local-backed LTI。
+     */
     @Transactional
     public void applyMergeTarget(MergeTargetEvent target) {
         if (target.inherited()) {

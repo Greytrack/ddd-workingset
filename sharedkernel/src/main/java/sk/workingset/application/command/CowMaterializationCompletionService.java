@@ -27,6 +27,9 @@ public final class CowMaterializationCompletionService {
     private final TransactionTemplate transaction;
 
 
+    /**
+     * 消费物化结果：成功切换 LTI 为 Local-backed，失败记录失败终态。
+     */
     public void complete(TrackerItemMaterializationCompletedEvent event) {
         if (event.outcome() == TrackerItemMaterializationCompletedEvent.Outcome.MATERIALIZED) {
             transaction.executeWithoutResult(status -> switchToLocalBacked(event));

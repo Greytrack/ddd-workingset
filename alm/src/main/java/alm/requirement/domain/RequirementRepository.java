@@ -9,7 +9,9 @@ import java.util.Optional;
  */
 public interface RequirementRepository {
 
+    /** 保存聚合（新增或更新）。 */
     void save(Requirement requirement);
 
+    /** 按 LocalId 重建聚合。 */
     Optional<Requirement> findById(LocalId localId);
 }

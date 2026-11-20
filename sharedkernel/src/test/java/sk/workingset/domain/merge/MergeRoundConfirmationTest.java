@@ -24,6 +24,23 @@ class MergeRoundConfirmationTest {
     private static final Revision BEFORE = Revision.of(3);
     private static final Revision COMMITTED = Revision.of(4);
 
+    private static MergeRound round(boolean markAsMerged) {
+        var difference = new Difference(CommonId.of("10"), new TrackerPair(SOURCE, TrackerId.of("12"),
+                TARGET, TrackerId.of("13")), side("30", "old"), side("31", "new"), List.of("title"));
+        var decision = new MergeDecision(Map.of("title", MergeDecision.FieldAction.ACCEPT), null, markAsMerged);
+        return MergeRound.prepare("40", "request", SOURCE, TARGET, "user")
+                .register(new MergeRound.Entry("41", difference, decision, null)).start();
+    }
+
+    private static Side side(String localId, String title) {
+        LocalId id = LocalId.of(localId);
+        return new Side(id, id, BEFORE, BEFORE, null, 0L, Presence.PRESENT, null, Map.of("title", title));
+    }
+
+    private static MergeCommitReceipt receipt() {
+        return new MergeCommitReceipt(LocalId.of("31"), BEFORE, COMMITTED);
+    }
+
     @Test
     void confirmedEntryOwnsCommittedRevisionEvidenceBeforeRoundCloses() {
         MergeRound running = round(true);
@@ -76,22 +93,5 @@ class MergeRoundConfirmationTest {
                 new MergeDecision(Map.of("title", MergeDecision.FieldAction.ACCEPT), null, false).validate(twoFields));
         assertDoesNotThrow(() -> new MergeDecision(Map.of("title", MergeDecision.FieldAction.ACCEPT,
                 "description", MergeDecision.FieldAction.IGNORED), null, false).validate(twoFields));
-    }
-
-    private static MergeRound round(boolean markAsMerged) {
-        var difference = new Difference(CommonId.of("10"), new TrackerPair(SOURCE, TrackerId.of("12"),
-                TARGET, TrackerId.of("13")), side("30", "old"), side("31", "new"), List.of("title"));
-        var decision = new MergeDecision(Map.of("title", MergeDecision.FieldAction.ACCEPT), null, markAsMerged);
-        return MergeRound.prepare("40", "request", SOURCE, TARGET, "user")
-                .register(new MergeRound.Entry("41", difference, decision, null)).start();
-    }
-
-    private static Side side(String localId, String title) {
-        LocalId id = LocalId.of(localId);
-        return new Side(id, id, BEFORE, BEFORE, null, 0L, Presence.PRESENT, null, Map.of("title", title));
-    }
-
-    private static MergeCommitReceipt receipt() {
-        return new MergeCommitReceipt(LocalId.of("31"), BEFORE, COMMITTED);
     }
 }

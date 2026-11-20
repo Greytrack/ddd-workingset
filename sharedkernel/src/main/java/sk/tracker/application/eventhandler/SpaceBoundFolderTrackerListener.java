@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
@@ -17,7 +16,9 @@ import sk.workingset.domain.Classification;
 import sk.workingset.domain.event.TrackerCreatedEvent;
 import sk.workingset.domain.event.WorkingSetSpaceBoundEvent;
 
-/** 每个 Working Set 的每个产品空间拥有自己的文件夹 Tracker。 */
+/**
+ * 每个 Working Set 的每个产品空间拥有自己的文件夹 Tracker。
+ */
 @Component
 @RequiredArgsConstructor
 public class SpaceBoundFolderTrackerListener {
@@ -25,6 +26,12 @@ public class SpaceBoundFolderTrackerListener {
     private final ProductSpaceRepository spaces;
     private final IdentifierGenerator ids;
     private final ApplicationEventPublisher events;
+
+    private static TrackerCreatedEvent createdEvent(Tracker folder) {
+        return new TrackerCreatedEvent(folder.trackerId(), folder.workingSetId(),
+                folder.productSpaceId(), Long.toString(Tracker.FOLDER_CLASSIFICATION_ID),
+                Classification.SharingMode.UNSHARED);
+    }
 
     @ApplicationModuleListener(id = "bootstrap.SpaceBoundFolderTrackerListener.on(sk.workingset.domain.event.WorkingSetSpaceBoundEvent)")
     public void on(WorkingSetSpaceBoundEvent event) {
@@ -40,11 +47,5 @@ public class SpaceBoundFolderTrackerListener {
                 event.workingSetId(), space);
         trackers.save(folder);
         events.publishEvent(createdEvent(folder));
-    }
-
-    private static TrackerCreatedEvent createdEvent(Tracker folder) {
-        return new TrackerCreatedEvent(folder.trackerId(), folder.workingSetId(),
-                folder.productSpaceId(), Long.toString(Tracker.FOLDER_CLASSIFICATION_ID),
-                Classification.SharingMode.UNSHARED);
     }
 }

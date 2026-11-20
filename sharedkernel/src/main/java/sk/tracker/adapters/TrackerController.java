@@ -11,6 +11,10 @@ import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
+/**
+ * Tracker 的 HTTP 入口：创建业务原生 Tracker、重命名与删除。
+ * 删除顺序与拒绝语义由 {@link TrackerCommandService} 承担，控制器只做参数校验与映射。
+ */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -24,6 +28,9 @@ public class TrackerController {
         return value;
     }
 
+    /**
+     * 在默认工作集创建业务原生 Tracker；名称在（产品空间，分类）内唯一，共享方式须与分类相容（T2 §4.4）。
+     */
     @PostMapping("/worksets/{workingSetId}/trackers")
     @ResponseStatus(HttpStatus.CREATED)
     public TrackerView create(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
@@ -33,11 +40,17 @@ public class TrackerController {
                 required(request.classificationId(), "classificationId"), mode));
     }
 
+    /**
+     * 重命名 Tracker；名称去首尾空白后须为 1–255 字符。
+     */
     @PatchMapping("/trackers/{trackerId}")
     public TrackerView rename(@PathVariable String trackerId, @RequestBody RenameTrackerRequest request) {
         return TrackerView.from(commands.rename(TrackerId.of(trackerId), request.name()));
     }
 
+    /**
+     * 删除 Tracker；须通过无 Item、无组织子级、无派生子级三项检查（T2 K2）。
+     */
     @DeleteMapping("/trackers/{trackerId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String trackerId) {

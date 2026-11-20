@@ -23,6 +23,7 @@ public final class RequirementMaterializationService {
     private final RequirementSnapshotStore snapshotStore;
 
 
+    /** 按物化证据保存目标业务对象；已物化则校验与收据身份一致。 */
     public void materialize(MaterializeRequest request, TargetIdentity target) {
         RequirementSnapshot snapshot = snapshotStore.find(request.snapshotRef())
                 .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot is missing"));
@@ -57,6 +58,7 @@ public final class RequirementMaterializationService {
         }
     }
 
+    /** 校验已物化目标与收据的家族、Tracker 与版次一致。 */
     public void verifyMaterializedTarget(TargetIdentity target) {
         Requirement existing = repository.findById(target.localId())
                 .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business object is missing"));

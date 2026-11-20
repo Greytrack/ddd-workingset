@@ -6,7 +6,9 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 
-/** Read model for the latest confirmation across merge rounds. */
+/**
+ * Read model for the latest confirmation across merge rounds.
+ */
 public record MergeCheckpoint(Key key, long checkpointId, Revision revisionA, Revision revisionB,
                               LocalId localIdA, LocalId localIdB, String roundId, ChangeKind changeKind,
                               Direction direction, Action action, boolean revoked, String operator) {

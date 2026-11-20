@@ -115,6 +115,9 @@ public class MergeExecutionService {
         return new ItemResult(entry.id(), outcome, operation, businessRef, checkpoint, failure);
     }
 
+    /**
+     * 按 requestId 幂等登记一页合并决策并发布提交事件；同键返回原轮次，换方向返回冲突。
+     */
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, String caller) {
@@ -174,6 +177,9 @@ public class MergeExecutionService {
         return updated;
     }
 
+    /**
+     * 按 id 读取轮次。
+     */
     public MergeRound get(String id) {
         return round(id);
     }

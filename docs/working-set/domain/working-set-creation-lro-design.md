@@ -46,10 +46,8 @@
 | 步骤 | 内容 | 依赖 | 失败处理 |
 | --- | --- | --- | --- |
 | `CREATE_WORKING_SET` | 创建子 WS 本体（`parentWorkingSetId`） | — | 失败 → 任务 `Failed`，停止 |
-| `BIND_PRODUCT_SPACES` | 绑定用户选定的产品空间 | 本体 | 同上 |
-| `COPY_UNSHARED_TRACKERS` | 为每个选定的父 Tracker 复制一个子 Tracker（`sourceId=父`、同空间/分类、`UNSHARED`） | 对应空间已绑定 | 单项失败记录明细，继续其他项 |
-| `BIND_UNSHARED_TRACKERS` | 绑定已复制的非共享 Tracker | 复制及对应空间已绑定 | 同上 |
-| `BIND_SHARED_TRACKERS` | 绑定用户选定的共享 Tracker（复用父 TrackerId，不复制） | 对应空间已绑定 | 同上 |
+| `COPY_UNSHARED_TRACKERS` | 受理时按所选空间补齐必带分类的来源 Tracker（当前为 Folder），与显式选择合并去重。逐项派生，保留直属来源、空间和分类 | 本体已创建；Tracker 所属空间已选 | 单项失败记录明细，继续其他项 |
+| `BIND_PRODUCT_AND_TRACKER` | 在目标 WorkingSet 聚合中按空间纳入合法范围，同时绑定已复制的非共享 Tracker 和选定的共享 Tracker。空间成员关系由 TrackerBinding 投影，合法绑定一次保存 | 复制阶段已结束；新空间须有必带副本，且在直属父范围内 | 阶段按工作集计一项，各空间与 Tracker 的失败逐项记录，保留其余合法绑定 |
 | `INDEX_UNSHARED_TRACKERS`（T7-D 已实现） | 对每个绑定成功的非共享子 Tracker，按父 Tracker 的有效 Item 创建 LightTrackerItem | 复制+绑定 | 逐项记录；允许部分成功 |
 | `PUBLISH_RELATION_EVENTS`（T7-E 已实现） | 索引完成后发布 `ReferenceCreationRequestedEvent`、`DanglingReferenceRepairRequestedEvent`、`AssociationCreationRequestedEvent`；不操作关系聚合 | 索引 | 记录事件发布失败；不阻断主流程，不自动重试 |
 

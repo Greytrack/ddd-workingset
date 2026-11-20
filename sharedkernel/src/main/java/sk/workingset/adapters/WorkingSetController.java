@@ -31,6 +31,9 @@ public class WorkingSetController {
         this.queries = queries;
     }
 
+    /**
+     * 按 id 查询工作集；创建中的目标工作集返回 Preparing（任务上下文读取见 {@link WorkingSetCreationController#findTarget}）。
+     */
     @GetMapping("/{workingSetId}")
     public WorkingSetView find(@PathVariable String workingSetId) {
         return WorkingSetView.from(queries.find(WorkingSetId.of(workingSetId)));
@@ -46,6 +49,9 @@ public class WorkingSetController {
                 request.name(), request.color()));
     }
 
+    /**
+     * 创建子工作集，形成单父谱系；名称与主题色可空。
+     */
     @PostMapping("/{workingSetId}/children")
     @ResponseStatus(HttpStatus.CREATED)
     public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
@@ -53,11 +59,17 @@ public class WorkingSetController {
                 request.name(), request.color()));
     }
 
+    /**
+     * 查询直接子工作集的 id 列表。
+     */
     @GetMapping("/{workingSetId}/children")
     public List<String> findChildren(@PathVariable String workingSetId) {
         return queries.findChildren(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
     }
 
+    /**
+     * 查询祖先工作集的 id 列表。
+     */
     @GetMapping("/{workingSetId}/ancestors")
     public List<String> findAncestors(@PathVariable String workingSetId) {
         return queries.findAncestors(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
@@ -71,6 +83,9 @@ public class WorkingSetController {
         return queries.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
     }
 
+    /**
+     * 查询可用的分类元数据（含共享特性），供创建 Tracker 表单使用（T2 §4.4）。
+     */
     @GetMapping("/metadata/classifications")
     public List<ClassificationView> findClassifications() {
         return queries.findClassifications().stream().map(ClassificationView::from).toList();
@@ -78,17 +93,26 @@ public class WorkingSetController {
 
     // Query-side model has the same simple name as the REST view; keep the conversion explicit.
 
+    /**
+     * 查询工作集的空间绑定与 Tracker 绑定。
+     */
     @GetMapping("/{workingSetId}/bindings")
     public BindingsView listBindings(@PathVariable String workingSetId) {
         return BindingsView.from(queries.findBindings(WorkingSetId.of(workingSetId)));
     }
 
+    /**
+     * 把产品空间绑定到工作集，建立 SpaceBinding；随后由事件为（工作集，产品空间）创建 Folder Tracker。
+     */
     @PostMapping("/{workingSetId}/spaces/{spaceId}")
     @ResponseStatus(HttpStatus.CREATED)
     public SpaceBindingView bindSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
         return SpaceBindingView.from(commands.bindSpace(WorkingSetId.of(workingSetId), spaceId));
     }
 
+    /**
+     * 以共享方式纳入 Tracker，复用上游 trackerId 建立 TrackerBinding。
+     */
     @PostMapping("/{workingSetId}/trackers/shared/{trackerId}")
     @ResponseStatus(HttpStatus.CREATED)
     public TrackerBindingView bindTrackerShared(@PathVariable String workingSetId, @PathVariable String trackerId) {
@@ -96,6 +120,9 @@ public class WorkingSetController {
                 WorkingSetId.of(workingSetId), TrackerId.of(trackerId)));
     }
 
+    /**
+     * 按工作集与 LocalId 解析 LightTrackerItem，返回其身份、来源与物化状态。
+     */
     @GetMapping("/{workingSetId}/items/{localId}")
     public LightTrackerItemView resolve(@PathVariable("workingSetId") String workingSetId,
                                         @PathVariable("localId") String localId) {
@@ -103,6 +130,9 @@ public class WorkingSetController {
         return LightTrackerItemView.from(item);
     }
 
+    /**
+     * 切换 Tracker 在工作集的显示状态。
+     */
     @PatchMapping("/{workingSetId}/trackers/{trackerId}/visibility")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void setTrackerShown(@PathVariable String workingSetId, @PathVariable String trackerId,

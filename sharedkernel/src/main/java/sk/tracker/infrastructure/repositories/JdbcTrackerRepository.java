@@ -1,9 +1,8 @@
 package sk.tracker.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.IncorrectUpdateSemanticsDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -21,6 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Tracker 聚合的 PostgreSQL/Spring JDBC 仓储；负责与旧表 {@code air_inst_tracker_rev}/{@code air_ws_tracker} 的双写兼容。
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -59,19 +61,23 @@ public class JdbcTrackerRepository implements TrackerRepository {
         return Objects.requireNonNull(RequestThreadHolder.getLongUserId(), "Tracker write requires a current user");
     }
 
-    /** Full physical row for internal compatibility reads, including soft-deleted rows. */
+    /**
+     * Full physical row for internal compatibility reads, including soft-deleted rows.
+     */
     public Optional<TrackerRow> findLegacyRow(TrackerId id, long productSpaceId) {
         return jdbc.query("SELECT t.* FROM air_inst_tracker_rev t WHERE t.id = ? AND t.work_space = ?",
                 (rs, row) -> TrackerRow.read(rs), id.numericValue(), productSpaceId).stream().findFirst();
     }
 
-    /** The mirror has no workspace column; scope the lookup through the owning Tracker row. */
+    /**
+     * The mirror has no workspace column; scope the lookup through the owning Tracker row.
+     */
     public Optional<TrackerCompatibilityRow> findLegacyCompatibilityRow(TrackerId id, long productSpaceId) {
         return jdbc.query("""
-                SELECT mirror.* FROM air_ws_tracker mirror
-                JOIN air_inst_tracker_rev t ON t.id = mirror.id
-                WHERE t.id = ? AND t.work_space = ?
-                """, (rs, row) -> TrackerCompatibilityRow.read(rs), id.numericValue(), productSpaceId)
+                        SELECT mirror.* FROM air_ws_tracker mirror
+                        JOIN air_inst_tracker_rev t ON t.id = mirror.id
+                        WHERE t.id = ? AND t.work_space = ?
+                        """, (rs, row) -> TrackerCompatibilityRow.read(rs), id.numericValue(), productSpaceId)
                 .stream().findFirst();
     }
 

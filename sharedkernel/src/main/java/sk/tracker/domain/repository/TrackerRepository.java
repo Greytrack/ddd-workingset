@@ -21,7 +21,9 @@ public interface TrackerRepository {
 
     Optional<Tracker> findFolderTracker(WorkingSetId owner, String spaceId);
 
-    /** 保存聚合及其兼容数据；初始可见性与创建人由聚合自身携带。 */
+    /**
+     * 保存聚合及其兼容数据；初始可见性与创建人由聚合自身携带。
+     */
     void save(Tracker tracker);
 
     /**

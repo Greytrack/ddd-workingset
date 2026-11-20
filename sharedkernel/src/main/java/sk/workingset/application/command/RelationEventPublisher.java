@@ -29,6 +29,9 @@ public final class RelationEventPublisher {
     private final IdentifierGenerator ids;
 
 
+    /**
+     * 发布 Reference 创建请求事件，返回已发布事件列表。
+     */
     public List<ReferenceCreationRequestedEvent> publishReferenceCreations(String originId, OriginType originType,
                                                                            List<ReferenceFact> facts) {
         return facts.stream().map(fact -> new ReferenceCreationRequestedEvent(
@@ -36,6 +39,9 @@ public final class RelationEventPublisher {
                 .peek(events::publishEvent).toList();
     }
 
+    /**
+     * 发布悬空 Reference 修复请求事件，返回已发布事件列表。
+     */
     public List<DanglingReferenceRepairRequestedEvent> publishReferenceRepairs(String originId, OriginType originType,
                                                                                List<ReferenceFact> facts) {
         return facts.stream().map(fact -> new DanglingReferenceRepairRequestedEvent(
@@ -43,6 +49,9 @@ public final class RelationEventPublisher {
                 .peek(events::publishEvent).toList();
     }
 
+    /**
+     * 发布 Association 创建请求事件，返回已发布事件列表。
+     */
     public List<AssociationCreationRequestedEvent> publishAssociationCreations(String originId, OriginType originType,
                                                                                List<AssociationFact> facts) {
         return facts.stream().map(fact -> new AssociationCreationRequestedEvent(

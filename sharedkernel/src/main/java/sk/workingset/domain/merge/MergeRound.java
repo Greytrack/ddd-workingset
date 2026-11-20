@@ -146,7 +146,9 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         }
     }
 
-    /** Own business revisions of the compared variants, not the revisions used to read inherited content. */
+    /**
+     * Own business revisions of the compared variants, not the revisions used to read inherited content.
+     */
     @ValueObject
     public record Confirmation(Revision sourceRevision, Revision targetRevision) {
         public Confirmation {

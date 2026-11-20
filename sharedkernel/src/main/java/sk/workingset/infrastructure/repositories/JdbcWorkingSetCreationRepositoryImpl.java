@@ -15,6 +15,9 @@ import sk.workingset.domain.workingset.WorkingSetId;
 import java.sql.Timestamp;
 import java.util.Optional;
 
+/**
+ * WorkingSetCreation 任务仓储的 JDBC 实现；任务进度与范围快照以 JSONB 保存。
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor

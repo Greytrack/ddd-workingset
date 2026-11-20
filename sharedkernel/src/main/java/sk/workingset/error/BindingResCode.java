@@ -3,7 +3,9 @@ package sk.workingset.error;
 import sk.common.error.DomainErrorType;
 import sk.common.error.DomainResCode;
 
-/** T4 binding and deletion codes with their public reason values. */
+/**
+ * T4 binding and deletion codes with their public reason values.
+ */
 public enum BindingResCode implements DomainResCode {
     WORKING_SET_NOT_EXISTS(DomainErrorType.NOT_FOUND, 1201, "Working Set does not exist", "WorkingSetNotFound"),
     WORKING_SET_NOT_WRITABLE(DomainErrorType.CONFLICT, 1202, "Working set not writable", "WorkingSetNotWritable"),
@@ -47,13 +49,21 @@ public enum BindingResCode implements DomainResCode {
     }
 
     @Override
-    public DomainErrorType getType() { return type; }
+    public DomainErrorType getType() {
+        return type;
+    }
 
     @Override
-    public int getCode() { return code; }
+    public int getCode() {
+        return code;
+    }
 
     @Override
-    public String getDesc() { return desc; }
+    public String getDesc() {
+        return desc;
+    }
 
-    public String reason() { return reason; }
+    public String reason() {
+        return reason;
+    }
 }

@@ -3,7 +3,6 @@ package sk.workingset.application.eventhandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
@@ -16,7 +15,9 @@ import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
-/** 默认 Tracker 批量创建完成后，WorkingSet 在一个事务内建立空间与 Tracker 绑定。 */
+/**
+ * 默认 Tracker 批量创建完成后，WorkingSet 在一个事务内建立空间与 Tracker 绑定。
+ */
 @Component
 @RequiredArgsConstructor
 public class DefaultTrackersBindingListener {
@@ -24,6 +25,10 @@ public class DefaultTrackersBindingListener {
     private final ProductSpaceRepository spaces;
     private final TrackerRepository trackers;
     private final ClassificationCatalog classifications;
+
+    private static boolean isFolder(String classificationId) {
+        return Long.toString(Tracker.FOLDER_CLASSIFICATION_ID).equals(classificationId);
+    }
 
     @ApplicationModuleListener(id = "bootstrap.DefaultTrackersBindingListener.on(sk.tracker.domain.event.DefaultTrackersProvisionedEvent)")
     public void on(DefaultTrackersProvisionedEvent event) {
@@ -46,17 +51,13 @@ public class DefaultTrackersBindingListener {
                             "tracker disappeared: " + trackerId.value()));
             Classification classification = isFolder(tracker.classificationId())
                     ? new Classification(Tracker.FOLDER_CLASSIFICATION_ID,
-                            Classification.SharingMode.UNSHARED, "文件夹")
+                    Classification.SharingMode.UNSHARED, "文件夹")
                     : classifications.findClassification(tracker.classificationId())
-                            .orElseThrow(() -> DomainException.withMessage(
-                                    SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                                    "classification disappeared: " + tracker.classificationId()));
+                    .orElseThrow(() -> DomainException.withMessage(
+                            SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
+                            "classification disappeared: " + tracker.classificationId()));
             workingSet.bindTracker(tracker, classification, tracker.sharingMode());
         }
         workingSets.save(workingSet);
-    }
-
-    private static boolean isFolder(String classificationId) {
-        return Long.toString(Tracker.FOLDER_CLASSIFICATION_ID).equals(classificationId);
     }
 }

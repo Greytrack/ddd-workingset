@@ -22,6 +22,9 @@ public class WorkingSetExtensionController {
         this.creations = creations;
     }
 
+    /**
+     * 对已有子工作集批量纳入直接父 Tracker（T7-G），返回 202 与创建任务视图。
+     */
     @PostMapping("/{target}/extensions")
     public ResponseEntity<WorkingSetCreationController.CreationView> extend(
             @PathVariable String target, @RequestBody ExtensionRequest request) {

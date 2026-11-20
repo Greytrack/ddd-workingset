@@ -18,7 +18,9 @@ public interface TrackerItemCatalogQueryProvider {
      */
     List<Identity> identities(TrackerId trackerId);
 
-    /** Identities needed by compare, including soft-deleted variants that merge can restore. */
+    /**
+     * Identities needed by compare, including soft-deleted variants that merge can restore.
+     */
     default List<Identity> identitiesForMerge(TrackerId trackerId) {
         return identities(trackerId);
     }

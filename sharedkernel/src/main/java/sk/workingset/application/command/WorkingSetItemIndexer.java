@@ -125,11 +125,15 @@ public final class WorkingSetItemIndexer {
         }
     }
 
+    /**
+     * 按当前阶段项分页索引父 Tracker 的冻结 Item，返回推进后的任务进度。
+     */
     public WorkingSetCreation indexBatch(WorkingSetCreation creation, SavepointManager transaction) {
         TrackerId parent = TrackerId.of(creation.currentItem());
         WorkingSetId target = WorkingSetId.of(creation.request().newWorkingSetId());
         if (creation.failures().stream().anyMatch(failure -> parent.value().equals(failure.trackerId())
-                && (failure.stage() == Stage.COPY_UNSHARED_TRACKERS || failure.stage() == Stage.BIND_UNSHARED_TRACKERS))) {
+                && (failure.stage() == Stage.COPY_UNSHARED_TRACKERS || failure.stage() == Stage.BIND_PRODUCT_AND_TRACKER
+                || failure.stage() == Stage.BIND_UNSHARED_TRACKERS))) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
         Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);

@@ -30,6 +30,28 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
 
+    private static Long numericId(LocalId id) {
+        return id == null ? null : id.numericValue();
+    }
+
+    private static Integer revision(Revision revision) {
+        return revision == null ? null : revision.value();
+    }
+
+    /**
+     * 活动轮次唯一索引按数值升序记录 Tracker 对；聚合内证据已保证整轮同属一对。
+     */
+    private static Long[] trackerPair(MergeRound round) {
+        MergeRound.Entry first = round.entries().isEmpty() ? null : round.entries().getFirst();
+        if (first == null || first.evidence() == null) {
+            return new Long[]{null, null};
+        }
+        Comparison.TrackerPair trackers = first.evidence().trackers();
+        long a = trackers.source().numericValue();
+        long b = trackers.target().numericValue();
+        return a <= b ? new Long[]{a, b} : new Long[]{b, a};
+    }
+
     @Override
     public void save(MergeRound round) {
         // Serialize duplicate requestId submissions before touching the unique indexes.
@@ -87,14 +109,14 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
             case DELETED -> "DELETED";
         };
         int inserted = jdbc.update("""
-                INSERT INTO air_ws_items_merge_index
-                    (id, batch_id, branch_a_id, branch_b_id, common_id, local_id_a, local_id_b,
-                     revision_a, revision_b, diff_type, merge_direction, merge_action, merge_status,
-                     operator, created_by, created_time, updated_by, updated_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MERGED', ?, ?,
-                    (extract(epoch FROM now()) * 1000)::bigint, ?, (extract(epoch FROM now()) * 1000)::bigint)
-                ON CONFLICT (id) DO NOTHING
-                """, entry.numericId(), round.numericId(), Math.min(source, target), Math.max(source, target),
+                        INSERT INTO air_ws_items_merge_index
+                            (id, batch_id, branch_a_id, branch_b_id, common_id, local_id_a, local_id_b,
+                             revision_a, revision_b, diff_type, merge_direction, merge_action, merge_status,
+                             operator, created_by, created_time, updated_by, updated_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MERGED', ?, ?,
+                            (extract(epoch FROM now()) * 1000)::bigint, ?, (extract(epoch FROM now()) * 1000)::bigint)
+                        ON CONFLICT (id) DO NOTHING
+                        """, entry.numericId(), round.numericId(), Math.min(source, target), Math.max(source, target),
                 evidence.family().numericValue(), sourceIsA ? sourceLocal : targetLocal, sourceIsA ? targetLocal : sourceLocal,
                 revision(sourceIsA ? confirmation.sourceRevision() : confirmation.targetRevision()),
                 revision(sourceIsA ? confirmation.targetRevision() : confirmation.sourceRevision()), diffType,
@@ -104,14 +126,6 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
         if (inserted != 1) {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "checkpoint ID belongs to another confirmation");
         }
-    }
-
-    private static Long numericId(LocalId id) {
-        return id == null ? null : id.numericValue();
-    }
-
-    private static Integer revision(Revision revision) {
-        return revision == null ? null : revision.value();
     }
 
     @Override
@@ -128,20 +142,6 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     public Optional<MergeRound> findByRequestId(String requestId) {
         return jdbc.query("SELECT state FROM merge_rounds WHERE request_id = ?",
                 (rs, row) -> decode(rs.getString(1), MergeRound.class), requestId).stream().findFirst();
-    }
-
-    /**
-     * 活动轮次唯一索引按数值升序记录 Tracker 对；聚合内证据已保证整轮同属一对。
-     */
-    private static Long[] trackerPair(MergeRound round) {
-        MergeRound.Entry first = round.entries().isEmpty() ? null : round.entries().getFirst();
-        if (first == null || first.evidence() == null) {
-            return new Long[]{null, null};
-        }
-        Comparison.TrackerPair trackers = first.evidence().trackers();
-        long a = trackers.source().numericValue();
-        long b = trackers.target().numericValue();
-        return a <= b ? new Long[]{a, b} : new Long[]{b, a};
     }
 
     private String encode(Object value) {

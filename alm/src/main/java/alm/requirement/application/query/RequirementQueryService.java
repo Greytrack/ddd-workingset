@@ -17,6 +17,7 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.BindingResCode;
 
 import java.util.List;
 import java.util.Optional;
@@ -54,7 +55,9 @@ public class RequirementQueryService {
         LightTrackerItem target = items.findById(localId)
                 .filter(item -> !item.materialized())
                 .orElseThrow(() -> notFound(localId));
-        workingSets.requireReady(target.workingSetId());
+        WorkingSetId workingSetId = target.workingSetId();
+        workingSets.findById(workingSetId)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, workingSetId.value()));
         Requirement source = repository.findById(target.sourceLocalId())
                 .orElseThrow(() -> notFound(target.sourceLocalId()));
         if (source.deleted()) {

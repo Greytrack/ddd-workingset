@@ -21,18 +21,27 @@ public class BindingDeletionController {
         this.deletions = deletions;
     }
 
+    /**
+     * 解除工作集与 Tracker 的绑定；Shared 仅解绑、聚合保留，非共享须通过三项检查后删除（T2 §4.2）。
+     */
     @DeleteMapping("/worksets/{workingSetId}/trackers/{trackerId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unbindTracker(@PathVariable String workingSetId, @PathVariable String trackerId) {
         deletions.unbindTracker(WorkingSetId.of(workingSetId), TrackerId.of(trackerId));
     }
 
+    /**
+     * 从工作集移除产品空间；须先解除该空间下的全部 TrackerBinding（SB-4）。
+     */
     @DeleteMapping("/worksets/{workingSetId}/spaces/{spaceId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeSpace(@PathVariable String workingSetId, @PathVariable String spaceId) {
         deletions.removeSpace(WorkingSetId.of(workingSetId), spaceId);
     }
 
+    /**
+     * 删除工作集；默认工作集不可删，须先合法解除全部 TrackerBinding 与 SpaceBinding（T2 K3）。
+     */
     @DeleteMapping("/worksets/{workingSetId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteWorkingSet(@PathVariable String workingSetId) {

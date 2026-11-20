@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
+import sk.productspace.domain.event.ProductSpaceCreatedEvent;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
@@ -15,6 +16,9 @@ import sk.workingset.error.BindingResCode;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 产品空间命令服务：创建与删除；删除前审查所有工作集的绑定与空间内 Tracker。
+ */
 @Service
 @RequiredArgsConstructor
 public class ProductSpaceCommandService {
@@ -24,14 +28,20 @@ public class ProductSpaceCommandService {
     private final TrackerQueryProvider trackerQueries;
     private final IdentifierGenerator ids;
 
+    /**
+     * 创建产品空间并发布创建事件。
+     */
     @Transactional
     public ProductSpace create(String name) {
         ProductSpace space = new ProductSpace(ids.nextId(null).longValue(), name);
         spaces.save(space);
-        events.publishEvent(new sk.productspace.domain.event.ProductSpaceCreatedEvent(space.numericId()));
+        events.publishEvent(new ProductSpaceCreatedEvent(space.numericId()));
         return space;
     }
 
+    /**
+     * 删除产品空间；须无工作集绑定且空间内无 Tracker。
+     */
     @Transactional
     public void delete(String id) {
         ProductSpace space = spaces.findById(id)

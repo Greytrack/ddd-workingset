@@ -29,6 +29,7 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.BindingResCode;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -65,10 +66,12 @@ public class RequirementCommandService {
                               String description,
                               Revision revision) {
         if (requestedWorkingSetId != null) {
-            workingSets.requireReady(requestedWorkingSetId);
+            requireWorkingSet(requestedWorkingSetId);
         }
         java.util.Optional<Tracker> tracker = trackers.findById(trackerId);
-        tracker.ifPresent(found -> workingSets.requireReady(found.workingSetId()));
+        tracker.map(Tracker::workingSetId)
+                .filter(owner -> !owner.equals(requestedWorkingSetId))
+                .ifPresent(this::requireWorkingSet);
         if (requestedWorkingSetId != null) {
             tracker.ifPresent(current -> {
                 if (current.sharingMode() == SharingMode.UNSHARED
@@ -126,11 +129,16 @@ public class RequirementCommandService {
         java.util.Optional<LightTrackerItem> inherited = items.findById(localId)
                 .filter(item -> !item.materialized());
         Requirement current = inherited.map(target -> {
-            workingSets.requireReady(target.workingSetId());
+            requireWorkingSet(target.workingSetId());
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
         }).orElseGet(() -> load(localId));
         requireActive(current);
         return saveChange(current, change.apply(current));
+    }
+
+    private void requireWorkingSet(WorkingSetId id) {
+        workingSets.findById(id)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
     }
 
     private Requirement createEditBase(LightTrackerItem target, LockVersion expectedLockVersion) {
@@ -152,6 +160,7 @@ public class RequirementCommandService {
                 source.title(), source.description(), target.revision(), source.version());
     }
 
+    /** 显式升级业务版次，触发依赖变体的 COW。 */
     @Transactional
     public Requirement upgradeRevision(LocalId localId, LockVersion expectedLockVersion) {
         Requirement current = load(localId);
@@ -159,6 +168,7 @@ public class RequirementCommandService {
         return saveChange(current, current.upgradeRevision(expectedLockVersion));
     }
 
+    /** 软删除需求。 */
     @Transactional
     public void delete(LocalId id) {
         Requirement current = load(id);
@@ -166,6 +176,7 @@ public class RequirementCommandService {
         saveChange(current, current.delete(current.lockVersion()));
     }
 
+    /** 恢复软删除的需求。 */
     @Transactional
     public void undelete(LocalId id) {
         Requirement current = load(id);
@@ -184,6 +195,7 @@ public class RequirementCommandService {
         }
     }
 
+    /** 保存变更：先保存修改前快照，再保存对象并发布来源变更事件（及软删事件）。 */
     public Requirement saveChange(Requirement current, Requirement changed) {
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
         SnapshotRefEvent snapshotRef = snapshotStore.save(snapshot);

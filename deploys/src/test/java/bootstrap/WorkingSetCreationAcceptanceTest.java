@@ -153,13 +153,19 @@ class WorkingSetCreationAcceptanceTest {
     @Test
     void initializesSelectedSpaceAndTrackersAndKeepsOneCopyAfterRedelivery() {
         seedRange();
-        Request request = new Request("1", child, "range", List.of(space), List.of(shared), List.of(unshared));
+        String firstFolder = fixtureId("folder-" + space);
+        String secondFolder = fixtureId("folder-" + otherSpace);
+        jdbc.update("UPDATE trackers SET is_default = true WHERE tracker_id = ?", fixtureId("unselected-" + child));
+        Request request = new Request("1", child, "range", List.of(space, otherSpace), List.of(shared),
+                List.of(unshared, firstFolder));
         String id = submit(request);
         CreationView completed = awaitStatus(id, Status.Succeeded);
-        assertEquals(7, completed.progress().succeeded());
+        assertEquals(3, completed.stageProgress().get(Stage.COPY_UNSHARED_TRACKERS).succeeded());
+        assertEquals(1, completed.stageProgress().get(Stage.BIND_PRODUCT_AND_TRACKER).succeeded());
         BindingsView bindings = bindings();
-        assertEquals(List.of(space), bindings.spaces().stream().map(binding -> binding.productSpaceId()).toList());
-        assertEquals(3, bindings.trackers().size());
+        assertEquals(java.util.Set.of(space, otherSpace), bindings.spaces().stream()
+                .map(binding -> binding.productSpaceId()).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(4, bindings.trackers().size());
         assertEquals(1, bindings.trackers().stream().filter(binding -> shared.equals(binding.trackerId())).count());
         String copy = bindings.trackers().stream().filter(binding -> "UNSHARED".equals(binding.sharingMode()))
                 .filter(binding -> !"10070101".equals(binding.classificationId()))
@@ -175,8 +181,8 @@ class WorkingSetCreationAcceptanceTest {
                 """, Integer.class, "%" + id + "%")));
         assertEquals(completed, task(id));
         assertEquals(bindings, bindings());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL",
-                Integer.class, child));
+        assertEquals(java.util.Set.of(unshared, firstFolder, secondFolder), new java.util.HashSet<>(jdbc.queryForList(
+                "SELECT source_id FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL", String.class, child)));
     }
 
     @Test
@@ -193,7 +199,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(outsideTracker, failure.trackerId());
         assertEquals(otherSpace, failure.productSpaceId());
         assertEquals("MissingSpaceBinding", failure.reason());
-        assertEquals(1, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).skipped());
+        assertEquals(1, completed.stageProgress().get(Stage.BIND_PRODUCT_AND_TRACKER).succeeded());
         assertEquals(1, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).skipped());
         assertEquals(3, bindings().trackers().size());
         assertEquals(1, bindings().spaces().size());
@@ -205,10 +211,14 @@ class WorkingSetCreationAcceptanceTest {
         FixtureIds.insertWorkingSet(jdbc, "1", parent);
         assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
                 null, Map.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1,
+                jdbc.queryForObject("SELECT count(*) FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
+                        Integer.class, parent, space)));
         CreationView completed = awaitStatus(submit(new Request(parent, child, "outside-parent",
                 List.of(space, otherSpace), List.of(shared), List.of())), Status.PartiallySucceeded);
         assertEquals(List.of("NOT_INCLUDED", "SourceTrackerNotFound"),
-                completed.failures().stream().map(failure -> failure.reason()).toList());
+                completed.failures().stream().map(failure -> failure.reason()).sorted().toList());
+        assertTrue(completed.failures().stream().allMatch(failure -> failure.stage() == Stage.BIND_PRODUCT_AND_TRACKER));
         assertEquals(List.of(space), bindings().spaces().stream().map(binding -> binding.productSpaceId()).toList());
         assertEquals(List.of("10070101"), bindings().trackers().stream().map(binding -> binding.classificationId()).toList());
     }
@@ -221,11 +231,11 @@ class WorkingSetCreationAcceptanceTest {
         CreationView completed = awaitStatus(submit(new Request("1", child, "slot", List.of(space), List.of(),
                 List.of(unshared, sameSlot))), Status.Succeeded);
 
-        assertEquals(2, completed.stageProgress().get(Stage.COPY_UNSHARED_TRACKERS).succeeded());
-        assertEquals(2, completed.stageProgress().get(Stage.BIND_UNSHARED_TRACKERS).succeeded());
+        assertEquals(3, completed.stageProgress().get(Stage.COPY_UNSHARED_TRACKERS).succeeded());
+        assertEquals(1, completed.stageProgress().get(Stage.BIND_PRODUCT_AND_TRACKER).succeeded());
         assertTrue(completed.failures().isEmpty());
         assertEquals(3, bindings().trackers().size());
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL",
+        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL",
                 Integer.class, child));
     }
 
@@ -341,7 +351,7 @@ class WorkingSetCreationAcceptanceTest {
         seedItem(second, fixtureId("other-item-" + child), fixtureId("other-item-" + child), false);
         String id = submit(new Request("1", child, "index", List.of(space, otherSpace), List.of(), List.of(unshared, second)));
         CreationView completed = awaitStatus(id, Status.Succeeded);
-        assertEquals(2, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).succeeded());
+        assertEquals(4, completed.stageProgress().get(Stage.INDEX_UNSHARED_TRACKERS).succeeded());
         assertEquals(3, completed.indexProgress().get(unshared).succeeded());
         assertEquals(1, completed.indexProgress().get(second).succeeded());
         String copiedTracker = bindings().trackers().stream()
@@ -369,6 +379,9 @@ class WorkingSetCreationAcceptanceTest {
         FixtureIds.insertWorkingSet(jdbc, "1", parent);
         assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + parent + "/spaces/" + space,
                 null, Map.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1,
+                jdbc.queryForObject("SELECT count(*) FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
+                        Integer.class, Long.valueOf(parent), Long.valueOf(space))));
         String nativeId = fixtureId("root-" + child);
         seedItem(unshared, nativeId, nativeId, false);
         DeriveFixture.Result derive = DeriveFixture.derive(jdbc, parent, unshared, nativeId, Revision.of(3), CommonId.of(nativeId));
@@ -404,11 +417,13 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals("NOT_FOUND", failure.reason());
         String copied = bindings().trackers().stream().filter(binding -> !"10070101".equals(binding.classificationId()))
                 .findFirst().orElseThrow().trackerId();
+        String folderCopy = bindings().trackers().stream().filter(binding -> "10070101".equals(binding.classificationId()))
+                .findFirst().orElseThrow().trackerId();
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             TrackerItemsIndexedEvent event = indexEvents.find(child);
             assertNotNull(event);
             assertEquals(id, event.creationId());
-            assertEquals(List.of(copied), event.trackerIds());
+            assertEquals(java.util.Set.of(copied, folderCopy), new java.util.HashSet<>(event.trackerIds()));
             assertNotNull(event.occurredAt());
         });
         String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
@@ -545,7 +560,7 @@ class WorkingSetCreationAcceptanceTest {
                 statement.executeQuery().close();
                 id = extension(List.of(unshared));
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                        assertEquals(Stage.BIND_PRODUCT_SPACES, task(id).stage()));
+                        assertEquals(Stage.COPY_UNSHARED_TRACKERS, task(id).stage()));
                 org.springframework.http.ResponseEntity<Map> visible = rest.getForEntity("/api/worksets/" + child, Map.class);
                 assertEquals(HttpStatus.OK, visible.getStatusCode());
             } finally {
@@ -616,6 +631,8 @@ class WorkingSetCreationAcceptanceTest {
     private void seedRange() {
         jdbc.update("INSERT INTO product_spaces VALUES (?), (?)", space, otherSpace);
         jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED'), (?, 'UNSHARED')", shared, unshared);
+        seedFolderTracker(space);
+        seedFolderTracker(otherSpace);
         seedTracker(shared, space, shared, "SHARED");
         seedTracker(unshared, space, unshared, "UNSHARED");
         seedTracker(fixtureId("unselected-" + child), otherSpace, shared, "SHARED");
@@ -626,6 +643,15 @@ class WorkingSetCreationAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, ?)
                 """, id, spaceId, classification, mode);
+    }
+
+    private String seedFolderTracker(String spaceId) {
+        String id = fixtureId("folder-" + spaceId);
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode, is_default)
+                VALUES (?, '1', ?, 10070101, 'UNSHARED', TRUE)
+                """, id, spaceId);
+        return id;
     }
 
     private BindingsView bindings() {

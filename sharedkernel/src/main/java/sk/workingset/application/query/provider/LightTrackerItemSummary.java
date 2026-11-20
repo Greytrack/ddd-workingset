@@ -7,7 +7,9 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-/** LightTrackerItem 的只读摘要；查询侧不返回聚合。 */
+/**
+ * LightTrackerItem 的只读摘要；查询侧不返回聚合。
+ */
 public record LightTrackerItemSummary(LocalId localId,
                                       CommonId commonId,
                                       TrackerId trackerId,

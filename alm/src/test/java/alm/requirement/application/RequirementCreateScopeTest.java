@@ -15,9 +15,12 @@ import sk.workingset.application.FailureReason;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
+import sk.workingset.error.BindingResCode;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,6 +51,10 @@ class RequirementCreateScopeTest {
     @BeforeEach
     void stubIdentifiers() {
         when(ids.nextId(null)).thenReturn(100L, 200L, 300L, 400L);
+        WorkingSetId root = WorkingSet.DEFAULT_ID;
+        WorkingSetId child = WorkingSetId.of("259712159403968");
+        when(workingSets.findById(root)).thenReturn(Optional.of(new WorkingSet(root, null, List.of(), List.of())));
+        when(workingSets.findById(child)).thenReturn(Optional.of(WorkingSet.child(child, root)));
     }
 
     @Test
@@ -90,6 +97,15 @@ class RequirementCreateScopeTest {
 
         assertEquals(created.localId().value(), created.commonId().value());
         verify(repository).save(any());
+    }
+
+    @Test
+    void missing_requested_working_set_rejects_creation() {
+        var failure = assertThrows(DomainException.class,
+                () -> service.create(TRACKER, WorkingSetId.of("42"), "A", "d", REVISION));
+
+        assertSame(BindingResCode.WORKING_SET_NOT_EXISTS, failure.getResCode());
+        verify(repository, never()).save(any());
     }
 
     @Test

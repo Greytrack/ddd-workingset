@@ -10,6 +10,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 工作集创建任务的 HTTP 入口；提交后异步执行，客户端轮询 {@code GET /api/working-set-creations/{id}} 至终态。
+ */
 @RestController
 @RequestMapping("/api/working-set-creations")
 public class WorkingSetCreationController {
@@ -19,6 +22,9 @@ public class WorkingSetCreationController {
         this.creations = creations;
     }
 
+    /**
+     * 提交创建工作集任务，返回 202 与任务视图；requestId 为幂等键。
+     */
     @PostMapping
     public ResponseEntity<CreationView> submit(@RequestBody CreateWorkingSetRequest request) {
         WorkingSetCreation creation = creations.submitNew(request.requestId(), request::toDomainRequest);
@@ -26,6 +32,9 @@ public class WorkingSetCreationController {
                 .body(CreationView.from(creation));
     }
 
+    /**
+     * 按 id 查询创建任务的状态、阶段、进度与失败明细。
+     */
     @GetMapping("/{id}")
     public CreationView find(@PathVariable String id) {
         return CreationView.from(creations.find(id));

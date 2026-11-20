@@ -3,7 +3,9 @@ package sk.workingset.error;
 import sk.common.error.DomainErrorType;
 import sk.common.error.DomainResCode;
 
-/** T4 Merge codes with their public reason values. */
+/**
+ * T4 Merge codes with their public reason values.
+ */
 public enum MergeResCode implements DomainResCode {
     NOT_ALLOWED(DomainErrorType.CONFLICT, 1301, "Merge not allowed", "MergeNotAllowed"),
     ROUND_NOT_FOUND(DomainErrorType.NOT_FOUND, 1302, "Round not found", "RoundNotFound"),
@@ -28,13 +30,21 @@ public enum MergeResCode implements DomainResCode {
     }
 
     @Override
-    public DomainErrorType getType() { return type; }
+    public DomainErrorType getType() {
+        return type;
+    }
 
     @Override
-    public int getCode() { return code; }
+    public int getCode() {
+        return code;
+    }
 
     @Override
-    public String getDesc() { return desc; }
+    public String getDesc() {
+        return desc;
+    }
 
-    public String reason() { return reason; }
+    public String reason() {
+        return reason;
+    }
 }

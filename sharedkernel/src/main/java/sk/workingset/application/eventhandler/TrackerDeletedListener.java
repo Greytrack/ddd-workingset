@@ -6,7 +6,9 @@ import org.springframework.stereotype.Component;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.domain.event.TrackerDeletedEvent;
 
-/** 绑定清理完成后，Tracker 聚合执行最终物理删除。 */
+/**
+ * 绑定清理完成后，Tracker 聚合执行最终物理删除。
+ */
 @Component
 @RequiredArgsConstructor
 public class TrackerDeletedListener {

@@ -16,7 +16,9 @@ import sk.workingset.domain.event.TrackerCreatedEvent;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
-/** Tracker 创建后，WorkingSet 在自己的事务中完成空间绑定与 Tracker 绑定。 */
+/**
+ * Tracker 创建后，WorkingSet 在自己的事务中完成空间绑定与 Tracker 绑定。
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -25,6 +27,10 @@ public class TrackerCreatedBindingListener {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
+
+    private static boolean isFolder(String classificationId) {
+        return Long.toString(Tracker.FOLDER_CLASSIFICATION_ID).equals(classificationId);
+    }
 
     @ApplicationModuleListener(id = "bootstrap.TrackerCreatedBindingListener.on(sk.workingset.domain.event.TrackerCreatedEvent)")
     public void on(TrackerCreatedEvent event) {
@@ -47,13 +53,9 @@ public class TrackerCreatedBindingListener {
         Classification classification = isFolder(event.classificationId())
                 ? new Classification(Tracker.FOLDER_CLASSIFICATION_ID, Classification.SharingMode.UNSHARED, "文件夹")
                 : classifications.findClassification(event.classificationId())
-                        .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                                "classification disappeared: " + event.classificationId()));
+                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
+                        "classification disappeared: " + event.classificationId()));
         workingSet.bindTracker(tracker, classification, event.sharingMode());
         workingSets.save(workingSet);
-    }
-
-    private static boolean isFolder(String classificationId) {
-        return Long.toString(Tracker.FOLDER_CLASSIFICATION_ID).equals(classificationId);
     }
 }

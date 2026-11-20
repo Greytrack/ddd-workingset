@@ -76,6 +76,39 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         return advance(outcome, failure == null ? List.of() : List.of(failure), now);
     }
 
+    public WorkingSetCreation recordBindingResult(boolean changed, List<Failure> bindingFailures, Instant now) {
+        requireRunning();
+        if (stage != Stage.BIND_PRODUCT_AND_TRACKER
+                || bindingFailures.stream().anyMatch(failure -> failure.stage() != stage)) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Not binding the working set scope");
+        }
+        ItemOutcome outcome = bindingFailures.isEmpty() ? (changed ? ItemOutcome.Succeeded : ItemOutcome.Skipped)
+                : ItemOutcome.Failed;
+        return advance(outcome, bindingFailures, now);
+    }
+
+    /**
+     * 历史阶段名保留用于读取旧任务，运行中的任务从已保存的绑定继续。
+     */
+    public WorkingSetCreation resumeWithCurrentBindingStage() {
+        if ((status != Status.Pending && status != Status.Running)
+                || !(stage.isLegacyBinding() || stageProgress.keySet().stream().anyMatch(Stage::isLegacyBinding))) {
+            return this;
+        }
+        EnumMap<Stage, Progress> updated = new EnumMap<>(Stage.class);
+        updated.putAll(stageProgress);
+        updated.keySet().removeIf(Stage::isLegacyBinding);
+        if (stage == Stage.INDEX_UNSHARED_TRACKERS || stage == Stage.PUBLISH_RELATION_EVENTS) {
+            updated.put(Stage.BIND_PRODUCT_AND_TRACKER, new Progress(0, 0, 1, 1));
+        }
+        Stage next = stage.isLegacyBinding() ? nextUnfinishedStage(updated) : stage;
+        Progress totals = new Progress(updated.values().stream().mapToInt(Progress::succeeded).sum(),
+                updated.values().stream().mapToInt(Progress::failed).sum(),
+                updated.values().stream().mapToInt(Progress::skipped).sum(), total(request));
+        return new WorkingSetCreation(numericId, request, requestedBy, status, next, totals, failures,
+                createdAt, startedAt, completedAt, updated, indexProgress);
+    }
+
     public WorkingSetCreation recordIndexBatch(IndexProgress batch, List<Failure> batchFailures,
                                                boolean finished, Instant now) {
         if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
@@ -107,25 +140,33 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         updatedFailures.addAll(newFailures);
         WorkingSetCreation.Progress totals = new Progress(progress.succeeded(), progress.failed(), progress.skipped(), total(request))
                 .record(outcome);
-        WorkingSetCreation.Stage next = stage;
+        Stage next = stage;
         WorkingSetCreation.Status nextStatus = Status.Running;
         if (stage == Stage.CREATE_WORKING_SET && outcome == ItemOutcome.Failed) {
             nextStatus = Status.Failed;
         } else if (current.processed() == current.total()) {
-            Stage[] stages = Stage.values();
-            int index = stage.ordinal() + 1;
-            while (index < stages.length && request.items(stages[index]).isEmpty()) {
-                updatedProgress.put(stages[index++], new Progress(0, 0, 0, 0));
-            }
-            if (index == stages.length) {
+            Stage unfinished = nextUnfinishedStage(updatedProgress);
+            if (unfinished == null) {
                 nextStatus = updatedFailures.isEmpty() ? Status.Succeeded : Status.PartiallySucceeded;
             } else {
-                next = stages[index];
-                updatedProgress.put(next, new Progress(0, 0, 0, request.items(next).size()));
+                next = unfinished;
             }
         }
         return new WorkingSetCreation(numericId, request, requestedBy, nextStatus, next, totals, updatedFailures,
                 createdAt, startedAt, nextStatus == Status.Running ? null : now, updatedProgress, updatedIndex);
+    }
+
+    private Stage nextUnfinishedStage(EnumMap<Stage, Progress> updatedProgress) {
+        // 按执行顺序找第一项未完成的阶段，保留已提交的阶段进度。
+        for (Stage candidate : Stage.values()) {
+            if (candidate.isLegacyBinding()) continue;
+            int totalItems = request.items(candidate).size();
+            Progress checkpoint = updatedProgress.computeIfAbsent(candidate, ignored -> new Progress(0, 0, 0, totalItems));
+            if (checkpoint.processed() < totalItems) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private void requireRunning() {
@@ -138,9 +179,22 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
 
     public enum Mode {CREATE, EXTEND}
 
+    /**
+     * 声明顺序即执行顺序，由创建任务按进度推进。
+     */
     public enum Stage {
-        CREATE_WORKING_SET, BIND_PRODUCT_SPACES, COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS,
-        INDEX_UNSHARED_TRACKERS, PUBLISH_RELATION_EVENTS
+        CREATE_WORKING_SET,
+        COPY_UNSHARED_TRACKERS,
+        BIND_PRODUCT_AND_TRACKER,
+        INDEX_UNSHARED_TRACKERS,
+        PUBLISH_RELATION_EVENTS,
+
+        // 旧任务 JSON 仍可能引用这些值。
+        BIND_PRODUCT_SPACES, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS;
+
+        public boolean isLegacyBinding() {
+            return this == BIND_PRODUCT_SPACES || this == BIND_UNSHARED_TRACKERS || this == BIND_SHARED_TRACKERS;
+        }
     }
 
     public enum ItemOutcome {Succeeded, Failed, Skipped}
@@ -237,10 +291,11 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         public List<String> items(Stage stage) {
             return switch (stage) {
                 case CREATE_WORKING_SET -> mode == Mode.CREATE ? List.of(newWorkingSetId()) : List.of();
-                case BIND_PRODUCT_SPACES -> productSpaceIds();
-                case COPY_UNSHARED_TRACKERS, BIND_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS,
+                case BIND_PRODUCT_AND_TRACKER -> productSpaceIds().isEmpty() && sharedTrackerIds().isEmpty()
+                        && unsharedParentTrackerIds().isEmpty() ? List.of() : List.of(newWorkingSetId());
+                case COPY_UNSHARED_TRACKERS, INDEX_UNSHARED_TRACKERS,
                      PUBLISH_RELATION_EVENTS -> unsharedParentTrackerIds();
-                case BIND_SHARED_TRACKERS -> sharedTrackerIds();
+                case BIND_PRODUCT_SPACES, BIND_UNSHARED_TRACKERS, BIND_SHARED_TRACKERS -> List.of();
             };
         }
     }

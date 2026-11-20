@@ -1,16 +1,11 @@
 package sk.tracker.application.command;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
@@ -18,12 +13,15 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.FailureReason;
 import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.error.BindingResCode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 产品空间默认 Tracker 批量创建。
@@ -32,7 +30,7 @@ import sk.workingset.error.BindingResCode;
  */
 @Service
 @RequiredArgsConstructor
-public class DefaultTrackerProvisioningService {
+public class DefaultTrackerInitCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;

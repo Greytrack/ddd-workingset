@@ -33,9 +33,8 @@ public final class LightTrackerItem {
     private final CommonId commonId;
     private final TrackerId trackerId;
     private final WorkingSetId workingSetId;
-    private Revision revision;
     private final Map<Revision, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
-
+    private Revision revision;
     private LocalId sourceLocalId;
     private Revision sourceRevision;
     private boolean materialized;
@@ -122,6 +121,23 @@ public final class LightTrackerItem {
         return item;
     }
 
+    public static LightTrackerItem restore(LocalId localId, CommonId commonId, TrackerId trackerId,
+                                           WorkingSetId workingSetId, Revision revision, LocalId sourceLocalId,
+                                           Revision sourceRevision, boolean materialized, boolean deleted,
+                                           List<Revision> indexedRevisions) {
+        LightTrackerItem item = restore(localId, commonId, trackerId, workingSetId, revision,
+                sourceLocalId, sourceRevision, materialized);
+        item.deleted = deleted;
+        item.revisions.clear();
+        for (Revision indexed : indexedRevisions) {
+            item.revisions.put(indexed, new LightTrackerItemRevisionEntity(indexed));
+        }
+        if (!item.revisions.containsKey(revision)) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Current revision is missing from the index");
+        }
+        return item;
+    }
+
     /**
      * 首次 COW 生效：在单次聚合状态变更中同步更新三字段（T3 §6、A2）。
      *
@@ -142,23 +158,6 @@ public final class LightTrackerItem {
         checkInvariants();
     }
 
-    public static LightTrackerItem restore(LocalId localId, CommonId commonId, TrackerId trackerId,
-                                           WorkingSetId workingSetId, Revision revision, LocalId sourceLocalId,
-                                           Revision sourceRevision, boolean materialized, boolean deleted,
-                                           List<Revision> indexedRevisions) {
-        LightTrackerItem item = restore(localId, commonId, trackerId, workingSetId, revision,
-                sourceLocalId, sourceRevision, materialized);
-        item.deleted = deleted;
-        item.revisions.clear();
-        for (Revision indexed : indexedRevisions) {
-            item.revisions.put(indexed, new LightTrackerItemRevisionEntity(indexed));
-        }
-        if (!item.revisions.containsKey(revision)) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Current revision is missing from the index");
-        }
-        return item;
-    }
-
     public List<LightTrackerItemRevisionEntity> revisions() {
         return List.copyOf(revisions.values());
     }
@@ -167,7 +166,9 @@ public final class LightTrackerItem {
         return revisions.get(revision);
     }
 
-    /** Apply a committed explicit upgrade of this item's own business revision. */
+    /**
+     * Apply a committed explicit upgrade of this item's own business revision.
+     */
     public boolean advanceRevision(Revision before, Revision after) {
         if (after.value() != (long) before.value() + 1) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step revision upgrade");
@@ -224,7 +225,9 @@ public final class LightTrackerItem {
         return sourceRevision;
     }
 
-    /** Synchronize the committed lifecycle of this variant without changing its content source or revision. */
+    /**
+     * Synchronize the committed lifecycle of this variant without changing its content source or revision.
+     */
     public boolean recordDeletionState(boolean deleted) {
         if (this.deleted == deleted) {
             return false;

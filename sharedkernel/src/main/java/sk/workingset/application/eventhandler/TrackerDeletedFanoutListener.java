@@ -10,7 +10,9 @@ import sk.workingset.domain.event.TrackerDeletedEvent;
 import sk.workingset.domain.event.TrackerDeletionRequestedEvent;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-/** Tracker 删除后，把解绑工作拆成每个 Working Set 一个独立事件。 */
+/**
+ * Tracker 删除后，把解绑工作拆成每个 Working Set 一个独立事件。
+ */
 @Component
 @RequiredArgsConstructor
 public class TrackerDeletedFanoutListener {

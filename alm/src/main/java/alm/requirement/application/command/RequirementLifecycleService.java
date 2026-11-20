@@ -18,6 +18,9 @@ import sk.workingset.domain.event.CompleteDeleteEvent;
 
 import java.time.Instant;
 
+/**
+ * Requirement 生命周期服务：永久删除 guard 与编排（先软删、无来源依赖后方可清除，D14/D7）。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class RequirementLifecycleService {
     private final ApplicationEventPublisher eventPublisher;
 
 
+    /** 永久删除：先通过 guard（须已软删），无来源依赖时清除对象并发布彻底删除事件。 */
     @Transactional
     public void delete2(LocalId id) {
         Requirement current = requirements.lockById(id).orElseThrow(() -> missing(id));

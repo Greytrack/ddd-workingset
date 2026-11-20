@@ -77,6 +77,10 @@ public class MergeComparisonService {
                 .toList();
     }
 
+    private static boolean absentOrDeleted(Side side) {
+        return side.presence() == Presence.ABSENT || side.presence() == Presence.DELETED;
+    }
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId sourceTracker,
                               TrackerId targetTracker) {
@@ -110,10 +114,6 @@ public class MergeComparisonService {
             differences.add(new Difference(kind, family, pair, left, right, fields));
         }
         return new Comparison(source, target, Instant.now(), List.of(pair), differences);
-    }
-
-    private static boolean absentOrDeleted(Side side) {
-        return side.presence() == Presence.ABSENT || side.presence() == Presence.DELETED;
     }
 
     private boolean handled(Comparison.TrackerPair trackers, CommonId family, Side left, Side right) {

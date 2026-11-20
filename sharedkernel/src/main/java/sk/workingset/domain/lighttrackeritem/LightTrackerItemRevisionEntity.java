@@ -5,7 +5,9 @@ import sk.workingset.domain.Revision;
 
 import java.util.Objects;
 
-/** An indexed business revision, identified by its revision within the owning item. */
+/**
+ * An indexed business revision, identified by its revision within the owning item.
+ */
 @Entity
 public record LightTrackerItemRevisionEntity(Revision revision) {
     public LightTrackerItemRevisionEntity {

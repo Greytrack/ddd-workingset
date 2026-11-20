@@ -6,7 +6,9 @@ import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.Objects;
 
-/** Tracker 聚合已创建；WorkingSet 绑定由 SK 监听事件后独立完成。 */
+/**
+ * Tracker 聚合已创建；WorkingSet 绑定由 SK 监听事件后独立完成。
+ */
 public record TrackerCreatedEvent(TrackerId trackerId,
                                   WorkingSetId workingSetId,
                                   String productSpaceId,

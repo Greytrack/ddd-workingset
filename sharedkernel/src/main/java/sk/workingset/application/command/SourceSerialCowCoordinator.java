@@ -39,6 +39,9 @@ public final class SourceSerialCowCoordinator {
         return sequence > previous && sequence - previous > 1;
     }
 
+    /**
+     * 按来源串行执行任务；同一来源的事件按 sequence 顺序处理，缺口等待 {@code gapWait} 后告警继续。
+     */
     public void runSerial(LocalId sourceLocalId, long sequence, Runnable task) {
         CompletableFuture<Void> completion = new CompletableFuture<Void>();
         boolean drain;

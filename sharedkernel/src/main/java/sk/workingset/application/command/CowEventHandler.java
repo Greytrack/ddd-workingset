@@ -32,6 +32,9 @@ public final class CowEventHandler {
                 target.revision(), event.snapshotRef());
     }
 
+    /**
+     * 来源变化后，为每个未物化的 Source-backed 目标发布逐目标物化请求；收据与事件同事务提交。
+     */
     public void onTrackerItemChanged(BusinessObjectUpdateEvent event) {
         for (LightTrackerItem target : items.findSourceBackedTargets(event.sourceLocalId(), event.beforeRevision())) {
             if (target.materialized()) {

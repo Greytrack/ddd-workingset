@@ -4,7 +4,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
-/** Physical row of {@code air_inst_tracker_rev}. */
+/**
+ * Physical row of {@code air_inst_tracker_rev}.
+ */
 public record TrackerRow(
         Long id,
         Long baseClass,

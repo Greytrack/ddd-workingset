@@ -31,6 +31,9 @@ public final class RelationEventStep {
     private final RelationEventPublisher publisher;
 
 
+    /**
+     * 对已索引的派生 Tracker 发布关系创建/修复事件；失败累计，不自动重试。
+     */
     public StepResult publish(WorkingSetId target, TrackerId parent, OriginType originType, String originId) {
         try {
             Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);

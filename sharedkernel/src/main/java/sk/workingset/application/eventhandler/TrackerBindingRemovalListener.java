@@ -9,7 +9,9 @@ import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.event.TrackerBindingRemovalRequestedEvent;
 import sk.workingset.domain.event.TrackerDeletedEvent;
 
-/** 每个事件只解绑一个 Working Set 聚合。 */
+/**
+ * 每个事件只解绑一个 Working Set 聚合。
+ */
 @Component
 @RequiredArgsConstructor
 public class TrackerBindingRemovalListener {

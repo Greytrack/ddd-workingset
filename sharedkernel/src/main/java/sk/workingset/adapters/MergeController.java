@@ -55,6 +55,9 @@ public class MergeController {
                 end < comparison.differences().size() ? end : null);
     }
 
+    /**
+     * 对直属父子工作集的 Tracker 对做只读瞬时比较，按 offset/limit 分页；不承诺跨请求冻结（ADR-0005 补充）。
+     */
     @PostMapping("/worksets/{target}/compare/{source}")
     public ComparisonPage compare(@PathVariable String target,
                                   @PathVariable String source,
@@ -68,6 +71,9 @@ public class MergeController {
         return page(result, offset, limit);
     }
 
+    /**
+     * 提交一页合并决策（1–50 条）；requestId 为幂等键，轮次异步执行，客户端轮询 {@code GET /api/merge-rounds/{id}}。
+     */
     @PostMapping("/worksets/{target}/merge-rounds")
     @ResponseStatus(HttpStatus.CREATED)
     public MergeRound submit(@PathVariable String target, @RequestBody SubmitRequest request) {
@@ -90,12 +96,18 @@ public class MergeController {
                 request.requestId(), List.copyOf(request.decisions()), "web");
     }
 
+    /**
+     * 触发轮次执行（幂等）；重复调用返回同一轮次的当前 ApplyResult。
+     */
     @PostMapping("/merge-rounds/{id}/apply")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public MergeRound apply(@PathVariable String id) {
         return rounds.apply(id);
     }
 
+    /**
+     * 按 id 查询轮次状态、条目结果与唯一终态 ApplyResult。
+     */
     @GetMapping("/merge-rounds/{id}")
     public MergeRound get(@PathVariable String id) {
         return rounds.get(id);

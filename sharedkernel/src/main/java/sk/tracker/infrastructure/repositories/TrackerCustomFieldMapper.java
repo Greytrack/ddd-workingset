@@ -7,14 +7,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Custom columns of air_inst_tracker_rev. */
+/**
+ * Custom columns of air_inst_tracker_rev.
+ */
 final class TrackerCustomFieldMapper implements JdbcCustomFieldMapper {
     private static final Map<String, Class<?>> COLUMNS = declareColumns();
-
-    @Override
-    public Map<String, Class<?>> columns() {
-        return COLUMNS;
-    }
 
     private static Map<String, Class<?>> declareColumns() {
         Map<String, Class<?>> columns = new LinkedHashMap<>();
@@ -41,5 +38,10 @@ final class TrackerCustomFieldMapper implements JdbcCustomFieldMapper {
             columns.put(prefix + suffix, type);
             columns.put(prefix + "0" + suffix, type);
         }
+    }
+
+    @Override
+    public Map<String, Class<?>> columns() {
+        return COLUMNS;
     }
 }

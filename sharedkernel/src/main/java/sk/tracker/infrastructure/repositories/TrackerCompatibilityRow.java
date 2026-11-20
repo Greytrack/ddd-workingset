@@ -3,7 +3,9 @@ package sk.tracker.infrastructure.repositories;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/** Physical row of {@code air_ws_tracker}. */
+/**
+ * Physical row of {@code air_ws_tracker}.
+ */
 public record TrackerCompatibilityRow(
         Long id,
         Long parentId,

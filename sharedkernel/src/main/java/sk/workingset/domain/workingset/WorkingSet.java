@@ -26,12 +26,12 @@ public final class WorkingSet {
             java.util.regex.Pattern.compile("#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;
-    private String name;
-    private String color;
     private final boolean newAggregate;
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> originalTrackers;
+    private String name;
+    private String color;
 
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
@@ -104,7 +104,15 @@ public final class WorkingSet {
         return trimmed;
     }
 
-    /** 编辑工作集显示名称；名称是展示属性，不改变谱系、范围或绑定。 */
+    public static void requireDeletable(WorkingSetId id) {
+        if (DEFAULT_ID.equals(id)) {
+            throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, id.value());
+        }
+    }
+
+    /**
+     * 编辑工作集显示名称；名称是展示属性，不改变谱系、范围或绑定。
+     */
     public void rename(String newName) {
         if (newName == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name is required");
@@ -112,18 +120,14 @@ public final class WorkingSet {
         this.name = normalizeName(newName);
     }
 
-    /** 编辑工作集主题色；颜色只影响界面呈现，不参与领域比较或合并。 */
+    /**
+     * 编辑工作集主题色；颜色只影响界面呈现，不参与领域比较或合并。
+     */
     public void recolor(String newColor) {
         if (newColor == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "color is required");
         }
         this.color = normalizeColor(newColor);
-    }
-
-    public static void requireDeletable(WorkingSetId id) {
-        if (DEFAULT_ID.equals(id)) {
-            throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, id.value());
-        }
     }
 
     public WorkingSetId id() {
@@ -289,7 +293,8 @@ public final class WorkingSet {
 
     @Entity
     public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
-                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin, boolean shown) {
+                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin,
+                                 boolean shown) {
         public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
                               Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
             this(workingSetId, trackerId, numericProductSpaceId, numericClassificationId, sharingMode, origin, true);

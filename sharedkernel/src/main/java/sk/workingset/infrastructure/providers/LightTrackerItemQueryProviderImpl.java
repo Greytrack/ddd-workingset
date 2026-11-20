@@ -14,7 +14,9 @@ import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.List;
 
-/** LightTrackerItem 查询适配器；只读，不重建聚合。 */
+/**
+ * LightTrackerItem 查询适配器；只读，不重建聚合。
+ */
 @Component
 @RequiredArgsConstructor
 public class LightTrackerItemQueryProviderImpl implements LightTrackerItemQueryProvider {

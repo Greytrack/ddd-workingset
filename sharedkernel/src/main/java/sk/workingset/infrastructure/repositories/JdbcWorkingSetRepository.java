@@ -31,7 +31,9 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     private final IdentifierGenerator ids;
     private final JdbcCommonInstanceStore commonInstances;
 
-    /** Full physical row for internal compatibility reads, including soft-deleted rows. */
+    /**
+     * Full physical row for internal compatibility reads, including soft-deleted rows.
+     */
     public Optional<WorkingSetRow> findLegacyRow(WorkingSetId id) {
         return jdbc.query("SELECT * FROM air_inst_workingset WHERE id = ?",
                 (rs, row) -> WorkingSetRow.read(rs), id.numericValue()).stream().findFirst();
@@ -79,8 +81,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                 rows.getFirst()[2], spaces, trackers));
     }
 
-    @Override
-    public void requireReady(WorkingSetId id) {
+    private void requireReady(WorkingSetId id) {
         boolean preparing = Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM working_set_creations
                     WHERE new_working_set_id = ? AND status IN ('Pending', 'Running')
@@ -106,11 +107,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         String actor = RequestThreadHolder.getUserId();
         long now = System.currentTimeMillis();
         int updated = jdbc.update("""
-                        UPDATE air_inst_workingset
-                        SET name = ?, color = ?, lock_version = COALESCE(lock_version, 0) + 1,
-                            updated_by = ?, updated_time = ?
-                        WHERE id = ? AND delete_flag = 0
-                        """, workingSet.name(), workingSet.color(), actor, now, id.numericValue());
+                UPDATE air_inst_workingset
+                SET name = ?, color = ?, lock_version = COALESCE(lock_version, 0) + 1,
+                    updated_by = ?, updated_time = ?
+                WHERE id = ? AND delete_flag = 0
+                """, workingSet.name(), workingSet.color(), actor, now, id.numericValue());
         if (updated != 1) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value());
         }

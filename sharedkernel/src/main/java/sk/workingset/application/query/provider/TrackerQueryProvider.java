@@ -3,7 +3,11 @@ package sk.workingset.application.query.provider;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-/** Tracker 的只读存在性/可见性查询；命令侧聚合重建仍走 TrackerRepository。 */
+import java.util.Optional;
+
+/**
+ * Tracker 的只读存在性/可见性查询；命令侧聚合重建仍走 TrackerRepository。
+ */
 public interface TrackerQueryProvider {
     boolean isVisible(TrackerId trackerId);
 
@@ -14,4 +18,6 @@ public interface TrackerQueryProvider {
     boolean hasTrackersInSpace(String spaceId);
 
     boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId);
+
+    Optional<TrackerId> findDefaultTrackerId(WorkingSetId workingSetId, long spaceId, long classificationId);
 }

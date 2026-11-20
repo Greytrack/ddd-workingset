@@ -38,6 +38,7 @@ public class RequirementController {
         this.lifecycle = lifecycle;
     }
 
+    /** 创建需求；请求不携带 CommonId，身份由应用服务按工作集分配（T6-C）。 */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RequirementView create(@RequestBody CreateRequirementRequest request) {
@@ -61,6 +62,7 @@ public class RequirementController {
                 .map(RequirementView::from).toList();
     }
 
+    /** 修改需求标题，需携带期望乐观锁版本。 */
     @PutMapping("/{localId}/title")
     public RequirementView changeTitle(@PathVariable("localId") String localId,
                                        @RequestBody ChangeTitleRequest request) {
@@ -90,24 +92,28 @@ public class RequirementController {
         commands.delete(LocalId.of(localId));
     }
 
+    /** 软删除需求（兼容旧 POST /{localId}/delete 入口）。 */
     @PostMapping("/{localId}/delete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String localId) {
         commands.delete(LocalId.of(localId));
     }
 
+    /** 永久删除的 guard 入口；实际永久删除由应用服务编排（D14/D7）。 */
     @PostMapping("/{localId}/delete2")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete2(@PathVariable String localId) {
         lifecycle.delete2(LocalId.of(localId));
     }
 
+    /** 恢复软删除的需求。 */
     @PostMapping("/{localId}/undelete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void undelete(@PathVariable String localId) {
         commands.undelete(LocalId.of(localId));
     }
 
+    /** 按 LocalId 查询需求详情。 */
     @GetMapping("/{localId}")
     public RequirementView find(@PathVariable("localId") String localId) {
         RequirementDetail detail = queries.find(LocalId.of(localId));

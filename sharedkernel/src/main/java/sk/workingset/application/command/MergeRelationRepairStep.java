@@ -30,6 +30,9 @@ public final class MergeRelationRepairStep {
         return operation != null && !"IGNORED".equals(operation);
     }
 
+    /**
+     * 对本轮实际成功且改变目标的条目发布悬空引用修复事件；失败只记录，不改变 Merge 终态。
+     */
     public StepResult repair(MergeRound round) {
         int published = 0;
         int failed = 0;
@@ -46,6 +49,9 @@ public final class MergeRelationRepairStep {
         return new StepResult(published, failed);
     }
 
+    /**
+     * 汇总本轮成功且改变目标变体的条目端点（按 LocalId 去重）。
+     */
     public Map<String, ReferenceEndpointEvent> changedTargets(MergeRound round) {
         Map<String, ReferenceEndpointEvent> targets = new LinkedHashMap<>();
         for (Entry entry : round.entries()) {

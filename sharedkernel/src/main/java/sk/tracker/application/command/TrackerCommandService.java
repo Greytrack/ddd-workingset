@@ -23,6 +23,9 @@ import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
 
+/**
+ * Tracker 命令服务：创建业务原生 Tracker、重命名与删除；删除前置校验在此完成。
+ */
 @Service
 @RequiredArgsConstructor
 public class TrackerCommandService {
@@ -36,6 +39,9 @@ public class TrackerCommandService {
     private final IdentifierGenerator ids;
     private final ApplicationEventPublisher events;
 
+    /**
+     * 在默认工作集创建业务原生 Tracker；Folder Tracker 不在此创建（随产品空间创建）。
+     */
     @Transactional
     public Tracker create(WorkingSetId id, String spaceId, String name, String classificationId,
                           SharingMode sharingMode) {
@@ -61,18 +67,24 @@ public class TrackerCommandService {
         return tracker;
     }
 
+    /**
+     * 重命名可见 Tracker；名称去首尾空白后 1–255 字符。
+     */
     @Transactional
     public Tracker rename(TrackerId id, String name) {
         Tracker tracker = trackers.lockTracker(id)
                 .filter(locked -> trackerQueries.isVisible(id))
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
-        workingSets.requireReady(tracker.workingSetId());
+        requireOwningWorkingSet(tracker.workingSetId());
         if (tracker.rename(name)) {
             trackers.save(tracker);
         }
         return tracker;
     }
 
+    /**
+     * 删除 Tracker；须通过无 Item/组织子级/派生子级三项检查，随后发布删除请求事件。
+     */
     @Transactional
     public void delete(TrackerId id) {
         Tracker tracker = trackers.lockTracker(id)
@@ -81,9 +93,14 @@ public class TrackerCommandService {
             throw DomainException.withMessage(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST,
                     "文件夹 Tracker 须随产品空间卸载");
         }
-        workingSets.requireReady(tracker.workingSetId());
+        requireOwningWorkingSet(tracker.workingSetId());
         tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
                 trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
         events.publishEvent(new sk.workingset.domain.event.TrackerDeletionRequestedEvent(id));
+    }
+
+    private void requireOwningWorkingSet(WorkingSetId id) {
+        workingSets.findById(id)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
     }
 }

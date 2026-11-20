@@ -26,6 +26,7 @@ public final class RequirementMergeWriter {
     private final RequirementMergeReceiptStore receipts;
 
 
+    /** 幂等应用合并条目：整体校验目标、提交并返回结果事件。 */
     public MergeEntryResolvedEvent apply(MergeEntryApprovedEvent command) {
         java.util.Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());
         if (existing.isPresent()) {

@@ -4,7 +4,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
-/** Physical row of {@code air_inst_workingset}. */
+/**
+ * Physical row of {@code air_inst_workingset}.
+ */
 public record WorkingSetRow(
         Long id,
         Long baseClass,

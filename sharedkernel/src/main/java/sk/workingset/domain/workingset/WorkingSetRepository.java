@@ -4,11 +4,15 @@ import org.jmolecules.ddd.annotation.Repository;
 
 import java.util.Optional;
 
-/** WorkingSet 聚合生命周期仓储；查询由 WorkingSetQueryProvider 承担。 */
+/**
+ * WorkingSet 聚合生命周期仓储；查询由 WorkingSetQueryProvider 承担。
+ */
 @Repository
 public interface WorkingSetRepository {
 
-    /** 命令侧重建聚合；锁策略不进领域接口。 */
+    /**
+     * 命令侧重建普通入口可访问的聚合；创建任务使用专用查询。
+     */
     Optional<WorkingSet> findById(WorkingSetId id);
 
     /**
@@ -20,12 +24,12 @@ public interface WorkingSetRepository {
     Optional<WorkingSet> findByIdForCreation(WorkingSetId id);
 
     /**
-     * @deprecated 待迁移到 WorkingSetQueryProvider#isPreparing；当前仅为兼容保留。
+     * 保存聚合（新增或更新）；绑定变更随根一次保存。
      */
-    @Deprecated(since = "2026-11-20", forRemoval = false)
-    void requireReady(WorkingSetId id);
-
     void save(WorkingSet workingSet);
 
+    /**
+     * 永久删除聚合。
+     */
     void delete(WorkingSet workingSet);
 }

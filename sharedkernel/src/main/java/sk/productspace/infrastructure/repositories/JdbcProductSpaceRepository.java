@@ -1,10 +1,9 @@
 package sk.productspace.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sk.productspace.domain.ProductSpace;
@@ -12,6 +11,9 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 
 import java.util.Optional;
 
+/**
+ * ProductSpace 聚合的 PostgreSQL/Spring JDBC 仓储。
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     @Override
     public Optional<ProductSpace> findById(String id) {
         return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
-                (row, position) -> new ProductSpace(row.getLong(1), row.getString(2)), Long.valueOf(id))
+                        (row, position) -> new ProductSpace(row.getLong(1), row.getString(2)), Long.valueOf(id))
                 .stream().findFirst();
     }
 

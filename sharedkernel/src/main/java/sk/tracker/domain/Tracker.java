@@ -114,18 +114,6 @@ public final class Tracker {
         return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault, false);
     }
 
-    public boolean isNew() {
-        return newAggregate;
-    }
-
-    public boolean isInitiallyVisible() {
-        return initiallyVisible;
-    }
-
-    public Long createdBy() {
-        return createdBy;
-    }
-
     public static Tracker folderTracker(TrackerId id, WorkingSetId owner, ProductSpace space) {
         return new Tracker(id, id, "文件夹", null, owner, space.numericId(), FOLDER_CLASSIFICATION_ID,
                 SharingMode.UNSHARED, null, true);
@@ -178,6 +166,18 @@ public final class Tracker {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
         }
         return normalized;
+    }
+
+    public boolean isNew() {
+        return newAggregate;
+    }
+
+    public boolean isInitiallyVisible() {
+        return initiallyVisible;
+    }
+
+    public Long createdBy() {
+        return createdBy;
     }
 
     public boolean isFolderTracker() {

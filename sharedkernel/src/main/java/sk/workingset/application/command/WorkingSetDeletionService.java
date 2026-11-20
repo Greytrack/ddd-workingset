@@ -50,6 +50,9 @@ public class WorkingSetDeletionService {
         }
     }
 
+    /**
+     * 解除工作集与 Tracker 的绑定；Shared 仅解绑，非共享删除其拥有的 Tracker。
+     */
     @Transactional
     public void unbindTracker(WorkingSetId id, TrackerId trackerId) {
         WorkingSet workingSet = lockWorkingSet(id);
@@ -61,11 +64,17 @@ public class WorkingSetDeletionService {
         deleteOwnedTracker(binding);
     }
 
+    /**
+     * 从工作集移除产品空间；空间内仅允许 Folder Tracker。
+     */
     @Transactional
     public void removeSpace(WorkingSetId id, String spaceId) {
         removeSpace(lockWorkingSet(id), spaceId);
     }
 
+    /**
+     * 删除工作集；预检全部绑定可解除后按 TrackerBinding → SpaceBinding → WorkingSet 顺序解除并删除。
+     */
     @Transactional
     public void deleteWorkingSet(WorkingSetId id) {
         WorkingSet.requireDeletable(id);
