@@ -42,7 +42,7 @@ public final class CowMaterializationCompletionService {
             return;
         }
         store.markMaterialized(event.eventId(), event.targetLocalId());
-        LightTrackerItem target = items.findById(event.targetLocalId())
+        LightTrackerItem target = items.findByIdForUpdate(event.targetLocalId())
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "LightTrackerItem is missing"));
         if (!target.materialized() && (!target.sourceLocalId().equals(receipt.sourceLocalId())
                 || !target.sourceRevision().equals(receipt.sourceRevision()))) {

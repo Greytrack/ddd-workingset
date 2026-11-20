@@ -51,6 +51,19 @@ public class TrackerItemLifecycleService {
     }
 
     @Transactional
+    public void synchronizeDeletion(LocalId id) {
+        if (!businessItems.lockContentSource(id)) {
+            return;
+        }
+        // The current business state, rather than the incoming event order, decides the flag.
+        items.findByIdForUpdate(id).ifPresent(item -> {
+            if (item.recordDeletionState(businessItems.isDeleted(id))) {
+                items.save(item);
+            }
+        });
+    }
+
+    @Transactional
     public void removePurged(LocalId localId) {
         items.remove(localId);
     }
@@ -62,7 +75,7 @@ public class TrackerItemLifecycleService {
         if (!businessItems.lockContentSource(event.localId()) || items.findById(event.localId()).isPresent()) {
             return;
         }
-        items.save(LightTrackerItem.local(event.localId(), event.commonId(), event.trackerId(),
+        saveNewIndex(LightTrackerItem.local(event.localId(), event.commonId(), event.trackerId(),
                 event.workingSetId(), event.revision()));
     }
 
@@ -72,14 +85,20 @@ public class TrackerItemLifecycleService {
             switchToLocalContent(target.localId(), target.revision());
             return;
         }
-        if (target.create()) {
-            items.save(LightTrackerItem.local(target.localId(), target.commonId(), target.trackerId(),
+        if (target.create() && businessItems.lockContentSource(target.localId())
+                && items.findById(target.localId()).isEmpty()) {
+            saveNewIndex(LightTrackerItem.local(target.localId(), target.commonId(), target.trackerId(),
                     target.workingSetId(), target.revision()));
         }
     }
 
+    private void saveNewIndex(LightTrackerItem item) {
+        item.recordDeletionState(businessItems.isDeleted(item.localId()));
+        items.save(item);
+    }
+
     private void switchToLocalContent(LocalId localId, Revision revision) {
-        LightTrackerItem item = items.findById(localId)
+        LightTrackerItem item = items.findByIdForUpdate(localId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
                         "target variant disappeared: " + localId.value()));
         if (!item.materialized()) {

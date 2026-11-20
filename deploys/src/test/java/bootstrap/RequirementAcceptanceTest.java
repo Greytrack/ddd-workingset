@@ -18,6 +18,8 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
+import sk.workingset.domain.event.BusinessObjectDeleteEvent;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 
@@ -50,6 +52,7 @@ class RequirementAcceptanceTest {
     @Autowired private ApplicationEventPublisher events;
     @Autowired private TransactionTemplate transaction;
     @SpyBean private LightTrackerItemRepository items;
+    @Autowired private LightTrackerItemQueryProvider indexQueries;
     @Autowired private sk.workingset.application.command.TrackerItemLifecycleService indexLifecycle;
 
     private RootTrackerFixture fixture;
@@ -118,6 +121,47 @@ class RequirementAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 3);
         assertEquals(0, indexedRows());
         assertTrue(indexedRevisions().isEmpty());
+    }
+
+    @Test
+    void legacyIndexTracksSoftDeleteAndRestoreWithoutReplayingStaleState() {
+        TrackerId trackerId = TrackerId.of(fixtureId("T-" + UUID.randomUUID()));
+        fixture = new RootTrackerFixture(jdbc, trackerId.value());
+        fixture.provision();
+        ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId.value(),
+                "title", "Index lifecycle", "description", "", "revision", 3), Map.class);
+        assertEquals(HttpStatus.CREATED, created.getStatusCode(), String.valueOf(created.getBody()));
+        localId = String.valueOf(created.getBody().get("localId"));
+        String path = "/api/requirements/" + localId;
+        LocalId id = LocalId.of(localId);
+        await().atMost(Duration.ofSeconds(8)).until(() -> indexedRows() == 1);
+        assertEquals(0, indexFlags());
+
+        assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete", null, Void.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemDeletionChangedEvent") == 1);
+        assertEquals(1, indexFlags());
+        assertTrue(items.findById(id).orElseThrow().deleted());
+        assertTrue(indexQueries.findInTracker(trackerId).isEmpty());
+        assertTrue(indexQueries.pageInTracker(trackerId, "", 10).isEmpty());
+        assertTrue(indexQueries.hasFamily(WorkingSet.DEFAULT_ID, CommonId.of(localId)));
+        assertEquals(List.of(3), indexedRevisions());
+
+        assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/undelete", null, Void.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemDeletionChangedEvent") == 2);
+        assertEquals(0, indexFlags());
+        var staleDelete = new BusinessObjectDeleteEvent(id, true);
+        transaction.executeWithoutResult(status -> events.publishEvent(staleDelete));
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemDeletionChangedEvent") == 3);
+        assertFalse(items.findById(id).orElseThrow().deleted());
+        assertEquals(0, indexFlags());
+        assertEquals(List.of(id), indexQueries.findInTracker(trackerId).stream()
+                .map(item -> item.localId()).toList());
+        assertEquals(List.of(3), indexedRevisions());
+    }
+
+    private Integer indexFlags() {
+        return jdbc.queryForObject("SELECT flags FROM air_ws_items_index WHERE local_id = ?",
+                Integer.class, Long.valueOf(localId));
     }
 
     @Test

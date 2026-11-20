@@ -34,14 +34,14 @@ public class LightTrackerItemQueryProviderImpl implements LightTrackerItemQueryP
 
     @Override
     public List<LightTrackerItemSummary> findInTracker(TrackerId trackerId) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? ORDER BY local_id",
+        return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? AND flags IS DISTINCT FROM 1 ORDER BY local_id",
                 MAPPER, trackerId.numericValue());
     }
 
     @Override
     public List<LightTrackerItemSummary> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
         return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? "
-                        + "AND local_id > ? ORDER BY local_id LIMIT ?",
+                        + "AND flags IS DISTINCT FROM 1 AND local_id > ? ORDER BY local_id LIMIT ?",
                 MAPPER, trackerId.numericValue(), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 

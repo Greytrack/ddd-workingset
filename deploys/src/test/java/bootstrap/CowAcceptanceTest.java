@@ -288,6 +288,8 @@ class CowAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> read(target).materialized());
         assertLocalContent(target, "A");
         assertEquals(1, read(target).contentRevision());
+        assertEquals(0, jdbc.queryForObject("SELECT flags FROM air_ws_items_index WHERE local_id = ?",
+                Integer.class, Long.valueOf(target.id())));
         assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete2", null, Void.class).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class).getStatusCode());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",

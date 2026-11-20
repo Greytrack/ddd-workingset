@@ -1,5 +1,7 @@
 package alm.requirement.infrastructure.repositories;
 
+import lombok.extern.slf4j.Slf4j;
+
 import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
@@ -22,6 +24,7 @@ import java.util.Optional;
  * <p>写入使用 {@code lock_version} 条件更新：只有当前数据库版本等于待写入版本减一才更新；
  * 0 行受影响视为并发冲突，显式抛出 {@link LockVersionConflictException}，不静默覆盖。
  */
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class JdbcRequirementRepository implements RequirementMutationStore {

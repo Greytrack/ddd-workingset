@@ -1,5 +1,7 @@
 package sk.productspace.infrastructure.repositories;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 
 import java.util.Optional;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class JdbcProductSpaceRepository implements ProductSpaceRepository {

@@ -21,6 +21,7 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
+import sk.workingset.domain.event.BusinessObjectDeleteEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
@@ -202,6 +203,9 @@ public class RequirementCommandService {
 
         // 发布记录随来源事务提交，监听器在提交后异步处理。
         eventPublisher.publishEvent(event);
+        if (current.deleted() != changed.deleted()) {
+            eventPublisher.publishEvent(new BusinessObjectDeleteEvent(changed.localId(), changed.deleted()));
+        }
         return changed;
     }
 }

@@ -4,11 +4,13 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.AppException;
 
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackages;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
 /**
  * AC-01：Working Set 编译期不依赖 ALM 的实现模块或业务聚合类型（A1/T4 §3.1）。
@@ -80,4 +82,29 @@ class ArchitectureTest {
                     .that().resideInAnyPackage("sk.workingset.domain..", "sk.productspace.domain..", "alm.requirement.domain..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.baomidou..", "org.apache.ibatis..", "org.springframework.jdbc..");
+
+    @ArchTest
+    static final ArchRule repositories_must_not_be_transactional =
+            noClasses()
+                    .that().resideInAnyPackage("..infrastructure.repositories..")
+                    .should().beAnnotatedWith(Transactional.class);
+
+    @ArchTest
+    static final ArchRule repository_methods_must_not_be_transactional =
+            noMethods()
+                    .that().areDeclaredInClassesThat().resideInAnyPackage("..infrastructure.repositories..")
+                    .should().beAnnotatedWith(Transactional.class);
+
+    @ArchTest
+    static final ArchRule repositories_must_not_depend_on_illegal_state_exception =
+            noClasses()
+                    .that().resideInAnyPackage("..infrastructure.repositories..")
+                    .should().dependOnClassesThat()
+                    .haveFullyQualifiedName("java.lang.IllegalStateException");
+
+    @ArchTest
+    static final ArchRule shared_kernel_repositories_must_not_depend_on_business_bc_types =
+            noClasses()
+                    .that().resideInAnyPackage("sk.workingset.infrastructure.repositories..")
+                    .should().dependOnClassesThat().resideInAnyPackage("alm.requirement..");
 }

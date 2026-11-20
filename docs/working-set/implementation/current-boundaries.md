@@ -37,6 +37,7 @@
 | Merge 条目批准 | SK `MergeEntryApprovedEvent` | ALM 校验并保存目标 Requirement，发布 `MergeEntryResolvedEvent` |
 | Merge 条目结果与确认 | ALM `MergeEntryResolvedEvent` | SK 在同一轮次事务持久化条目结果和所需确认，按需发布 `MergeAppliedEvent`；确认写失败时轮次不结束 |
 | Merge 目标 LTI | SK `MergeAppliedEvent` | SK 独立事务切换/创建 LTI |
+| 当前索引软删 / 恢复 | ALM `BusinessObjectDeleteEvent` | SK 独立事务核对当前业务状态，更新 LTI `deleted` 并映射到旧表 `flags`；保留版次成员 |
 | 来源软删 / 永久删除 | ALM `BusinessObjectUpdateEvent` / `CompleteDeleteEvent` | 软删保存快照并触发物化；仍有来源依赖时拒绝永久删除，完成后 SK 异步清理来源 LTI |
 
 事件只表达已发生事实；请求不是完成事实。以上流程不引入通用写 Port，也不要求消息代理或事件溯源。

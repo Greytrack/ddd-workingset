@@ -109,10 +109,10 @@ WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_
 SELECT local_id, common_id, tracker_id, working_set_id, revision, local_id, revision, true FROM requirements
 )
 INSERT INTO air_ws_items_index
-    (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied,
+    (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
      work_space_id, master_id, parent_branch_id, sub_class_id)
 SELECT d.local_id, d.local_id, d.common_id, d.tracker_id, d.working_set_id,
-       d.revision, d.source_local_id, d.source_revision, CASE WHEN d.materialized THEN 1 ELSE 0 END,
+       d.revision, d.source_local_id, d.source_revision, CASE WHEN d.materialized THEN 1 ELSE 0 END, 0,
        t.work_space, t.common_id, t.source_branch_id, 14010101
 FROM indexed d JOIN air_inst_tracker_rev t ON t.id = d.tracker_id;
 
@@ -137,10 +137,10 @@ SELECT pg_temp.demo_id(200000 + d.ws * 1000 + d.space * 100 + d.slot * 20 + i.i)
 FROM demo_derivations d JOIN demo_items i ON i.space = d.space AND i.slot = d.slot
 )
 INSERT INTO air_ws_items_index
-    (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied,
+    (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
      work_space_id, master_id, parent_branch_id, sub_class_id)
 SELECT d.local_id, d.local_id, d.common_id, d.tracker_id, d.working_set_id,
-       d.revision, d.source_local_id, d.source_revision, CASE WHEN d.materialized THEN 1 ELSE 0 END,
+       d.revision, d.source_local_id, d.source_revision, CASE WHEN d.materialized THEN 1 ELSE 0 END, 0,
        t.work_space, t.common_id, t.source_branch_id, 14010101
 FROM indexed d JOIN air_inst_tracker_rev t ON t.id = d.tracker_id;
 

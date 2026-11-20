@@ -64,7 +64,7 @@ public final class RequirementMergeWriter {
             Requirement created = create(command);
             repository.save(created);
             if (command.operation() == MergeEntryApprovedEvent.Operation.DELETE) {
-                repository.save(created.delete(created.lockVersion()));
+                requirements.saveChange(created, created.delete(created.lockVersion()));
             }
             return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
                     created.localId(), command.sourceRevision(), created.revision(), true,

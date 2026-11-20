@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface ProductSpaceRepository {
     void save(ProductSpace space);
 
-    /** 命令侧重建并锁定聚合；读模型查询使用 Query Provider。 */
+    /** 命令侧重建聚合；读模型查询使用 Query Provider。 */
     Optional<ProductSpace> findById(String id);
 
     void delete(ProductSpace space);

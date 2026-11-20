@@ -1,5 +1,7 @@
 package sk.tracker.infrastructure.repositories;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.IncorrectUpdateSemanticsDataAccessException;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class JdbcTrackerRepository implements TrackerRepository {

@@ -39,6 +39,7 @@ public final class LightTrackerItem {
     private LocalId sourceLocalId;
     private Revision sourceRevision;
     private boolean materialized;
+    private boolean deleted;
 
     private LightTrackerItem(LocalId localId,
                              CommonId commonId,
@@ -143,9 +144,11 @@ public final class LightTrackerItem {
 
     public static LightTrackerItem restore(LocalId localId, CommonId commonId, TrackerId trackerId,
                                            WorkingSetId workingSetId, Revision revision, LocalId sourceLocalId,
-                                           Revision sourceRevision, boolean materialized, List<Revision> indexedRevisions) {
+                                           Revision sourceRevision, boolean materialized, boolean deleted,
+                                           List<Revision> indexedRevisions) {
         LightTrackerItem item = restore(localId, commonId, trackerId, workingSetId, revision,
                 sourceLocalId, sourceRevision, materialized);
+        item.deleted = deleted;
         item.revisions.clear();
         for (Revision indexed : indexedRevisions) {
             item.revisions.put(indexed, new LightTrackerItemRevisionEntity(indexed));
@@ -219,6 +222,19 @@ public final class LightTrackerItem {
 
     public Revision sourceRevision() {
         return sourceRevision;
+    }
+
+    /** Synchronize the committed lifecycle of this variant without changing its content source or revision. */
+    public boolean recordDeletionState(boolean deleted) {
+        if (this.deleted == deleted) {
+            return false;
+        }
+        this.deleted = deleted;
+        return true;
+    }
+
+    public boolean deleted() {
+        return deleted;
     }
 
     public boolean materialized() {
