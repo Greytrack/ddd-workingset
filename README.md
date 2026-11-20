@@ -9,7 +9,7 @@
 | 模块 | 职责 |
 | --- | --- |
 | `exception` | 公共异常基类、错误码接口和字段违规明细，使用纯 Java |
-| `sharedkernel` | Working Set 领域、应用服务、持久化适配器及业务错误码 |
+| `sharedkernel` | Shared Kernel 子模块：`businessframework` 通用业务对象能力、`tracker`/`productspace`/`workingset` 领域、应用服务和持久化适配器 |
 | `alm` | Requirement 领域、应用服务、持久化适配器及业务错误码，依赖 Shared Kernel |
 | `deploys` | Spring Boot 启动、全局 Web 配置、Swagger UI、Knife4j、运行资源和跨模块集成测试 |
 
