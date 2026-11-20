@@ -94,11 +94,9 @@ public interface WorkingSetQueryMapper {
     List<SpaceBindingSummary> findSpaceBindings(@Param("id") long id, @Param("workspace") Long workspace);
 
     @Select("""
-            SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode, b.origin, b.shown,
-                   (c.folder_tracker AND NULLIF(t.parent_id, 0) IS NULL AND t.share = 0) AS folder_tracker
+            SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode, b.origin, b.shown
             FROM tracker_bindings b
             JOIN air_inst_tracker_rev t ON t.id = b.tracker_id AND t.work_space = b.product_space_id
-            JOIN classifications c ON c.classification_id = t.tracker_class
             WHERE b.working_set_id = #{id} AND t.delete_flag = 0 AND t.visible = 1
               AND t.work_space = COALESCE(#{workspace,jdbcType=BIGINT}, t.work_space)
             ORDER BY b.product_space_id, b.classification_id

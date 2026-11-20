@@ -138,11 +138,11 @@ public class WorkingSetController {
     }
 
     public record TrackerBindingView(String trackerId, String productSpaceId, String classificationId,
-                                     String sharingMode, String origin, boolean shown, boolean folderTracker) {
+                                     String sharingMode, String origin, boolean shown) {
         static TrackerBindingView from(TrackerBindingSummary summary) {
             return new TrackerBindingView(String.valueOf(summary.trackerId()),
                     String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
-                    summary.sharingMode(), summary.origin(), summary.shown(), summary.folderTracker());
+                    summary.sharingMode(), summary.origin(), summary.shown());
         }
     }
 

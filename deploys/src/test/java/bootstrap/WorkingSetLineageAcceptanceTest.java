@@ -173,12 +173,26 @@ class WorkingSetLineageAcceptanceTest {
                                + (SELECT count(*) FROM product_spaces)
                                + (SELECT count(*) FROM requirements)
                                + (SELECT count(*) FROM air_ws_items_index WHERE has_copied = 0),
-                               count(*), count(DISTINCT base_class)
+                               count(*), array_agg(DISTINCT base_class ORDER BY base_class)
                         FROM air_inst_common
                         """)) {
                     assertTrue(rows.next());
                     assertEquals(rows.getLong(1), rows.getLong(2));
-                    assertEquals(4, rows.getLong(3));
+                    assertArrayEquals(new Long[]{1003L, 1007L, 1008L, 1009L, 1401L},
+                            (Long[]) rows.getArray(3).getArray());
+                }
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT count(*)
+                        FROM air_inst_tracker_rev child
+                        JOIN air_inst_workingset workspace ON workspace.id = child.workingset_id
+                        LEFT JOIN air_inst_tracker_rev parent ON parent.id = child.source_branch_id
+                        WHERE child.workingset_id <> 1
+                          AND (parent.workingset_id IS DISTINCT FROM workspace.parent_id
+                               OR parent.common_id IS DISTINCT FROM child.common_id
+                               OR parent.tracker_class IS DISTINCT FROM child.tracker_class)
+                        """)) {
+                    assertTrue(rows.next());
+                    assertEquals(0, rows.getLong(1));
                 }
                 try (java.sql.ResultSet rows = sql.executeQuery("""
                         SELECT count(*) FROM product_spaces p

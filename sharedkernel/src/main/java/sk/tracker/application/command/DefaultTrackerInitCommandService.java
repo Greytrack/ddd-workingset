@@ -14,7 +14,6 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.query.provider.ClassificationCatalog;
-import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.error.BindingResCode;
@@ -33,7 +32,6 @@ public class DefaultTrackerInitCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
-    private final TrackerQueryProvider trackerQueries;
     private final IdentifierGenerator ids;
     private final ApplicationEventPublisher events;
 
@@ -48,21 +46,13 @@ public class DefaultTrackerInitCommandService {
         List<TrackerId> created = new ArrayList<>();
         List<Tracker> pending = new ArrayList<>();
         for (Classification classification : classifications.findClassifications()) {
-            if (classification.folder()) {
-                var existing = trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId());
-                if (existing.isPresent()) {
-                    created.add(existing.orElseThrow().trackerId());
-                } else {
-                    pending.add(Tracker.folderTracker(TrackerId.of(ids.nextId(null).longValue()),
-                            WorkingSet.DEFAULT_ID, space, classification));
-                }
-                continue;
+            var existing = trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId());
+            if (existing.isPresent()) {
+                created.add(existing.orElseThrow().trackerId());
+            } else {
+                pending.add(Tracker.original(TrackerId.of(ids.nextId(null).longValue()),
+                        space, classification, null, true));
             }
-            if (trackerQueries.existsDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.id())) {
-                continue;
-            }
-            pending.add(Tracker.original(TrackerId.of(ids.nextId(null).longValue()),
-                    space, classification, null, true));
         }
         for (Tracker tracker : pending) {
             trackers.save(tracker);

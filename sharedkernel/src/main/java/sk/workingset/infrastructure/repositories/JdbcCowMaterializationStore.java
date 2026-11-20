@@ -9,7 +9,7 @@ import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.repository.CowMaterializationStore;
+import sk.workingset.domain.cow.CowMaterializationStore;
 
 import java.util.List;
 import java.util.Optional;

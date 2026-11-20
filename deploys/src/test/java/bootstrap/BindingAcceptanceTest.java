@@ -416,11 +416,7 @@ class BindingAcceptanceTest {
     }
 
     private void bindSpace(String id) {
-        String folder = fixtureId("folder-" + id + "-" + space);
-        jdbc.update("""
-                INSERT INTO trackers (tracker_id, working_set_id, product_space_id, name, classification_id, sharing_mode, is_default)
-                VALUES (?, ?, ?, '文件夹', 10070101, 'UNSHARED', TRUE)
-                """, folder, id, space);
+        String folder = FixtureIds.ensureDefaultTracker(jdbc, id, space);
         jdbc.update("""
                 INSERT INTO air_ws_workingset_branch_relation (id, workingset_id, work_space, tracker_id)
                 VALUES (?, ?, ?, ?)

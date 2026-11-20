@@ -51,7 +51,7 @@
 | T7 创建/扩展 | 阶段按项执行，但工作集创建、Tracker 派生、范围绑定及 LTI 索引仍与各自的任务进度同事务提交 | 按 [反模式审查](../reviews/2026-11-19-ddd-anti-pattern-scan.md) 将聚合副作用与任务进度拆成独立提交，用可靠结果事件推进任务。 |
 | Tracker 创建 | TrackerCommandService 仅持久化 Tracker，绑定由 `TrackerCreatedEvent` 的监听器在 Working Set 事务中完成 | 主路径已事件化；仍需验证监听失败、重复投递、绑定拒绝和运维可观察性。ProductSpace 初始化不在该路径内。 |
 | 继承编辑 | ALM 保存后由 `BusinessObjectUpdateEvent` 异步切换 LTI | 保存成功不保证 LTI 立即 Local-backed；读取方需容忍短暂 Source-backed。切换失败不回滚业务保存。 |
-| Folder Tracker | Tracker 是 ProductSpace 下第三级容器；每个 `(WorkingSet, ProductSpace)` 一个 Folder Tracker，非共享、不可独立删除，Folder 业务对象为单版次可编辑/删除/树结构，Folder 树不参与 Compare/Merge | 需要持续验证事件幂等、绑定失败可见性、Folder 业务对象生命周期和 Compare/Merge 排除。见 [ADR-0008](../adr/0008-tracker-third-level-container.md)。 |
+| 文件夹分类 | 空间初始化和工作集创建、扩展由应用编排默认纳入文件夹分类。Tracker 仓储按自身行重建，仅保留分类引用和三层 ID。 | Folder 业务能力由相应 BC 提供。见 [ADR-0008 后续裁定](../adr/0008-tracker-third-level-container.md)。 |
 
 ## 5. 已移除的旧声明
 

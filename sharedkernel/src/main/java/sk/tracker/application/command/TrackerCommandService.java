@@ -11,7 +11,6 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.BusinessTrackerItems;
 import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
@@ -41,7 +40,7 @@ public class TrackerCommandService {
     private final ApplicationEventPublisher events;
 
     /**
-     * 在默认工作集创建业务原生 Tracker；Folder Tracker 不在此创建（随产品空间创建）。
+     * 在默认工作集创建业务原生 Tracker。
      */
     @Transactional
     public Tracker create(WorkingSetId id, String spaceId, String name, String classificationId,
@@ -49,11 +48,7 @@ public class TrackerCommandService {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "只允许在默认工作集新建跟踪分类");
         }
-        Classification classification = classifications.findClassification(classificationId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + classificationId));
-        if (classification.folder()) {
-            throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "文件夹 Tracker 随产品空间创建");
-        }
+        Classification classification = classifications.requireClassification(classificationId);
         WorkingSet workingSet = workingSets.findById(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
         ProductSpace space = spaces.findById(spaceId)
@@ -90,10 +85,6 @@ public class TrackerCommandService {
     public void delete(TrackerId id) {
         Tracker tracker = trackers.lockTracker(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
-        if (tracker.isFolderTracker()) {
-            throw DomainException.withMessage(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST,
-                    "文件夹 Tracker 须随产品空间卸载");
-        }
         requireOwningWorkingSet(tracker.workingSetId());
         tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
                 trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));

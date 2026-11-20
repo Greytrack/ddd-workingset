@@ -8,7 +8,7 @@ import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.repository.CowMaterializationStore;
+import sk.workingset.domain.cow.CowMaterializationStore;
 
 /**
  * COW 请求处理器：来源变化后，为未物化目标发布逐目标实例化请求。

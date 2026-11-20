@@ -45,7 +45,6 @@ public final class WorkingSetLineageDomainService {
      * 该判断不遍历祖先，也不把同父的其他子 Tracker 视为可配对兄弟。
      */
     public static boolean isDirectDerivation(Tracker child, Tracker sourceTracker) {
-        return !child.isFolder() && !sourceTracker.isFolder()
-                && child.sourceId() != null && child.sourceId().equals(sourceTracker.trackerId());
+        return child.sourceId() != null && child.sourceId().equals(sourceTracker.trackerId());
     }
 }

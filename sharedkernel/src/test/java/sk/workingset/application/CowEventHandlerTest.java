@@ -16,7 +16,7 @@ import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.repository.CowMaterializationStore;
+import sk.workingset.domain.cow.CowMaterializationStore;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Instant;

@@ -27,7 +27,10 @@ public final class Tracker {
     private final TrackerId sourceId;
     private final WorkingSetId workingSetId;
     private final Long numericProductSpaceId;
-    private final Classification classification;
+    private final long classificationId;
+    private final long baseClassId;
+    private final long classId;
+    private final long typeId;
     private final SharingMode sharingMode;
     private final TrackerId parentId;
     private final boolean isDefault;
@@ -54,12 +57,14 @@ public final class Tracker {
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
                     WorkingSetId workingSetId, Long numericProductSpaceId, Classification classification,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate) {
-        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId, classification,
+        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
+                classification.numericId(), classification.baseClassId(), classification.classId(), classification.typeId(),
                 sharingMode, parentId, isDefault, newAggregate, true, null);
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
-                    WorkingSetId workingSetId, Long numericProductSpaceId, Classification classification,
+                    WorkingSetId workingSetId, Long numericProductSpaceId, long classificationId,
+                    long baseClassId, long classId, long typeId,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate,
                     boolean initiallyVisible, Long createdBy) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
@@ -70,16 +75,19 @@ public final class Tracker {
         this.isDefault = isDefault;
         this.workingSetId = Objects.requireNonNull(workingSetId, "workingSetId");
         this.numericProductSpaceId = Objects.requireNonNull(numericProductSpaceId, "productSpaceId");
-        this.classification = Objects.requireNonNull(classification, "classification");
+        this.classificationId = classificationId;
+        this.baseClassId = baseClassId;
+        this.classId = classId;
+        this.typeId = typeId;
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
-        this.compatibility = new TrackerCompatibility(trackerId, classification.numericId());
+        this.compatibility = new TrackerCompatibility(trackerId, classificationId);
         this.newAggregate = newAggregate;
         this.initiallyVisible = initiallyVisible;
         this.createdBy = createdBy;
         if (sourceId == null && !trackerId.equals(commonId)) {
             throw new IllegalArgumentException("An original Tracker must use its own ID as common ID");
         }
-        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId) && !isFolderTracker()) {
+        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "original Tracker must belong to the default Working Set");
         }
         if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
@@ -91,17 +99,11 @@ public final class Tracker {
     }
 
     public static Tracker reconstitute(TrackerId id, TrackerId commonId, String name, TrackerId source,
-                                       WorkingSetId owner, Long productSpace, Classification classification,
+                                       WorkingSetId owner, Long productSpace, long classificationId,
+                                       long baseClassId, long classId, long typeId,
                                        SharingMode sharing, TrackerId parent, boolean isDefault) {
-        return new Tracker(id, commonId, name, source, owner, productSpace, classification, sharing, parent, isDefault, false);
-    }
-
-    public static Tracker folderTracker(TrackerId id, WorkingSetId owner, ProductSpace space, Classification classification) {
-        if (!classification.folder()) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Folder Tracker requires a folder classification");
-        }
-        return new Tracker(id, id, classification.name(), null, owner, space.numericId(), classification,
-                SharingMode.UNSHARED, null, true);
+        return new Tracker(id, commonId, name, source, owner, productSpace, classificationId,
+                baseClassId, classId, typeId, sharing, parent, isDefault, false, true, null);
     }
 
     /**
@@ -116,7 +118,7 @@ public final class Tracker {
      */
     public static Tracker original(TrackerId id, ProductSpace space, Classification classification, TrackerId parentId,
                                    boolean isDefault) {
-        return new Tracker(id, id, null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
+        return new Tracker(id, id, isDefault ? classification.name() : null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
                 classification.sharingMode(), parentId, isDefault);
     }
 
@@ -141,7 +143,8 @@ public final class Tracker {
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault,
                                   boolean initiallyVisible, Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
-                source.numericProductSpaceId(), source.classification(), source.sharingMode(), null,
+                source.numericProductSpaceId(), source.classificationId, source.baseClassId, source.classId, source.typeId,
+                source.sharingMode(), null,
                 isDefault, true, initiallyVisible, createdBy);
     }
 
@@ -163,14 +166,6 @@ public final class Tracker {
 
     public Long createdBy() {
         return createdBy;
-    }
-
-    public boolean isFolderTracker() {
-        return isFolder() && parentId == null && sharingMode == SharingMode.UNSHARED;
-    }
-
-    public boolean isFolder() {
-        return classification.folder();
     }
 
     public TrackerId trackerId() {
@@ -197,12 +192,20 @@ public final class Tracker {
         return numericProductSpaceId;
     }
 
-    public Classification classification() {
-        return classification;
+    public long baseClassId() {
+        return baseClassId;
+    }
+
+    public long classId() {
+        return classId;
+    }
+
+    public long typeId() {
+        return typeId;
     }
 
     public Long numericClassificationId() {
-        return classification.numericId();
+        return classificationId;
     }
 
     public SharingMode sharingMode() {
@@ -235,7 +238,7 @@ public final class Tracker {
     }
 
     public String classificationId() {
-        return classification.id();
+        return Long.toString(classificationId);
     }
 
     public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {

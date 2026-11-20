@@ -15,9 +15,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
-import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
@@ -39,6 +37,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class WorkingSetCreationService {
+    private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(10070101L);
 
     private final WorkingSetCreationRepository store;
     private final IdentifierGenerator ids;
@@ -50,7 +49,6 @@ public class WorkingSetCreationService {
     private final WorkingSetItemIndexer indexer;
     private final RelationEventStep relationEvents;
     private final TrackerQueryProvider trackerQueries;
-    private final ClassificationCatalog classifications;
 
     private static DomainException notFound(String id) {
         return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
@@ -134,7 +132,7 @@ public class WorkingSetCreationService {
         for (String trackerId : requested) {
             TrackerId id = TrackerId.of(trackerId);
             Tracker source = trackers.findById(id).orElse(null);
-            if (source != null && source.classification().folder()
+            if (source != null && REQUIRED_TRACKER_CLASSIFICATIONS.contains(source.numericClassificationId())
                     && hasClassificationBinding(targetSet, source.numericProductSpaceId(), source.numericClassificationId())) {
                 continue;
             }
@@ -183,9 +181,8 @@ public class WorkingSetCreationService {
         TreeSet<Long> unshared = new TreeSet<>(request.numericUnsharedTrackerIds());
         TreeSet<Long> shared = new TreeSet<>(request.numericSharedTrackerIds());
         WorkingSetId parent = WorkingSetId.of(request.numericParentWorkingSetId());
-        List<Long> requiredClassifications = requiredTrackerClassifications();
         for (Long spaceId : request.numericProductSpaceIds()) {
-            for (Long classificationId : requiredClassifications) {
+            for (Long classificationId : REQUIRED_TRACKER_CLASSIFICATIONS) {
                 if (existingTarget != null && hasClassificationBinding(existingTarget, spaceId, classificationId)) {
                     continue;
                 }
@@ -199,11 +196,6 @@ public class WorkingSetCreationService {
         return new WorkingSetCreation.Request(request.numericParentWorkingSetId(),
                 request.numericTargetWorkingSetId(), request.requestId(), request.numericProductSpaceIds(),
                 List.copyOf(shared), List.copyOf(unshared), request.name(), request.mode(), request.color());
-    }
-
-    private List<Long> requiredTrackerClassifications() {
-        return classifications.findClassifications().stream().filter(Classification::folder)
-                .map(Classification::numericId).toList();
     }
 
     private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
@@ -351,7 +343,7 @@ public class WorkingSetCreationService {
                 .map(Failure::trackerId)
                 .collect(Collectors.toSet());
         var binding = workingSetService.bindProductAndTrackersForTask(target, creation.request(), failedCopies,
-                requiredTrackerClassifications());
+                REQUIRED_TRACKER_CLASSIFICATIONS);
         return creation.recordBindingResult(binding.changed(), binding.failures(), Instant.now());
     }
 

@@ -30,6 +30,27 @@ public final class FixtureIds {
                 Long.valueOf(child), Long.valueOf(parent));
     }
 
+    static String ensureDefaultTracker(JdbcTemplate jdbc, String workingSet, String space) {
+        var existing = jdbc.queryForList("""
+                SELECT tracker_id FROM trackers
+                WHERE working_set_id = ? AND product_space_id = ? AND classification_id = 10070101 AND is_default
+                """, Long.class, Long.valueOf(workingSet), Long.valueOf(space));
+        if (!existing.isEmpty()) {
+            return existing.getFirst().toString();
+        }
+        String id = fixtureId("default-tracker-" + workingSet + "-" + space);
+        Long parent = jdbc.queryForObject("SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?",
+                Long.class, Long.valueOf(workingSet));
+        String source = parent == null ? null : ensureDefaultTracker(jdbc, parent.toString(), space);
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id,
+                                      name, classification_id, sharing_mode, is_default)
+                VALUES (?, ?, ?, ?, '文件夹', 10070101, 'UNSHARED', TRUE)
+                """, Long.valueOf(id), source == null ? null : Long.valueOf(source),
+                Long.valueOf(workingSet), Long.valueOf(space));
+        return id;
+    }
+
     static void extendWithRootFolder(TestRestTemplate rest, JdbcTemplate jdbc, String target, String space) {
         Long folder = jdbc.queryForObject("""
                 SELECT tracker_id FROM trackers

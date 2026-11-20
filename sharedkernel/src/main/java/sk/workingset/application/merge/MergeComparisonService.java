@@ -140,7 +140,6 @@ public class MergeComparisonService {
                         // The binding must belong to the direct child Working Set; this rejects cross-level
                         // and Shared bindings that happen to carry a sourceId.
                         .filter(tracker -> tracker.workingSetId().equals(child.id()))
-                        .filter(tracker -> !tracker.isFolderTracker())
                         .filter(tracker -> tracker.sourceId() != null)
                         .filter(tracker -> parentIncludes(left, right, tracker))
                         .map(tracker -> tracker.workingSetId().equals(source)

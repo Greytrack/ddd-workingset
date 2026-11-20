@@ -9,7 +9,7 @@
 | 编号 | 术语 | 定义 | 应避免的混用 |
 | --- | --- | --- | --- |
 | `CONCEPT-001` | **Working Set／工作集** | 有身份和生命周期、选择 Tracker 并形成有效工作范围的工作上下文或范围清单。 | 不等同 Git Branch；不预设拥有全部 Item；不等同分支本体。 |
-| `CONCEPT-002` | **Tracker** | 具有独立业务身份、状态、生命周期与管理行为的独立聚合，是 Working Set 下 ProductSpace 内的第三级容器，按业务对象类型划分。业务原生 Tracker 只能在默认工作集创建；子工作集只能纳入 Shared 或从直属父工作集派生。Folder Tracker 按 `(WorkingSet, ProductSpace)` 唯一创建，是非共享例外。 | 不作为 Working Set 内部实体；不使用 Tracker Branch 作为独立领域概念；子工作集不独立创建业务原生 Tracker。 |
+| `CONCEPT-002` | **Tracker** | 具有独立业务身份、状态、生命周期与管理行为的独立聚合，是 Working Set 下 ProductSpace 内的第三级容器，按业务对象类型划分。业务原生 Tracker 只能在默认工作集创建；子工作集只能纳入 Shared 或从直属父工作集派生。文件夹分类由应用编排默认纳入。 | 不作为 Working Set 内部实体；不使用 Tracker Branch 作为独立领域概念；子工作集不独立创建业务原生 Tracker。 |
 | `CONCEPT-003` | **Shared Tracker／共享 Tracker** | 多个 Working Set 绑定同一权威 Tracker、同一 Item 变体和同一权威内容的协作语义。 | “共享”不等于所有用户有权；不等于复制后同步；修改不通过 Merge 传播。 |
 | `CONCEPT-004` | **Non-shared Tracker／非共享 Tracker** | 非共享协作模式下的 Tracker；派生时产生具有独立身份的新 Tracker，源与派生是不同对象。 | 不等同同一 Tracker 的视图；不引入 Tracker Branch。 |
 | `CONCEPT-007` | **Item Family／Item 家族** | 以 `CommonId` 识别跨派生变体的同一逻辑对象家族。 | 无关 Item 跨类型、跨 Tracker 也不能共享 `CommonId`。 |
@@ -37,7 +37,7 @@
 | `CONCEPT-030` | **Shared Kernel 内部模块** | `sharedkernel` 内的代码组织单元，如 `businessframework`、`tracker`、`productspace`、`workingset`；用于承载不同模型区域。 | 不自动等于独立限界上下文、微服务或已批准部署单元。 |
 | `CONCEPT-031` | **只读共享聚合访问** | 业务 BC 以只读方式使用 SK 共享聚合/仓储完成身份、来源和就绪校验；不得保存、删除或修改 SK 聚合状态。 | 不等于获得 SK 写入权；不替代跨聚合原子校验或事件协作。 |
 | `CONCEPT-032` | **Business Object Framework／业务对象框架** | `sk.businessframework` 提供的通用业务对象、属性、版次和排序能力，供多个 BC 复用。 | 不是 Working Set 业务模型；其 `BusinessObject` 与 `TrackerItem` 公共工作集契约不是同一概念。 |
-| `CONCEPT-033` | **Folder Tracker／文件夹 Tracker** | 每个 `(WorkingSet, ProductSpace)` 唯一的第三级容器 Tracker，用于承载该工作集该产品空间的 Folder 业务对象。 | 不是“根文件夹”；不是文件夹业务对象本身；不跨 WorkingSet 共享；不允许独立删除；不参与 Compare/Merge。 |
+| `CONCEPT-033` | **Folder Tracker／文件夹 Tracker** | 承载 Folder 业务对象的 Tracker，应用编排默认纳入。 | 业务行为见 [ADR-0008](../adr/0008-tracker-third-level-container.md)。 |
 | `CONCEPT-034` | **Folder／文件夹** | Folder Tracker 下的单版次业务对象，可编辑、可删除，并可通过父子关系形成树。 | 不是 Tracker；不等同文件夹容器；不参与 Compare/Merge。 |
 
 ## Item 身份规则（已确认）

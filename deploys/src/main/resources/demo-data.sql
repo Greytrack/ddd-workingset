@@ -44,6 +44,15 @@ INSERT INTO demo_derivations VALUES
     (204, 6, 1, 0), (204, 6, 2, 0);
 
 CREATE TEMP TABLE demo_tracker_rows AS
+WITH space_trackers AS (
+    SELECT pg_temp.demo_id(8000000 + row_number() OVER (ORDER BY owner_ws, work_space)) AS tracker_id,
+           owner_ws, work_space
+    FROM (
+        SELECT 1::bigint AS owner_ws, pg_temp.demo_id(100 + n) AS work_space FROM demo_spaces
+        UNION ALL
+        SELECT DISTINCT pg_temp.demo_id(ws), pg_temp.demo_id(100 + space) FROM demo_derivations
+    ) AS scopes
+)
 SELECT id, id AS common_id, NULL::bigint AS source_id, 1::bigint AS owner_ws,
        pg_temp.demo_id(100 + space) AS work_space, name, classification,
        CASE WHEN sharing = 'SHARED' THEN 1 ELSE 0 END AS share, (slot <> 2)::int AS is_default
@@ -54,16 +63,12 @@ SELECT pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot), t.id,
        pg_temp.demo_id(d.ws), pg_temp.demo_id(100 + d.space), t.name, t.classification, 0, (d.slot = 1)::int
 FROM demo_derivations d JOIN demo_trackers t ON t.space = d.space AND t.slot = d.slot
 UNION ALL
-SELECT folder_id, folder_id, NULL, owner_ws, work_space, '文件夹', 10070101, 0, 1
-FROM (
-    SELECT pg_temp.demo_id(8000000 + row_number() OVER (ORDER BY owner_ws, work_space)) AS folder_id,
-           owner_ws, work_space
-    FROM (
-        SELECT 1::bigint AS owner_ws, pg_temp.demo_id(100 + n) AS work_space FROM demo_spaces
-        UNION ALL
-        SELECT DISTINCT pg_temp.demo_id(ws), pg_temp.demo_id(100 + space) FROM demo_derivations
-    ) AS scopes
-) AS folders;
+SELECT current.tracker_id, root.tracker_id, parent.tracker_id, current.owner_ws, current.work_space,
+       '文件夹', 10070101, 0, 1
+FROM space_trackers current
+JOIN space_trackers root ON root.owner_ws = 1 AND root.work_space = current.work_space
+LEFT JOIN air_inst_workingset ws ON ws.id = current.owner_ws AND current.owner_ws <> 1
+LEFT JOIN space_trackers parent ON parent.owner_ws = ws.parent_id AND parent.work_space = current.work_space;
 
 INSERT INTO air_inst_tracker_rev
     (id, instance_id, common_id, source_branch_id, workingset_id, work_space, name, number, tracker_class,

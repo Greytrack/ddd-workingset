@@ -11,7 +11,7 @@
 | **WorkingSet** | 核心聚合根 | `WorkingSetId`；默认根；`parentWorkingSetId` 单父 | 默认根不可删；单父谱系无环；SpaceBinding 前置；绑定唯一性；绑定移除/删除顺序 | ID 引用 Tracker、ProductSpace、LTI |
 | **SpaceBinding** | WorkingSet 内 Entity | `(workingSetId, productSpaceId)` | 同一 WS/空间唯一；有 TrackerBinding 时不可移除 | 引用 ProductSpace |
 | **TrackerBinding** | WorkingSet 内 Entity | `(workingSetId, trackerId)`；槽位 `(WS, space, classification)` 可多 Tracker、至多一个有效默认 | 同一 Tracker 不重复纳入；空间一致；共享特性相容；默认资格由 Tracker 承担（T6-F） | 引用 Tracker |
-| **Tracker** | 独立聚合根、ProductSpace 下的第三级容器 | `TrackerId` | 业务原生 Tracker 只能在默认工作集创建；Folder Tracker 例外，按 `(WorkingSet, ProductSpace)` 唯一、非共享、不可独立删除、不参与 Compare/Merge；共享特性创建后不可变；`parentId` 创建后不可变；`sourceId` 不可变（T6-F）；删除受 Item/组织子级/派生子级约束 | ID 引用 ProductSpace、Classification、父 Tracker、来源 Tracker |
+| **Tracker** | 独立聚合根、ProductSpace 下的第三级容器 | `TrackerId` | 业务原生 Tracker 只能在默认工作集创建；共享特性创建后不可变；`parentId` 创建后不可变；`sourceId` 不可变（T6-F）；删除受 Item/组织子级/派生子级约束 | ID 引用 ProductSpace、Classification、父 Tracker、来源 Tracker |
 | **LightTrackerItem** | 独立聚合根 | `LocalId`（变体）；`CommonId` 关联家族 | `materialized` 三字段一致；COW 不改身份；Local-backed 后不被来源覆盖；单 WS 家族唯一 | ID 引用 Tracker、WorkingSet、业务对象 |
 | **ProductSpace** | 独立聚合根 | `ProductSpaceId` | 稳定归属身份；不随 WorkingSet 派生复制；删除前所有绑定为空 | 被 SpaceBinding 引用 |
 | **MergeRound** | 合并区域聚合根 | `MergeRoundId`；`requestId` 幂等 | 一页 1～50 条决策；同 Tracker 对不并发；终态不可重开；唯一 `ApplyResult` | 持有 MergeEntry（Entity）与决策；ID 引用 WorkingSet/Tracker/LTI |
@@ -24,7 +24,7 @@
 
 完整业务内容与状态机由各业务 BC 的聚合负责。Working Set 的聚合之间按身份引用。跨 BC 写入见 [T4](cross-bc-contract-v1.md)。
 
-**容器层级与 Folder Tracker**：Working Set 是一级容器，ProductSpace 是二级容器，Tracker 是三级容器；Requirement、Test、Material、Review、Folder 等业务对象位于各自 Tracker 下。每个 `(WorkingSet, ProductSpace)` 只有一个 **Folder Tracker**，它是承载 Folder 业务对象的普通第三级容器，不是“根文件夹”，也不作为业务对象。Folder 是单版次业务对象，可编辑、删除并形成树；Folder Tracker 不允许独立删除；Folder Tracker、Folder 业务对象及其树不参与 Compare/Merge。见 [ADR-0008](../adr/0008-tracker-third-level-container.md)。
+**容器层级与 Folder Tracker**：Working Set 是一级容器，ProductSpace 是二级容器，Tracker 是三级容器；Requirement、Test、Material、Review、Folder 等业务对象位于各自 Tracker 下。应用流程默认纳入文件夹分类。Tracker 执行通用的容器规则；Folder 的生命周期由业务 BC 管理。见 [ADR-0008](../adr/0008-tracker-third-level-container.md)。
 
 ## 非聚合的共享能力
 

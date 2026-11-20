@@ -1,4 +1,4 @@
-package sk.workingset.domain.repository;
+package sk.workingset.domain.cow;
 
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;

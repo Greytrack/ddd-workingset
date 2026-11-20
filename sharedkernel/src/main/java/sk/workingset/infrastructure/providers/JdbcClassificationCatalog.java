@@ -16,8 +16,8 @@ import java.util.Optional;
 public class JdbcClassificationCatalog implements ClassificationCatalog {
     private static final RowMapper<Classification> CLASSIFICATION = (row, position) ->
             new Classification(row.getLong(1), SharingMode.valueOf(row.getString(2)), row.getString(3),
-                    row.getLong(4), row.getLong(5), row.getLong(6), row.getBoolean(7));
-    private static final String SELECT = "SELECT classification_id, sharing_mode, name, base_class, class, type, folder_tracker FROM classifications";
+                    row.getLong(4), row.getLong(5), row.getLong(6));
+    private static final String SELECT = "SELECT classification_id, sharing_mode, name, base_class, class, type FROM classifications";
 
     private final JdbcTemplate jdbc;
 

@@ -226,14 +226,12 @@ CREATE TABLE IF NOT EXISTS classifications (
     base_class        BIGINT NOT NULL DEFAULT 1009,
     class             BIGINT NOT NULL DEFAULT 100901,
     type              BIGINT NOT NULL DEFAULT 10090101,
-    folder_tracker    BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (classification_id, sharing_mode)
 );
 
 ALTER TABLE classifications ADD COLUMN IF NOT EXISTS base_class BIGINT NOT NULL DEFAULT 1009;
 ALTER TABLE classifications ADD COLUMN IF NOT EXISTS class BIGINT NOT NULL DEFAULT 100901;
 ALTER TABLE classifications ADD COLUMN IF NOT EXISTS type BIGINT NOT NULL DEFAULT 10090101;
-ALTER TABLE classifications ADD COLUMN IF NOT EXISTS folder_tracker BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Base requirement category. Demo-only categories are added by demo-data.sql.
 INSERT INTO classifications (classification_id, name, sharing_mode)
@@ -467,7 +465,7 @@ CREATE TABLE IF NOT EXISTS air_inst_tracker_rev (
       AND work_space IS NOT NULL AND workingset_id IS NOT NULL
       AND share IS NOT NULL AND share IN (0, 1) AND delete_flag IN (0, 1)),
   CONSTRAINT tracker_v4_lineage CHECK (
-      (source_branch_id IS NULL AND (workingset_id = 1 OR (tracker_class = 10070101 AND share = 0 AND NULLIF(parent_id, 0) IS NULL)))
+      (source_branch_id IS NULL AND workingset_id = 1)
       OR (source_branch_id IS NOT NULL AND workingset_id <> 1 AND share = 0)),
   CONSTRAINT tracker_v4_workingset_fk FOREIGN KEY (workingset_id) REFERENCES air_inst_workingset (id),
   CONSTRAINT tracker_v4_space_fk FOREIGN KEY (work_space) REFERENCES product_spaces (product_space_id),
@@ -519,10 +517,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_name ON air_inst_tracker_rev (w
     WHERE name IS NOT NULL AND source_branch_id IS NULL AND delete_flag = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_source ON air_inst_tracker_rev (workingset_id, source_branch_id)
     WHERE source_branch_id IS NOT NULL AND delete_flag = 0;
-INSERT INTO classifications (classification_id, sharing_mode, name, base_class, class, type, folder_tracker)
-VALUES (10070101, 'UNSHARED', '文件夹', 1007, 100701, 10070101, TRUE)
+INSERT INTO classifications (classification_id, sharing_mode, name, base_class, class, type)
+VALUES (10070101, 'UNSHARED', '文件夹', 1007, 100701, 10070101)
 ON CONFLICT (classification_id) DO UPDATE SET base_class = EXCLUDED.base_class,
-    class = EXCLUDED.class, type = EXCLUDED.type, folder_tracker = EXCLUDED.folder_tracker;
+    class = EXCLUDED.class, type = EXCLUDED.type;
 
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_parent ON air_inst_tracker_rev (parent_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_source ON air_inst_tracker_rev (source_branch_id);
@@ -542,8 +540,19 @@ DO 'BEGIN
 END';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_space_id ON air_inst_tracker_rev (id, work_space);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_local_root_folder ON air_inst_tracker_rev (workingset_id, work_space)
-    WHERE tracker_class = 10070101 AND NULLIF(parent_id, 0) IS NULL AND delete_flag = 0;
+DROP INDEX IF EXISTS uq_tracker_rev_local_root_folder;
+DO '
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = ''air_inst_tracker_rev''::regclass
+               AND conname = ''tracker_v4_lineage'' AND pg_get_constraintdef(oid) LIKE ''%tracker_class%'') THEN
+        ALTER TABLE air_inst_tracker_rev DROP CONSTRAINT tracker_v4_lineage;
+        ALTER TABLE air_inst_tracker_rev ADD CONSTRAINT tracker_v4_lineage CHECK (
+            (source_branch_id IS NULL AND workingset_id = 1)
+            OR (source_branch_id IS NOT NULL AND workingset_id <> 1 AND share = 0)
+        ) NOT VALID;
+    END IF;
+END
+';
 
 CREATE TABLE IF NOT EXISTS air_ws_workingset_branch_relation (
     id BIGINT PRIMARY KEY,

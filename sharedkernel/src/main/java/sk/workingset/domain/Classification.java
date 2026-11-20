@@ -11,7 +11,7 @@ import java.util.Objects;
  */
 @ValueObject
 public record Classification(Long numericId, SharingMode sharingMode, String name,
-                             long baseClassId, long classId, long typeId, boolean folder) {
+                             long baseClassId, long classId, long typeId) {
     public Classification {
         if (numericId == null || numericId <= 0) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "classificationId must be positive");

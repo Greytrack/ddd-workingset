@@ -10,6 +10,7 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
@@ -22,6 +23,7 @@ public class DefaultTrackersBindingListener {
     private final WorkingSetRepository workingSets;
     private final ProductSpaceRepository spaces;
     private final TrackerRepository trackers;
+    private final ClassificationCatalog classifications;
 
     @ApplicationModuleListener(id = "bootstrap.DefaultTrackersBindingListener.on(sk.tracker.domain.event.DefaultTrackersProvisionedEvent)")
     public void on(DefaultTrackersProvisionedEvent event) {
@@ -42,7 +44,7 @@ public class DefaultTrackersBindingListener {
             Tracker tracker = trackers.findById(trackerId)
                     .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                             "tracker disappeared: " + trackerId.value()));
-            workingSet.bindTracker(tracker, tracker.classification(), tracker.sharingMode());
+            workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.sharingMode());
         }
         workingSets.save(workingSet);
     }

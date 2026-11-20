@@ -12,6 +12,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.Classification;
@@ -42,6 +43,7 @@ public class WorkingSetCommandService {
     private final ProductSpaceRepository spaces;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
+    private final ClassificationCatalog classifications;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
@@ -213,7 +215,7 @@ public class WorkingSetCommandService {
             }
             Tracker tracker = mode == SharingMode.SHARED ? source : trackers.findDerivedTracker(target.id(), id)
                     .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceId));
-            Classification classification = tracker.classification();
+            Classification classification = classifications.requireClassification(tracker.classificationId());
             if (tracker.sharingMode() != mode || !classification.allows(mode)) {
                 throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
             }

@@ -22,14 +22,8 @@ WHERE r.tracker_id IS NOT NULL
        OR r.work_space IS DISTINCT FROM t.work_space
        OR (t.share = 0 AND r.workingset_id IS DISTINCT FROM t.workingset_id));
 
-SELECT r.workingset_id, r.work_space,
-       count(*) FILTER (WHERE t.tracker_class = 10070101 AND NULLIF(t.parent_id, 0) IS NULL
-                           AND t.share = 0 AND t.workingset_id = r.workingset_id) AS root_folders
-FROM air_ws_workingset_branch_relation r
-JOIN air_inst_tracker_rev t ON t.id = r.tracker_id AND t.work_space = r.work_space AND t.delete_flag = 0
-WHERE r.workingset_id IS NOT NULL
-GROUP BY r.workingset_id, r.work_space
-HAVING count(*) FILTER (WHERE t.tracker_class = 10070101 AND NULLIF(t.parent_id, 0) IS NULL
-                           AND t.share = 0 AND t.workingset_id = r.workingset_id) <> 1;
+SELECT id, workingset_id, work_space, tracker_class
+FROM air_inst_tracker_rev
+WHERE delete_flag = 0 AND workingset_id <> 1 AND source_branch_id IS NULL;
 
 COMMIT;

@@ -96,7 +96,7 @@
 | 2026-11-20 | 关闭 QUESTION-006 与 QUESTION-008.c：先软删触发物化，依赖切换后才可永久删除；Checkpoint 用自身业务版次，回读用来源版次。见 [T3](domain/lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)、[T1 §6](domain/merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)。 |
 | 2026-11-20 | QUESTION-008.b 已关闭：合并只接受或忽略；新增接收含软删恢复自动确认，删除从不确认，更新按行标志确认。见 [T1 §7](domain/merge-execution-contract-v1.md#7-接收忽略与行级确认)。 |
 | 2026-11-20 | 确认改归 MergeEntry；轮次仓储同事务保存确认和轮次状态，跨轮次比较只读旧表。见 [ADR-0006](adr/0006-merge-confirmation-ownership.md)。 |
-| 2026-11-20 | 用户纠正：不存在根文件夹 Tracker；Tracker 是产品空间下第三级容器，Folder 是单版次业务对象；每个 `(WorkingSet, ProductSpace)` 一个不可独立删除的 Folder Tracker，Folder 树不参与 Compare/Merge。见 [ADR-0008](adr/0008-tracker-third-level-container.md)。 |
+| 2026-11-20 | 用户纠正：不存在根文件夹 Tracker；Tracker 是产品空间下第三级容器，Folder 是单版次业务对象；文件夹分类由应用编排默认纳入，Tracker 使用同一套生命周期与谱系规则。见 [ADR-0008](adr/0008-tracker-third-level-container.md)。 |
 | 2026-11-16 | Checkpoint 身份修正（该行物理表和撤销入口已由 11-20 方案替换）：以**两侧 Tracker 分支**（`tracker_a_id`/`tracker_b_id`）+ 家族 + 双侧版次定位，**WorkingSet 不参与**；`round_id` 取 `MergeRound`（旧 `batch_id` 无对应语义）；唯一键 `(tracker_a_id, tracker_b_id, common_id)`；同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；撤销方向无关。见 [裁定](reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)。 |
 | 2026-11-13 | T7-A/B/C：创建 LRO 契约、任务骨架、范围复制与绑定；见 [T7-A 评审](reviews/2026-11-13-t7-a-creation-lro-review.md)、[T7-B](implementation/t7-b-creation-task-verification.md)、[T7-C](implementation/t7-c-binding-verification.md)。 |
 | 2026-11-13 | T6-B/C/D：Merge 并发恢复、身份分配、子工作集回并；见 [T6-B](implementation/t6-b-merge-recovery-verification.md)、[T6-C](implementation/t6-c-identity-verification.md)、[T6-D](implementation/t6-d-merge-back-verification.md)。 |

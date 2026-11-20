@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import sk.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
 import sk.common.error.DomainException;
@@ -21,6 +22,7 @@ import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.ClassificationView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
+import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.workingset.WorkingSetId;
 
@@ -41,6 +43,8 @@ class TrackerDefaultAcceptanceTest {
     @Autowired private TrackerRepository trackerRepository;
     @Autowired private sk.workingset.application.query.provider.ClassificationCatalog classifications;
     @Autowired private LiteBusinessObjectProvider instanceSummaries;
+    @Autowired private WorkingSetQueryService workingSetQueries;
+    @Autowired private TransactionTemplate transactions;
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = fixtureId("WS-CHILD-" + suffix);
@@ -61,6 +65,33 @@ class TrackerDefaultAcceptanceTest {
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM classifications WHERE classification_id = ?", sharedClassification);
+    }
+
+    @Test
+    void readsFolderTrackerBindingsWithClassificationMetadataWithoutFolderColumn() {
+        String space = createSpace("1");
+        transactions.executeWithoutResult(status -> {
+            jdbc.execute("""
+                    CREATE TEMP TABLE classifications ON COMMIT DROP AS
+                    SELECT classification_id, sharing_mode, name, base_class, class, type
+                    FROM public.classifications
+                    """);
+
+            var bindings = workingSetQueries.findBindings(WorkingSetId.of("1")).trackers().stream()
+                    .filter(binding -> binding.productSpaceId().equals(Long.valueOf(space))).toList();
+
+            var folder = bindings.stream().filter(binding -> binding.classificationId().equals(10070101L))
+                    .findFirst().orElseThrow();
+            assertTrue(bindings.stream().anyMatch(binding -> !binding.classificationId().equals(10070101L)));
+            assertEquals(10070101L, classifications.findClassification("10070101").orElseThrow().numericId());
+
+            jdbc.update("DELETE FROM pg_temp.classifications WHERE classification_id = ?", 10070101L);
+            Tracker tracker = trackerRepository.lockTracker(TrackerId.of(folder.trackerId())).orElseThrow();
+            assertEquals(10070101L, tracker.numericClassificationId());
+            assertEquals(1007L, tracker.baseClassId());
+            assertEquals(100701L, tracker.classId());
+            assertEquals(10070101L, tracker.typeId());
+        });
     }
 
     @Test
@@ -167,7 +198,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(0, rest.getForObject(path + "/trackers", TrackerView[].class).length);
         BindingsView hidden = rest.getForObject(path + "/bindings", BindingsView.class);
         assertEquals(1, hidden.spaces().size());
-        assertTrue(hidden.trackers().getFirst().folderTracker());
+        assertEquals("10070101", hidden.trackers().getFirst().classificationId());
         assertFalse(hidden.trackers().getFirst().shown());
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
@@ -248,6 +279,25 @@ class TrackerDefaultAcceptanceTest {
                 Integer.class, id.numericValue()));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
                 Integer.class, id.numericValue()));
+    }
+
+    @Test
+    void createsAndDeletesAnAdditionalTrackerInTheDefaultIncludedClassification() {
+        String spaceId = createSpace("1");
+        var response = rest.postForEntity("/api/worksets/1/trackers",
+                Map.of("productSpaceId", spaceId, "name", "第二个文件夹分类 Tracker",
+                        "classificationId", "10070101", "sharingMode", "UNSHARED"), TrackerView.class);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        TrackerView tracker = response.getBody();
+        assertFalse(tracker.isDefault());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+            assertTrue(bindings.trackers().stream().anyMatch(binding -> tracker.trackerId().equals(binding.trackerId())));
+        });
+        rest.delete("/api/trackers/" + tracker.trackerId());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?", Integer.class, Long.valueOf(tracker.trackerId()))));
     }
 
     @Test
@@ -371,7 +421,7 @@ class TrackerDefaultAcceptanceTest {
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
         ProductSpace space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
         Classification classification = new Classification(258831141156800L, Classification.SharingMode.UNSHARED,
-                "测试分类", 11L, 111L, 1111L, false);
+                "测试分类", 11L, 111L, 1111L);
         assertThrows(DomainException.class, () -> new Tracker(
                 TrackerId.of(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
                 WorkingSetId.of(child), space.numericId(), classification, classification.sharingMode(), null, false));

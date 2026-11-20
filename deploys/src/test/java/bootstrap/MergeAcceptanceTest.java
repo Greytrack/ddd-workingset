@@ -857,11 +857,7 @@ class MergeAcceptanceTest {
     }
 
     private void mountSpaceWithLocalFolder(String workingSetId) {
-        String folderId = id("folder-" + workingSetId);
-        jdbc.update("""
-                INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode, is_default)
-                VALUES (?, '文件夹', ?, ?, 10070101, 'UNSHARED', TRUE)
-                """, folderId, workingSetId, space);
+        String folderId = FixtureIds.ensureDefaultTracker(jdbc, workingSetId, space);
         jdbc.update("""
                 INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id)
                 VALUES (?, ?, ?)
