@@ -3,6 +3,7 @@ package sk.workingset.application.command;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class WorkingSetCommandService {
     private final ClassificationCatalog classifications;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
+    private final ApplicationEventPublisher events;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
@@ -83,26 +85,6 @@ public class WorkingSetCommandService {
         return child;
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    public void initializeProductSpaceMembership(ProductSpace space) {
-        WorkingSet defaultWorkingSet = writable(WorkingSet.DEFAULT_ID);
-        trackers.findRootFolder(defaultWorkingSet.id(), space.id()).orElseGet(() -> {
-            Tracker folder = Tracker.rootFolder(
-                    TrackerId.of(identifierGenerator.nextId(null).longValue()), defaultWorkingSet.id(), space);
-            trackers.save(folder, true, null);
-            return folder;
-        });
-        bindSpace(defaultWorkingSet, space);
-        for (Classification classification : classifications.findClassifications()) {
-            if (classification.numericId() == Tracker.FOLDER_CLASSIFICATION_ID) continue;
-            Tracker tracker = Tracker.original(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())),
-                    space, classification, null, true);
-            defaultWorkingSet.bindTracker(tracker, classification, classification.sharingMode());
-            trackers.save(tracker);
-        }
-        workingSets.save(defaultWorkingSet);
-    }
-
     @Transactional
     public WorkingSet updatePresentation(WorkingSetId id, String name, String color) {
         if (name == null && color == null) {
@@ -124,6 +106,7 @@ public class WorkingSetCommandService {
         WorkingSet workingSet = writable(id);
         WorkingSet.SpaceBinding binding = bindSpace(workingSet, lockSpace(spaceId));
         workingSets.save(workingSet);
+        events.publishEvent(new sk.workingset.domain.event.WorkingSetSpaceBoundEvent(id, spaceId));
         return binding;
     }
 
@@ -133,11 +116,7 @@ public class WorkingSetCommandService {
     }
 
     private WorkingSet.SpaceBinding bindSpace(WorkingSet workingSet, ProductSpace space) {
-        WorkingSet.SpaceBinding binding = workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
-        Tracker folder = trackers.findRootFolder(WorkingSet.DEFAULT_ID, space.id())
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, space.id()));
-        bindTracker(workingSet, folder, SharingMode.UNSHARED);
-        return binding;
+        return workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
     }
 
     @Transactional
@@ -173,6 +152,7 @@ public class WorkingSetCommandService {
         }
         bindSpace(target, space);
         workingSets.save(target);
+        events.publishEvent(new sk.workingset.domain.event.WorkingSetSpaceBoundEvent(id, spaceId));
         return true;
     }
 
@@ -184,13 +164,13 @@ public class WorkingSetCommandService {
         if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
             return false;
         }
-        Tracker copy = derivedTracker(target, source);
-        trackers.save(copy, visible, actor);
+        Tracker copy = derivedTracker(target, source, visible, actor);
+        trackers.save(copy);
         return true;
     }
 
-    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor) {
-        trackers.revealExtensionTrackers(target, parentTrackerIds, actor);
+    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
+        trackers.revealExtensionTrackers(target, parentTrackerIds);
     }
 
     boolean bindUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId) {
@@ -246,7 +226,7 @@ public class WorkingSetCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, tracker.classificationId()));
     }
 
-    private Tracker derivedTracker(WorkingSet target, Tracker source) {
+    private Tracker derivedTracker(WorkingSet target, Tracker source, boolean visible, long actor) {
         boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId(),
                 source.classificationId());
         return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),

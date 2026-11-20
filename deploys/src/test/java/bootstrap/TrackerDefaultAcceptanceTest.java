@@ -121,6 +121,16 @@ class TrackerDefaultAcceptanceTest {
         FixtureIds.insertWorkingSet(jdbc, "1", child);
         assertEquals(HttpStatus.CREATED, rest.postForEntity("/api/worksets/" + child + "/spaces/" + space,
                 null, Map.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            long folderId = jdbc.queryForObject("""
+                    SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
+                    JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
+                    WHERE r.workingset_id = ? AND r.work_space = ? AND t.tracker_class = 10070101
+                      AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NULL AND t.share = 0
+                      AND NULLIF(t.parent_id, 0) IS NULL AND t.name = '文件夹'
+                    """, Long.class, Long.valueOf(child), Long.valueOf(space));
+            assertTrue(folderId > 0);
+        });
         long folder = jdbc.queryForObject("""
                 SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
                 JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
@@ -137,7 +147,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(0, rest.getForObject(path + "/trackers", TrackerView[].class).length);
         BindingsView hidden = rest.getForObject(path + "/bindings", BindingsView.class);
         assertEquals(1, hidden.spaces().size());
-        assertTrue(hidden.trackers().getFirst().rootFolder());
+        assertTrue(hidden.trackers().getFirst().folderTracker());
         assertFalse(hidden.trackers().getFirst().shown());
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
@@ -365,6 +375,14 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         String id = response.getBody().productSpaceId();
         testSpaces.add(id);
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
+            assertEquals(classifications, jdbc.queryForObject(
+                    "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
+                    Integer.class, id));
+            BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+            assertTrue(bindings.spaces().stream().anyMatch(binding -> id.equals(binding.productSpaceId())));
+        });
         return id;
     }
 }

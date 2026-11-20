@@ -43,7 +43,7 @@ public class TrackerCommandService {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "只允许在默认工作集新建跟踪分类");
         }
         if (Long.parseLong(classificationId) == Tracker.FOLDER_CLASSIFICATION_ID) {
-            throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "根文件夹随产品空间创建");
+            throw new DomainException(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST, "文件夹 Tracker 随产品空间创建");
         }
         WorkingSet workingSet = workingSets.findById(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
@@ -77,9 +77,9 @@ public class TrackerCommandService {
     public void delete(TrackerId id) {
         Tracker tracker = trackers.lockTracker(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
-        if (tracker.isRootFolder()) {
+        if (tracker.isFolderTracker()) {
             throw DomainException.withMessage(sk.workingset.error.WorkingsetResultCode.BAD_REQUEST,
-                    "根文件夹须随产品空间卸载");
+                    "文件夹 Tracker 须随产品空间卸载");
         }
         workingSets.requireReady(tracker.workingSetId());
         tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),

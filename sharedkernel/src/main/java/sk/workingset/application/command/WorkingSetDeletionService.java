@@ -45,8 +45,8 @@ public class WorkingSetDeletionService {
     private final BusinessTrackerItems businessItems;
 
     private static void rejectIndependentFolderRemoval(Tracker tracker) {
-        if (tracker.isRootFolder()) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "根文件夹须随产品空间卸载");
+        if (tracker.isFolderTracker()) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "文件夹 Tracker 须随产品空间卸载");
         }
     }
 
@@ -122,7 +122,7 @@ public class WorkingSetDeletionService {
         List<TrackerBinding> members = workingSet.trackers().stream()
                 .filter(binding -> binding.productSpaceId().equals(spaceId)).toList();
         for (TrackerBinding binding : members) {
-            if (!lockTracker(binding.trackerId()).isRootFolder()) {
+            if (!lockTracker(binding.trackerId()).isFolderTracker()) {
                 throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);
             }
         }

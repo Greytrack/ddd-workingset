@@ -40,8 +40,13 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     }
 
     @Override
-    public Optional<WorkingSetCreation> find(String id, boolean lock) {
-        return load("SELECT result FROM working_set_creations WHERE id = ?" + (lock ? " FOR UPDATE" : ""), Long.valueOf(id));
+    public Optional<WorkingSetCreation> find(String id) {
+        return load("SELECT result FROM working_set_creations WHERE id = ?", Long.valueOf(id));
+    }
+
+    @Override
+    public Optional<WorkingSetCreation> findForUpdate(String id) {
+        return load("SELECT result FROM working_set_creations WHERE id = ? FOR UPDATE", Long.valueOf(id));
     }
 
     @Override

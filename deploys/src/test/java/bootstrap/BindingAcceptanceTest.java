@@ -202,20 +202,20 @@ class BindingAcceptanceTest {
     @Test
     void sharedUnbindPreservesTrackerItemAndSpaceBinding() {
         bindSpace(ws);
-        String rootFolderRelation = """
+        String folderTrackerRelation = """
                 SELECT id FROM air_ws_workingset_branch_relation
                 WHERE workingset_id = ? AND work_space = ? AND tracker_id IS NOT NULL AND tracker_id <> ?
                 """;
-        Long rootFolderBinding = jdbc.queryForObject(rootFolderRelation, Long.class,
+        Long folderTrackerBinding = jdbc.queryForObject(folderTrackerRelation, Long.class,
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared));
         assertEquals(HttpStatus.CREATED, rest.postForEntity(sharedPath(ws, shared), null, Void.class).getStatusCode());
-        assertEquals(rootFolderBinding, jdbc.queryForObject(rootFolderRelation, Long.class,
+        assertEquals(folderTrackerBinding, jdbc.queryForObject(folderTrackerRelation, Long.class,
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         businessItem(fixtureId("ITEM-" + suffix), shared);
         assertFailure(delete(spacePath(ws)), HttpStatus.CONFLICT, "SpaceStillHasTrackers");
 
         assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
-        assertEquals(rootFolderBinding, jdbc.queryForObject(rootFolderRelation, Long.class,
+        assertEquals(folderTrackerBinding, jdbc.queryForObject(folderTrackerRelation, Long.class,
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
@@ -425,6 +425,11 @@ class BindingAcceptanceTest {
 
     private void bindSpace(String id) {
         assertEquals(HttpStatus.CREATED, rest.postForEntity(spacePath(id), null, Void.class).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            BindingsView bindings = rest.getForObject(path(id) + "/bindings", BindingsView.class);
+            assertTrue(bindings.spaces().stream().anyMatch(binding -> space.equals(binding.productSpaceId())));
+            assertTrue(bindings.trackers().stream().anyMatch(TrackerBindingView::folderTracker));
+        });
     }
 
     private DeriveFixture.Result derive(String target, String sourceTracker, String sourceLocalId) {

@@ -34,6 +34,8 @@ public final class Tracker {
     private final boolean isDefault;
     private final TrackerCompatibility compatibility;
     private final boolean newAggregate;
+    private final boolean initiallyVisible;
+    private final Long createdBy;
     private String name;
 
     public Tracker(TrackerId trackerId, String name, TrackerId sourceId, WorkingSetId workingSetId,
@@ -70,6 +72,14 @@ public final class Tracker {
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
                     WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate) {
+        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId, numericClassificationId,
+                sharingMode, parentId, isDefault, newAggregate, true, null);
+    }
+
+    private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
+                    WorkingSetId workingSetId, Long numericProductSpaceId, Long numericClassificationId,
+                    SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate,
+                    boolean initiallyVisible, Long createdBy) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.name = name;
@@ -82,10 +92,12 @@ public final class Tracker {
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
         this.compatibility = new TrackerCompatibility(trackerId, numericClassificationId);
         this.newAggregate = newAggregate;
+        this.initiallyVisible = initiallyVisible;
+        this.createdBy = createdBy;
         if (sourceId == null && !trackerId.equals(commonId)) {
             throw new IllegalArgumentException("An original Tracker must use its own ID as common ID");
         }
-        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId) && !isRootFolder()) {
+        if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId) && !isFolderTracker()) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "original Tracker must belong to the default Working Set");
         }
         if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
@@ -106,7 +118,15 @@ public final class Tracker {
         return newAggregate;
     }
 
-    public static Tracker rootFolder(TrackerId id, WorkingSetId owner, ProductSpace space) {
+    public boolean isInitiallyVisible() {
+        return initiallyVisible;
+    }
+
+    public Long createdBy() {
+        return createdBy;
+    }
+
+    public static Tracker folderTracker(TrackerId id, WorkingSetId owner, ProductSpace space) {
         return new Tracker(id, id, "文件夹", null, owner, space.numericId(), FOLDER_CLASSIFICATION_ID,
                 SharingMode.UNSHARED, null, true);
     }
@@ -142,8 +162,14 @@ public final class Tracker {
     }
 
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault) {
+        return derived(id, source, target, isDefault, true, null);
+    }
+
+    public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault,
+                                  boolean initiallyVisible, Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
-                source.numericProductSpaceId(), source.numericClassificationId(), source.sharingMode(), null, isDefault);
+                source.numericProductSpaceId(), source.numericClassificationId(), source.sharingMode(), null,
+                isDefault, true, initiallyVisible, createdBy);
     }
 
     private static String normalizeName(String name) {
@@ -154,7 +180,7 @@ public final class Tracker {
         return normalized;
     }
 
-    public boolean isRootFolder() {
+    public boolean isFolderTracker() {
         return isFolder() && parentId == null && sharingMode == SharingMode.UNSHARED;
     }
 

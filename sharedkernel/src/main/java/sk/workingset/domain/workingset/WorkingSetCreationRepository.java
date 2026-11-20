@@ -9,7 +9,9 @@ public interface WorkingSetCreationRepository {
     /** 保存整个任务；新任务若未取得幂等或活跃任务席位则返回 false。 */
     boolean save(WorkingSetCreation creation);
 
-    Optional<WorkingSetCreation> find(String id, boolean lock);
+    Optional<WorkingSetCreation> find(String id);
+
+    Optional<WorkingSetCreation> findForUpdate(String id);
 
     Optional<WorkingSetCreation> findByTarget(WorkingSetId target);
 

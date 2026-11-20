@@ -19,21 +19,15 @@ public interface TrackerRepository {
 
     Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source);
 
-    Optional<Tracker> findRootFolder(WorkingSetId owner, String spaceId);
+    Optional<Tracker> findFolderTracker(WorkingSetId owner, String spaceId);
 
-    default void save(Tracker tracker) {
-        save(tracker, true, null);
-    }
-
-    /**
-     * 保存聚合及其兼容数据；初始可见性只在新建时使用。
-     */
-    void save(Tracker tracker, boolean initiallyVisible, Long actor);
+    /** 保存聚合及其兼容数据；初始可见性与创建人由聚合自身携带。 */
+    void save(Tracker tracker);
 
     /**
      * 终态后只揭示已成功建立绑定的新 Tracker。
      */
-    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor);
+    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds);
 
     void deleteTracker(TrackerId id);
 }

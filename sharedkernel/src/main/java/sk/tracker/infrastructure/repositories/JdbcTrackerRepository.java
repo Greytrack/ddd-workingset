@@ -104,7 +104,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    public Optional<Tracker> findRootFolder(WorkingSetId owner, String spaceId) {
+    public Optional<Tracker> findFolderTracker(WorkingSetId owner, String spaceId) {
         return jdbc.query("SELECT " + COLUMNS + """
                         FROM air_inst_tracker_rev t
                         WHERE t.workingset_id = ? AND t.work_space = ? AND t.tracker_class = ?
@@ -115,16 +115,11 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     @Override
     public void save(Tracker tracker) {
-        save(tracker, true, null);
-    }
-
-    @Override
-    public void save(Tracker tracker, boolean initiallyVisible, Long actor) {
-        long writeActor = actor == null ? currentActor() : actor;
+        long writeActor = tracker.createdBy() == null ? currentActor() : tracker.createdBy();
         if (tracker.isNew()) {
-            insert(tracker, initiallyVisible ? 1 : 0, writeActor);
+            insert(tracker, tracker.isInitiallyVisible() ? 1 : 0, writeActor);
         } else {
-            update(tracker, writeActor);
+            update(tracker, currentActor());
         }
     }
 
@@ -189,7 +184,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     @Override
-    public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds, long actor) {
+    public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
         for (TrackerId parent : parentTrackerIds) {
             List<Long> ids = jdbc.queryForList("""
                             UPDATE air_inst_tracker_rev t
@@ -198,7 +193,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                               AND EXISTS (SELECT 1 FROM tracker_bindings b
                                           WHERE b.working_set_id = t.workingset_id AND b.tracker_id = t.id)
                             RETURNING t.id
-                            """, Long.class, Long.toString(actor), System.currentTimeMillis(),
+                            """, Long.class, Long.toString(currentActor()), System.currentTimeMillis(),
                     target.numericValue(), parent.numericValue());
             for (long id : ids) {
                 requireOne(jdbc.update("""

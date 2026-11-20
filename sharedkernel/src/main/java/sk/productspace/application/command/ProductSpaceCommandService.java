@@ -2,15 +2,14 @@ package sk.productspace.application.command;
 
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
-import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
 
 import java.util.List;
@@ -20,8 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProductSpaceCommandService {
     private final ProductSpaceRepository spaces;
-    private final WorkingSetCommandService memberships;
-    private final WorkingSetRepository workingSets;
+    private final ApplicationEventPublisher events;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
     private final IdentifierGenerator ids;
@@ -30,7 +28,7 @@ public class ProductSpaceCommandService {
     public ProductSpace create(String name) {
         ProductSpace space = new ProductSpace(ids.nextId(null).longValue(), name);
         spaces.save(space);
-        memberships.initializeProductSpaceMembership(space);
+        events.publishEvent(new sk.productspace.domain.event.ProductSpaceCreatedEvent(space.numericId()));
         return space;
     }
 

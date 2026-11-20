@@ -68,7 +68,7 @@ class LegacyWideRowAcceptanceTest {
         assertTrue(trackers.findLegacyCompatibilityRow(trackerId, spaceId + 1).isEmpty());
         var tracker = trackers.findById(trackerId).orElseThrow();
         assertTrue(tracker.rename("after"));
-        trackers.save(tracker, true, 42L);
+        trackers.save(tracker);
 
         var row = trackers.findLegacyRow(trackerId, spaceId).orElseThrow();
         assertEquals("after", row.name());

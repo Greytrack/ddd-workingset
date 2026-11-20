@@ -10,7 +10,7 @@
 
 ## 当前基线状态
 
-事实与政策主题、首版领域模型候选及 ADR-0001～0006 已接受。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
+事实与政策主题、首版领域模型候选及 ADR-0001～0008 已接受；ADR-0007 已由 0008 替代。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
 
 2026-11-19 的模块拆分、直接只读边界和事件协作澄清登记为 **Reviewed 实现边界**，不是新的 Accepted 业务基线；其权威说明见[当前实现边界](implementation/current-boundaries.md)与[对齐记录](reviews/2026-11-19-doc-alignment-after-code-evolution.md)。
 
@@ -44,6 +44,8 @@
 - [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md)：Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054；2026-11-10）。
 - [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（2026-11-10）。MergeEntry 归 MergeRound、所选择差异证据必须绑定双侧内容证据继续有效；Checkpoint 确认归属已由 ADR-0006 替代；2026-11-15 补充 compare 不持久化。
 - [ADR-0006：合并确认归属轮次，跨轮次独立查询](adr/0006-merge-confirmation-ownership.md)：Accepted（2026-11-20），用户明确确认。
+- [ADR-0007：每个 Working Set 的产品空间拥有独立根文件夹 Tracker](adr/0007-root-folder-tracker-per-working-set-space.md)：Superseded（由 ADR-0008 替代）。
+- [ADR-0008：Tracker 是产品空间下的第三级容器，Folder 是业务对象](adr/0008-tracker-third-level-container.md)：Accepted（2026-11-20），用户明确确认。
 
 ## 相关验收标准
 
@@ -94,6 +96,7 @@
 | 2026-11-20 | 关闭 QUESTION-006 与 QUESTION-008.c：先软删触发物化，依赖切换后才可永久删除；Checkpoint 用自身业务版次，回读用来源版次。见 [T3](domain/lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)、[T1 §6](domain/merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)。 |
 | 2026-11-20 | QUESTION-008.b 已关闭：合并只接受或忽略；新增接收含软删恢复自动确认，删除从不确认，更新按行标志确认。见 [T1 §7](domain/merge-execution-contract-v1.md#7-接收忽略与行级确认)。 |
 | 2026-11-20 | 确认改归 MergeEntry；轮次仓储同事务保存确认和轮次状态，跨轮次比较只读旧表。见 [ADR-0006](adr/0006-merge-confirmation-ownership.md)。 |
+| 2026-11-20 | 用户纠正：不存在根文件夹 Tracker；Tracker 是产品空间下第三级容器，Folder 是单版次业务对象；每个 `(WorkingSet, ProductSpace)` 一个不可独立删除的 Folder Tracker，Folder 树不参与 Compare/Merge。见 [ADR-0008](adr/0008-tracker-third-level-container.md)。 |
 | 2026-11-16 | Checkpoint 身份修正（该行物理表和撤销入口已由 11-20 方案替换）：以**两侧 Tracker 分支**（`tracker_a_id`/`tracker_b_id`）+ 家族 + 双侧版次定位，**WorkingSet 不参与**；`round_id` 取 `MergeRound`（旧 `batch_id` 无对应语义）；唯一键 `(tracker_a_id, tracker_b_id, common_id)`；同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；撤销方向无关。见 [裁定](reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)。 |
 | 2026-11-13 | T7-A/B/C：创建 LRO 契约、任务骨架、范围复制与绑定；见 [T7-A 评审](reviews/2026-11-13-t7-a-creation-lro-review.md)、[T7-B](implementation/t7-b-creation-task-verification.md)、[T7-C](implementation/t7-c-binding-verification.md)。 |
 | 2026-11-13 | T6-B/C/D：Merge 并发恢复、身份分配、子工作集回并；见 [T6-B](implementation/t6-b-merge-recovery-verification.md)、[T6-C](implementation/t6-c-identity-verification.md)、[T6-D](implementation/t6-d-merge-back-verification.md)。 |

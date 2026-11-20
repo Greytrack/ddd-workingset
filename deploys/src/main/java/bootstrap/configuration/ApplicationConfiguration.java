@@ -1,6 +1,8 @@
 package bootstrap.configuration;
 
 import alm.requirement.adapters.workingset.RequirementAdapter;
+import alm.requirement.adapters.workingset.RequirementReadModelAdapter;
+import alm.requirement.application.query.provider.RequirementQueryProvider;
 import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.beans.factory.annotation.Value;

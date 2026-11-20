@@ -25,7 +25,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | --- | --- |
 | ProductSpace 是 Shared Kernel 独立聚合，可被多个 WorkingSet 关联，不随 WorkingSet 派生复制/迁移；Tracker 属于一个 ProductSpace；在默认 WorkingSet 中维护生命周期 | FACT-024 |
 | Classification 为三层共享元模型、启动前初始化常驻内存；Tracker 是其在 ProductSpace/WorkingSet 中的投影；创建 ProductSpace 时按分类集合投影生成 Tracker | FACT-025 |
-| 默认 WorkingSet 固定 Id=1、不可删除/隐藏；Tracker 只能在默认 WorkingSet 创建原始聚合；子 WS 只能纳入直接上游 | FACT-026 |
+| 默认 WorkingSet 固定 Id=1、不可删除/隐藏；业务原生 Tracker 只能在默认 WorkingSet 创建；子 WS 只能纳入直接上游。Folder Tracker 是例外：每个 `(WorkingSet, ProductSpace)` 在绑定空间后创建，且不允许独立删除 | FACT-026、ADR-0008 |
 | SpaceBinding 是 TrackerBinding 前置；同一 WS 同 ProductSpace 最多一个有效 SpaceBinding；同一 WS/ProductSpace/Classification 可绑定多个 Tracker；默认资格见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)；Tracker.productSpaceId 必须等于绑定空间；同一 Tracker 不在同一 WS 重复纳入 | POL-012、T6-F |
 | Shared 纳入复用原 TrackerId 仅建绑定；非共享纳入创建新聚合 + 直接 sourceId；移除后可重新纳入/派生；最后 Tracker 移除不删 SpaceBinding；ProductSpace 移出是独立显式操作 | POL-013 |
 | 删除/移除八条：Shared 移除仅解绑；非共享无 Item 且无派生子才删除；有派生子不允许删除；任意 Tracker 有 TrackerItem 不允许移除；有组织子节点但无派生子不允许删除；最后 Tracker 移除不删空间绑定；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 下 Shared 空且无子可删 | POL-014（修订 POL-006） |
@@ -59,7 +59,17 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | TB-3 | Shared：`trackerId` 与上游聚合相同；非共享：新 Tracker 身份 + 直接 `sourceId`（POL-013/INV-057） |
 | TB-4 | `sharingMode` 必须与 Classification 的共享特性相容（POL-003） |
 
-### 3.3 默认 WorkingSet 约束
+### 3.3 Folder Tracker
+
+- Tracker 是 WorkingSet 下 ProductSpace 内的第三级容器；每个业务对象类型拥有自己的 Tracker。
+- 每个 `(WorkingSet, ProductSpace)` 有且只有一个 **Folder Tracker**，身份作用域为 `(workingSetId, productSpaceId)`。
+- Folder Tracker 是非共享 Tracker；它承载该 Working Set 该 ProductSpace 的 Folder 业务对象，不跨 Working Set 复用。
+- Folder Tracker 不是“根文件夹”，也不是文件夹业务对象本身；Folder 是单版次业务对象，可编辑、删除并形成树。
+- Folder Tracker 不允许通过普通 Tracker 删除入口独立删除；其卸载随所属空间/工作集的受控容器卸载处理。
+- Folder Tracker、Folder 业务对象及其树**不允许 Compare/Merge**；Compare 候选必须排除 Folder Tracker 及 Folder 业务对象。
+- 决策依据见 [ADR-0008](../adr/0008-tracker-third-level-container.md)。
+
+### 3.4 默认 WorkingSet 约束
 
 - Id=1 固定，不可删除、不可隐藏（INV-059/FACT-026）；**默认 WorkingSet 始终不可删除**（K3）。
 - Tracker 原始聚合只能在此创建；子 WorkingSet 只能纳入直接上游（FACT-026）。
@@ -73,7 +83,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 
 | 操作 | 入参 | 前置 | 后置 / 结果 | 失败语义 |
 | --- | --- | --- | --- | --- |
-| `bindSpace` | workingSetId、productSpaceId | WorkingSet 可用；ProductSpace 存在；同 WS 无同空间的有效 SpaceBinding（INV-055） | 建立 SpaceBinding | `AlreadyBound`、`ProductSpaceNotFound`、`WorkingSetNotWritable` |
+| `bindSpace` | workingSetId、productSpaceId | WorkingSet 可用；ProductSpace 存在；同 WS 无同空间的有效 SpaceBinding（INV-055） | 建立 SpaceBinding；提交后通过独立事件为 `(WS, ProductSpace)` 创建 Folder Tracker，再由 Tracker 创建事件建立绑定 | `AlreadyBound`、`ProductSpaceNotFound`、`WorkingSetNotWritable` |
 | `bindTracker`（Shared） | workingSetId、trackerId | 同 WS 已有该空间 SpaceBinding（INV-053）；未重复纳入；共享特性相容 | 建立 TrackerBinding，复用上游 `trackerId` | `MissingSpaceBinding`、`TrackerAlreadyBound`、`SharingModeMismatch` |
 | `bindTracker`（非共享派生） | workingSetId、productSpaceId、classificationId | 同上；来源为直接上游 Tracker | 创建新 Tracker 聚合（直接 `sourceId`）+ 新 TrackerBinding | 同上 + `SourceTrackerNotFound` |
 

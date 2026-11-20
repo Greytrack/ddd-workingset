@@ -186,7 +186,7 @@ public class WorkingSetCreationService {
     }
 
     public WorkingSetCreation find(String id) {
-        return store.find(id, false).orElseThrow(() -> notFound(id));
+        return store.find(id).orElseThrow(() -> notFound(id));
     }
 
     /**
@@ -218,8 +218,7 @@ public class WorkingSetCreationService {
                 store.save(updated);
                 if (updated.status() != Status.Running && updated.request().mode() == Mode.EXTEND) {
                     workingSetService.revealExtensionTrackers(WorkingSetId.of(updated.request().newWorkingSetId()),
-                            updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList(),
-                            Long.parseLong(updated.requestedBy()));
+                            updated.request().unsharedParentTrackerIds().stream().map(TrackerId::of).toList());
                 }
                 if (creation.stage() == Stage.INDEX_UNSHARED_TRACKERS
                         && updated.stage() != Stage.INDEX_UNSHARED_TRACKERS) {
@@ -296,6 +295,6 @@ public class WorkingSetCreationService {
     }
 
     private WorkingSetCreation lock(String id) {
-        return store.find(id, true).orElseThrow(() -> notFound(id));
+        return store.findForUpdate(id).orElseThrow(() -> notFound(id));
     }
 }
