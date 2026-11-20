@@ -6,7 +6,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Reads the custom columns declared by a repository, preserving SQL NULL values. */
+/**
+ * Reads the custom columns declared by a repository, preserving SQL NULL values.
+ */
 public interface JdbcCustomFieldMapper {
     Map<String, Class<?>> columns();
 
