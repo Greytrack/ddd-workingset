@@ -1,6 +1,6 @@
 # S6 多级 WorkingSet 谱系实施验证
 
-**状态：Reviewed（实施验证记录，2026-11-12）**
+**状态：Historical（T5 实施验证记录，2026-11-12；保留证据，不代表当前实现）**
 
 依据 [多级 WorkingSet 谱系设计](../domain/working-set-lineage-design.md)、FACT-028、[T2](../domain/binding-deletion-contract-v1.md) 和 [T1](../domain/merge-execution-contract-v1.md)。各片完成后分别运行 `mvn -B test`。最终回归使用本机 PostgreSQL、Redis 和内嵌 Tomcat，包含 ArchUnit。
 

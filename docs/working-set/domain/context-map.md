@@ -2,7 +2,7 @@
 
 **状态：Draft — Candidate Strategic Design**
 
-本页区分业务能力、子域、限界上下文和部署。它不是微服务拆分建议，也不把每个名词机械变成上下文。依据见 [证据登记](evidence-register.md)，关键不确定性见 [开放问题](open-questions.md)，可视化协作方向见 [候选 Context Map 图](../diagrams/candidate-context-map.md)。
+本页区分业务能力、子域、限界上下文和部署。它不是微服务拆分建议，也不把每个名词机械变成上下文。依据见 [证据登记](evidence-register.md)，关键不确定性见 [开放问题](open-questions.md)，可视化协作方向见 [企业 Shared Kernel 图](../diagrams/shared-kernel-context-map.md)。
 
 ## 已确认的企业架构外框
 
@@ -87,4 +87,4 @@ DQA 拥有其质量业务对象的模型及业务逻辑。Working Set 仅纳入�
 
 治理建议：共同批准公共语言，语义变化显式版本化，适配器声明支持能力和证据模式版本，先兼容后弃用；各 BC 可在兼容窗口内不同步升级。谁批准、兼容期限、是否允许双版本并存未确定（QUESTION-014）。共同发布是备选，成本是四 BC 被迫同步升级；同属 Shared Kernel 不足以证明应共同发布。
 
-[内部图](../diagrams/candidate-context-map.md)、[企业图](../diagrams/shared-kernel-context-map.md)、[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md) 共同说明本建议；不决定部署单元或微服务。
+本页的候选上下文表和[企业 Shared Kernel 图](../diagrams/shared-kernel-context-map.md)、[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md) 共同说明本建议；不决定部署单元或微服务。

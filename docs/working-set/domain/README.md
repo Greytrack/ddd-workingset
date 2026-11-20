@@ -2,36 +2,27 @@
 
 **状态：Draft（目录用途；不接受任何具体领域结论）**
 
-存放经提炼的统一领域语言、业务事实、业务不变量、业务政策、领域模型及其证据来源。具体内容按需创建，不从探索记录或对话中机械搬运。
+存放统一领域语言、业务事实、业务不变量、领域模型和证据来源。当前规则按 [BASELINE](../BASELINE.md) 的接受范围读取；本目录不重复裁定历史，也不把候选资料自动升级为 Accepted。
 
-每份文档应标明状态，并清楚区分已确认内容、假设、技术约束和开放问题；同一规则应有一个权威定义，其余位置使用链接引用。
+## 当前权威入口
 
-## 已接受领域文档
+- [统一领域语言](glossary.md)：术语及其边界；
+- [聚合边界](aggregate-model.md)：聚合、非聚合共享能力与一致性边界；
+- [Shared Kernel 边界](shared-kernel-boundary.md)：企业外框、内部模块与跨 BC 读取边界；
+- [跨 BC 公共契约](cross-bc-contract-v1.md)：只读能力、事件协作和九分类失败语义；
+- [Merge 执行](merge-execution-contract-v1.md)：轮次、条目、比较证据与确认；
+- [物化协议](lighttrackeritem-materialization-contract-v1.md)：身份、双态、COW 与失败语义；
+- [绑定与删除](binding-deletion-contract-v1.md)：绑定结构、删除和拒绝条件；
+- [多级 WorkingSet 谱系](working-set-lineage-design.md)、[工作集创建 LRO](working-set-creation-lro-design.md)；
+- [事实与政策基线](facts-policy-baseline-v1.md)：已接受的事实与政策主题（Accepted）；
+- [不变量](invariants.md)、[开放问题](open-questions.md)、[业务场景](../scenarios/README.md)。
 
-- [facts-policy-baseline-v1.md](facts-policy-baseline-v1.md)：事实与政策主题基线 v1（Accepted，2026-11-10；覆盖阶段 3.1 的 R01—R19 与限定术语）；
-- [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：首版领域模型基线候选 v1（Historical，作为 2026-11-10 接受依据保留；当前权威入口见 [BASELINE](../BASELINE.md)）。
+## 候选与历史
 
-## 阶段 5 契约
-
-契约正文按主题维护，确认范围见 [BASELINE](../BASELINE.md)，进度与下一步见[实施与验收索引](../implementation/README.md)；阶段 5 计划保留为历史记录。
-
-- [Merge 执行](merge-execution-contract-v1.md)：轮次、条目、比较证据与 Checkpoint。
-- [绑定与删除](binding-deletion-contract-v1.md)：绑定结构、操作与拒绝条件。
-- [物化协议](lighttrackeritem-materialization-contract-v1.md)：身份、状态转换与失败恢复。
-- [跨 BC 公共契约](cross-bc-contract-v1.md)：Port、用例边界、失败分类与治理待办。
-- [多级 WorkingSet 谱系](working-set-lineage-design.md)：单父谱系、`parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge（Draft）。
-- [工作集创建 LRO](working-set-creation-lro-design.md)：异步长流程创建工作集（按范围复制、批量索引、关系事件），区别于原子操作（Draft）。
-- [BusinessObject 生命周期能力](business-object-lifecycle-design.md)：Historical；`TrackerItem` 继承 `BusinessObject`，delete/undelete/delete2 能力声明由各 BC 实现，当前以 T4 为准。
-
-## 阶段 2 候选知识
-
-- [evidence-register.md](evidence-register.md)：来源代号、读取范围和确认状态；
-- [glossary.md](glossary.md)：统一领域语言（当前术语 + 历史术语）；
-- [facts.md](facts.md)：事实、政策、假设和技术约束（混合状态）；
-- [invariants.md](invariants.md)：业务不变量登记（Confirmed/Candidate/Superseded）；
-- [open-questions.md](open-questions.md)：当前开放问题与已关闭问题索引；
+- [facts.md](facts.md)：候选事实、政策、假设与技术约束的混合登记；
+- [evidence-register.md](evidence-register.md)：来源、读取范围和确认状态；
 - [context-map.md](context-map.md)：候选战略上下文；
-- [shared-kernel-boundary.md](shared-kernel-boundary.md)：Shared Kernel 外框、BC 边界与 T4 契约结论；
-- [aggregate-model.md](aggregate-model.md)：当前聚合边界结论与未决项。
+- [model-baseline-candidate-v1.md](model-baseline-candidate-v1.md)：Historical，首版模型候选；
+- [business-object-lifecycle-design.md](business-object-lifecycle-design.md)：Historical；当前生命周期契约以 T4 为准。
 
-上述资料包含已确认子句与候选内容；文件级 Draft 不取消已登记的条款确认。具体接受范围以 [BASELINE](../BASELINE.md) 为准。
+上述文件的状态和接受范围以 [BASELINE](../BASELINE.md) 为准；文件级 Draft 不取消已登记的条款确认。

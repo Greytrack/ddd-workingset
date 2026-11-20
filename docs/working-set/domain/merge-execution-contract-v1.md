@@ -1,12 +1,12 @@
 # Merge 执行行为契约 v1（草案）
 
-**状态：Reviewed（T1 审核通过并关闭，2026-11-11；契约整体仍为候选，未 Accepted、未发布）**
+**状态：Reviewed（T1 审核通过并关闭，2026-11-11；2026-11-20 按 ADR-0006 调整确认归属；契约整体仍为候选，未 Accepted、未发布）**
 
-依据：[ADR-0005](../adr/0005-merge-execution-model.md)、D-019、POL-004、FACT-007/008/027、R08～R11。
+依据：[ADR-0005](../adr/0005-merge-execution-model.md)、[ADR-0006](../adr/0006-merge-confirmation-ownership.md)、D-019、POL-004、FACT-007/008/027、R08～R11。
 
 ## 1. 范围
 
-用户比较直属父子工作集中的非共享 Tracker，提交所选差异的证据与决定。MergeRound 登记后异步执行，目标业务 BC 校验完整对象并提交。轮次记录单项结果，并按决定确认 Checkpoint。需要 LTI 变更时由业务提交后的事件推进。
+用户比较直属父子工作集中的非共享 Tracker，提交所选差异的证据与决定。MergeRound 登记后异步执行，目标业务 BC 校验完整对象并提交。轮次记录单项结果，并在需要时把合并确认随轮次结果一并保存。需要 LTI 变更时由业务提交后的事件推进。
 
 一轮只有一个终态结果。失败、过期或延迟项须重新比较并提交新轮次，可只选未完成项。旧轮次的结果继续保留。执行中断恢复见 §8.1，协作顺序见 [Merge 时序](../diagrams/merge-entry-lifecycle.md)。
 
@@ -15,13 +15,13 @@
 | 对象 | 形态 | 拥有的职责 | 明确不拥有 |
 | --- | --- | --- | --- |
 | **Diff 能力**（Compare & Merge 区域） | 查询能力／领域服务，非聚合 | 产生有向、可追溯的 `TrackerItemDiff` 与瞬时比较证据；只读双侧证据 | 不写业务内容；不持决定；不记录「已处理」 |
-| **MergeRound** | 聚合根（合并载体，D-019） | 轮次参数、条目集合、进度、单项结果、最终 `ApplyResult`；持有本轮合并决策 | 不直接写业务字段；不判定 BC 业务合法性；不拥有 Checkpoint |
+| **MergeRound** | 聚合根（合并载体，D-019） | 轮次参数、条目集合、进度、单项结果、最终 `ApplyResult`；持有本轮合并决策与条目确认 | 不直接写业务字段；不判定 BC 业务合法性；不拥有独立 Checkpoint 聚合 |
 | **MergeEntry** | MergeRound 内 **Entity**（已裁定：ADR-0005） | 一次合并事项的生命周期与状态；持有所选差异证据、决定、目标操作与结果 | 不是独立聚合；不跨轮次复用 |
 | **合并确认 / 当前 Checkpoint** | 确认归 MergeEntry；当前 Checkpoint 是跨轮次只读模型（ADR-0006） | 确认记录随轮次结果原子提交；读取按规范化 Tracker 对、家族及双侧版次判断 | 不拥有业务内容；不证明内容相等；查询侧无写入口 |
 | **业务 BC 聚合** | 各 BC 独立聚合 | 构建目标聚合、整体校验、提交（Save）、返回真实结果与业务 Revision | 不做合并选择；不记录 Checkpoint |
 | **LightTrackerItem** | 独立聚合（D-008） | 身份（LocalId/CommonId）、有效内容来源、自身 Revision 的维护 | 不构造业务内容；不判定合并合法性 |
 
-**边界原则**：Merge 是「决定 + 编排」，内容写入与合法性始终由目标业务 BC 拥有；「已处理」由 Checkpoint 单独表达；三者不合并为一个大对象。
+**边界原则**：Merge 是「决定 + 编排」，内容写入与合法性始终由目标业务 BC 拥有；「已处理」由条目确认记录表达，跨轮次只读查询当前有效确认。
 
 **附件与关系（D6，2026-11-12 用户裁定）**：本版 Compare/Merge 只处理普通字段；附件与关系**不参与比较与合并**。派生时的附件/关系固定基准仍按 T3 §2.1 生效，但 Merge 不比较、不合并、不改写它们。
 
@@ -62,7 +62,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | `startRound` | 源范围、目标范围、方向、范围参数、发起人 | `MergeRoundId`、状态 `Preparing` | 直接父子准入（POL-004、D-019）；非共享 Tracker；双方可读 | `MergeNotAllowed`（兄弟/跨代、共享 Tracker、不可读） |
 | `executeEntry` | `MergeRoundId`、`MergeEntryId` | `EntryResult` | 轮次处于执行阶段（`Running`）；条目已登记且非终态 | 见 §5 状态机；终态条目不可重复执行；轮次终态后拒绝执行 |
 | `reportProgress` | `MergeRoundId` | `RoundProgress`（各状态计数与条目摘要） | 只读 | — |
-| `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态）；轮次非终态 | 不存在未终态条目或待确认 Checkpoint 时方可结束；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
+| `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态）；轮次非终态 | 不存在未终态条目时方可结束；确认与轮次终态同事务提交；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
 
 **异步 LRO（2026-11-16 收敛）**：`startRound` 即「提交一页决策」：`decisions` 必填 1–50 条、`requestId` 必填且不超过 128 字符，空决策、缺键或超限直接拒绝；**不再提供空轮次与分批登记入口**，一页决策要么整页登记成功、要么整轮回滚。服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmittedEvent`，由异步消费者逐条执行。同一 requestId 返回原轮次，不同 source/target 返回 `Conflict`。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 是幂等触发器，重复调用返回原 `ApplyResult`。
 
@@ -98,9 +98,9 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 - `Applied` 是业务事实，`Confirmed` 是处理事实，两者分离（FACT-008）；
 - 条目终态后不可再次执行；**跨轮次重做必须新建 MergeRound**（新 `mergeRoundId`），原结果保留可追溯（Q4）。
 
-## 6. MergeCheckpoint 主要领域行为与不变量
+## 6. 合并确认与跨轮次查询
 
-**身份与命中**：Checkpoint 以数值规范化的 Tracker 对和家族定位。最新记录只有状态为 `MERGED` 且双侧业务 Revision 匹配时才命中。先选最新再校验状态；最新为 `REVOKED` 时不回退到上一条确认。方向和 LocalId 留作证据，WorkingSet 不进入身份。确认不证明内容相同，普通编辑不改变命中版次。
+**身份与命中**：跨轮次查询以数值规范化的 Tracker 对和家族定位当前确认。最新记录只有状态为 `MERGED` 且双侧业务 Revision 匹配时才命中。先选最新再校验状态；最新为 `REVOKED` 时不回退到上一条确认。方向和 LocalId 留作证据，WorkingSet 不进入身份。确认不证明内容相同，普通编辑不改变命中版次。
 
 **确认归属（[ADR-0006](../adr/0006-merge-confirmation-ownership.md)）**：确认是 MergeEntry 持有的值对象。轮次仓储将轮次状态与所需确认行一并提交。查询侧 `MergeCheckpointQuery` 可直接读取已提交的成员行，不建第二张表，也不提供独立修改入口。
 
@@ -111,11 +111,11 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | 重投 | 重投已提交的业务结果即可继续轮次收敛；已经终结的 A 轮不会重新追加确认，不改变 B 轮基准。 |
 | 比较 | 只读查询按 Tracker 对和家族取最新行，再校验状态与双侧版次。比较凭据仍需在登记及执行时复核。 |
 
-物理映射：`id=checkpointId`，`batch_id=roundId`；`diff_type` 使用 `ADD / UPDATED / DELETED`；`merge_action` 使用 `ACCEPTED / IGNORED`，仅展示；`merge_status` 读 `MERGED / REVOKED`，V4 新确认写 `MERGED`。追加历史保留旧批次和 `lastSeq` 范围读，不运行旧的物理清理任务。客户旧库切换前应验证雪花 ID 不碰撞、已有序列高于历史最大值，处理完旧版在途确认事件并停止旧端直接写入；并行旧端写入不受 V4 轮次闸门保护。旧端如果读取撤销，须先按 `batch_id+Tracker对+lastSeq` 选每族最新行，再筛 `MERGED`；批次内查询不自动覆盖其他批次的撤销。需要严格快照时，取上界与读取使用同一个数据库快照。
+物理映射、旧表列与旧端兼容细节见[实施记录](../implementation/merge-checkpoint-rework-plan.md)；本契约只约束领域语义和跨轮次查询规则。
 
 ## 7. ACCEPT / KEEP_TARGET / DEFER 与 markAsMerged 行为矩阵
 
-| 决定 | markAsMerged | 目标写入 | 条目终态 | Checkpoint | 对本轮终态的影响 |
+| 决定 | markAsMerged | 目标写入 | 条目终态 | 合并确认 | 对本轮终态的影响 |
 | --- | --- | --- | --- | --- | --- |
 | `ACCEPT`（字段/存在性） | true | 目标 BC 整体校验后 Save | `Applied` → `Confirmed` | `confirm` | 成功处理项 |
 | `ACCEPT` | false | 同上 | `Applied` | 不更新 | 成功处理项 |
@@ -185,10 +185,10 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | 内容 | 性质 |
 | --- | --- |
 | 直接父子准入、决策优先、BC 整体校验提交、KEEP_TARGET 语义、部分成功、Checkpoint 过时判定、未物化可参与 Diff、未物化目标修改即物化 | **已确认**（FACT-007/008、POL-004、R08～R11、D-019） |
-| MergeRound/MergeCheckpoint 的聚合定位；合并决策归属 MergeRound | **已确认**（D-019） |
+| MergeRound 的聚合定位；合并决策与确认归 MergeEntry，随轮次结果同事务保存 | **已确认**（D-019；ADR-0006 于 2026-11-20 调整确认归属） |
 | MergeEntry 作为 MergeRound 内 Entity | **已裁定**（Q1；ADR-0005） |
 | 所选差异证据必须绑定双侧内容证据，Revision 仅其中一项 | **已裁定**（Q2；ADR-0005；2026-11-15 后随 MergeRound 持久化） |
-| Checkpoint 确认由 MergeRound 在 `markAsMerged=true` 且条目 `Applied` 时发起 | **已裁定**（Q3；ADR-0005） |
+| 合并确认由 MergeEntry 在 `markAsMerged=true` 且条目 `Applied` 时生成，随轮次结果同事务保存；跨轮次读取当前确认 | **已裁定**（ADR-0006，2026-11-20） |
 | 一轮一次执行即终态、不可重开；未完成项须新建 MergeRound；`ApplyResult` 为本轮不可变快照 | **已裁定**（Q4，2026-11-11） |
 | `TrackerItemDiff` 字段集、瞬时比较证据的编码与传输形式 | **契约候选**（留实现） |
 | MergeRound 行为签名与状态机、MergeEntry 状态机、`ApplyResult` 字段结构 | **契约候选** |

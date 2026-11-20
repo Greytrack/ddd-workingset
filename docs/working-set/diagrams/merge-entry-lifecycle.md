@@ -1,10 +1,10 @@
 # MergeEntry 生命周期与提交到确认时序
 
-**状态：Draft / Candidate（T6-E 后的当前交互；Q1～Q4 语义见 ADR-0005，图本身未纳入正式基线）**
+**状态：Draft / Candidate（T6-E 后的当前交互；Q1～Q4 语义见 ADR-0005，确认归属见 ADR-0006；图本身未纳入正式基线）**
 
-- 目的：表达一页 Merge 决策从 Compare、提交、异步执行、业务 BC 提交、LightTrackerItem 维护到 Checkpoint 确认的协作顺序，以及 MergeRound 的一次执行与终态。
+- 目的：表达一页 Merge 决策从 Compare、提交、异步执行、业务 BC 提交、LightTrackerItem 维护到合并确认的协作顺序，以及 MergeRound 的一次执行与终态。
 - 适用范围：直属父子非共享 Tracker。证据分界见 [S7 实施裁定](../reviews/2026-11-12-s7-merge-implementation-decisions.md)。
-- 依据：[Merge 执行契约 v1](../domain/merge-execution-contract-v1.md)、ADR-0005、D-019、T6-E、T6-B。
+- 依据：[Merge 执行契约 v1](../domain/merge-execution-contract-v1.md)、ADR-0005、ADR-0006、D-019、T6-E、T6-B。
 - 不表达：事件中间件、数据库表、事务隔离级别；不表达共享 Tracker 与兄弟/跨代合并。
 - **2026-11-16 更新**：Compare 只读瞬时，不返回可回读的 `ComparisonToken`；提交入口改为整页决策（1～50 条，`requestId` 幂等），轮次由事件异步执行，客户端轮询。
 
@@ -116,7 +116,7 @@ stateDiagram-v2
 
 ## 3. 确认归属与只读查询
 
-依据 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 与 [SCN-058](../scenarios/core-scenarios.md#scn-058)。组合箭头表示聚合内所有权；依赖箭头仅表示读写路径，不表示第二份确认数据。
+依据 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 与 [SCN-058](../scenarios/core-scenarios.md)。组合箭头表示聚合内所有权；依赖箭头仅表示读写路径，不表示第二份确认数据。
 
 ```mermaid
 classDiagram

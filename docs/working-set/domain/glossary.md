@@ -66,7 +66,7 @@
 
 1. **Design Baseline** 是仓库设计基线。**Snapshot** 是对象的时点证据。**Merge Base** 是候选合并概念。业务 Baseline 的含义由 QUESTION-011 裁定。
 2. **共享** 表达权威内容复用，不表达访问权限；“无权”不得偷换为“不存在”。
-3. **已处理** 是 Checkpoint 记录的用户确认。**内容相等** 是 Compare 的判断。适用性见 [T1 Checkpoint](merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)。
+3. **已处理** 是 Checkpoint 记录的用户确认。**内容相等** 是 Compare 的判断。适用性见 [T1 Checkpoint](merge-execution-contract-v1.md#6-合并确认与跨轮次查询)。
 4. **Tracker 组织树**（`parentId`）与**Tracker 派生链**（`sourceId`）是两个维度；前者表达同工作集结构父，后者表达直接父级工作集来源。二者不互相替代。
 5. **Working Set 谱系**（`parentWorkingSetId`）与 Tracker 派生链也是不同维度；Compare/Merge 只允许直属父子工作集。
 6. **Source-backed** 表达“未物化但存在”；不得把无本地内容行当作不存在。

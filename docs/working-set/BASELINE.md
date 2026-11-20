@@ -4,13 +4,13 @@
 - **Baseline Version**: 首版领域模型候选基线 v1（阶段 4，基于 D-001～D-019 及阶段 4 补充；后续 T1～T7 以契约和验收记录增量登记）
 - **Release Status**: Unreleased
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
-- **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）；`8231d33`（2026-11-16 Checkpoint 身份改为两侧 Tracker 对）
+- **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）；`8231d33`（2026-11-16 Checkpoint 身份改为两侧 Tracker 对）；`da8685b`（2026-11-20 ADR-0006：合并确认归 MergeEntry，跨轮次只读查询）
 - **Released Git Tag**: None
-- **Last Updated**: 2026-11-19
+- **Last Updated**: 2026-11-20
 
 ## 当前基线状态
 
-事实与政策主题、首版领域模型候选及 ADR-0001～0005 已接受。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
+事实与政策主题、首版领域模型候选及 ADR-0001～0006 已接受。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
 
 2026-11-19 的模块拆分、直接只读边界和事件协作澄清登记为 **Reviewed 实现边界**，不是新的 Accepted 业务基线；其权威说明见[当前实现边界](implementation/current-boundaries.md)与[对齐记录](reviews/2026-11-19-doc-alignment-after-code-evolution.md)。
 
@@ -42,7 +42,7 @@
 - [ADR-0002：LightTrackerItem 作为 Working Set 权威聚合](adr/0002-lighttrackeritem-authoritative-aggregate.md)：Accepted（D-007/D-008/D-012，2026-11-10）。
 - [ADR-0003：COW 采用事件驱动最终一致与首次快照优先](adr/0003-cow-event-driven-final-consistency.md)：Accepted（D-009～D-018，2026-11-10）。
 - [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md)：Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054；2026-11-10）。
-- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（Q1～Q3 裁定：MergeEntry 为 MergeRound 内 Entity、所选差异证据必须绑双侧内容证据、Checkpoint 由 MergeRound 发起；2026-11-10）。2026-11-15 补充：compare 不持久化，不再要求持久化 `ComparisonToken`。确认归属已由 ADR-0006 替换。
+- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（2026-11-10）。MergeEntry 归 MergeRound、所选择差异证据必须绑定双侧内容证据继续有效；Checkpoint 确认归属已由 ADR-0006 替代；2026-11-15 补充 compare 不持久化。
 - [ADR-0006：合并确认归属轮次，跨轮次独立查询](adr/0006-merge-confirmation-ownership.md)：Accepted（2026-11-20），用户明确确认。
 
 ## 相关验收标准

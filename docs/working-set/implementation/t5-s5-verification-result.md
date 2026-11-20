@@ -1,6 +1,6 @@
 # S5 绑定与删除实施验证
 
-**状态：Reviewed（实施验证记录，2026-11-12）**
+**状态：Historical（T5 实施验证记录，2026-11-12；保留证据，不代表当前实现）**
 
 依据 [T2 绑定与删除契约](../domain/binding-deletion-contract-v1.md)。用户裁定 A 将本次纳入范围限定为已登记的首层 WorkingSet，直接上游固定为默认 WorkingSet。
 

@@ -46,4 +46,4 @@ alm.requirement.application.query
 
 ## 验证
 
-最近一次可复现的完整记录为 **160 项通过**（2026-11-19，在后续工作区新增 `businessframework`/`RequestThreadHolder` 之前）；当前工作区尚未重跑全量测试。ArchUnit 规则覆盖 query→command、command→query、application→MyBatis 和 domain→持久化框架边界。测试状态与未验证项见 [当前实现边界](current-boundaries.md)。
+2026-11-19 的完整测试记录为 **160 项通过**；2026-11-20 后的改动尚未完成全量回归，最新本地报告仅覆盖 32 项局部测试。ArchUnit 规则覆盖 query→command、command→query、application→MyBatis 和 domain→持久化框架边界。测试状态与未验证项见 [当前实现边界](current-boundaries.md)。

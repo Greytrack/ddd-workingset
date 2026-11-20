@@ -2,7 +2,9 @@
 
 # T6-E MergeRound 一页决策与幂等提交验收
 
-**状态：Accepted（2026-11-16 收敛）**。设计依据 [T1 契约 §3/§4](../domain/merge-execution-contract-v1.md) 与 [Compare 不持久化裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)；规模与保留见[规模压测与保留专题](performance-testing.md)。
+**状态：Accepted（2026-11-16 收敛；2026-11-20 确认归属由 ADR-0006 调整）**。设计依据 [T1 契约 §3/§4](../domain/merge-execution-contract-v1.md) 与 [Compare 不持久化裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)；规模与保留见[规模压测与保留专题](performance-testing.md)。
+
+> **2026-11-20 补充**：确认记录归 MergeEntry，随轮次结果同事务保存；跨轮次 Checkpoint 改为只读查询模型，不再运行独立清理任务。本文下述接口、验证数量和“旧确认表”描述保留当时证据，当前规则见 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 与 [T1 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)。
 
 ## 范围
 
