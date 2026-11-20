@@ -11,8 +11,8 @@ import sk.RequestThreadHolder;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.Classification;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.ResultSet;

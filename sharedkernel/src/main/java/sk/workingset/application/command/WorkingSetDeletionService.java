@@ -1,7 +1,6 @@
 package sk.workingset.application.command;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
@@ -13,13 +12,11 @@ import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.Classification.SharingMode;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
-import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -32,45 +29,15 @@ import java.util.Map;
  * <p>删除顺序为 TrackerBinding → SpaceBinding → WorkingSet；能力范围只到 Working Set，
  * 业务对象生命周期由各 BC 负责（D7/D16）。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
-    private final LightTrackerItemRepository items;
     private final LightTrackerItemQueryProvider itemQueries;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
     private final BusinessTrackerItems businessItems;
-
-    private static void rejectIndependentFolderRemoval(Tracker tracker) {
-        if (tracker.isFolderTracker()) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "文件夹 Tracker 须随产品空间卸载");
-        }
-    }
-
-    /**
-     * 解除工作集与 Tracker 的绑定；Shared 仅解绑，非共享删除其拥有的 Tracker。
-     */
-    @Transactional
-    public void unbindTracker(WorkingSetId id, TrackerId trackerId) {
-        WorkingSet workingSet = lockWorkingSet(id);
-        TrackerBinding binding = workingSet.trackerBinding(trackerId);
-        rejectIndependentFolderRemoval(lockTracker(trackerId));
-        checkUnbind(binding);
-        workingSet.unbindTracker(trackerId);
-        workingSets.save(workingSet);
-        deleteOwnedTracker(binding);
-    }
-
-    /**
-     * 从工作集移除产品空间；空间内仅允许 Folder Tracker。
-     */
-    @Transactional
-    public void removeSpace(WorkingSetId id, String spaceId) {
-        removeSpace(lockWorkingSet(id), spaceId);
-    }
 
     /**
      * 删除工作集；预检全部绑定可解除后按 TrackerBinding → SpaceBinding → WorkingSet 顺序解除并删除。
@@ -122,24 +89,6 @@ public class WorkingSetDeletionService {
         if (binding.sharingMode() == SharingMode.UNSHARED) {
             trackers.deleteTracker(binding.trackerId());
         }
-    }
-
-    private void removeSpace(WorkingSet workingSet, String spaceId) {
-        if (!workingSet.hasSpaceBinding(spaceId)) {
-            throw DomainException.withMessage(BindingResCode.SPACE_BINDING_NOT_FOUND, spaceId);
-        }
-        List<TrackerBinding> members = workingSet.trackers().stream()
-                .filter(binding -> binding.productSpaceId().equals(spaceId)).toList();
-        for (TrackerBinding binding : members) {
-            if (!lockTracker(binding.trackerId()).isFolderTracker()) {
-                throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);
-            }
-        }
-        members.forEach(this::checkUnbind);
-        members.forEach(binding -> workingSet.unbindTracker(binding.trackerId()));
-        workingSet.removeSpace(spaceId);
-        workingSets.save(workingSet);
-        members.forEach(this::deleteOwnedTracker);
     }
 
     private void requireDeletable(Tracker tracker) {

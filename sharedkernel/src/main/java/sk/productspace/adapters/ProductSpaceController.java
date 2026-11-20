@@ -6,10 +6,13 @@ import org.springframework.web.bind.annotation.*;
 import sk.common.error.DomainException;
 import sk.productspace.application.command.ProductSpaceCommandService;
 import sk.productspace.domain.ProductSpace;
+import sk.tracker.domain.TrackerId;
+import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
 /**
- * 产品空间的 HTTP 入口：创建与删除。
+ * 产品空间的 HTTP 入口：创建、删除与空间内 Tracker 展示。
  * 删除的引用完整性由 {@link ProductSpaceCommandService} 承担。
  */
 @RestController
@@ -17,6 +20,7 @@ import sk.workingset.error.WorkingsetResultCode;
 @RequiredArgsConstructor
 public class ProductSpaceController {
     private final ProductSpaceCommandService commands;
+    private final WorkingSetCommandService workingSets;
 
     /**
      * 创建产品空间；名称去首尾空白后不得为空。
@@ -32,12 +36,28 @@ public class ProductSpaceController {
     }
 
     /**
-     * 删除产品空间；须在所有工作集无有效 SpaceBinding 且空间内无 Tracker（T2 §4.3）。
+     * 默认工作集受理空产品空间删除。
      */
-    @DeleteMapping({"/product-spaces/{spaceId}", "/worksets/1/product-spaces/{spaceId}"})
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/worksets/1/product-spaces/{spaceId}")
+    @ResponseStatus(HttpStatus.ACCEPTED)
     public void delete(@PathVariable String spaceId) {
         commands.delete(spaceId);
+    }
+
+    /**
+     * 修改 Tracker 在指定工作集、产品空间中的展示状态。
+     */
+    @PatchMapping("/worksets/{workingSetId}/product-spaces/{spaceId}/trackers/{trackerId}/visibility")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setTrackerShown(@PathVariable String workingSetId, @PathVariable long spaceId,
+                                @PathVariable String trackerId, @RequestBody TrackerVisibilityRequest request) {
+        if (request.shown() == null) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "shown is required");
+        }
+        workingSets.setTrackerShown(WorkingSetId.of(workingSetId), spaceId, TrackerId.of(trackerId), request.shown());
+    }
+
+    public record TrackerVisibilityRequest(Boolean shown) {
     }
 
     public record CreateProductSpaceRequest(String name) {

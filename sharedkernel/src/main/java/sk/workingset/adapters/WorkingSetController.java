@@ -2,15 +2,13 @@ package sk.workingset.adapters;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import sk.common.error.DomainException;
-import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.WorkingSetCommandService;
+import sk.workingset.application.command.WorkingSetDeletionService;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.*;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
-import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;
 
@@ -23,10 +21,19 @@ public class WorkingSetController {
 
     private final WorkingSetCommandService commands;
     private final WorkingSetQueryService queries;
+    private final WorkingSetDeletionService deletions;
 
-    public WorkingSetController(WorkingSetCommandService commands, WorkingSetQueryService queries) {
+    public WorkingSetController(WorkingSetCommandService commands, WorkingSetQueryService queries,
+                                WorkingSetDeletionService deletions) {
         this.commands = commands;
         this.queries = queries;
+        this.deletions = deletions;
+    }
+
+    @DeleteMapping("/{workingSetId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteWorkingSet(@PathVariable String workingSetId) {
+        deletions.deleteWorkingSet(WorkingSetId.of(workingSetId));
     }
 
     /**
@@ -99,25 +106,6 @@ public class WorkingSetController {
         return BindingsView.from(queries.findBindings(WorkingSetId.of(workingSetId)));
     }
 
-    /**
-     * 切换 Tracker 在工作集的显示状态。
-     */
-    @PatchMapping("/{workingSetId}/trackers/{trackerId}/visibility")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void setTrackerShown(@PathVariable String workingSetId, @PathVariable String trackerId,
-                                @RequestBody TrackerVisibilityRequest request) {
-        if (request.shown() == null) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "shown is required");
-        }
-        commands.setTrackerShown(WorkingSetId.of(workingSetId), TrackerId.of(trackerId), request.shown());
-    }
-
-    public record CreateChildRequest(String name, String color) {
-    }
-
-    public record UpdateWorkingSetRequest(String name, String color) {
-    }
-
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
                                  String parentWorkingSetId, String color) {
         static WorkingSetView from(WorkingSet workingSet) {
@@ -147,9 +135,6 @@ public class WorkingSetController {
             return new SpaceBindingView(String.valueOf(summary.productSpaceId()), summary.name(),
                     summary.origin(), summary.state());
         }
-    }
-
-    public record TrackerVisibilityRequest(Boolean shown) {
     }
 
     public record TrackerBindingView(String trackerId, String productSpaceId, String classificationId,

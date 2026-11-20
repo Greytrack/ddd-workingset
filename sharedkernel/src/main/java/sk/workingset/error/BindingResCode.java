@@ -28,7 +28,7 @@ public enum BindingResCode implements DomainResCode {
     TRACKER_BINDING_NOT_FOUND(DomainErrorType.NOT_FOUND, 1219, "Tracker binding not found", "TrackerBindingNotFound"),
     SPACE_BINDING_NOT_FOUND(DomainErrorType.NOT_FOUND, 1220, "Space binding not found", "SpaceBindingNotFound"),
     SPACE_STILL_HAS_TRACKERS(DomainErrorType.CONFLICT, 1221, "Space still has trackers", "SpaceStillHasTrackers"),
-    SPACE_STILL_BOUND_IN_WORKING_SET(DomainErrorType.CONFLICT, 1222, "Space still bound in working set", "SpaceStillBoundInWorkingSet"),
+    SPACE_HAS_BUSINESS_REFERENCES(DomainErrorType.CONFLICT, 1222, "Space has business references", "SpaceHasBusinessReferences"),
     TRACKER_HAS_ITEMS(DomainErrorType.CONFLICT, 1223, "Tracker has items", "TrackerHasItems"),
     TRACKER_HAS_ORG_CHILDREN(DomainErrorType.CONFLICT, 1224, "Tracker has org children", "TrackerHasOrgChildren"),
     TRACKER_HAS_DERIVED_CHILDREN(DomainErrorType.CONFLICT, 1225, "Tracker has derived children", "TrackerHasDerivedChildren"),

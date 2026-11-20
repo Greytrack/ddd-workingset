@@ -180,8 +180,11 @@ public final class WorkingSet {
                 .toList();
     }
 
-    public void setTrackerShown(TrackerId trackerId, boolean shown) {
+    public void setTrackerShown(long spaceId, TrackerId trackerId, boolean shown) {
         TrackerBinding binding = trackerBinding(trackerId);
+        if (binding.numericProductSpaceId() != spaceId) {
+            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, trackerId.value());
+        }
         trackers.put(trackerId, new TrackerBinding(id, trackerId, binding.numericProductSpaceId(),
                 binding.numericClassificationId(), binding.sharingMode(), binding.origin(), shown));
     }
@@ -209,6 +212,15 @@ public final class WorkingSet {
     public void unbindTracker(TrackerId trackerId) {
         trackerBinding(trackerId);
         trackers.remove(trackerId);
+    }
+
+    public boolean detachSpaceForDeletion(String spaceId) {
+        if (!hasSpaceBinding(spaceId)) {
+            return false;
+        }
+        trackers.values().removeIf(binding -> binding.productSpaceId().equals(spaceId));
+        removeSpace(spaceId);
+        return true;
     }
 
     public void removeSpace(String spaceId) {

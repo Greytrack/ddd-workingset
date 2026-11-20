@@ -41,6 +41,8 @@ WorkingSet 需要关联 ProductSpace 与 Tracker。历史候选把 ProductSpace 
 
 **后续澄清（2026-11-11，T2 K1～K3）**：上节历史摘要的「任意 Tracker 有 TrackerItem 不允许移除」限定为聚合删除；Shared 解绑不受 Item 限制。当前操作约束见[绑定与删除契约 §4](../domain/binding-deletion-contract-v1.md)，确认依据见 [T2 评审](../reviews/2026-11-11-t2-binding-deletion-review.md)。本补注保留原决定及历史措辞，未改变绑定的聚合归属。
 
+**后续裁定（2026-11-20）**：产品空间删除和绑定解除的对外入口调整见[绑定与删除契约 §4](../domain/binding-deletion-contract-v1.md#42-绑定移除)。原聚合归属有效。
+
 - 事实：FACT-024～026；政策：POL-012～014；不变量：INV-053～059；场景：SCN-050～054。
 - 图：[ProductSpace/Tracker/WorkingSet 关系](../diagrams/productspace-tracker-workingset.md)。
 - 重估条件：绑定规模/并发热点、ProductSpace 生命周期变化、OR M 实现约束。

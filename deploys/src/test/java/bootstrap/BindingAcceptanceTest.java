@@ -82,7 +82,7 @@ class BindingAcceptanceTest {
     void extensionReusesSharedTrackersAndMountsTheirSpace() {
         assertTrue(rest.getForObject(path("1"), WorkingSetView.class).defaultWorkingSet());
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity(sharedPath(ws, shared), null, Map.class).getStatusCode());
-        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, rest.postForEntity(spacePath(ws), null, Map.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity(spacePath(ws), null, Map.class).getStatusCode());
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, name, classification_id, sharing_mode, is_default)
                 VALUES (?, 1, ?, '文件夹', 10070101, 'UNSHARED', TRUE)
@@ -114,8 +114,8 @@ class BindingAcceptanceTest {
         assertEquals(List.of(owned, shared).stream().sorted().toList(), trackerIds(listPath));
         assertEquals(List.of(), trackerIds(path(other) + "/trackers"));
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
-        assertEquals(List.of(owned), trackerIds(listPath));
+        assertEquals(HttpStatus.NOT_FOUND, delete(unbindPath(ws, shared)).getStatusCode());
+        assertEquals(List.of(owned, shared).stream().sorted().toList(), trackerIds(listPath));
     }
 
     private List<String> trackerIds(String path) {
@@ -124,7 +124,7 @@ class BindingAcceptanceTest {
     }
 
     @Test
-    void sharedDefaultComesFromRootAndIsNotReplacedAfterUnbindOrDelete() {
+    void sharedDefaultComesFromRootAndIsNotReplacedAfterDelete() {
         String alternate = fixtureId("ALT-" + suffix);
         original(alternate, sharedClass, "SHARED", null);
         jdbc.update("UPDATE trackers SET is_default = true WHERE tracker_id = ?", shared);
@@ -138,13 +138,11 @@ class BindingAcceptanceTest {
         }
         assertEquals(Map.of(shared, true, alternate, false), trackerDefaults(ws));
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
-        assertEquals(Map.of(alternate, false), trackerDefaults(ws));
-        assertEquals(Map.of(shared, true, alternate, false), trackerDefaults(other));
-
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).until(() -> !trackerDefaults(other).containsKey(shared));
-        assertEquals(Map.of(alternate, false), trackerDefaults(other));
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertEquals(Map.of(alternate, false), trackerDefaults(ws));
+            assertEquals(Map.of(alternate, false), trackerDefaults(other));
+        });
     }
 
     private Map<String, Boolean> trackerDefaults(String id) {
@@ -178,18 +176,13 @@ class BindingAcceptanceTest {
         extendShared(ws, shared);
         extendShared(grandchild, shared);
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(shared, rest.getForObject(path(grandchild) + "/bindings", BindingsView.class)
                 .trackers().stream().filter(binding -> "SHARED".equals(binding.sharingMode()))
                 .findFirst().orElseThrow().trackerId());
-        String laterChild = fixtureId("LATER-" + suffix);
-        createChild(ws, laterChild);
-        bindSpace(laterChild);
-        assertSharedOutsideParent(laterChild);
     }
 
     @Test
-    void sharedUnbindPreservesTrackerItemAndSpaceBinding() {
+    void standaloneUnbindRoutesAreUnavailableAndPreserveBindings() {
         bindSpace(ws);
         String folderTrackerRelation = """
                 SELECT id FROM air_ws_workingset_branch_relation
@@ -201,25 +194,25 @@ class BindingAcceptanceTest {
         assertEquals(folderTrackerBinding, jdbc.queryForObject(folderTrackerRelation, Long.class,
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         businessItem(fixtureId("ITEM-" + suffix), shared);
-        assertFailure(delete(spacePath(ws)), HttpStatus.CONFLICT, "SpaceStillHasTrackers");
+        assertEquals(HttpStatus.NOT_FOUND, delete(spacePath(ws)).getStatusCode());
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, shared)).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(folderTrackerBinding, jdbc.queryForObject(folderTrackerRelation, Long.class,
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
-        assertTrue(bindings.trackers().stream().noneMatch(binding -> "SHARED".equals(binding.sharingMode())));
+        assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
         assertEquals(space, bindings.spaces().getFirst().productSpaceId());
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasItems");
     }
 
     @Test
-    void nonsharedUnbindRejectsItemsAndEmptyTrackerCanBeRemoved() {
+    void trackerDeletionRejectsItemsAndRemovesEmptyTrackerAndItsBinding() {
         bindSpace(ws);
         DeriveFixture.Result target = derive(ws, unshared, sourceItem);
         String tracker = target.trackerId();
-        assertFailure(delete(unbindPath(ws, tracker)), HttpStatus.CONFLICT, "TrackerHasItems");
+        assertFailure(delete(trackerPath(tracker)), HttpStatus.CONFLICT, "TrackerHasItems");
         assertEquals(1, count("SELECT count(*) FROM light_tracker_items WHERE tracker_id = ?", tracker));
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
@@ -229,9 +222,11 @@ class BindingAcceptanceTest {
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasDerivedChildren");
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(unbindPath(ws, tracker)).getStatusCode());
-        assertEquals(0, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
-        assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", tracker));
+        assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(tracker)).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertEquals(0, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
+            assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", tracker));
+        });
     }
 
     @Test
@@ -247,8 +242,10 @@ class BindingAcceptanceTest {
         extendShared(other, shared);
 
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).until(() ->
-                count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", shared) == 0);
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertEquals(0, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", shared));
+            assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
+        });
         assertEquals(2, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
         assertFailure(rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
                 "title", "A", "description", "deleted tracker", "revision", 3), Map.class),
@@ -256,27 +253,29 @@ class BindingAcceptanceTest {
     }
 
     @Test
-    void productSpaceDeletionReportsAllWorksetsIncludingEmptyBindings() {
+    void deletesAnEmptyProductSpaceAndItsBindingsOnlyFromTheDefaultWorkset() {
         bindSpace(ws);
         bindSpace(other);
-        String endpoint = "/api/product-spaces/" + space;
-        ResponseEntity<Map> blocked = delete(endpoint);
-        assertFailure(blocked, HttpStatus.CONFLICT, "SpaceStillBoundInWorkingSet");
-        assertEquals(java.util.stream.Stream.of(other, ws).sorted(java.util.Comparator.comparingLong(Long::parseLong))
-                .toList(), blocked.getBody().get("workingSetIds"));
+        String endpoint = path("1") + "/product-spaces/" + space;
+        assertEquals(HttpStatus.NOT_FOUND, delete("/api/product-spaces/" + space).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, delete(path(ws) + "/product-spaces/" + space).getStatusCode());
+        jdbc.update("UPDATE requirements SET delete_flag = true WHERE local_id = ?", sourceItem);
+        assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceHasBusinessReferences");
+        assertEquals(2, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(spacePath(ws)).getStatusCode());
-        assertEquals(HttpStatus.NO_CONTENT, delete(spacePath(other)).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).until(() ->
-                count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space) == 0);
-        assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceStillHasTrackers");
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
-        assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
-        assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(unshared)).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).until(() ->
-                count("SELECT count(*) FROM trackers WHERE product_space_id = ?", space) == 0);
-        assertEquals(HttpStatus.NO_CONTENT, delete(endpoint).getStatusCode());
-        assertEquals(0, count("SELECT count(*) FROM product_spaces WHERE product_space_id = ?", space));
+        long retainedReference = Long.parseLong(fixtureId("direct-reference-" + suffix));
+        jdbc.update("INSERT INTO air_inst_common (id, base_class, work_space) VALUES (?, 1001, ?)",
+                retainedReference, space);
+        assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceHasBusinessReferences");
+        jdbc.update("DELETE FROM air_inst_common WHERE id = ?", retainedReference);
+
+        assertEquals(HttpStatus.ACCEPTED, delete(endpoint).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertEquals(0, count("SELECT count(*) FROM product_spaces WHERE product_space_id = ?", space));
+            assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
+            assertEquals(0, count("SELECT count(*) FROM trackers WHERE product_space_id = ?", space));
+        });
     }
 
     @Test

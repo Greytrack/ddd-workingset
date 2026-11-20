@@ -153,7 +153,15 @@ class TrackerDefaultAcceptanceTest {
         RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
                 .requestFactory(new JdkClientHttpRequestFactory()).build();
         String path = "/api/worksets/" + child;
-        String visibility = path + "/trackers/" + folder + "/visibility";
+        String visibility = path + "/product-spaces/" + space + "/trackers/" + folder + "/visibility";
+        var wrongSpace = client.patch().uri(path + "/product-spaces/" + fixtureId("other-" + space)
+                        + "/trackers/" + folder + "/visibility")
+                .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, wrongSpace);
+        var oldRoute = client.patch().uri(path + "/trackers/" + folder + "/visibility")
+                .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, oldRoute);
+        assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", false))
                 .retrieve().toBodilessEntity().getStatusCode());
         assertEquals(0, rest.getForObject(path + "/trackers", TrackerView[].class).length);
@@ -164,7 +172,9 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
-        rest.delete(path + "/spaces/" + space);
+        var deletion = client.delete().uri("/api/worksets/1/product-spaces/" + space)
+                .exchange((request, response) -> response.getStatusCode());
+        assertEquals(HttpStatus.ACCEPTED, deletion);
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
             assertTrue(rest.getForObject(path + "/bindings", BindingsView.class).spaces().isEmpty());
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",

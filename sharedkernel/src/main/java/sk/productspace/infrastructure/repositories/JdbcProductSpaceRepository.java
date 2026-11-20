@@ -38,6 +38,17 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     }
 
     @Override
+    public boolean hasBusinessReferences(ProductSpace space) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM air_inst_common instance
+                    WHERE instance.work_space = ? AND instance.id <> ?
+                      AND NOT EXISTS (SELECT 1 FROM air_inst_tracker_rev tracker WHERE tracker.id = instance.id)
+                )
+                """, Boolean.class, space.numericId(), space.numericId()));
+    }
+
+    @Override
     public void delete(ProductSpace space) {
         long numericId = space.numericId();
         if (jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", numericId) == 1) {

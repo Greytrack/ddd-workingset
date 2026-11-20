@@ -3,6 +3,7 @@ package sk.workingset.application.query.provider;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.workingset.WorkingSetId;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,7 +16,9 @@ public interface TrackerQueryProvider {
 
     boolean hasDerivedChildren(TrackerId id);
 
-    boolean hasTrackersInSpace(String spaceId);
+    List<TrackerId> findTrackerIdsInSpace(String spaceId);
+
+    boolean hasExternalTrackerReferences(String spaceId);
 
     boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId);
 

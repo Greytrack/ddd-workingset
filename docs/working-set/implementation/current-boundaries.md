@@ -47,6 +47,7 @@
 | 路径 | 当前状态 | 差距/待验证 |
 | --- | --- | --- |
 | ProductSpace 创建 | `ProductSpaceCommandService.create` 保存 ProductSpace 并发布 `ProductSpaceCreatedEvent`；默认 Tracker 批量创建后由 Working Set 独立绑定 | 默认 Tracker 的循环保存仍是用户裁定的折中多聚合事务；需记录偏差并验证部分失败与重投。 |
+| ProductSpace 删除 | [T2 §4.3](../domain/binding-deletion-contract-v1.md#43-聚合删除)；Modulith 逐事件清理 | 受理后若出现新业务引用，当前步骤再次校验并中止，保留未完成事件和已提交清理结果。删除期间没有公开任务状态。 |
 | T7 创建/扩展 | 阶段按项执行，但工作集创建、Tracker 派生、范围绑定及 LTI 索引仍与各自的任务进度同事务提交 | 按 [反模式审查](../reviews/2026-11-19-ddd-anti-pattern-scan.md) 将聚合副作用与任务进度拆成独立提交，用可靠结果事件推进任务。 |
 | Tracker 创建 | TrackerCommandService 仅持久化 Tracker，绑定由 `TrackerCreatedEvent` 的监听器在 Working Set 事务中完成 | 主路径已事件化；仍需验证监听失败、重复投递、绑定拒绝和运维可观察性。ProductSpace 初始化不在该路径内。 |
 | 继承编辑 | ALM 保存后由 `BusinessObjectUpdateEvent` 异步切换 LTI | 保存成功不保证 LTI 立即 Local-backed；读取方需容忍短暂 Source-backed。切换失败不回滚业务保存。 |

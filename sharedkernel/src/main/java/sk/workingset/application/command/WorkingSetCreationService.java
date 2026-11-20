@@ -15,8 +15,8 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.ClassificationCatalog;
+import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
@@ -317,7 +317,9 @@ public class WorkingSetCreationService {
         };
     }
 
-    /** 将本体创建、派生和绑定的领域拒绝记录到任务；索引与关系事件各自处理失败。 */
+    /**
+     * 将本体创建、派生和绑定的领域拒绝记录到任务；索引与关系事件各自处理失败。
+     */
     private WorkingSetCreation executeScopeWrite(WorkingSetCreation creation, String item,
                                                  Supplier<WorkingSetCreation> action) {
         try {

@@ -716,13 +716,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 **业务规则：用户确认（2026-11-11，K1/K3；POL-014、INV-058、INV-064/065）。验收表述 Draft。** 关联 [绑定与删除契约](../domain/binding-deletion-contract-v1.md)。
 
 - Given 子 WorkingSet 中纳入 Shared Tracker S 与非共享 Tracker N；S 在默认工作集有 Item，N 存在 Item 或组织子级或派生子级。
-- When 对 S 执行绑定移除（调用者具备解除权限）。
-- Then 仅解除 TrackerBinding，S 聚合保留；**即使 S 拥有 Item 也允许解除子工作集关联**。
-- When 对 N 执行绑定移除。
-- Then 必须同时满足：无 TrackerItem、无组织子级（`parentId` 指向 N）、无派生子级（`sourceId` 指向 N）；任一不满足即拒绝（`TrackerHasItems` / `TrackerHasOrgChildren` / `TrackerHasDerivedChildren`），N 的聚合与绑定保持原样。
-- When N 满足三项条件时执行绑定移除。
-- Then 合法删除 N 聚合并解除 TrackerBinding。
-- 边界：绑定移除不等于业务 TrackerItem 删除；POL-014「有 TrackerItem 不允许移除」只约束**聚合删除**，不约束 Shared 解绑（INV-064）。
+- When 删除该子工作集。
+- Then N 阻止工作集删除，成员关系保留。
+- When N 无 TrackerItem、无组织子级、无派生子级后再次删除工作集。
+- Then 删除子工作集和 N，解除 S 的绑定，保留 S 和其 Item。见 [SCN-063](#scn-063)。
+- 边界：独立解绑入口已于 2026-11-20 撤除。
 
 <a id="scn-062"></a>
 ## SCN-062 Tracker 删除限制（组织子级 / 派生子级 / Item）
@@ -749,16 +747,16 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：默认 WorkingSet（Id=1）始终不可删除（`DefaultWorkingSetUndeletable`）；上述为业务准入与行为顺序，不预设跨聚合数据库大事务。
 
 <a id="scn-064"></a>
-## SCN-064 ProductSpace 删除须审查残留 SpaceBinding
+## SCN-064 删除空 ProductSpace 并清理绑定
 
-**业务规则：用户确认（2026-11-11；POL-014、INV-066 引用完整性采纳）。验收表述 Draft。**
+**业务规则：用户于 2026-11-20 裁定，见[绑定与删除契约 §4.3](../domain/binding-deletion-contract-v1.md#43-聚合删除)。验收表述 Draft。**
 
-- Given ProductSpace P 的 Tracker 已被移除（按 SB-3，移除最后一个 Tracker 不删除 SpaceBinding），某个 WorkingSet 仍残留指向 P 的 SpaceBinding。
-- When 尝试删除 P。
-- Then 拒绝（`SpaceStillBoundInWorkingSet`，列出 WorkingSet），**即使已无任何 TrackerBinding**；P 聚合保留。
-- When 用户先解除残留 SpaceBinding，且 P 下无 Tracker 聚合。
-- Then 允许删除 P。
-- 边界：不得直接清理 TrackerBinding 或级联删除 Tracker；不因删除 P 自动删除其他 WorkingSet 或 Tracker；保留默认 WorkingSet 维护 P 生命周期的既有规则。
+- Given 根与子工作集绑定了 P，P 内只有空 Tracker。
+- When 在默认工作集删除 P。
+- Then 请求受理，最终 P、其空 Tracker 和各工作集下对 P 的绑定均不可见，工作集保留。
+- Given P 仍被业务对象引用，即使对象已软删除。
+- When 在默认工作集删除 P。
+- Then 返回 `SpaceHasBusinessReferences`，P 与原绑定保留。
 
 <a id="scn-065"></a>
 ## SCN-065 删除不可恢复（K1）

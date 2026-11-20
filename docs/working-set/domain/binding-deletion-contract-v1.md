@@ -6,7 +6,7 @@
 - 阶段：阶段 5 契约层 T2（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
 - 已确认依据：FACT-024/025/026、POL-012/013/014/015、INV-053～060、INV-064～068（2026-11-11 确认）、SCN-050～054、SCN-061～065、[ADR-0004](../adr/0004-productspace-independent-aggregate.md)
 - 本文件**不决定**：数据库表结构、物理删除/清理策略、并发锁与消息机制、软删状态机、跨聚合数据库大事务。
-- 本文件**不重新裁定**：绑定归属（WorkingSet）、两个 Entity 的划分、POL-014 的八条删除/移除语义、ProductSpace 独立聚合地位。
+- 绑定仍归属 WorkingSet。ProductSpace 与 Tracker 保持独立聚合。
 
 ## 1. 范围
 
@@ -27,8 +27,8 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | Classification 为三层共享元模型、启动前初始化常驻内存；Tracker 是其在 ProductSpace/WorkingSet 中的投影；创建 ProductSpace 时按分类集合投影生成 Tracker | FACT-025 |
 | 默认 WorkingSet 固定 Id=1、不可删除/隐藏；业务原生 Tracker 只能在默认 WorkingSet 创建；子 WS 只能纳入直接上游。Folder Tracker 是例外：每个 `(WorkingSet, ProductSpace)` 在绑定空间后创建，且不允许独立删除 | FACT-026、ADR-0008 |
 | SpaceBinding 是 TrackerBinding 前置；同一 WS 同 ProductSpace 最多一个有效 SpaceBinding；同一 WS/ProductSpace/Classification 可绑定多个 Tracker；默认资格见 [T6-F](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)；Tracker.productSpaceId 必须等于绑定空间；同一 Tracker 不在同一 WS 重复纳入 | POL-012、T6-F |
-| Shared 纳入复用原 TrackerId 仅建绑定；非共享纳入创建新聚合 + 直接 sourceId；移除后可重新纳入/派生；最后 Tracker 移除不删 SpaceBinding；ProductSpace 移出是独立显式操作 | POL-013 |
-| 删除/移除八条：Shared 移除仅解绑；非共享无 Item 且无派生子才删除；有派生子不允许删除；任意 Tracker 有 TrackerItem 不允许移除；有组织子节点但无派生子不允许删除；最后 Tracker 移除不删空间绑定；移除 ProductSpace 时仍有 TrackerBinding 抛异常；默认 WS 下 Shared 空且无子可删 | POL-014（修订 POL-006） |
+| Shared 纳入复用原 TrackerId，仅建立绑定；非共享纳入创建新聚合并记录直接 sourceId | POL-013 |
+| 删除与解除绑定的当前准入见 §4.2～4.3 | POL-014（修订 POL-006） |
 | SpaceBinding、TrackerBinding 是归属 WorkingSet 聚合的两个 Entity；ProductSpace、Tracker 只维护自身归属身份，不持有绑定 | POL-015 |
 | 领域删除不可恢复；软删、归档、恢复不纳入本版契约；领域彻底删除不强制映射为数据库物理 DELETE | POL-016（2026-11-11） |
 
@@ -87,40 +87,35 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | 纳入共享 Tracker | 工作集创建或扩展任务中的 Tracker 选择 | 来源已纳入直属父工作集范围；共享特性相容 | 在范围绑定阶段建立 TrackerBinding，复用上游 `trackerId` | [任务逐项失败](working-set-creation-lro-design.md#43-失败明细) |
 | `bindTracker`（非共享派生） | workingSetId、productSpaceId、classificationId | 同上；来源为直接上游 Tracker | 创建新 Tracker 聚合（直接 `sourceId`）+ 新 TrackerBinding | 同上 + `SourceTrackerNotFound` |
 
-### 4.2 绑定移除（按共享策略分别约束）
+### 4.2 绑定移除
 
-| 操作 | 入参 | 前置 | 后置 / 结果 | 失败语义 |
-| --- | --- | --- | --- | --- |
-| `unbindTracker`（**Shared**） | workingSetId、trackerId | 当前 WorkingSet 存在有效 TrackerBinding；该绑定为 Shared；调用者具备解除权限 | **仅解除 TrackerBinding**；Tracker 聚合保留；**即使该 Tracker 拥有 TrackerItem 也允许解除子工作集关联** | `TrackerBindingNotFound`、`NotSharedBinding`、`PermissionDenied` |
-| `unbindTracker`（**非共享**） | workingSetId、trackerId | 当前 WorkingSet 存在有效 TrackerBinding；且同时满足：无 TrackerItem、无组织子级（`parentId` 指向它）、无派生子级（`sourceId` 指向它） | 删除该 Tracker 聚合 + 解除 TrackerBinding | `TrackerHasItems`、`TrackerHasOrgChildren`、`TrackerHasDerivedChildren` |
-| `removeSpace` | workingSetId、productSpaceId | 该 WS 内该空间无任何 TrackerBinding（SB-4） | 解除 SpaceBinding（ProductSpace 聚合保留） | `SpaceStillHasTrackers` |
-
-**关键区分（K1）**：Shared 解绑是「解除关系」，即使 Tracker 拥有 Item 也允许；非共享解绑是「删除聚合 + 解除关系」，必须同时通过 Item、组织子级、派生子级三项检查。POL-014 中「任意 Tracker 有 TrackerItem 不允许移除」只约束**聚合删除**，不约束 Shared 解绑（INV-064）。
+TrackerBinding 和 SpaceBinding 的解除由第 4.3 节的聚合删除流程触发。2026-11-20 用户裁定移除两个独立解绑 REST 入口。工作集删除时仍按 K3 处理 Shared 与非共享成员。
 
 ### 4.3 聚合删除
 
 | 操作 | 入参 | 前置 | 后置 / 结果 | 失败语义 |
 | --- | --- | --- | --- | --- |
 | `deleteTracker` | trackerId | 无 TrackerItem、无组织子级、无派生子级（POL-014、SCN-053） | 删除 Tracker 聚合 + 解除其 TrackerBinding | `TrackerHasItems`、`TrackerHasOrgChildren`、`TrackerHasDerivedChildren` |
-| `deleteProductSpace` | productSpaceId | ① 该空间在**所有** WorkingSet 中不存在任何有效 SpaceBinding；② 该空间下无 Tracker 聚合存在；如仍有 TrackerBinding，必须先按 Tracker 的解除规则处理，**不得直接清理 TrackerBinding 或级联删除 Tracker**；③ 即使某 WorkingSet 已无 TrackerBinding，只要 SpaceBinding 仍存在也不得删除；④ 保留 ProductSpace 在默认 WorkingSet 维护生命周期的既有规则（FACT-024）；⑤ 不因删除 ProductSpace 自动删除其他 WorkingSet 或 Tracker | 删除 ProductSpace 聚合 | `SpaceStillBoundInWorkingSet`（列出 WorkingSet）、`SpaceStillHasTrackers` |
+| `deleteProductSpace` | productSpaceId | 仅默认工作集；空间无业务对象引用（含软删后仍保留的对象）、无 TrackerItem，也无外部 Tracker 引用空间内 Tracker | 受理后逐工作集清理该空间的绑定，再从叶子逐个删除空 Tracker，最终删除 ProductSpace | `SpaceHasBusinessReferences`、`SpaceStillHasTrackers` |
 | `deleteWorkingSet` | workingSetId | ① 非默认 WorkingSet（Id=1 始终不可删）；② 全部 TrackerBinding 均可合法解除——Shared 直接解除（不受 Item 限制）、非共享须通过 Item/组织子级/派生子级三项检查；③ 全部 TrackerBinding 解除后，才显式解除该 WorkingSet 的 SpaceBinding；④ 任一关系不能合法解除即拒绝删除 | 显式解除全部 TrackerBinding → 显式解除 SpaceBinding → 删除 WorkingSet；**不允许通过隐式级联绕过规则** | `DefaultWorkingSetUndeletable`、`MemberCannotBeUnbound`（列出成员与原因） |
 
 **业务准入与行为顺序**：`deleteWorkingSet` 定义的是准入条件与解除顺序，不预设跨聚合数据库大事务。
 
-**ProductSpace 删除的引用完整性**：移除最后一个 Tracker 后 SpaceBinding 仍保留（SB-3）；成功执行 `removeSpace` 才解除对应 SpaceBinding。因此删除 ProductSpace 必须显式审查**所有 WorkingSet 的 SpaceBinding**；只检查 TrackerBinding 会留下指向已删除空间的悬空绑定（INV-066）。
+**产品空间删除入口**为 `DELETE /api/worksets/1/product-spaces/{spaceId}`。`202 Accepted` 表示预检通过并已可靠登记。每次消费最多修改一个聚合，绑定与空容器清理完成后才物理删除空间。流程不删除任何工作集或业务对象。
 
 ### 4.4 新建原生跟踪分类（Tracker）
 
 - `GET /api/worksets/metadata/classifications` 返回可选的 `classificationId` 及元数据的 `sharingMode`，供创建表单按 [POL-003](facts.md) 显示可选共享方式。
 - `POST /api/worksets/{workingSetId}/trackers` 仍只允许在默认工作集创建业务原生 Tracker，产品空间必须已绑定。Tracker 独立提交后发布 `TrackerCreatedEvent`，监听器另行保存 WorkingSet 绑定；`201` 不保证绑定已收敛，绑定失败的公开语义待评审。产品空间独立创建/删除入口见 [实现边界](../implementation/current-boundaries.md)。
 - Tracker 绑定来自产品空间创建后的异步初始化、工作集创建或扩展任务，以及空间内新建 Tracker 后发布的事件。
+- `PATCH /api/worksets/{workingSetId}/product-spaces/{spaceId}/trackers/{trackerId}/visibility` 使用 `shown` 修改指定空间内的 Tracker 绑定可见性。Tracker 在所选空间中无绑定时返回 `TrackerBindingNotFound`。
 - 名称必填，去除首尾空白后最多 255 个字符，同一产品空间及所属分类内重名返回 `409`。在子工作集请求原生创建返回 `409`，不相容的共享方式返回 `422`。手动新建不设置默认标记。
 
 ## 5. 移除 / 删除 / 软删 / 彻底删除（K1，用户确认）
 
 | 概念 | 契约 |
 | --- | --- |
-| 绑定移除（unbind） | 解除 WorkingSet 与 Tracker 的关系；Shared 不删除聚合（即使有 Item 也允许），非共享才删除聚合；与业务内容删除无关 |
+| 绑定移除（unbind） | 聚合删除流程内解除 WorkingSet 与 Tracker 或 ProductSpace 的关系，准入见第 4.3 节 |
 | 聚合删除（delete） | Tracker／ProductSpace／WorkingSet 不再作为有效业务对象存在；受第 4.3 节约束 |
 | 业务 TrackerItem 删除 | 业务 BC 的 Item 生命周期；Merge 可传递删除但由目标 BC 校验提交；不在本契约 |
 | 软删 / 归档 / 恢复 | **不纳入本版契约**；未来如需支持，作为独立能力设计 |
@@ -136,7 +131,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 ## 6. 级联边界（K2 / K3，用户确认）
 
 - **删 Tracker（K2）**：存在组织子级（其他 Tracker 的 `parentId` 指向它）、存在派生子级（其他 Tracker 的 `sourceId` 指向它）、或存在 TrackerItem 时，**禁止删除**；**不自动级联删除子 Tracker、不自动断开或重挂 `parentId`/`sourceId`**。
-- **删 ProductSpace**：不得存在任何 WorkingSet 的有效 SpaceBinding（即使该 WS 已无 TrackerBinding）；如仍有 TrackerBinding，必须先按 Tracker 的解除规则处理，不得直接清理绑定或级联删 Tracker；不因删除 ProductSpace 自动删除其他 WorkingSet 或 Tracker；保留 ProductSpace 在默认 WorkingSet 维护生命周期的既有规则。
+- **删 ProductSpace**：引用审查与清理顺序见第 4.3 节。
 - **删 WorkingSet（K3）**：默认 WorkingSet（Id=1）始终不可删除；删除前须能合法解除全部 TrackerBinding 与 SpaceBinding（Shared 解绑不受 Item 限制，非共享须三项检查）；解除顺序为 TrackerBinding → SpaceBinding → WorkingSet；存在任何不能合法解除的关系即拒绝，不允许隐式级联绕过。
 - **不存在“停用”生命周期**：WorkingSet 与 Tracker 都没有停用状态或停用命令（用户 2026-11-12 裁定）；删除契约中不引入任何停用状态及其行为。
 
@@ -158,7 +153,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | K1 删除语义（不可恢复、软删不纳入、不强制物理 DELETE） | **用户确认**（2026-11-11，POL-016、INV-068） |
 | K2 Tracker 删除三条件与不级联/不断链 | **用户确认**（2026-11-11，INV-065） |
 | K3 子 WorkingSet 删除的成员关系约束与解除顺序 | **用户确认**（2026-11-11，INV-067） |
-| `deleteProductSpace` 的引用完整性（所有 WorkingSet 的 SpaceBinding 均须为空） | **用户确认**（2026-11-11，INV-066） |
+| `deleteProductSpace` 的引用完整性 | **用户确认**（2026-11-20，替换 2026-11-11 要求用户先清理绑定的操作方式，见第 4.3 节） |
 | 绑定 Entity 属性集、身份键命名、操作签名与失败分类 | **契约 v1（本文件冻结）**；实现细节留后续 |
 | 数据库表、唯一约束实现、并发锁、物理清理策略、软删字段 | **不在本契约** |
 

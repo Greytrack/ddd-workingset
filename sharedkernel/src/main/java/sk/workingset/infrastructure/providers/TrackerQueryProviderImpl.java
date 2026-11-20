@@ -8,6 +8,8 @@ import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.workingset.WorkingSetId;
 
+import java.util.List;
+
 /**
  * Tracker 只读布尔查询的 JDBC 适配器。
  */
@@ -33,8 +35,22 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     }
 
     @Override
-    public boolean hasTrackersInSpace(String spaceId) {
-        return exists("work_space = ?", Long.valueOf(spaceId));
+    public List<TrackerId> findTrackerIdsInSpace(String spaceId) {
+        return jdbc.queryForList("""
+                SELECT id FROM air_inst_tracker_rev WHERE work_space = ? ORDER BY id
+                """, Long.class, Long.valueOf(spaceId)).stream().map(TrackerId::of).toList();
+    }
+
+    @Override
+    public boolean hasExternalTrackerReferences(String spaceId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM air_inst_tracker_rev tracker
+                    JOIN air_inst_tracker_rev child
+                      ON child.source_branch_id = tracker.id OR child.parent_id = tracker.id
+                    WHERE tracker.work_space = ? AND child.work_space <> tracker.work_space
+                )
+                """, Boolean.class, Long.valueOf(spaceId)));
     }
 
     @Override

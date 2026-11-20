@@ -145,9 +145,9 @@ public class WorkingSetCommandService {
      * 切换 Tracker 在工作集的显示状态。
      */
     @Transactional
-    public void setTrackerShown(WorkingSetId workingSet, TrackerId tracker, boolean shown) {
+    public void setTrackerShown(WorkingSetId workingSet, long spaceId, TrackerId tracker, boolean shown) {
         WorkingSet target = writable(workingSet);
-        target.setTrackerShown(tracker, shown);
+        target.setTrackerShown(spaceId, tracker, shown);
         workingSets.save(target);
     }
 

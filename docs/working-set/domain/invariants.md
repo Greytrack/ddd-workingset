@@ -85,15 +85,15 @@
 | `INV-055` | 同一 WorkingSet 内 ProductSpace 绑定唯一。 | Confirmed；`POL-012` | SCN-050 |
 | `INV-056` | 同一（工作集，空间，分类）可纳入多个 Tracker，有效范围内至多一个默认 Tracker。 | Confirmed；`POL-012`、[T6-F 默认资格裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认) | SCN-050/051 |
 | `INV-057` | Shared Tracker 在多个 WS 共享同一聚合身份；非共享在子 WS 拥有独立派生身份。 | Confirmed；`POL-013` | SCN-052 |
-| `INV-058` | 删除/移除八条语义（见 `POL-014`）。 | Confirmed；`POL-014`；边界由 `INV-064` 澄清 | SCN-052/053 |
+| `INV-058` | 聚合删除及绑定解除受 `POL-014` 约束。 | Confirmed；`POL-014`；边界由 `INV-064` 澄清 | SCN-052/053 |
 | `INV-059` | 默认 WS 不可删除/隐藏；Tracker `parentId` 创建后不可变。 | Confirmed；FACT-026、`INV-022` | SCN-054 |
 | `INV-060` | SpaceBinding、TrackerBinding 是 WorkingSet 聚合内 Entity；ProductSpace/Tracker 不持有绑定。 | Confirmed；`POL-015` | SCN-050/052 |
 | `INV-061` | 未物化变体可以参与 Diff。 | Confirmed；FACT-027 | SCN-055 |
 | `INV-062` | 未物化目标被 Merge 修改时构建业务聚合正常 save（物化与修改一体）。 | Confirmed；FACT-027 | SCN-055 |
 | `INV-063` | MergeRound 记录参数/进度/结果；决策和确认归 MergeRound；必须与本轮结果一起提交，跨轮次查询只读。 | Confirmed；FACT-027 | SCN-056/059/060 |
-| `INV-064` | “有 TrackerItem 不允许移除”只约束聚合删除；Shared 解绑不受该约束。 | Confirmed；T2 K1/K3 | SCN-052/061 |
+| `INV-064` | 删除子工作集时，Shared TrackerItem 不阻止解除其 Shared 绑定。 | Confirmed；T2 K1/K3 | SCN-061/063 |
 | `INV-065` | 非共享 Tracker 解绑/删除必须同时满足：无 TrackerItem、无组织子级、无派生子级。 | Confirmed；T2 K2 | SCN-061/062 |
-| `INV-066` | 删除 ProductSpace 前所有 WorkingSet 无指向它的 SpaceBinding，且空间下无 Tracker。 | Confirmed；T2 | SCN-064 |
+| `INV-066` | 产品空间最终删除时无绑定、Tracker 或业务引用。受理准入及清理顺序见[绑定与删除契约 §4.3](binding-deletion-contract-v1.md#43-聚合删除)。 | Confirmed；2026-11-20 澄清 | SCN-064 |
 | `INV-067` | 删除 WorkingSet 前全部 TrackerBinding/SpaceBinding 可合法解除；默认 WS 始终不可删。 | Confirmed；T2 K3 | SCN-063 |
 | `INV-068` | 删除后不可恢复；软删/归档/恢复不属于 T2 本版；彻底删除不强制物理 DELETE。 | Confirmed；`POL-016` | SCN-061/065 |
 
