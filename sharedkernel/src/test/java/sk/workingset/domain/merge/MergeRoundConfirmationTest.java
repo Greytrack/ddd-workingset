@@ -46,6 +46,38 @@ class MergeRoundConfirmationTest {
         assertEquals(MergeRound.Outcome.Applied, outcome.complete(Instant.now()).result().itemResults().getFirst().outcome());
     }
 
+    @Test
+    void onlyAcceptedAdditionConfirmsAutomatically() {
+        var pair = new TrackerPair(SOURCE, TrackerId.of("12"), TARGET, TrackerId.of("13"));
+        Side present = side("30", "source");
+        Side deleted = new Side(LocalId.of("31"), LocalId.of("31"), BEFORE, BEFORE,
+                null, 2L, Presence.DELETED, null, Map.of());
+        var addition = new Difference(CommonId.of("10"), pair, present, deleted, List.of());
+        var deletion = new Difference(CommonId.of("10"), pair, deleted, present, List.of());
+        var accept = new MergeDecision(Map.of(), MergeDecision.ExistenceAction.ACCEPT, false);
+        var ignore = new MergeDecision(Map.of(), MergeDecision.ExistenceAction.IGNORED, false);
+        assertEquals(Comparison.ChangeKind.ADDED, addition.kind());
+        accept.validate(addition);
+        ignore.validate(addition);
+        accept.validate(deletion);
+        assertTrue(accept.confirmsOnSuccess(addition));
+        assertFalse(ignore.confirmsOnSuccess(addition));
+        assertFalse(accept.confirmsOnSuccess(deletion));
+        assertThrows(DomainException.class, () ->
+                new MergeDecision(Map.of(), MergeDecision.ExistenceAction.ACCEPT, true).validate(addition));
+    }
+
+    @Test
+    void missingFieldIsNotAnImplicitIgnore() {
+        var existing = round(false).entries().getFirst().evidence();
+        var twoFields = new Difference(existing.family(), existing.trackers(), existing.source(),
+                existing.target(), List.of("title", "description"));
+        assertThrows(DomainException.class, () ->
+                new MergeDecision(Map.of("title", MergeDecision.FieldAction.ACCEPT), null, false).validate(twoFields));
+        assertDoesNotThrow(() -> new MergeDecision(Map.of("title", MergeDecision.FieldAction.ACCEPT,
+                "description", MergeDecision.FieldAction.IGNORED), null, false).validate(twoFields));
+    }
+
     private static MergeRound round(boolean markAsMerged) {
         var difference = new Difference(CommonId.of("10"), new TrackerPair(SOURCE, TrackerId.of("12"),
                 TARGET, TrackerId.of("13")), side("30", "old"), side("31", "new"), List.of("title"));

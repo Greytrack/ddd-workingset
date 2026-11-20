@@ -96,7 +96,7 @@ public class MergeComparisonService {
             if (handled(pair, family, left, right)) {
                 continue;
             }
-            if (left.presence() == Presence.ABSENT && right.presence() == Presence.ABSENT) {
+            if (absentOrDeleted(left) && absentOrDeleted(right)) {
                 continue;
             }
             ChangeKind kind = Difference.classify(left, right);
@@ -112,7 +112,14 @@ public class MergeComparisonService {
         return new Comparison(source, target, Instant.now(), List.of(pair), differences);
     }
 
+    private static boolean absentOrDeleted(Side side) {
+        return side.presence() == Presence.ABSENT || side.presence() == Presence.DELETED;
+    }
+
     private boolean handled(Comparison.TrackerPair trackers, CommonId family, Side left, Side right) {
+        if (left.presence() != Presence.PRESENT || right.presence() != Presence.PRESENT) {
+            return false;
+        }
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), family);
         boolean leftIsA = key.a().equals(trackers.source());
         sk.workingset.domain.Revision aRevision = leftIsA ? left.revision() : right.revision();
@@ -140,15 +147,6 @@ public class MergeComparisonService {
                                 : new TrackerPair(source, tracker.sourceId(), target, tracker.trackerId()))).toList();
     }
 
-    public boolean isMergeBack(WorkingSetId source, WorkingSetId target) {
-        return target.equals(workingSet(source).parentWorkingSetId());
-    }
-
-    /**
-     * The source tracker must be the child's direct sourceId, must belong to the direct parent
-     * Working Set, and must be inside that parent's effective range. No ancestor fallback and no
-     * sibling pairing: a child's siblings are never candidates for each other.
-     */
     private boolean parentIncludes(WorkingSet source, WorkingSet target, Tracker child) {
         if (child.sourceId() == null) {
             return false;
@@ -172,7 +170,7 @@ public class MergeComparisonService {
 
     private Map<CommonId, LocalId> familyIds(TrackerId tracker) {
         Map<CommonId, LocalId> families = new LinkedHashMap<>();
-        catalog.identities(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
+        catalog.identitiesForMerge(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
         itemQueries.findInTracker(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
         return families;
     }
@@ -190,7 +188,8 @@ public class MergeComparisonService {
             sk.workingset.domain.Revision revision = variant == null || !inherited ? stamp.revision() : variant.revision();
             sk.workingset.domain.Revision contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
             if (!inherited && stamp.deleted()) {
-                return Side.absent();
+                return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),
+                        Presence.DELETED, null, Map.of());
             }
             sk.workingset.application.TrackerItemContent content = inherited ? port.readInheritedAt(contentRevision) : port.readAt(contentRevision);
             return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),

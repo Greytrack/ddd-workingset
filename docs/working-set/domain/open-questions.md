@@ -11,7 +11,6 @@
 | P0 | `QUESTION-006` | **历史按 Source Cut 回读的保留期限、读取与删除守卫** | 已确认：首次编辑所需派生内容必须可读；永久删除不保留历史；附件/关系固定为派生时状态。剩余：保留多久、删除来源前的守卫、历史不可用的失败语义 | 决定 COW、Compare、审计与来源删除顺序；当前实现只保证已存快照可读，未定义保留期 | 覆盖单版次对象、`delete2`、来源删除后首次编辑、历史缺失四类场景 |
 | P0 | `QUESTION-010` | **关系服务的可见性、删除守卫与接入** | 身份裁定 C 见 [原裁定](../reviews/2026-11-15-question-010-relation-identity-decision.md)。WorkingSet 侧事件已实现；[消费守卫矩阵](../reviews/2026-11-17-t7-e-relation-guards-decision.md#5-关系服务侧的守卫矩阵)待确认和接入 | 影响真实关系数据的创建、悬空引用修复及消费契约 | 对缺失、软删、永久删除、后续纳入、钉版不可读做端到端验收 |
 | P1 | `QUESTION-004` | **CommonId 跨实例并发与去重协议** | 已确认：默认 WS 同一雪花、非默认两个不等雪花、派生继承 CommonId、软删占键、冲突 409。剩余：多实例并发生成/校验、重试与唯一约束的兜底边界 | 决定唯一索引、ID 生成器与冲突重试；不重开身份语义 | 并发创建/派生/回并 + 唯一约束冲突注入 |
-| P1 | `QUESTION-008.b` | **同一 MergeEntry 内字段级 `DEFER` 与 `ACCEPT` 能否混用？** | A 任一 `DEFER` 使整条条目 `Deferred`，不写任何字段（当前实现）；B 应用 `ACCEPT` 字段，`DEFER` 字段留待新轮次；C 禁止同一条目混用 | 决定 `MergeDecision` 校验、`EntryResult` 表达与 Checkpoint 确认条件；当前实现选择 A 但契约未明确 | 以“一字段接受、一字段延迟”验证结果与后续轮次 |
 | P1 | `QUESTION-008.c` | **Checkpoint 命中使用的“版次”口径** | A 统一用变体业务 Revision（Source-backed 侧为 LTI Revision；当前实现）；B 用实际读取的内容版次（Source-backed 侧为 `SourceRevision`）；C 双侧分别按状态取版次并同时保存两者 | 决定 Compare 隐藏已处理差异与 Confirm 写入的 revisionA/B 是否总能对齐；D-018 允许 LTI Revision 与业务 Revision 不同步 | 以 Source-backed 目标 + 普通编辑 + 显式升级三类组合验证命中/过时 |
 | P1 | `QUESTION-011` | **业务 Baseline 的含义** | A Snapshot；B 发布清单；C Merge Base；D 多概念并存但分别命名 | 决定不可变性、保留、引用语义；避免与仓库 Design Baseline、Merge Base 混淆 | 收集业务人员使用“基线”的原句与操作；T6-G |
 | P2 | `QUESTION-012` | **Working Set 与 Binding 的规模、并发上限** | A 小集合单聚合；B 大集合版本化 Manifest；C 分片准备 + 发布指针 | 决定 WorkingSet 聚合装载/热点与是否引入 Manifest；不阻塞当前语义 | 采集 P95/P99 数量、写并发、发布频率与允许时延 |
@@ -20,6 +19,9 @@
 | P2 | `QUESTION-018` | **T7-E 关系构建失败后的重试与修复边界** | A 只记录失败明细，人工修复；B 自动重投；C 定时对账修复 | 决定 Reference/Association 的最终一致责任与幂等键 | 与 `QUESTION-010` 六类场景合并验证 |
 
 `QUESTION-002.k` 已关闭，见 [Shared 默认与删除补位裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)。
+
+
+`QUESTION-008.b` 已关闭：取消延期；新增/删除行级接受或忽略，更新逐字段接受或忽略。软删恢复与确认规则见[执行契约 §7](merge-execution-contract-v1.md#7-接收忽略与行级确认)。
 
 ## 已关闭问题索引
 

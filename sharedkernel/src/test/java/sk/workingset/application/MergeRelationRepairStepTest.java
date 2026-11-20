@@ -47,10 +47,10 @@ class MergeRelationRepairStepTest {
     }
 
     @Test
-    void ignoresKeepTargetRejectedAndDeferredEntries() {
+    void ignoresIgnoredAndRejectedEntries() {
         WorkingSetId targetWorkingSet = WorkingSetId.of("259712159403968");
         MergeRound round = MergeRound.prepare("261365428617152", "request-2", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
-                .register(entry("258520000000010", "265506033508288", "261158455371712", "265864557082560", new MergeDecision(Map.of("title", FieldAction.KEEP_TARGET),
+                .register(entry("258520000000010", "265506033508288", "261158455371712", "265864557082560", new MergeDecision(Map.of("title", FieldAction.IGNORED),
                         null, false)))
                 .register(entry("258520000000011", "258520000000013", "258520000000015", "258520000000016", new MergeDecision(Map.of("title", FieldAction.ACCEPT),
                         null, false)))
@@ -61,8 +61,8 @@ class MergeRelationRepairStepTest {
                     switch (entry.id()) {
                         case "258520000000010" -> Outcome.Applied;
                         case "258520000000011" -> Outcome.Rejected;
-                        default -> Outcome.Deferred;
-                    }, entry.decision().markAsMerged() ? "DEFER" : "KEEP_TARGET", null, null, null));
+                        default -> Outcome.Rejected;
+                    }, "IGNORED", null, null, null));
         }
         round = round.complete(Instant.now());
 

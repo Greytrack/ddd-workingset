@@ -56,12 +56,9 @@ public final class RequirementMergeWriter {
     }
 
     private MergeEntryResolvedEvent applyCommand(MergeEntryApprovedEvent command) {
-        if (command.mergeBackCreate()) {
-            java.util.Optional<Requirement> familyMember = repository.lockFamilyInWorkingSet(
-                    command.trackerId(), command.commonId());
-            if (familyMember.isPresent()) {
-                return restoreMergeBack(command, familyMember.orElseThrow());
-            }
+        if (command.operation() == MergeEntryApprovedEvent.Operation.CREATE
+                && repository.lockFamilyInWorkingSet(command.trackerId(), command.commonId()).isPresent()) {
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "target working set family is already occupied");
         }
         java.util.Optional<Requirement> existing = repository.lockById(command.localId());
         if (command.expectedLockVersion() == null && existing.isPresent()
@@ -88,21 +85,10 @@ public final class RequirementMergeWriter {
                     text(command.acceptedFields(), "title", current.title()),
                     text(command.acceptedFields(), "description", current.description()), expected);
             case DELETE -> current.delete(expected);
-            case RESTORE -> current.undelete(expected);
+            case RESTORE -> current.restoreContent(text(command.baseFields(), "title", null),
+                    text(command.baseFields(), "description", null), expected);
             case CREATE -> throw DomainException.withMessage(MergeResCode.CONFLICT, "target already exists");
         };
-        requirements.saveChange(current, changed);
-        return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
-                changed.localId(), command.sourceRevision(), changed.revision(), false,
-                command.inherited(), null);
-    }
-
-    private MergeEntryResolvedEvent restoreMergeBack(MergeEntryApprovedEvent command, Requirement current) {
-        if (!current.deleted() || !current.trackerId().equals(command.trackerId())) {
-            throw DomainException.withMessage(MergeResCode.CONFLICT, "target working set family is already occupied");
-        }
-        Requirement changed = current.restoreContent(text(command.baseFields(), "title", null),
-                text(command.baseFields(), "description", null), current.lockVersion());
         requirements.saveChange(current, changed);
         return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
                 changed.localId(), command.sourceRevision(), changed.revision(), false,

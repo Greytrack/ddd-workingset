@@ -7,7 +7,6 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.CowEventHandler;
-import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.*;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
@@ -33,7 +32,6 @@ class CowEventHandlerTest {
     @Test
     void changed_source_publishes_a_materialization_request_for_each_unmaterialized_target() {
         LightTrackerItemRepository items = mock(LightTrackerItemRepository.class);
-        CowFailureLogQueryProvider failures = mock(CowFailureLogQueryProvider.class);
         ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
         LocalId source = LocalId.of("261802623213504");
         Revision before = Revision.of(3);
@@ -55,7 +53,7 @@ class CowEventHandlerTest {
                 ((org.springframework.transaction.support.TransactionCallback<?>) invocation.getArgument(0))
                         .doInTransaction(mock(TransactionStatus.class)));
 
-        CowEventHandler handler = new CowEventHandler(items, failures, transaction, store, events);
+        CowEventHandler handler = new CowEventHandler(items, transaction, store, events);
         handler.onTrackerItemChanged(event);
 
         ArgumentCaptor<TrackerItemMaterializationRequestedEvent> request =

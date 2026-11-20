@@ -18,7 +18,6 @@ public class JdbcLightTrackerItemFamilyStore implements LightTrackerItemFamilySt
     private final JdbcCommonInstanceStore commonInstances;
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY, noRollbackFor = RuntimeException.class)
     public boolean claim(LightTrackerItem item) {
         boolean inserted = index.claimFamily(item);
         if (inserted && !item.materialized()) {

@@ -104,18 +104,19 @@
 
 **来源**：`FACT-008`、`INV-007/008/009`；**状态**：Reported / Pending。
 
-- **Given** 标题选择 ACCEPT，描述选择 KEEP_TARGET，所有适用差异已决定。
+- **Given** 标题选择 ACCEPT，描述选择 IGNORED，所有适用差异已决定。
 - **When** 用户提交 `markAsMerged=true`。
 - **Then（候选预期）** 目标业务能力整体校验并应用标题，保留描述，记录真实 Apply Result 与处理确认；不得声称内容物理相等。
-- **反例**：任一适用字段为 DEFER 时必须拒绝 true；两个分别合法字段组合后整体非法。
+- **反例**：有差异字段未选择时拒绝提交；两个分别合法字段组合后仍可能整体非法。
 
-## KEEP_TARGET 的已处理确认
+<a id="keep_target-的已处理确认"></a>
+## 忽略更新字段后的确认
 
 **用户已确认。** 内容未合并、双侧仍然不同，也允许以 `markAsMerged=true` 标记已处理。决策结果记入 MergeCheckpoint。下一次比对时，只要两边版次都没有发生变化，就不再显示该差异。
 
 例如源标题为「定稿」，目标为「初稿」。用户选择保留目标并标记已处理，目标仍为「初稿」。MergeCheckpoint 保存该决定及对应双侧版次，后续同版次组合比对抑制该差异。
 
-确认依据为本对话中用户对 KEEP_TARGET 的明确答复。用户进一步明确「版次」为显式升级的业务版次。普通修改增加乐观锁 `lock_version`，业务版次不增加，也不产生新版次历史数据。显式升级才产生版次历史数据，并将版次号向前推进 +1。即使普通编辑改变了标题，只要双侧业务版次未变，已处理差异仍继续隐藏。关联 [阶段 3 裁定进度](../reviews/2026-11-09-stage-3-architecture-review.md#裁定进度)。
+确认依据为本对话中用户对保留目标的原裁定及 QUESTION-008.b 的新选择范围。用户进一步明确「版次」为显式升级的业务版次。普通修改增加乐观锁 `lock_version`，业务版次不增加，也不产生新版次历史数据。显式升级才产生版次历史数据，并将版次号向前推进 +1。即使普通编辑改变了标题，只要双侧业务版次未变，已处理差异仍继续隐藏。关联 [阶段 3 裁定进度](../reviews/2026-11-09-stage-3-architecture-review.md#裁定进度)。
 
 ## `SCN-009` 合并后 source 再次修改
 
@@ -688,15 +689,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then A 不追加新记录，当前基准仍为 B；业务内容与业务 Revision 均不变。
 
 <a id="scn-059"></a>
-## SCN-059 DEFER 残留与轮次终态
+## SCN-059 接收、忽略与轮次终态
 
-**业务规则：INV-008 与 D-019 已确认；轮次一次执行即终态、不可重开为 2026-11-11 用户裁定（方案 B）；验收表述 Draft。** 关联 [契约 §7/§8](../domain/merge-execution-contract-v1.md)、INV-063。
-
-- Given 一轮三项：A `ACCEPT`、B `KEEP_TARGET`、C `DEFER`；A、B 均成功。
-- When 用户对 C 提交 `DEFER + markAsMerged=true`；或以 `DEFER + markAsMerged=false` 登记后结束本轮执行。
-- Then ① `DEFER + markAsMerged=true` 在提交一页决策时被拒绝（非法组合）；② `DEFER + markAsMerged=false` 合法，条目不执行、不建 Checkpoint；③ 本轮存在其他成功项时，本次执行结束返回唯一 `ApplyResult`，状态 `PartiallySucceeded`；④ 未处理差异进入后续新轮次，不要求先处理 C 才能关闭本轮。
-- 可观察结果：C 在 `ApplyResult` 中为 `Deferred` 并计入未完成计数；轮次进入终态后不可重开、不可再登记或重新执行条目。
-- 边界：`KEEP_TARGET + markAsMerged=true` 属于**成功处理项**（未写内容但已处理），与 `DEFER` 不同；纯 `DEFER` 轮次按现行终态判定规则归入 `Failed`，本轮不新增专用状态枚举。
+- Given 新增 A 被接收，删除 B 被忽略，更新 C 的标题接收、描述忽略且不标记已处理。
+- Then A 新建或按原 LocalId 恢复并自动确认；B 不写目标或确认；C 只改标题，不写确认。三项成功时轮次为 `Succeeded`。
+- Then 下轮仍展示未被确认且仍存在的差异。对于更新，如果所有字段都忽略且标记已处理，只写确认，不修改目标内容。
 
 <a id="scn-060"></a>
 ## SCN-060 部分成功后以新轮次重做未完成项

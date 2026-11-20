@@ -69,10 +69,10 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 `executeEntry` 的内部步骤（一次执行的完整行为契约）：
 
 1. **复核证据**：以用户提交并随 MergeRound 持久化的所选差异证据与当前双侧状态比对；不一致 → `StaleEvidence`，不写任何内容，要求重新比较。
-2. **确定目标操作**：依 `ItemMergeDecision` 得到目标操作——字段赋值集合、显式存在性操作（创建或删除，回并恢复原变体见 §8）、或「无写入」（`KEEP_TARGET`）、或「保持未完成」（`DEFER`）。
+2. **确定目标操作**：依 `ItemMergeDecision` 得到目标操作——按差异类型应用行决策或字段决策；忽略时不写目标，软删目标的新增接收见 §8。
 3. **请求业务 BC 执行**：通过可靠事件提交（携带期望版本与证据引用）；BC 构建目标聚合并**整体校验**；成功 → Save 并返回真实结果与业务 Revision；拒绝 → `Rejected`（保留决定与拒绝原因，目标不得部分写入，INV-009）。
 4. **维护 LightTrackerItem**：目标若尚未物化，业务聚合 Save 成功后按既定机制转为 Local-backed（有效来源=自身、Revision=自身 Revision，D-012/D-018/D-019）；**不新增 Merge 专用物化协议**。
-5. **登记业务结果和确认**：成功且 `markAsMerged=true` 时，条目生成不可变确认，轮次仓储在同一事务记录结果和确认行；其他情况只记录条目结果。
+5. **登记业务结果和确认**：按 §7 判定本次成功是否需要写确认；需要时条目生成不可变确认，轮次仓储在同一事务记录结果和确认行；其他情况只记录条目结果。
 6. **结束**：所有条目完成时，保存唯一终态；若最后的条目需要确认，确认行与终态同事务提交。写入失败会回滚本次轮次变更；可重投已提交的业务结果。
 
 ## 5. MergeEntry 生命周期
@@ -83,17 +83,15 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 | 状态 | 含义 | 可迁移到 |
 | --- | --- | --- |
-| `Decided` | 决定已登记，等待执行 | `Applying`、`StaleEvidence`、`Deferred` |
+| `Decided` | 决定已登记，等待执行 | `Applying`、`StaleEvidence` |
 | `Applying` | 已提交业务 BC，等待结果 | `Applied`、`Rejected` |
-| `Applied` | 业务操作成功（含 `KEEP_TARGET` 的无写入） | 轮次保存时无需确认则记 `Applied`；需确认则同事务记 `Confirmed` 和确认行 |
+| `Applied` | 业务操作成功（含 `IGNORED` 的无写入） | 轮次保存时无需确认则记 `Applied`；需确认则同事务记 `Confirmed` 和确认行 |
 | `Rejected` | 业务 BC 校验拒绝 | 终态（重做须新建 MergeRound） |
 | `StaleEvidence` | 提交依据已过期 | 终态；须重新 `compare` 并新建 MergeRound |
-| `Deferred` | 用户显式延迟 | 终态（本轮不可完成，进入后续新轮次） |
 | `Confirmed` | 已记录 Checkpoint | 终态 |
 
 约束：
 
-- `Deferred` **不得**迁移到 `Confirmed`（INV-008）；
 - `StaleEvidence` 不得直接执行，必须先重新比较；
 - `Applied` 是业务事实，`Confirmed` 是处理事实，两者分离（FACT-008）；
 - 条目终态后不可再次执行；**跨轮次重做必须新建 MergeRound**（新 `mergeRoundId`），原结果保留可追溯（Q4）。
@@ -106,33 +104,35 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 | 步骤 | 提交边界与验收 |
 | --- | --- |
-| 业务提交 | 业务 BC 独立提交目标内容和结果事件。KEEP_TARGET 无业务写入，轮次可以直接登记结果。 |
+| 业务提交 | 业务 BC 独立提交目标内容和结果事件。没有接收任何变更时无业务写入，轮次可以直接登记结果。 |
 | 轮次提交 | 消费业务结果，按轮次和条目幂等推进。每轮每族至多一项；需要确认时用条目雪花 ID 追加确认行。若插入失败，条目和轮次状态都回滚，Tracker 对闸门保持占用。 |
 | 重投 | 重投已提交的业务结果即可继续轮次收敛；已经终结的 A 轮不会重新追加确认，不改变 B 轮基准。 |
 | 比较 | 只读查询按 Tracker 对和家族取最新行，再校验状态与双侧版次。比较凭据仍需在登记及执行时复核。 |
 
 物理映射、旧表列与旧端兼容细节见[实施记录](../implementation/merge-checkpoint-rework-plan.md)；本契约只约束领域语义和跨轮次查询规则。
 
-## 7. ACCEPT / KEEP_TARGET / DEFER 与 markAsMerged 行为矩阵
+## 7. 接收、忽略与行级确认
 
-| 决定 | markAsMerged | 目标写入 | 条目终态 | 合并确认 | 对本轮终态的影响 |
-| --- | --- | --- | --- | --- | --- |
-| `ACCEPT`（字段/存在性） | true | 目标 BC 整体校验后 Save | `Applied` → `Confirmed` | `confirm` | 成功处理项 |
-| `ACCEPT` | false | 同上 | `Applied` | 不更新 | 成功处理项 |
-| `KEEP_TARGET` | true | **不写**（显式保留目标） | `Applied` → `Confirmed` | `confirm`（记录已处理，不伪造相等） | 成功处理项（未写内容但已处理） |
-| `KEEP_TARGET` | false | 不写 | `Applied` | 不更新 | 成功处理项 |
-| `DEFER` | true | 不写 | **非法，拒绝登记** | — | — |
-| `DEFER` | false | 不写 | `Deferred` | 不更新 | 未完成项；本轮可关闭但非 `Succeeded` |
-| 任意（BC 拒绝） | 任意 | 不写，不得部分写入 | `Rejected` | 不更新 | 未完成项；重做须新建轮次 |
-| 任意（证据过期） | 任意 | 不写 | `StaleEvidence` | 不更新 | 未完成项；重新比较后新建轮次 |
+**QUESTION-008.b 已裁定。** 对外动作只有 `ACCEPT` 和 `IGNORED`，没有延期状态。新增、删除提交 `existence` 行级选择；更新必须给每个差异字段提交一个选择，且可单独指定行级 `markAsMerged`。字段未填写不是忽略。
 
-补充规则（已确认）：`ACCEPT` 执行时读取源端**最新值**（B09/R08）；目标同字段更新不要求重新审阅（决策优先，R09）；单字段不可读时该条未完成、批次继续。
+| 差异 | 决策 | 业务写入 | 成功后确认 |
+| --- | --- | --- | --- |
+| 新增 | `ACCEPT` | 新建；软删目标则恢复原变体 | 自动写入，使用提交后的目标版次 |
+| 新增 | `IGNORED` | 无 | 不写 |
+| 删除 | `ACCEPT` | 删除目标 | 不写 |
+| 删除 | `IGNORED` | 无 | 不写 |
+| 更新 | 每字段 `ACCEPT` / `IGNORED` | 一次提交所有接收字段；忽略值保留目标原值；全部忽略不写内容 | 仅当 `markAsMerged=true` 才写；确认覆盖当前版次的整行 |
+
+执行接收字段仍取源端最新值（B09/R08）；同版次目标字段变动遵循决策优先（R09）；任一实际接收值不可读则整条失败，不部分写入。
+
+行级新增/删除不接受由客户端开启 `markAsMerged`。忽略是本轮正常完成；未确认且差异仍存在时，下次比较继续展示。BC 拒绝、冲突、过期证据不写确认。
 
 ## 8. 轮次终态与结果表达
 
-**C11（2026-11-13 用户裁定）**：Compare 过滤软删对象，已软删的目标侧显示 `ABSENT`；用户可选动作不包含 `RESTORE`。
+**软删目标（QUESTION-008.b 最新裁定）**：来源存在而目标软删时，对外差异类型为新增（`ADDED`），证据保留目标 `Presence.DELETED`、原 LocalId 与乐观锁。接收后，业务 BC 使用该身份及期望锁恢复目标，沿用原变体及自身版次；不创建第二个同族对象。恢复成功自动确认。客户端不提交 `RESTORE`，它只是内部业务操作。
 
-**T6-D 回并（用户确认）**：子工作集原生新增 Item 只经直属父子 Compare → 显式 `CREATE` → Apply 回并。目标 BC 在条目写入事务内按目标工作集和 CommonId 检查家族席位。席位空闲时按 [T4 身份规则](cross-bc-contract-v1.md#4-六个用例的契约边界)创建；同 Tracker 的原变体软删时，恢复并合入源侧业务内容，保留原 LocalId、CommonId 和目标业务版次，一次提交后可见。其他 Tracker 占用席位时为冲突。已存在的有效候选不能登记 `CREATE`；登记后目标变为可见时仍按 §3.3 处理过期证据。恢复更新失败时原变体保持软删。回并来源沿用轮次及其冻结比较证据。
+
+**新建家族保护**：席位空闲时按 [T4 身份规则](cross-bc-contract-v1.md#4-六个用例的契约边界)创建。目标工作集中若由另一个 Tracker 占用同族席位，返回冲突；软删目标恢复时若并发变化，按证据过期或乐观锁冲突处理，不降级为新建。
 
 `MergeRound` 状态：`Preparing` → `Running` → 终态（`Succeeded` / `PartiallySucceeded` / `Failed`）。实现**没有独立的 `Completed` 阶段**：本轮全部条目完成后直接进入三种终态之一；`completeRound` 只是一次执行结束的动作，不新增状态。
 
@@ -142,24 +142,23 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 | 终态 | 条件 |
 | --- | --- |
-| `Succeeded` | 本轮全部条目成功处理，没有失败、过期、`DEFER` 等未完成项 |
+| `Succeeded` | 本轮全部条目成功处理，没有拒绝、冲突、过期等未成功条目 |
 | `PartiallySucceeded` | 至少一项成功，且存在未完成或失败项 |
 | `Failed` | 本轮没有成功项，且存在失败或未完成项 |
 
-- **成功处理项** = 条目终态 `Applied`（含 `KEEP_TARGET + markAsMerged=true` 的无写入已处理）——虽未修改业务内容，仍属成功处理项，与 `DEFER` 不同。
-- 纯 `DEFER` 轮次按上表归入 `Failed`（没有成功项且存在未完成项）；**本轮不新增专用状态枚举**，若业务需要区分可另行裁定。
+- **成功处理项** = 条目终态 `Applied` 或 `Confirmed`，包括明确选择忽略的无写入结果。
 - 空轮次（无条目）沿用 `Failed`，不扩展枚举。
 
 `ApplyResult` 是**本轮执行结果的不可变终态快照**：
 
 - 条目结果列表：`entryId`（轮次内唯一）、终态、目标操作摘要、BC 结果引用、Checkpoint 结果、失败分类；
-- 计数汇总：`applied` / `confirmed` / `rejected` / `deferred` / `staleEvidence`；
+- 计数汇总：`applied` / `confirmed` / `rejected` / `conflict` / `staleEvidence` / `unknown`；
 - 轮次状态与完成时间；
 - **只汇总本轮**；新轮次不修改旧轮次结果；已提交项不回滚（B08 已确认）。
 
 跨轮次重做（Q4）：
 
-- 未完成项（`Rejected` / `StaleEvidence` / `Deferred`）需重新 `compare` 并创建新 `MergeRound`，使用新 `mergeRoundId`；
+- 未完成项（`Rejected` / `Conflict` / `StaleEvidence`）需重新 `compare` 并创建新 `MergeRound`，使用新 `mergeRoundId`；
 - 新轮次可只选未完成条目，不自动重复上一轮已成功条目（R10 精神）；
 - 新轮次的用户决定、执行状态、`ApplyResult` 与旧轮次相互独立，旧结果保留可追溯；
 - 消息重复投递的幂等处理**不属于**业务重试，仍遵循原幂等规则。
@@ -171,6 +170,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 - 以轮次 ID 和条目 ID 查询业务提交回执；BC 业务提交、回执和 `MergeEntryResolvedEvent` 发布记录同事务保存。重复交付以回执兑现已提交结果，不重写业务对象。待派发与已派发但等待结果应分别核对。
 - 已受理的轮次在提交或结果暂时无法确认时保留 `Running`，按 T4 返回 `Unknown`。恢复以持久化凭据判定，业务拒绝等已记录结果遵循 Q4。旧版未终态轮次缺少提交凭据，须先核对已有业务事实。
 - LTI 切换仍按 D15-B 独立异步收敛。2026-11-18 用户裁定移除 `/api/cow/recover/incomplete`；切换失败不再提供恢复入口。轮次结果以业务提交事实为准。
+
 
 ## 9. 与 LightTrackerItem 和业务 BC 的边界
 
@@ -184,11 +184,11 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 | 内容 | 性质 |
 | --- | --- |
-| 直接父子准入、决策优先、BC 整体校验提交、KEEP_TARGET 语义、部分成功、Checkpoint 过时判定、未物化可参与 Diff、未物化目标修改即物化 | **已确认**（FACT-007/008、POL-004、R08～R11、D-019） |
+| 直接父子准入、决策优先、BC 整体校验提交、忽略变更语义、部分成功、Checkpoint 过时判定、未物化可参与 Diff、未物化目标修改即物化 | **已确认**（FACT-007/008、POL-004、R08～R11、D-019） |
 | MergeRound 的聚合定位；合并决策与确认归 MergeEntry，随轮次结果同事务保存 | **已确认**（D-019；ADR-0006 于 2026-11-20 调整确认归属） |
 | MergeEntry 作为 MergeRound 内 Entity | **已裁定**（Q1；ADR-0005） |
 | 所选差异证据必须绑定双侧内容证据，Revision 仅其中一项 | **已裁定**（Q2；ADR-0005；2026-11-15 后随 MergeRound 持久化） |
-| 合并确认由 MergeEntry 在 `markAsMerged=true` 且条目 `Applied` 时生成，随轮次结果同事务保存；跨轮次读取当前确认 | **已裁定**（ADR-0006，2026-11-20） |
+| 合并确认由 MergeEntry 按 §7 在条目成功时生成，随轮次结果同事务保存；跨轮次读取当前确认 | **已裁定**（ADR-0006，2026-11-20） |
 | 一轮一次执行即终态、不可重开；未完成项须新建 MergeRound；`ApplyResult` 为本轮不可变快照 | **已裁定**（Q4，2026-11-11） |
 | `TrackerItemDiff` 字段集、瞬时比较证据的编码与传输形式 | **契约候选**（留实现） |
 | MergeRound 行为签名与状态机、MergeEntry 状态机、`ApplyResult` 字段结构 | **契约候选** |

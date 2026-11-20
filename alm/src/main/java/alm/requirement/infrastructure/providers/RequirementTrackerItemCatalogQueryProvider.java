@@ -41,6 +41,15 @@ public class RequirementTrackerItemCatalogQueryProvider implements TrackerItemCa
     }
 
     @Override
+    public List<Identity> identitiesForMerge(TrackerId trackerId) {
+        return jdbc.query("""
+                SELECT local_id, common_id, revision FROM requirements
+                WHERE tracker_id = ?
+                ORDER BY local_id
+                """, IDENTITY, trackerId.numericValue());
+    }
+
+    @Override
     public boolean hasActiveFamily(TrackerId trackerId, CommonId commonId) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag)

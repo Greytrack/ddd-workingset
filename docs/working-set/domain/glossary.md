@@ -19,7 +19,7 @@
 | `CONCEPT-012` | **Baseline／基线（业务，待定义）** | 业务用语，适用含义见 [QUESTION-011](open-questions.md)。 | 仓库 Design Baseline、Snapshot、Merge Base 分别使用各自名称。 |
 | `CONCEPT-013` | **Difference／差异** | 有向 Compare 在本次双侧证据上得到的存在性或字段内容差异。 | 分页不会固定后续请求的结果；`LocalId` 或物化状态不同不自动构成业务差异。 |
 | `CONCEPT-014` | **Merge／合并** | 把明确决定通过目标业务能力应用，并记录结果与处理事实的有向过程。 | 不是整行覆盖；不自动承诺整轮原子；不直接写业务字段。 |
-| `CONCEPT-015` | **Merge Decision／合并决定** | 对存在性或字段差异作出的 `ACCEPT / KEEP_TARGET / DEFER` 选择，以及 `markAsMerged`。 | 数据决定、实际 Apply Result 与“已处理”确认是不同事实。 |
+| `CONCEPT-015` | **Merge Decision／合并决定** | 对新增/删除的行级 `ACCEPT / IGNORED`，或更新的逐字段选择及行级 `markAsMerged`。 | 数据决定、实际 Apply Result 与“已处理”确认是不同事实。 |
 | `CONCEPT-016` | **Merge Base／合并基准（候选术语）** | 比较两条演进线时双方共同认可的历史依据。 | 当前合并准入见 [T1](merge-execution-contract-v1.md#32-瞬时比较证据)。 |
 | `CONCEPT-017` | **Reference／引用** | 由引用方持有、指向 Item Family 的逻辑关系，可附带钉版或物理定位。 | 物理定位缺失时仍可有逻辑目标；可见性待裁定。 |
 | `CONCEPT-018` | **Association／关联** | 以具体 Item 变体为端点的业务关系。 | 端点身份与引用的逻辑目标不同；见 [QUESTION-010 裁定](../reviews/2026-11-15-question-010-relation-identity-decision.md)。 |
@@ -96,4 +96,4 @@
 >
 > **领域专家**：那 Compare 显示“无差异”，是否等于已经合并？
 >
-> **架构师**：不等于。内容相等和“已处理”是两件事；`KEEP_TARGET` 也可以确认已处理，但不伪造内容相等。
+> **架构师**：不等于。内容相等和“已处理”是两件事；更新中全部 `IGNORED` 也可以确认已处理，但不伪造内容相等。

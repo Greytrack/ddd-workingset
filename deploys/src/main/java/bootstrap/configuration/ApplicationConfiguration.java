@@ -51,11 +51,16 @@ public class ApplicationConfiguration {
 
     @Bean
     public WorkingSetItemIndexer workingSetItemIndexer(
-            WorkingSetRepository bindings, TrackerRepository trackers,
-            LightTrackerItemQueryProvider itemQueries, LightTrackerItemFamilyStore familyStore,
-            TrackerItemCatalogQueryProvider catalog, BusinessTrackerItems businessItems,
-            WorkingSetCreationSnapshotStore snapshots, JdbcRequirementRepository requirements,
-            IdentifierGenerator ids, @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
+            WorkingSetRepository bindings,
+            TrackerRepository trackers,
+            LightTrackerItemQueryProvider itemQueries,
+            LightTrackerItemFamilyStore familyStore,
+            TrackerItemCatalogQueryProvider catalog,
+            BusinessTrackerItems businessItems,
+            WorkingSetCreationSnapshotStore snapshots,
+            JdbcRequirementRepository requirements,
+            IdentifierGenerator ids,
+            @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
         return new WorkingSetItemIndexer(bindings, trackers, itemQueries, familyStore, catalog, snapshots,
                 businessItems, id -> new RequirementAdapter(requirements, id), ids, batchSize);
     }

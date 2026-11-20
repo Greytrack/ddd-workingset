@@ -84,10 +84,10 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
         }
 
         public static ChangeKind classify(Side source, Side target) {
-            if (source.presence() == Presence.PRESENT && target.presence() == Presence.ABSENT) {
+            if (source.presence() == Presence.PRESENT && (target.presence() == Presence.ABSENT || target.presence() == Presence.DELETED)) {
                 return ChangeKind.ADDED;
             }
-            if (source.presence() == Presence.ABSENT && target.presence() == Presence.PRESENT) {
+            if ((source.presence() == Presence.ABSENT || source.presence() == Presence.DELETED) && target.presence() == Presence.PRESENT) {
                 return ChangeKind.DELETED;
             }
             return ChangeKind.MODIFIED;

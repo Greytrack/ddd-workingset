@@ -20,7 +20,7 @@
 | `INV-005` | COW 只改变内容承载，不改变既有逻辑变体身份与直接来源。 | Candidate；D-012/D-013 | 并发首次写 |
 | `INV-006` | Compare/Merge 的方向、范围与双侧证据固定；执行读取源最新值并另记实际证据。 | Candidate；FACT-007；R08/B09 | 反向与过期证据 |
 | `INV-007` | 存在性差异必须显式裁决；一侧缺失不能自动推导 CREATE、RESTORE 或 DELETE。 | Candidate；FACT-007；T1 §7 | 来源删除、目标已编辑反例 |
-| `INV-008` | `markAsMerged=true` 前所有适用差异必须明确为 ACCEPT 或 KEEP_TARGET；DEFER 不得伪装已处理。 | Candidate；FACT-008；T1 §7 | 四组合契约测试 |
+| `INV-008` | 更新的每个差异字段必须明确选择 ACCEPT 或 IGNORED；行级确认按差异类型与成功结果判定。 | Candidate；FACT-008；T1 §7 | 四组合契约测试 |
 | `INV-009` | 字段级决定应用后目标整体仍须通过其业务不变量；Merge 不能绕过目标能力写字段。 | Candidate；B06；T4 | 交叉字段反例 |
 | `INV-010` | 同一幂等操作重试不重复分配身份或重复应用；已完成轮次的旧确认重放不得覆盖后续轮次。 | Candidate；T1 §6 | 重投和乱序 |
 | `INV-011` | 发布的工作范围必须引用封闭、可读、身份确定的成员与必要关系；准备失败不能冒充发布成功。 | Candidate；FACT-010；T7 创建任务 | 半批失败、取消、重启 |

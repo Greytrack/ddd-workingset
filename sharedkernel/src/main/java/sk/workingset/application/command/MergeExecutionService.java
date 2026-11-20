@@ -103,10 +103,12 @@ public class MergeExecutionService {
     }
 
     private static String operation(Entry entry) {
-        if (entry.decision().existence() != null) {
-            return entry.decision().existence().name();
-        }
-        return entry.decision().fields().containsValue(FieldAction.ACCEPT) ? "UPDATE" : "KEEP_TARGET";
+        return switch (entry.evidence().kind()) {
+            case MODIFIED -> entry.decision().fields().containsValue(FieldAction.ACCEPT) ? "UPDATE" : "IGNORED";
+            case ADDED -> entry.decision().existence() != MergeDecision.ExistenceAction.ACCEPT ? "IGNORED"
+                    : entry.evidence().target().presence() == Comparison.Presence.DELETED ? "RESTORE" : "CREATE";
+            case DELETED -> entry.decision().existence() == MergeDecision.ExistenceAction.ACCEPT ? "DELETE" : "IGNORED";
+        };
     }
 
     private static ItemResult result(Entry entry, Outcome outcome, String operation, String businessRef,
@@ -201,10 +203,6 @@ public class MergeExecutionService {
             if (entry.result() != null || entry.requested()) {
                 continue;
             }
-            if (entry.decision().deferred()) {
-                round = finish(round, entry, result(entry, Outcome.Deferred, "DEFER", null, null, null));
-                continue;
-            }
             Difference current;
             try {
                 current = comparisons.current(entry.evidence());
@@ -218,7 +216,7 @@ public class MergeExecutionService {
                 continue;
             }
             String operation = operation(entry);
-            if ("KEEP_TARGET".equals(operation)) {
+            if ("IGNORED".equals(operation)) {
                 MergeCommitReceipt receipt = new MergeCommitReceipt(null,
                         current.source().revision(), current.target().revision());
                 round = round.finishApplied(entry.id(), operation, receipt);
@@ -250,9 +248,8 @@ public class MergeExecutionService {
                 sourceRevision, targetRevision,
                 inherited || create ? null : target.lockVersion(),
                 create ? source.version() : target.version(),
-                create ? source.fields() : target.fields(),
-                acceptedFields(entry, current), inherited,
-                create && comparisons.isMergeBack(round.source(), round.target()));
+                create || action == MergeEntryApprovedEvent.Operation.RESTORE ? source.fields() : target.fields(),
+                acceptedFields(entry, current), inherited);
     }
 
     /**

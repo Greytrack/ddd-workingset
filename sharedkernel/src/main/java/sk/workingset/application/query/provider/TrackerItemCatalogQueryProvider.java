@@ -14,9 +14,14 @@ public interface TrackerItemCatalogQueryProvider {
     List<Identity> page(TrackerId trackerId, String afterLocalId, int limit);
 
     /**
-     * Full active identity list for a tracker; used by compare/merge.
+     * Full active identity list for a tracker.
      */
     List<Identity> identities(TrackerId trackerId);
+
+    /** Identities needed by compare, including soft-deleted variants that merge can restore. */
+    default List<Identity> identitiesForMerge(TrackerId trackerId) {
+        return identities(trackerId);
+    }
 
     boolean hasActiveFamily(TrackerId trackerId, CommonId commonId);
 

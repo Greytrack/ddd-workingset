@@ -2,8 +2,7 @@
 // 依赖 core.js 的 api()、state、escapeHtml()、setStatus()。
 const MERGE_ACTIONS = {
   ACCEPT: '采纳源',
-  KEEP_TARGET: '保留目标',
-  DEFER: '暂缓'
+  IGNORED: '忽略变更'
 };
 
 const mergeView = {
@@ -159,7 +158,10 @@ async function loadMergePage() {
       + '/compare/' + encodeURIComponent(mergeView.source) + '?' + query, { method: 'POST' });
     if (body !== $('#mergeBody')) return;
     mergeView.page = page;
-    mergeView.rows = page.differences.map((difference) => ({ difference, action: 'ACCEPT', mark: true }));
+    mergeView.rows = page.differences.map((difference) => ({
+      difference, action: 'ACCEPT', mark: true,
+      fields: Object.fromEntries((difference.fields || []).map((field) => [field, 'ACCEPT']))
+    }));
     $('#mergeSubtitle').textContent = `${mergeView.sourceTracker}（${mergeView.source}） → ${mergeView.targetTracker}（${mergeView.target}） · 本页 ${page.differences.length} 条差异`;
     renderMergeRows();
   } catch (error) {
@@ -189,36 +191,54 @@ function renderMergeRows() {
       <tbody>${rows.map((row, index) => mergeRowHtml(row, index)).join('')}</tbody>
     </table>
     <div class="merge-foot">${next}</div>`;
-  submit.disabled = false;
-  $('#mergeHint').textContent = '提交后按 requestId 幂等登记为一轮，执行结果由轮次轮询展示';
+  submit.disabled = !rows.some(isMergeRowDecidable);
+  $('#mergeHint').textContent = '更新行逐字段选择；标记已处理会隐藏当前版次的整行差异。';
+}
+
+function isMergeRowDecidable(row) {
+  return row.difference.source.presence !== 'UNREADABLE'
+    && row.difference.target.presence !== 'UNREADABLE';
+}
+
+function mergeActionOptions(action) {
+  return Object.entries(MERGE_ACTIONS).map(([value, label]) =>
+    `<option value="${value}"${action === value ? ' selected' : ''}>${label}</option>`).join('');
 }
 
 function mergeRowHtml(row, index) {
   const difference = row.difference;
   const target = difference.target || {};
   const source = difference.source || {};
-  const options = Object.entries(MERGE_ACTIONS).map(([value, label]) =>
-    `<option value="${value}"${row.action === value ? ' selected' : ''}>${label}</option>`).join('');
-  const fields = (difference.fields || []).join(', ');
-  const disable = row.action === 'DEFER' ? ' disabled' : '';
+  const updated = difference.kind === 'MODIFIED';
+  const decidable = isMergeRowDecidable(row);
+  const decisions = !decidable ? '证据不可读' : updated
+    ? (difference.fields || []).map((field, fieldIndex) => `
+        <div><label>${escapeHtml(field)}：
+          <select onchange="setMergeFieldAction(${index}, ${fieldIndex}, this.value)">${mergeActionOptions(row.fields[field])}</select>
+        </label></div>`).join('')
+    : `<select onchange="setMergeAction(${index}, this.value)">${mergeActionOptions(row.action)}</select>`;
+  const mark = !decidable ? '—' : updated
+    ? `<input type="checkbox" aria-label="标记整条差异已处理" ${row.mark ? 'checked' : ''} onchange="setMergeMark(${index}, this.checked)">`
+    : difference.kind === 'ADDED' ? '接收成功后自动标记' : '不标记';
+  const kind = { ADDED: '新增', MODIFIED: '更新', DELETED: '删除' }[difference.kind] || difference.kind;
   return `
     <tr>
       <td class="mono">${escapeHtml(shortId(difference.family && difference.family.value))}</td>
-      <td>${escapeHtml(difference.kind)}${fields ? `<div class="muted">${escapeHtml(fields)}</div>` : ''}</td>
+      <td>${escapeHtml(kind)}</td>
       <td>${escapeHtml(source.presence || '—')}<div class="muted mono">${escapeHtml(shortId(source.localId && source.localId.value))}</div></td>
       <td>${escapeHtml(target.presence || '—')}<div class="muted mono">${escapeHtml(shortId(target.localId && target.localId.value))}</div></td>
-      <td>
-        <select onchange="setMergeAction(${index}, this.value)">${options}</select>
-      </td>
-      <td><input type="checkbox" ${row.mark ? 'checked' : ''}${disable} onchange="setMergeMark(${index}, this.checked)"></td>
+      <td>${decisions}</td>
+      <td>${mark}</td>
     </tr>`;
 }
 
 function setMergeAction(index, action) {
+  mergeView.rows[index].action = action;
+}
+
+function setMergeFieldAction(index, fieldIndex, action) {
   const row = mergeView.rows[index];
-  row.action = action;
-  if (action === 'DEFER') row.mark = false;
-  renderMergeRows();
+  row.fields[row.difference.fields[fieldIndex]] = action;
 }
 
 function setMergeMark(index, mark) {
@@ -232,21 +252,12 @@ async function nextMergePage() {
 }
 
 function mergeDecisions() {
-  return mergeView.rows.map((row) => {
-    const difference = row.difference;
-    const markAsMerged = row.action !== 'DEFER' && row.mark;
-    if (difference.kind === 'MODIFIED') {
-      const fields = {};
-      (difference.fields || []).forEach((field) => { fields[field] = row.action; });
-      return { evidence: difference,
-        decision: { fields, markAsMerged } };
-    }
-    const existence = row.action === 'ACCEPT'
-      ? (difference.kind === 'ADDED' ? 'CREATE' : 'DELETE')
-      : row.action;
-    return { evidence: difference,
-      decision: { existence, markAsMerged } };
-  });
+  return mergeView.rows.filter(isMergeRowDecidable).map((row) => ({
+    evidence: row.difference,
+    decision: row.difference.kind === 'MODIFIED'
+      ? { fields: row.fields, markAsMerged: row.mark }
+      : { existence: row.action }
+  }));
 }
 
 async function submitMerge() {
@@ -323,7 +334,6 @@ function renderMergeRound(round) {
          <span>确认 ${result.summary.confirmed}</span>
          <span>拒绝 ${result.summary.rejected}</span>
          <span>冲突 ${result.summary.conflict}</span>
-         <span>暂缓 ${result.summary.deferred}</span>
          <span>证据过期 ${result.summary.staleEvidence}</span>
        </div>`
     : `<div class="merge-summary"><span>轮次 ${escapeHtml(shortId(round.id))}</span><span>状态 ${escapeHtml(round.state)}</span><span>执行中…</span></div>`;

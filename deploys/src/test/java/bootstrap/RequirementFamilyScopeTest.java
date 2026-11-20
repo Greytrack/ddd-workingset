@@ -40,6 +40,9 @@ class RequirementFamilyScopeTest {
     private JdbcRequirementRepository repository;
 
     @Autowired
+    private org.springframework.transaction.support.TransactionTemplate transactions;
+
+    @Autowired
     private TrackerItemCatalogQueryProvider catalog;
 
     private final String suffix = UUID.randomUUID().toString();
@@ -80,6 +83,7 @@ class RequirementFamilyScopeTest {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("DELETE FROM air_inst_common WHERE common_id = ?", family);
         jdbc.update("DELETE FROM light_tracker_items WHERE common_id = ?", family);
         jdbc.update("DELETE FROM requirements WHERE common_id = ?", family);
         // Child trackers reference parents through source_id; remove them first.
@@ -93,17 +97,17 @@ class RequirementFamilyScopeTest {
 
     @Test
     void same_family_is_unique_within_a_working_set_but_allowed_across_working_sets() {
-        assertDoesNotThrow(() -> repository.save(requirement("L1-", t1)));
-        assertThrows(DataIntegrityViolationException.class, () -> repository.save(requirement("L2-", t2)));
-        assertDoesNotThrow(() -> repository.save(requirement("L3-", t3)));
+        assertDoesNotThrow(() -> save(requirement("L1-", t1)));
+        assertThrows(DataIntegrityViolationException.class, () -> save(requirement("L2-", t2)));
+        assertDoesNotThrow(() -> save(requirement("L3-", t3)));
     }
 
     @Test
     void soft_deleted_row_keeps_family_identity_until_restored_or_purged() {
         Requirement first = requirement("L1-", t1);
-        repository.save(first);
-        repository.save(first.delete(first.lockVersion()));
-        assertThrows(DataIntegrityViolationException.class, () -> repository.save(requirement("L2-", t1)));
+        save(first);
+        save(first.delete(first.lockVersion()));
+        assertThrows(DataIntegrityViolationException.class, () -> save(requirement("L2-", t1)));
     }
 
     @Test
@@ -112,14 +116,15 @@ class RequirementFamilyScopeTest {
         TrackerId trackerId = TrackerId.of(t1);
         TrackerItemCatalogQueryProvider.Identity identity =
                 new TrackerItemCatalogQueryProvider.Identity(saved.localId(), saved.commonId(), saved.revision());
-        repository.save(saved);
+        save(saved);
         assertEquals(List.of(identity), catalog.identities(trackerId));
         assertEquals(List.of(identity), catalog.page(trackerId, "", 1));
         assertTrue(catalog.page(trackerId, saved.localId().value(), 1).isEmpty());
         assertTrue(catalog.hasActiveFamily(trackerId, saved.commonId()));
 
-        repository.save(saved.delete(saved.lockVersion()));
+        save(saved.delete(saved.lockVersion()));
         assertTrue(catalog.identities(trackerId).isEmpty());
+        assertEquals(List.of(identity), catalog.identitiesForMerge(trackerId));
         assertTrue(catalog.page(trackerId, "", 1).isEmpty());
         assertFalse(catalog.hasActiveFamily(trackerId, saved.commonId()));
     }
@@ -129,6 +134,10 @@ class RequirementFamilyScopeTest {
         assertDoesNotThrow(() -> insertVariant("V1-", t1, "1"));
         assertThrows(DataIntegrityViolationException.class, () -> insertVariant("V2-", t2, "1"));
         assertDoesNotThrow(() -> insertVariant("V3-", t3, ws2));
+    }
+
+    private void save(Requirement requirement) {
+        transactions.executeWithoutResult(tx -> repository.save(requirement));
     }
 
     private void insertVariant(String prefix, String tracker, String workingSet) {

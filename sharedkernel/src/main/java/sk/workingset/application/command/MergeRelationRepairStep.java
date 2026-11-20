@@ -27,7 +27,7 @@ public final class MergeRelationRepairStep {
     private final RelationEventPublisher publisher;
 
     private static boolean changesTarget(String operation) {
-        return operation != null && !"KEEP_TARGET".equals(operation) && !"DEFER".equals(operation);
+        return operation != null && !"IGNORED".equals(operation);
     }
 
     public StepResult repair(MergeRound round) {

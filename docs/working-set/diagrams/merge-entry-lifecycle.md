@@ -41,8 +41,6 @@ sequenceDiagram
         R->>E: 复核身份、版次、存在性、可读性
         alt 证据已变化
             E-->>R: StaleEvidence
-        else DEFER
-            E-->>R: Deferred
         else 执行准入通过
             opt 决定要求写入
                 R--)BC: MergeEntryApprovedEvent（决定、字段与证据）
@@ -51,9 +49,9 @@ sequenceDiagram
             end
             alt 业务拒绝
                 R->>E: Rejected 保留原因
-            else 成功或 KEEP_TARGET
+            else 成功或 IGNORED
                 par 轮次提交条目结果
-                    R->>E: 应用结果，按 markAsMerged 生成确认
+                    R->>E: 应用结果，按差异类型及适用的确认规则生成确认
                     R->>C: 同事务保存轮次状态和所需确认
                     C-->>R: 提交；写失败则整次轮次变更回滚
                 and LTI 独立收敛（仅适用的业务写入）
@@ -79,16 +77,14 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> Decided: 一页决策提交并登记
     Decided --> StaleEvidence: 执行准入证据变化
-    Decided --> Deferred: 用户 DEFER
     Decided --> Applying: 执行准入通过
-    Applying --> Applied: BC 接受 或 KEEP_TARGET
+    Applying --> Applied: BC 接受或忽略操作
     Applying --> Rejected: BC 拒绝
-    Applied --> Confirmed: markAsMerged 为真，随轮次同事务持久化
-    Applied --> [*]: markAsMerged 为假
+    Applied --> Confirmed: 符合确认规则，随轮次同事务持久化
+    Applied --> [*]: 无需确认
     Confirmed --> [*]
     Rejected --> [*]: 重做须新建 MergeRound
     StaleEvidence --> [*]: 重新 compare 后新建轮次
-    Deferred --> [*]: 未完成项进入新轮次
 ```
 
 状态定义与责任边界见 [T1 §5、§8](../domain/merge-execution-contract-v1.md)，落地证据见 [T6-E 验收](../implementation/t6-e-merge-round-verification.md)。

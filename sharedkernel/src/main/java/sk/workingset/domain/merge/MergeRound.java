@@ -73,12 +73,12 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
     public MergeRound finishApplied(String entryId, String operation, MergeCommitReceipt receipt) {
         Entry entry = entries.stream().filter(candidate -> candidate.id().equals(entryId)).findFirst()
                 .orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, entryId));
-        boolean confirm = entry.decision().markAsMerged();
+        boolean confirm = entry.decision().confirmsOnSuccess(entry.evidence());
         String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
         ItemResult itemResult = new ItemResult(entryId, confirm ? Outcome.Confirmed : Outcome.Applied,
                 operation, businessRef, confirm ? "Confirmed" : null, null);
         return finishEntry(entryId, itemResult,
-                confirm ? new Confirmation(receipt.sourceRevision(), receipt.targetRevision()) : null);
+                confirm ? new Confirmation(entry.evidence().source().revision(), receipt.targetRevision()) : null);
     }
 
     private MergeRound finishEntry(String entryId, ItemResult itemResult, Confirmation confirmation) {
@@ -110,7 +110,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
                 : successful == results.size() ? State.Succeeded : State.PartiallySucceeded;
         MergeRound.Summary summary = new Summary(count(results, Outcome.Applied), count(results, Outcome.Confirmed),
                 count(results, Outcome.Rejected),
-                count(results, Outcome.Conflict), count(results, Outcome.Deferred), count(results, Outcome.StaleEvidence),
+                count(results, Outcome.Conflict), count(results, Outcome.StaleEvidence),
                 count(results, Outcome.Unknown));
         return new MergeRound(numericId, token, requestId, source, target, caller, terminal, entries,
                 new ApplyResult(terminal, summary, results, completedAt));
@@ -118,7 +118,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public enum State {Preparing, Running, Succeeded, PartiallySucceeded, Failed}
 
-    public enum Outcome {Applied, Confirmed, Rejected, Conflict, StaleEvidence, Deferred, Unknown}
+    public enum Outcome {Applied, Confirmed, Rejected, Conflict, StaleEvidence, Unknown}
 
     @Entity
     public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId,
@@ -136,7 +136,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
             if (this.result != null) {
                 throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
             }
-            boolean required = result.succeeded() && decision.markAsMerged();
+            boolean required = result.succeeded() && decision.confirmsOnSuccess(evidence);
             if (required != (confirmation != null) || required != (result.outcome() == Outcome.Confirmed)) {
                 throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "confirmation must match the applied entry");
             }
@@ -148,9 +148,13 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         }
     }
 
-    /** Immutable revision evidence owned by the confirmed entry. */
+    /** Own business revisions of the compared variants, not the revisions used to read inherited content. */
     @ValueObject
     public record Confirmation(Revision sourceRevision, Revision targetRevision) {
+        public Confirmation {
+            Objects.requireNonNull(sourceRevision, "source variant revision");
+            Objects.requireNonNull(targetRevision, "target variant revision");
+        }
     }
 
     @ValueObject
@@ -162,7 +166,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
     }
 
     @ValueObject
-    public record Summary(long applied, long confirmed, long rejected, long conflict, long deferred,
+    public record Summary(long applied, long confirmed, long rejected, long conflict,
                           long staleEvidence, long unknown) {
     }
 

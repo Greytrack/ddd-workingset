@@ -24,6 +24,7 @@
 
 - 请求校验前置：`decisions` 1–50 条、`requestId` 非空且 ≤128；不满足直接 400，不存在空轮次或分批登记入口。
 - 每个 decision 只含 `evidence` + `decision`；`entryKey` 已于 2026-11-17 废弃。轮次内条目身份由服务端生成的 `Entry.id` 承担，跨轮次审计使用完整 evidence。
+- QUESTION-008.b 后请用新版二元决策重新比较并提交。旧版在途轮次应先在旧版处理完；含旧枚举的历史轮次 JSON 未迁移。
 - **开发基线**：按现行 schema 初始化，不迁移旧 V4 合并表和轮次 JSON。旧 V3 表沿用 `air_ws_items_merge_index`；切换前收敛旧版本的在途轮次和事件。
 - 同 `requestId` 返回原轮次；同键换方向 409 `Conflict`；登记阶段证据过期 409 `StaleEvidence`，整轮回滚，不留半成品轮次。
 - 并发同键：`insertOrFindRound` 以 `ON CONFLICT (request_id) DO UPDATE … RETURNING state` 单条语句返回已提交轮次，不依赖"插入失败后再查询"的可见性。
@@ -39,10 +40,12 @@
 - `failedSubmissionLeavesNoRoundBehind`：证据过期 409 后事务回滚，不残留轮次。
 - `rejectsMissingDecisionsMissingRequestIdAndOversizedPage`、`rejectsRequestIdLongerThanStorageColumn`、`requestIdCannotBeReusedForAnotherDirection`：空决策、缺键、超限、超长与跨方向冲突。
 - `secondRoundWithRacedEvidenceCannotCommitTheSameFamilyTwice`：同家族旧证据第二次提交被拒。
-- `partialRoundRetainsKeepTargetCheckpointAndNewRoundOnlyProcessesSelectedItems`：KEEP_TARGET 确认、部分成功与重做边界。
+- `partialRoundRetainsKeepTargetCheckpointAndNewRoundOnlyProcessesSelectedItems`：更新行全忽略后确认、部分成功与重做边界。
 - `competingApplyIsRejectedAndResumeOnlyRecordsTheCommittedWrite`、`replayCompletesMergeTargetAfterListenerFailureWithoutApplyingBusinessWriteAgain`：并发执行、恢复与事件重投。
 
 - `confirmationFailureRollsBackRoundAndOldBusinessReplayCannotReplaceNewRound`：确认写入失败回滚轮次结果，后续同对轮次被拒；重投业务回执恢复后可继续，旧重投不会覆盖新确认。
+
+- `ignoredPresenceChangesHaveNoCheckpointAndUpdatesAcceptOnlySelectedFields`：新增、删除忽略不写确认；更新逐字段接受，未确认的差异继续展示。双向新增及软删恢复验收自动确认。
 
 ## 前端
 

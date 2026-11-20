@@ -8,7 +8,7 @@ import java.util.Optional;
 @Repository
 public interface WorkingSetRepository {
 
-    /** 命令侧重建并隐式加锁；不向领域接口暴露 lock 参数。 */
+    /** 命令侧重建聚合；锁策略不进领域接口。 */
     Optional<WorkingSet> findById(WorkingSetId id);
 
     /** 创建任务上下文重建：不检查 Preparing。 */

@@ -26,8 +26,7 @@ public record MergeEntryApprovedEvent(String roundId,
                                       String version,
                                       Map<String, Object> baseFields,
                                       Map<String, Object> acceptedFields,
-                                      boolean inherited,
-                                      boolean mergeBackCreate) {
+                                      boolean inherited) {
 
     public MergeEntryApprovedEvent {
         Objects.requireNonNull(roundId, "roundId");

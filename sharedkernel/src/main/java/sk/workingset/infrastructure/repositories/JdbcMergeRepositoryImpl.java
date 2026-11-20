@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
@@ -34,7 +32,6 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     private final ObjectMapper json;
 
     @Override
-    @Transactional(propagation = Propagation.MANDATORY)
     public void save(MergeRound round) {
         // Serialize duplicate requestId submissions before touching the unique indexes.
         // The advisory lock is transaction scoped: the first committer owns the requestId,
@@ -103,7 +100,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
                 revision(sourceIsA ? confirmation.sourceRevision() : confirmation.targetRevision()),
                 revision(sourceIsA ? confirmation.targetRevision() : confirmation.sourceRevision()), diffType,
                 sourceIsA ? "A_TO_B" : "B_TO_A",
-                "KEEP_TARGET".equals(entry.result().operation()) ? "IGNORED" : "ACCEPTED",
+                "IGNORED".equals(entry.result().operation()) ? "IGNORED" : "ACCEPTED",
                 round.caller(), round.caller(), round.caller());
         if (inserted != 1) {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "checkpoint ID belongs to another confirmation");

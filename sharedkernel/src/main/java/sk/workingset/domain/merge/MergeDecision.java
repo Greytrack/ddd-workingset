@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 条目决定：字段级动作、存在性动作与 markAsMerged；DEFER 表示本轮不处理。
+ * 更新逐字段决策；新增和删除使用行级决策。
  */
 @ValueObject
 public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction existence, boolean markAsMerged) {
@@ -20,42 +20,36 @@ public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction exi
         fields = fields == null ? Map.of() : Map.copyOf(fields);
     }
 
-    private static boolean allowed(ExistenceAction action, Presence source, Presence target) {
-        return switch (action) {
-            case CREATE -> source == Presence.PRESENT && target == Presence.ABSENT;
-            case RESTORE -> false;
-            case DELETE -> source != Presence.PRESENT && target == Presence.PRESENT;
-            case KEEP_TARGET, DEFER -> true;
-        };
-    }
-
     private static DomainException invalid(String message) {
         return DomainException.withMessage(MergeResCode.INVALID_DECISION, message);
     }
 
-    public boolean deferred() {
-        return existence == ExistenceAction.DEFER || fields.containsValue(FieldAction.DEFER);
+    public boolean confirmsOnSuccess(Difference difference) {
+        return switch (difference.kind()) {
+            case ADDED -> existence == ExistenceAction.ACCEPT;
+            case DELETED -> false;
+            case MODIFIED -> markAsMerged;
+        };
     }
 
     public void validate(Difference difference) {
-        if (markAsMerged && deferred()) {
-            throw invalid("DEFER cannot be marked as merged");
-        }
         Presence source = difference.source().presence();
         Presence target = difference.target().presence();
         if (source == Presence.UNREADABLE || target == Presence.UNREADABLE) {
             throw invalid("comparison contains unreadable evidence");
         }
-        if (source == Presence.PRESENT && target == Presence.PRESENT) {
-            if (existence != null || fields.isEmpty() || !fields.keySet().equals(Set.copyOf(difference.fields()))) {
+        if (difference.kind() == Comparison.ChangeKind.MODIFIED) {
+            if (source != Presence.PRESENT || target != Presence.PRESENT || existence != null
+                    || fields.isEmpty() || !fields.keySet().equals(Set.copyOf(difference.fields()))) {
                 throw invalid("supply one decision per differing field");
             }
-        } else if (!fields.isEmpty() || existence == null || !allowed(existence, source, target)) {
-            throw invalid("supply an applicable explicit existence decision");
+        } else if (!fields.isEmpty() || existence == null || markAsMerged
+                || difference.kind() != Difference.classify(difference.source(), difference.target())) {
+            throw invalid("supply only a row decision for an addition or deletion");
         }
     }
 
-    public enum FieldAction {ACCEPT, KEEP_TARGET, DEFER}
+    public enum FieldAction {ACCEPT, IGNORED}
 
-    public enum ExistenceAction {CREATE, RESTORE, DELETE, KEEP_TARGET, DEFER}
+    public enum ExistenceAction {ACCEPT, IGNORED}
 }

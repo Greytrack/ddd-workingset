@@ -8,7 +8,8 @@ public enum RequirementResultCode implements DomainResCode {
     ALREADY_ACTIVE(DomainErrorType.INVALID_ARGUMENT, 1404, "Requirement is already active"),
     LOCK_VERSION_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 1405, "expectedLockVersion is required for delete/undelete"),
     DELETED(DomainErrorType.INTERNAL, 1406, "Requirement is deleted"),
-    TITLE_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 1407, "title must not be blank");
+    TITLE_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 1407, "title must not be blank"),
+    SOFT_DELETE_REQUIRED(DomainErrorType.CONFLICT, 1408, "Soft delete is required before permanent deletion");
 
     private final DomainErrorType type;
     private final int code;

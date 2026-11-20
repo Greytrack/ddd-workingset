@@ -23,7 +23,7 @@
 | `FACT-005` | `CommonId` 关联同族变体，`LocalId` 标识具体变体；实例化不更换 `LocalId`。 | Accepted 子集：R05 身份关系；实例化稳定性已由 T3 兑现 | [身份规则](glossary.md#item-身份规则已确认) |
 | `FACT-006` | 普通字段按来源 Revision 读取并在首次 COW 固定；附件与关系固定为派生时状态；来源删除不得破坏首次编辑所需事实的可读性。 | Accepted 限定范围 R07/R19；机制见 T3 | [T3 §2.1](lighttrackeritem-materialization-contract-v1.md) |
 | `FACT-007` | 直接父子工作集支持双向 Compare/Merge；任一方向的新增、删除、修改均可经用户选择应用到接收方；`source/target` 是本轮角色。 | 用户已确认 | `POL-004`；目标 BC 校验提交 |
-| `FACT-008` | Merge 数据选择、实际 Apply Result 与处理确认是不同事实。 | Accepted 子集 R08～R11；DEFER 边界见 `QUESTION-008.b` | [T1](merge-execution-contract-v1.md) |
+| `FACT-008` | Merge 数据选择、实际 Apply Result 与处理确认是不同事实。 | Accepted 子集 R08～R11；新版二元决策及确认规则见 T1 §7（`QUESTION-008.b` 已关闭） | [T1](merge-execution-contract-v1.md) |
 | `FACT-009` | Reference 可在逻辑目标有效但物理端点暂不可解析时保持有效悬空状态。 | Reported / Pending | `QUESTION-010` 剩余可见性/守卫 |
 | `FACT-010` | 创建、扩展、替换和合并被设计为可恢复长流程；受理成功不等于业务结果已可用。 | 部分 Accepted：GateFlow 替换 R16/R17；T7 创建 LRO 已落地 | T7 设计 |
 | `FACT-011` | 架构示意把 `create / extend / resolve / diff / merge` 画作业务 BC 调用 Working Set 的统一 API 面。 | 已由 T4 收敛为六个用例的契约边界 | [T4](cross-bc-contract-v1.md) |

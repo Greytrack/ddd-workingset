@@ -1,8 +1,10 @@
 package sk.workingset.infrastructure.repositories;
 
+import sk.SharedKernelResultCode;
+import sk.common.error.DomainException;
+
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -62,7 +64,6 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     private final IdentifierGenerator ids;
 
     @Override
-    @Transactional
     public void save(LightTrackerItem item) {
         int affected = insert(item, """
                 ON CONFLICT (local_id) DO UPDATE SET
@@ -75,7 +76,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                   AND air_ws_items_index.has_copied <= EXCLUDED.has_copied
                 """);
         if (affected != 1) {
-            throw new IllegalStateException("Could not save item index " + item.localId());
+            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID, "Could not save item index " + item.localId());
         }
         saveCurrentMember(item);
     }
@@ -126,7 +127,6 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     }
 
     @Override
-    @Transactional
     public void remove(LocalId id) {
         long local = id.numericValue();
         List<Boolean> deleted = jdbc.queryForList(

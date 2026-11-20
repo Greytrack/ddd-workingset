@@ -176,8 +176,8 @@ public final class Requirement implements TrackerItem {
 
     @Override
     public LifecycleResult delete2(LifecycleCommand command) {
-        // 永久删除不要求先软删；对象已不存在时由应用服务/仓储返回 NOT_FOUND。
-        return LifecycleResult.applied(this);
+        return deleted() ? LifecycleResult.applied(this)
+                : LifecycleResult.conflict("Requirement must be soft-deleted before permanent deletion");
     }
 
     private static LockVersion requireExpectedLockVersion(LifecycleCommand command) {
