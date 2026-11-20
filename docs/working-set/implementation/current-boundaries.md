@@ -35,7 +35,7 @@
 | COW 业务保存 | SK `TrackerItemMaterializationRequestedEvent` | ALM 保存 Requirement 并发布 `TrackerItemMaterializationCompletedEvent` |
 | COW 完成 | ALM `TrackerItemMaterializationCompletedEvent` | SK 在独立事务切换 Local-backed / 记录失败终态 |
 | Merge 条目批准 | SK `MergeEntryApprovedEvent` | ALM 校验并保存目标 Requirement，发布 `MergeEntryResolvedEvent` |
-| Merge 条目结果 | ALM `MergeEntryResolvedEvent` | SK 记录轮次结果、Checkpoint，并发布 `MergeAppliedEvent` |
+| Merge 条目结果与确认 | ALM `MergeEntryResolvedEvent` | SK 在同一轮次事务持久化条目结果和所需确认，按需发布 `MergeAppliedEvent`；确认写失败时轮次不结束 |
 | Merge 目标 LTI | SK `MergeAppliedEvent` | SK 独立事务切换/创建 LTI |
 | 永久删除 | ALM `CompleteDeleteEvent` | SK 异步清理 LTI |
 
@@ -46,7 +46,6 @@
 | 路径 | 当前状态 | 差距/待验证 |
 | --- | --- | --- |
 | ProductSpace 创建 | `ProductSpaceCommandService.create` 在同一应用事务中保存 ProductSpace 并调用 Working Set 初始化默认成员关系 | 跨聚合写仍在一个事务；应拆为 ProductSpace 保存 + 可靠事件驱动 Working Set 初始化，并定义部分失败与重投。 |
-| Merge 结果记录 | `MergeExecutionService` 在记录轮次结果时同事务写 MergeRound 与 Checkpoint | 两个独立聚合同事务，违反 TC-002；需拆为轮次结果提交后由事件推进 Checkpoint，或证明并重新裁定聚合边界。 |
 | T7 创建/扩展 | LTI 批量索引与任务进度仍可能在同一批处理事务中推进 | 按 [反模式审查](../reviews/2026-11-19-ddd-anti-pattern-scan.md) 拆为 LTI 结果事件与任务进度独立提交。 |
 | Tracker 创建 | TrackerCommandService 仅持久化 Tracker，绑定由 `TrackerCreatedEvent` 的监听器在 Working Set 事务中完成 | 主路径已事件化；仍需验证监听失败、重复投递、绑定拒绝和运维可观察性。ProductSpace 初始化不在该路径内。 |
 | COW 收据与请求 | `CowEventHandler` 先独立事务写 PENDING 收据，再发布请求事件 | 收据与请求不是同一次提交；重放可能跳过已留收据但未投递的目标。业务失败终态仍保留，不恢复已废弃的 COW Recovery。 |

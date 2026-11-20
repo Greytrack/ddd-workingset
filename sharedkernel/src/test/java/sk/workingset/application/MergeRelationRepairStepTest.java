@@ -38,7 +38,7 @@ class MergeRelationRepairStepTest {
                 WorkingSetId.of("259712159403968"), TrackerId.of("261538396602304"));
         Difference difference = new Difference(CommonId.of(family), pair,
                 side(sourceLocalId, Revision.of(3)), side(targetLocalId, Revision.of(4)), List.of("title"));
-        return new Entry(id, 1, difference, decision, null);
+        return new Entry(id, difference, decision, null);
     }
 
     private static Side side(String localId, Revision revision) {
@@ -81,7 +81,7 @@ class MergeRelationRepairStepTest {
                 side("261158455371712", Revision.of(3)), side("265864557082560", Revision.of(4)), List.of("title"));
         MergeDecision decision = new MergeDecision(Map.of("title", FieldAction.ACCEPT), null, false);
         MergeRound round = MergeRound.prepare("265523938635712", "request-1", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
-                .register(new Entry("263525235173312", 1, difference, decision, null)).start();
+                .register(new Entry("263525235173312", difference, decision, null)).start();
         MergeRound.Entry entry = round.entries().getFirst();
         round = round.finishEntry(entry, new ItemResult("263525235173312", Outcome.Applied, "ACCEPT", "265864557082560", null, null))
                 .complete(Instant.now());

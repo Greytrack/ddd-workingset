@@ -724,35 +724,38 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
     ON merge_rounds (tracker_a_id, tracker_b_id)
     WHERE (state->>'state') IN ('Preparing', 'Running');
 
-CREATE SEQUENCE IF NOT EXISTS merge_decision_version;
-
--- 「已处理」锚点：同一 Tracker 分支对 (tracker_a_id, tracker_b_id) 的同一家族 (common_id) 至多一行；
--- WorkingSet 不参与 Checkpoint 身份；merge_direction 只是本次确认的方向属性；
--- local_id_a/b 只是确认时的变体证据，revision_a/b 是命中锚点，decision_version 防止晚到确认覆盖新事实。
-CREATE TABLE IF NOT EXISTS merge_checkpoints (
-    checkpoint_id    BIGINT PRIMARY KEY,
-    round_id         BIGINT NOT NULL,
-    tracker_a_id     BIGINT NOT NULL,
-    tracker_b_id     BIGINT NOT NULL,
-    common_id        BIGINT NOT NULL,
-    local_id_a       BIGINT,
-    local_id_b       BIGINT,
-    revision_a       INTEGER,
-    revision_b       INTEGER,
-    change_kind      VARCHAR(16),
-    merge_direction  VARCHAR(8)  NOT NULL,
-    decision_version BIGINT      NOT NULL,
-    revoked          BOOLEAN     NOT NULL DEFAULT FALSE,
-    remark           TEXT,
-    operator         VARCHAR(64),
-    confirmed_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+-- One immutable row per confirmation. The entry's snowflake ID makes delivery idempotent.
+CREATE TABLE IF NOT EXISTS air_ws_items_merge_index (
+    id              BIGINT PRIMARY KEY,
+    batch_id        BIGINT NOT NULL,
+    merge_seq       BIGSERIAL NOT NULL,
+    branch_a_id     BIGINT NOT NULL,
+    branch_b_id     BIGINT NOT NULL,
+    common_id       BIGINT NOT NULL,
+    local_id_a      BIGINT,
+    local_id_b      BIGINT,
+    revision_a      INTEGER,
+    revision_b      INTEGER,
+    merge_action    VARCHAR(255),
+    diff_type       VARCHAR(255),
+    merge_time      TIMESTAMP(6) WITHOUT TIME ZONE DEFAULT now(),
+    merge_status    VARCHAR(32) DEFAULT 'MERGED',
+    operator        VARCHAR(64),
+    remark          TEXT,
+    lock_version    INTEGER DEFAULT 0,
+    created_by      VARCHAR(64),
+    created_time    BIGINT,
+    updated_by      VARCHAR(64),
+    updated_time    BIGINT,
+    merge_direction VARCHAR(8) DEFAULT 'A_TO_B',
+    CHECK (branch_a_id <= branch_b_id),
+    CHECK (merge_status IN ('MERGED', 'REVOKED'))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_checkpoints_tracker_pair_family
-    ON merge_checkpoints (tracker_a_id, tracker_b_id, common_id);
-CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_round ON merge_checkpoints (round_id);
-CREATE INDEX IF NOT EXISTS idx_merge_checkpoints_family ON merge_checkpoints (common_id);
+CREATE INDEX IF NOT EXISTS idx_air_ws_merge_current
+    ON air_ws_items_merge_index (branch_a_id, branch_b_id, common_id, merge_seq DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_air_ws_merge_batch_range
+    ON air_ws_items_merge_index (batch_id, branch_a_id, branch_b_id, merge_seq DESC);
 
 CREATE TABLE IF NOT EXISTS requirement_merge_receipts (
     round_id       BIGINT NOT NULL,
@@ -764,15 +767,6 @@ CREATE TABLE IF NOT EXISTS requirement_merge_receipts (
     created        BOOLEAN NOT NULL,
     inherited      BOOLEAN NOT NULL,
     failure        TEXT,
-    PRIMARY KEY (round_id, entry_id)
-);
-
-CREATE TABLE IF NOT EXISTS merge_commit_receipts (
-    round_id BIGINT NOT NULL REFERENCES merge_rounds (id) ON DELETE CASCADE,
-    entry_id BIGINT NOT NULL,
-    business_ref BIGINT,
-    source_revision INTEGER,
-    target_revision INTEGER,
     PRIMARY KEY (round_id, entry_id)
 );
 

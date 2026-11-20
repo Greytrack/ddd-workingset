@@ -1,7 +1,5 @@
 package bootstrap;
 
-import sk.common.error.DomainException;
-import sk.workingset.error.MergeResCode;
 
 import static bootstrap.FixtureIds.fixtureId;
 
@@ -34,16 +32,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.domain.merge.MergeCheckpointCleanupStore;
-import sk.workingset.domain.merge.MergeCheckpointRepository;
-import sk.workingset.domain.merge.MergeDecisionVersionGenerator;
+import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
@@ -54,7 +49,7 @@ import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
-import sk.workingset.domain.merge.MergeCheckpoint;
+import sk.workingset.application.query.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.ApplyResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
@@ -64,11 +59,13 @@ import sk.workingset.domain.merge.MergeRound.State;
 class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
-    @SpyBean private MergeCheckpointRepository store;
-    @Autowired private MergeCheckpointCleanupStore checkpointCleanup;
-    @Autowired private MergeDecisionVersionGenerator decisionVersions;
+    @Autowired private MergeCheckpointQuery checkpoints;
+    @Autowired private org.springframework.modulith.events.IncompleteEventPublications publications;
+    @Autowired private sk.workingset.application.command.MergeExecutionService mergeExecution;
     @Autowired private RequirementCommandService requirements;
     @Autowired private JdbcRequirementRepository repository;
+    @Autowired private org.springframework.context.ApplicationEventPublisher events;
+    @Autowired private org.springframework.transaction.support.TransactionTemplate transactions;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String child = id("child");
@@ -92,7 +89,8 @@ class MergeAcceptanceTest {
                 VALUES (?, '1', ?, ?, 'UNSHARED')
                 """, rootTracker, space, classification);
         createChild("1", child);
-        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(child) + "/spaces/" + space, null, Void.class));
+        mountSpaceWithLocalFolder("1");
+        mountSpaceWithLocalFolder(child);
         String source = seed(rootTracker, anchor, "same");
         MergeAcceptanceTest.Derived derived = derive(child, rootTracker, source, anchor);
         childTracker = derived.trackerId();
@@ -109,10 +107,9 @@ class MergeAcceptanceTest {
                   AND (event_type LIKE '%MergeEntryApprovedEvent'
                        OR event_type LIKE '%MergeEntryResolvedEvent')
                 """, Integer.class) == 0);
-        jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", id("cleanup-round"));
         jdbc.update("DELETE FROM merge_rounds WHERE request_id LIKE ?", "%" + suffix + "%");
         for (String round : rounds) {
-            jdbc.update("DELETE FROM merge_checkpoints WHERE round_id = ?", round);
+            jdbc.update("DELETE FROM air_ws_items_merge_index WHERE batch_id = ?", round);
             jdbc.update("DELETE FROM merge_rounds WHERE id = ?", round);
         }
         List<String> itemIds = jdbc.queryForList("""
@@ -135,6 +132,7 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", workset);
         }
+        jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM classifications WHERE classification_id IN (?, ?)", classification, sharedClassification);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
@@ -331,7 +329,7 @@ class MergeAcceptanceTest {
     void mergesNativeChildItemBackToNonDefaultParentAndRestoresItsOriginalVariant() {
         String grandchild = id("grandchild");
         createChild(child, grandchild);
-        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(grandchild) + "/spaces/" + space, null, Void.class));
+        mountSpaceWithLocalFolder(grandchild);
         String grandTracker = derive(grandchild, childTracker, childAnchor, anchor).trackerId();
         assertNativeMergeBack(child, grandchild, childTracker, grandTracker);
     }
@@ -457,7 +455,7 @@ class MergeAcceptanceTest {
 
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
                 CommonId.of(keep));
-        MergeCheckpoint checkpoint = store.findById(key).orElseThrow();
+        MergeCheckpoint checkpoint = checkpoints.findLatest(key).orElseThrow();
         assertNotNull(checkpoint.localIdA());
         assertNotNull(checkpoint.localIdB());
         assertTrue(kept.equals(checkpoint.localIdA().value()) || kept.equals(checkpoint.localIdB().value()));
@@ -472,13 +470,8 @@ class MergeAcceptanceTest {
         assertEquals("valid on retry", requirement(rejectedTarget).title());
         assertEquals(partial, rest.getForObject(roundPath(round), MergeRound.class).result());
 
-        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(
-                "/api/merge-checkpoints/" + key.a().value() + "/" + key.b().value() + "/" + keep + "/revoke",
-                Map.of("expectedDecisionVersion", checkpoint.decisionVersion()), Void.class));
-        var failure = assertThrows(DomainException.class, () -> store.save(checkpoint));
-        assertEquals(MergeResCode.CONFLICT, failure.getResCode());
-        assertTrue(store.findById(key).orElseThrow().revoked());
-        assertNotNull(diff(compare("1", child), keep));
+        assertEquals(MergeCheckpoint.Action.IGNORED, checkpoint.action());
+
     }
 
     @Test
@@ -506,7 +499,7 @@ class MergeAcceptanceTest {
         assertEquals("accepted", requirement(target).title());
         assertEquals("later accepted", requirement(laterTarget).title());
 
-        MergeCheckpoint checkpoint = store.findById(new MergeCheckpoint.Key(
+        MergeCheckpoint checkpoint = checkpoints.findLatest(new MergeCheckpoint.Key(
                 TrackerId.of(rootTracker), TrackerId.of(childTracker), CommonId.of(family))).orElseThrow();
         assertTrue(checkpoint.revisionA().value() == 3 || checkpoint.revisionB().value() == 3);
     }
@@ -523,7 +516,7 @@ class MergeAcceptanceTest {
     void unmaterializedTargetIsComparedAndWrittenByAlmBeforeSwitchingLocal() {
         String grandchild = id("grandchild");
         createChild(child, grandchild);
-        assertStatus(HttpStatus.CREATED, rest.postForEntity(ws(grandchild) + "/spaces/" + space, null, Void.class));
+        mountSpaceWithLocalFolder(grandchild);
         String parentItem = childTracker;
         String parentLocal = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE tracker_id = ?",
                 String.class, parentItem);
@@ -698,23 +691,70 @@ class MergeAcceptanceTest {
     }
 
     @Test
-    void supersededCheckpointsAreCleanedUp() {
-        String oldFamily = id("cleanup-old");
-        String keepFamily = id("cleanup-keep");
-        String low = rootTracker.compareTo(childTracker) < 0 ? rootTracker : childTracker;
-        String high = low.equals(rootTracker) ? childTracker : rootTracker;
-        insertCheckpoint(low, high, oldFamily, 2, 6);
-        insertCheckpoint(low, high, keepFamily, 5, 8);
-        insertItem(low, oldFamily, 3, low.equals(rootTracker) ? "1" : child);
-        insertItem(high, oldFamily, 7, high.equals(rootTracker) ? "1" : child);
-        insertItem(low, keepFamily, 5, low.equals(rootTracker) ? "1" : child);
-        insertItem(high, keepFamily, 8, high.equals(rootTracker) ? "1" : child);
+    void confirmationFailureRollsBackRoundAndOldBusinessReplayCannotReplaceNewRound() {
+        String family = id("checkpoint-replay");
+        String source = seed(rootTracker, family, "source");
+        String target = seed(childTracker, family, "target");
+        String other = id("competing-family");
+        seed(rootTracker, other, "other source");
+        seed(childTracker, other, "other target");
+        ComparisonPage first = compare("1", child);
+        String constraint = "test_checkpoint_" + suffix.replace("-", "");
+        jdbc.execute("ALTER TABLE air_ws_items_merge_index ADD CONSTRAINT " + constraint
+                + " CHECK (common_id <> " + Long.parseLong(family) + ") NOT VALID");
+        String firstRound;
+        sk.workingset.domain.event.MergeEntryResolvedEvent replay;
+        MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
+                CommonId.of(family));
+        try {
+            firstRound = submit(child, first, field(diff(first, family), "ACCEPT", true));
+            await().atMost(Duration.ofSeconds(8)).until(() -> "source".equals(requirement(target).title()));
+            MergeRound snapshot = roundState(firstRound);
+            replay = new sk.workingset.domain.event.MergeEntryResolvedEvent(firstRound,
+                    snapshot.entries().getFirst().id(), sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome.APPLIED,
+                    LocalId.of(target), Revision.of(3), Revision.of(3), false, false, null);
+            assertThrows(sk.common.error.DomainException.class, () -> mergeExecution.recordResult(replay));
+            assertEquals(State.Running, roundState(firstRound).state());
+            org.junit.jupiter.api.Assertions.assertNull(roundState(firstRound).entries().getFirst().result());
+            assertTrue(checkpoints.findLatest(key).isEmpty());
+            ComparisonPage competing = compare("1", child);
+            assertEquals("PairMergeInProgress", submitFailure(child, competing,
+                    field(diff(competing, other), "KEEP_TARGET", true)));
+        } finally {
+            jdbc.execute("ALTER TABLE air_ws_items_merge_index DROP CONSTRAINT " + constraint);
+        }
+        long appliedVersion = requirement(target).lockVersion();
+        publications.resubmitIncompletePublications(publication -> replay.equals(publication.getEvent()));
+        assertEquals(State.Succeeded, awaitResult(firstRound).state());
+        assertEquals(appliedVersion, requirement(target).lockVersion());
 
-        assertEquals(1, checkpointCleanup.deleteSupersededCheckpoints());
-        MergeCheckpoint.Key oldKey = new MergeCheckpoint.Key(TrackerId.of(low), TrackerId.of(high), CommonId.of(oldFamily));
-        MergeCheckpoint.Key keepKey = new MergeCheckpoint.Key(TrackerId.of(low), TrackerId.of(high), CommonId.of(keepFamily));
-        assertTrue(store.findById(oldKey).isEmpty());
-        assertTrue(store.findById(keepKey).isPresent());
+        jdbc.update("UPDATE requirements SET revision = 4, title = 'source revised' WHERE local_id = ?", source);
+        ComparisonPage next = compare("1", child);
+        String secondRound = submit(child, next, field(diff(next, family), "KEEP_TARGET", true));
+        assertEquals(State.Succeeded, awaitResult(secondRound).state());
+        MergeCheckpoint latest = checkpoints.findLatest(key).orElseThrow();
+        assertEquals(secondRound, latest.roundId());
+
+        transactions.executeWithoutResult(tx -> events.publishEvent(replay));
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
+            assertEquals(2, jdbc.queryForObject("""
+                    SELECT count(*) FROM event_publication
+                    WHERE event_type LIKE '%MergeEntryResolvedEvent' AND serialized_event LIKE ?
+                      AND completion_date IS NOT NULL
+                    """, Integer.class, "%" + firstRound + "%"));
+        });
+        assertEquals(latest, checkpoints.findLatest(key).orElseThrow());
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT count(*) FROM air_ws_items_merge_index WHERE common_id = ?
+                """, Integer.class, Long.valueOf(family)));
+        // A V3 revocation row hides the current confirmation, rather than revealing the previous one.
+        jdbc.update("""
+                INSERT INTO air_ws_items_merge_index (id, batch_id, branch_a_id, branch_b_id, common_id, merge_status)
+                VALUES (?, ?, ?, ?, ?, 'REVOKED')
+                """, Long.valueOf(id("legacy-revoked")), Long.valueOf(secondRound), key.a().numericValue(),
+                key.b().numericValue(), key.family().numericValue());
+        assertTrue(checkpoints.findLatest(key).orElseThrow().revoked());
+        assertNotNull(diff(compare("1", child), family));
     }
 
     @Test
@@ -760,22 +800,16 @@ class MergeAcceptanceTest {
         worksets.add(next);
     }
 
-    private void insertCheckpoint(String trackerA, String trackerB, String family, int revisionA, int revisionB) {
+    private void mountSpaceWithLocalFolder(String workingSetId) {
+        String folderId = id("folder-" + workingSetId);
         jdbc.update("""
-                INSERT INTO merge_checkpoints (checkpoint_id, round_id, tracker_a_id, tracker_b_id, common_id,
-                    local_id_a, local_id_b, revision_a, revision_b, change_kind, merge_direction, decision_version)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'MODIFIED', 'A_TO_B', ?)
-                """, fixtureId("checkpoint-" + family), id("cleanup-round"), trackerA, trackerB, family,
-                fixtureId("la-" + family), fixtureId("lb-" + family), revisionA, revisionB, decisionVersions.nextDecisionVersion());
-    }
-
-    private void insertItem(String tracker, String family, int revision, String workset) {
-        String local = fixtureId("li-" + family + "-" + tracker);
+                INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode, is_default)
+                VALUES (?, '文件夹', ?, ?, 10070101, 'UNSHARED', TRUE)
+                """, folderId, workingSetId, space);
         jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id,
-                    revision, source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
-                """, local, family, tracker, workset, revision, local, revision);
+                INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id)
+                VALUES (?, ?, ?)
+                """, workingSetId, folderId, space);
     }
 
     private String seed(String tracker, String common, String title) {

@@ -11,7 +11,7 @@
 ## 图例
 
 - 实线表示同步请求，虚线箭头表示回执，带开口箭头的虚线表示异步事件。
-- `MergeRound`、`MergeCheckpoint`、`LightTrackerItem`、业务 BC 聚合之间均按身份引用，图不表示同事务或聚合包含。
+- MergeRound 拥有 MergeEntry；确认是条目的不可变状态。业务 BC、LightTrackerItem 与轮次分开提交。跨轮次查询直接读已提交的确认行。
 - `MergeEntry` 是 MergeRound 内的 Entity，图中置于 MergeRound 协作内部。
 
 ## 1. 提交到确认的协作时序
@@ -26,7 +26,7 @@ sequenceDiagram
     participant BC as 业务 BC 聚合
     participant H as SK 物化事件处理
     participant L as LightTrackerItem
-    participant C as MergeCheckpoint
+    participant C as 轮次仓储 / 旧确认表
 
     U->>D: compare 源范围 目标范围 方向 offset/limit
     D-->>U: TrackerItemDiff 页（瞬时证据，无 token）
@@ -52,12 +52,10 @@ sequenceDiagram
             alt 业务拒绝
                 R->>E: Rejected 保留原因
             else 成功或 KEEP_TARGET
-                par 轮次记录执行结果
-                    opt markAsMerged 且 Applied
-                        R--)C: 确认处理事实（TC-002 目标：独立写事务）
-                        C-->>R: Checkpoint 结果
-                    end
-                    R->>E: 记录单项结果
+                par 轮次提交条目结果
+                    R->>E: 应用结果，按 markAsMerged 生成确认
+                    R->>C: 同事务保存轮次状态和所需确认
+                    C-->>R: 提交；写失败则整次轮次变更回滚
                 and LTI 独立收敛（仅适用的业务写入）
                     R--)H: MergeAppliedEvent（业务结果已消费）
                     H->>L: 在 SK 独立事务中维护 LTI
@@ -65,7 +63,7 @@ sequenceDiagram
             end
         end
     end
-    Note over R,H: 条目结果不等待 LTI；Checkpoint 与轮次同写为当前偏差
+    Note over R,H: 终态与本次确认同事务提交；LTI 独立推进
     U->>R: GET 轮次状态与结果
     R-->>U: 终态时返回唯一 ApplyResult
 
@@ -85,7 +83,7 @@ stateDiagram-v2
     Decided --> Applying: 执行准入通过
     Applying --> Applied: BC 接受 或 KEEP_TARGET
     Applying --> Rejected: BC 拒绝
-    Applied --> Confirmed: markAsMerged 为真 且 Checkpoint 接受
+    Applied --> Confirmed: markAsMerged 为真，随轮次同事务持久化
     Applied --> [*]: markAsMerged 为假
     Confirmed --> [*]
     Rejected --> [*]: 重做须新建 MergeRound
@@ -114,3 +112,29 @@ stateDiagram-v2
 ```
 
 当前实现没有独立 `Completed` 阶段：本轮全部条目完成后直接进入三种终态之一。
+
+
+## 3. 确认归属与只读查询
+
+依据 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 与 [SCN-058](../scenarios/core-scenarios.md#scn-058)。组合箭头表示聚合内所有权；依赖箭头仅表示读写路径，不表示第二份确认数据。
+
+```mermaid
+classDiagram
+    class MergeRound {
+        聚合根
+    }
+    class MergeEntry {
+        实体
+    }
+    class Confirmation {
+        不可变值对象
+    }
+    class MergeRoundRepository
+    class LegacyMergeIndex
+    class MergeCheckpointQuery
+    MergeRound "1" *-- "1..*" MergeEntry
+    MergeEntry "1" *-- "0..1" Confirmation
+    MergeRoundRepository ..> MergeRound : 保存
+    MergeRoundRepository ..> LegacyMergeIndex : 同事务写确认行
+    MergeCheckpointQuery ..> LegacyMergeIndex : 跨轮次只读
+```

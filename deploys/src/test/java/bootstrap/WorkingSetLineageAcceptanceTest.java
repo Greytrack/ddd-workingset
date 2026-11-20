@@ -198,6 +198,9 @@ class WorkingSetLineageAcceptanceTest {
                 try (java.sql.ResultSet rows = sql.executeQuery("""
                         SELECT to_regclass('air_inst_common_source') IS NULL
                            AND to_regprocedure('put_air_inst_common(jsonb)') IS NULL
+                           AND to_regclass('air_ws_items_merge_index') IS NOT NULL
+                           AND to_regclass('merge_checkpoints') IS NULL
+                           AND to_regclass('merge_decision_version') IS NULL
                         """)) {
                     assertTrue(rows.next());
                     assertTrue(rows.getBoolean(1));

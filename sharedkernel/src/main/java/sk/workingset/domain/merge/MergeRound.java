@@ -10,6 +10,7 @@ import org.jmolecules.ddd.annotation.AggregateRoot;
 import org.jmolecules.ddd.annotation.Entity;
 import org.jmolecules.ddd.annotation.ValueObject;
 import sk.workingset.domain.workingset.WorkingSetId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison.Difference;
 
 import java.time.Instant;
@@ -50,6 +51,9 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         if (state != State.Preparing) {
             throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
+        if (entries.stream().anyMatch(existing -> existing.evidence().family().equals(entry.evidence().family()))) {
+            throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "duplicate item family in one round");
+        }
         ArrayList<MergeRound.Entry> updated = new ArrayList<>(entries);
         updated.add(entry);
         return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
@@ -63,11 +67,26 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
     }
 
     public MergeRound finishEntry(Entry entry, ItemResult itemResult) {
+        return finishEntry(entry.id(), itemResult, null);
+    }
+
+    public MergeRound finishApplied(String entryId, String operation, MergeCommitReceipt receipt) {
+        Entry entry = entries.stream().filter(candidate -> candidate.id().equals(entryId)).findFirst()
+                .orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, entryId));
+        boolean confirm = entry.decision().markAsMerged();
+        String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
+        ItemResult itemResult = new ItemResult(entryId, confirm ? Outcome.Confirmed : Outcome.Applied,
+                operation, businessRef, confirm ? "Confirmed" : null, null);
+        return finishEntry(entryId, itemResult,
+                confirm ? new Confirmation(receipt.sourceRevision(), receipt.targetRevision()) : null);
+    }
+
+    private MergeRound finishEntry(String entryId, ItemResult itemResult, Confirmation confirmation) {
         if (state != State.Running) {
             throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
-        List<MergeRound.Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entry.id())
-                ? candidate.finish(itemResult) : candidate).toList();
+        List<Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entryId)
+                ? candidate.finish(itemResult, confirmation) : candidate).toList();
         return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
     }
 
@@ -82,7 +101,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
     }
 
     public MergeRound complete(Instant completedAt) {
-        if (state != State.Running || entries.stream().anyMatch(entry -> entry.result() == null)) {
+        if (state != State.Running || awaitingResults()) {
             throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
         List<MergeRound.ItemResult> results = entries.stream().map(Entry::result).toList();
@@ -103,26 +122,35 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     @Entity
     public record Entry(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId,
-                        long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result,
-                        boolean requested) {
-        public Entry(String id, long decisionVersion, Difference evidence, MergeDecision decision, ItemResult result) {
-            this(Long.valueOf(id), decisionVersion, evidence, decision, result, false);
+                        Difference evidence, MergeDecision decision, ItemResult result,
+                        boolean requested, Confirmation confirmation) {
+        public Entry(String id, Difference evidence, MergeDecision decision, ItemResult result) {
+            this(Long.valueOf(id), evidence, decision, result, false, null);
         }
 
         public String id() {
             return numericId.toString();
         }
 
-        Entry finish(ItemResult result) {
+        Entry finish(ItemResult result, Confirmation confirmation) {
             if (this.result != null) {
                 throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
             }
-            return new Entry(numericId, decisionVersion, evidence, decision, result, requested);
+            boolean required = result.succeeded() && decision.markAsMerged();
+            if (required != (confirmation != null) || required != (result.outcome() == Outcome.Confirmed)) {
+                throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "confirmation must match the applied entry");
+            }
+            return new Entry(numericId, evidence, decision, result, requested, confirmation);
         }
 
         Entry request() {
-            return requested ? this : new Entry(numericId, decisionVersion, evidence, decision, result, true);
+            return requested ? this : new Entry(numericId, evidence, decision, result, true, confirmation);
         }
+    }
+
+    /** Immutable revision evidence owned by the confirmed entry. */
+    @ValueObject
+    public record Confirmation(Revision sourceRevision, Revision targetRevision) {
     }
 
     @ValueObject

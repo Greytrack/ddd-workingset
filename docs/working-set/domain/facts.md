@@ -42,7 +42,7 @@
 | `FACT-024` | ProductSpace 是 Shared Kernel 独立聚合；在默认 WorkingSet 维护生命周期，可关联多个 WorkingSet，不随派生复制/迁移。 | 用户确认（2026-11-10） | `POL-012` |
 | `FACT-025` | 分类元模型三层、启动前初始化常驻内存；Tracker 是 Classification 的投影；产品空间创建时按分类集合投影生成 Tracker。 | 用户确认（2026-11-10） | 分类版本/变更协议待定 |
 | `FACT-026` | 默认 WorkingSet 固定 Id=1、不可删除/隐藏；Tracker 原始聚合只能在默认 WorkingSet 创建；子 WS 只能纳入直接上游。 | 用户确认（2026-11-10） | 多级谱系见 `FACT-028` |
-| `FACT-027` | 未物化变体可参与 Diff；未物化目标被 Merge 修改时构建业务聚合并 save；决策归 MergeRound；Checkpoint 独立；共享 Tracker 不参与 Merge；非共享只允许直接父子。 | 用户确认 D-019 | [T1](merge-execution-contract-v1.md) |
+| `FACT-027` | 未物化变体可参与 Diff；未物化目标被 Merge 修改时构建业务聚合并 save；决策归 MergeRound；确认归 MergeEntry，见 [ADR-0006](../adr/0006-merge-confirmation-ownership.md)；共享 Tracker 不参与 Merge；非共享只允许直接父子。 | 用户确认 D-019 | [T1](merge-execution-contract-v1.md) |
 | `FACT-028` | 多级 WorkingSet 谱系：单父、`parentWorkingSetId`、默认根为空、允许空范围子 WS、子 WS Tracker 只来自直属父、Merge 只允许直属父子双向、有子 WS 的中间 WS 不可删。 | 用户确认（2026-11-12） | [谱系设计](working-set-lineage-design.md) |
 
 ## Business Policy

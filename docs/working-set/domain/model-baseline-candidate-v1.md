@@ -1,5 +1,7 @@
 # Working Set 首版领域模型基线候选 v1
 
+> 历史候选中的 Checkpoint 独立聚合已由 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 替换，其他接受范围见 [BASELINE](../BASELINE.md)。
+
 **状态：Historical（首版候选基线；作为 2026-11-10 接受依据保留，当前权威入口见 [BASELINE.md](../BASELINE.md)）**
 
 - 版本：v1（基于 D-001～D-019）

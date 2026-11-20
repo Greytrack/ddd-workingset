@@ -22,7 +22,7 @@
 | `INV-007` | 存在性差异必须显式裁决；一侧缺失不能自动推导 CREATE、RESTORE 或 DELETE。 | Candidate；FACT-007；T1 §7 | 来源删除、目标已编辑反例 |
 | `INV-008` | `markAsMerged=true` 前所有适用差异必须明确为 ACCEPT 或 KEEP_TARGET；DEFER 不得伪装已处理。 | Candidate；FACT-008；T1 §7 | 四组合契约测试 |
 | `INV-009` | 字段级决定应用后目标整体仍须通过其业务不变量；Merge 不能绕过目标能力写字段。 | Candidate；B06；T4 | 交叉字段反例 |
-| `INV-010` | 同一幂等操作重试不重复分配身份或重复应用；旧确认不得覆盖更新的撤销/决定。 | Candidate；T1 CK-1/CK-2 | 重投和乱序 |
+| `INV-010` | 同一幂等操作重试不重复分配身份或重复应用；已完成轮次的旧确认重放不得覆盖后续轮次。 | Candidate；T1 §6 | 重投和乱序 |
 | `INV-011` | 发布的工作范围必须引用封闭、可读、身份确定的成员与必要关系；准备失败不能冒充发布成功。 | Candidate；FACT-010；T7 创建任务 | 半批失败、取消、重启 |
 | `INV-012` | 删除不得破坏仍存活的派生变体、Snapshot、审计或有效关系；无本地行不能证明不存在。 | Candidate；FACT-006/009 | 删除与修复竞态 |
 | `INV-013` | 有效 Reference 的逻辑身份不因端点暂不可解析而丢失；修复不能复活已删除或已换目标关系。 | Candidate；FACT-009；`QUESTION-010` | 事件重投、删除竞态 |
@@ -90,7 +90,7 @@
 | `INV-060` | SpaceBinding、TrackerBinding 是 WorkingSet 聚合内 Entity；ProductSpace/Tracker 不持有绑定。 | Confirmed；`POL-015` | SCN-050/052 |
 | `INV-061` | 未物化变体可以参与 Diff。 | Confirmed；FACT-027 | SCN-055 |
 | `INV-062` | 未物化目标被 Merge 修改时构建业务聚合正常 save（物化与修改一体）。 | Confirmed；FACT-027 | SCN-055 |
-| `INV-063` | MergeRound 记录参数/进度/结果；决策归 MergeRound；MergeCheckpoint 独立。 | Confirmed；FACT-027 | SCN-056/059/060 |
+| `INV-063` | MergeRound 记录参数/进度/结果；决策和确认归 MergeRound；必须与本轮结果一起提交，跨轮次查询只读。 | Confirmed；FACT-027 | SCN-056/059/060 |
 | `INV-064` | “有 TrackerItem 不允许移除”只约束聚合删除；Shared 解绑不受该约束。 | Confirmed；T2 K1/K3 | SCN-052/061 |
 | `INV-065` | 非共享 Tracker 解绑/删除必须同时满足：无 TrackerItem、无组织子级、无派生子级。 | Confirmed；T2 K2 | SCN-061/062 |
 | `INV-066` | 删除 ProductSpace 前所有 WorkingSet 无指向它的 SpaceBinding，且空间下无 Tracker。 | Confirmed；T2 | SCN-064 |

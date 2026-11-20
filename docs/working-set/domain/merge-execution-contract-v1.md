@@ -17,7 +17,7 @@
 | **Diff 能力**（Compare & Merge 区域） | 查询能力／领域服务，非聚合 | 产生有向、可追溯的 `TrackerItemDiff` 与瞬时比较证据；只读双侧证据 | 不写业务内容；不持决定；不记录「已处理」 |
 | **MergeRound** | 聚合根（合并载体，D-019） | 轮次参数、条目集合、进度、单项结果、最终 `ApplyResult`；持有本轮合并决策 | 不直接写业务字段；不判定 BC 业务合法性；不拥有 Checkpoint |
 | **MergeEntry** | MergeRound 内 **Entity**（已裁定：ADR-0005） | 一次合并事项的生命周期与状态；持有所选差异证据、决定、目标操作与结果 | 不是独立聚合；不跨轮次复用 |
-| **MergeCheckpoint** | 独立聚合（D-019） | 「差异已处理」的确认/撤销事实与因果单调；以规范化 Tracker 对与家族定位，按双侧证据判定适用性 | 不拥有业务内容；不证明内容相等；不替代 ApplyResult |
+| **合并确认 / 当前 Checkpoint** | 确认归 MergeEntry；当前 Checkpoint 是跨轮次只读模型（ADR-0006） | 确认记录随轮次结果原子提交；读取按规范化 Tracker 对、家族及双侧版次判断 | 不拥有业务内容；不证明内容相等；查询侧无写入口 |
 | **业务 BC 聚合** | 各 BC 独立聚合 | 构建目标聚合、整体校验、提交（Save）、返回真实结果与业务 Revision | 不做合并选择；不记录 Checkpoint |
 | **LightTrackerItem** | 独立聚合（D-008） | 身份（LocalId/CommonId）、有效内容来源、自身 Revision 的维护 | 不构造业务内容；不判定合并合法性 |
 
@@ -62,7 +62,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | `startRound` | 源范围、目标范围、方向、范围参数、发起人 | `MergeRoundId`、状态 `Preparing` | 直接父子准入（POL-004、D-019）；非共享 Tracker；双方可读 | `MergeNotAllowed`（兄弟/跨代、共享 Tracker、不可读） |
 | `executeEntry` | `MergeRoundId`、`MergeEntryId` | `EntryResult` | 轮次处于执行阶段（`Running`）；条目已登记且非终态 | 见 §5 状态机；终态条目不可重复执行；轮次终态后拒绝执行 |
 | `reportProgress` | `MergeRoundId` | `RoundProgress`（各状态计数与条目摘要） | 只读 | — |
-| `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态或显式结束）；轮次非终态 | 不存在未终态条目时方可结束；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
+| `completeRound` | `MergeRoundId` | 本轮**唯一** `ApplyResult` | 本次执行已结束（全部条目到达终态）；轮次非终态 | 不存在未终态条目或待确认 Checkpoint 时方可结束；结束后轮次进入终态，**不可重开、不可再登记、不可再执行**（Q4） |
 
 **异步 LRO（2026-11-16 收敛）**：`startRound` 即「提交一页决策」：`decisions` 必填 1–50 条、`requestId` 必填且不超过 128 字符，空决策、缺键或超限直接拒绝；**不再提供空轮次与分批登记入口**，一页决策要么整页登记成功、要么整轮回滚。服务端以 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmittedEvent`，由异步消费者逐条执行。同一 requestId 返回原轮次，不同 source/target 返回 `Conflict`。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整 entries/result，不做条目分页。`apply` 是幂等触发器，重复调用返回原 `ApplyResult`。
 
@@ -72,12 +72,12 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 2. **确定目标操作**：依 `ItemMergeDecision` 得到目标操作——字段赋值集合、显式存在性操作（创建或删除，回并恢复原变体见 §8）、或「无写入」（`KEEP_TARGET`）、或「保持未完成」（`DEFER`）。
 3. **请求业务 BC 执行**：通过可靠事件提交（携带期望版本与证据引用）；BC 构建目标聚合并**整体校验**；成功 → Save 并返回真实结果与业务 Revision；拒绝 → `Rejected`（保留决定与拒绝原因，目标不得部分写入，INV-009）。
 4. **维护 LightTrackerItem**：目标若尚未物化，业务聚合 Save 成功后按既定机制转为 Local-backed（有效来源=自身、Revision=自身 Revision，D-012/D-018/D-019）；**不新增 Merge 专用物化协议**。
-5. **确认（按 `markAsMerged`）**：为 `true` 且条目终态为 `Applied` 时，请求 `MergeCheckpoint.confirm`；为 `false` 时不确认。
-6. **记录结果**：写 `EntryResult`（终态、目标操作、BC 结果引用、Checkpoint 结果、失败分类），更新 `RoundProgress`。
+5. **登记业务结果和确认**：成功且 `markAsMerged=true` 时，条目生成不可变确认，轮次仓储在同一事务记录结果和确认行；其他情况只记录条目结果。
+6. **结束**：所有条目完成时，保存唯一终态；若最后的条目需要确认，确认行与终态同事务提交。写入失败会回滚本次轮次变更；可重投已提交的业务结果。
 
 ## 5. MergeEntry 生命周期
 
-**D15-B（业务提交与 LTI 切换分离）**：ALM 消费 `MergeEntryApprovedEvent`，独立提交业务结果与回执，发布 `MergeEntryResolvedEvent`。SK 消费结果推进轮次，适用时再发布 `MergeAppliedEvent`，由 LTI 独立事务切换。`ApplyResult` 不等待 LTI；Checkpoint 与轮次同写仍是 [TC-002 实现差距](../implementation/current-boundaries.md)。
+**D15-B（业务提交与 LTI 切换分离）**：ALM 消费 `MergeEntryApprovedEvent`，独立提交业务结果与回执，发布 `MergeEntryResolvedEvent`。SK 消费结果推进轮次，适用时再发布 `MergeAppliedEvent`，由 LTI 独立事务切换。`ApplyResult` 不等待 LTI；必需的确认必须与轮次状态原子提交，不额外等待确认回执。
 
 状态（Entity 内的状态机，候选）：
 
@@ -85,7 +85,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | --- | --- | --- |
 | `Decided` | 决定已登记，等待执行 | `Applying`、`StaleEvidence`、`Deferred` |
 | `Applying` | 已提交业务 BC，等待结果 | `Applied`、`Rejected` |
-| `Applied` | 业务操作成功（含 `KEEP_TARGET` 的无写入） | `Confirmed`（markAsMerged=true） |
+| `Applied` | 业务操作成功（含 `KEEP_TARGET` 的无写入） | 轮次保存时无需确认则记 `Applied`；需确认则同事务记 `Confirmed` 和确认行 |
 | `Rejected` | 业务 BC 校验拒绝 | 终态（重做须新建 MergeRound） |
 | `StaleEvidence` | 提交依据已过期 | 终态；须重新 `compare` 并新建 MergeRound |
 | `Deferred` | 用户显式延迟 | 终态（本轮不可完成，进入后续新轮次） |
@@ -100,25 +100,18 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 ## 6. MergeCheckpoint 主要领域行为与不变量
 
-**身份与命中（2026-11-16 裁定）**：Checkpoint 以规范化 Tracker 对与家族为键。未撤销且双侧业务 Revision 匹配时命中。方向是属性，LocalId 留作审计证据，WorkingSet 用于有向比较。见 [Checkpoint 对齐裁定](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md#32-唯一键与命中)。
+**身份与命中**：Checkpoint 以数值规范化的 Tracker 对和家族定位。最新记录只有状态为 `MERGED` 且双侧业务 Revision 匹配时才命中。先选最新再校验状态；最新为 `REVOKED` 时不回退到上一条确认。方向和 LocalId 留作证据，WorkingSet 不进入身份。确认不证明内容相同，普通编辑不改变命中版次。
 
-### 6.1 行为
+**确认归属（[ADR-0006](../adr/0006-merge-confirmation-ownership.md)）**：确认是 MergeEntry 持有的值对象。轮次仓储将轮次状态与所需确认行一并提交。查询侧 `MergeCheckpointQuery` 可直接读取已提交的成员行，不建第二张表，也不提供独立修改入口。
 
-| 行为 | 入参 | 返回 | 说明 |
-| --- | --- | --- | --- |
-| `confirm` | 两侧 Tracker（trackerA / trackerB）、家族键、决定版本、双侧业务 Revision、证据引用 | `CheckpointId` | 记录「已处理」；KEEP_TARGET 亦可确认 |
-| `revoke` | 两侧 Tracker、家族键、被撤销的确认、原因 | `CheckpointId` | 记录撤销事实与因果位置 |
-| `lookup` | 两侧 Tracker、家族键、双侧业务 Revision | `Handled` / `Outdated` / `Unknown` | 供 Diff 隐藏已处理差异 |
+| 步骤 | 提交边界与验收 |
+| --- | --- |
+| 业务提交 | 业务 BC 独立提交目标内容和结果事件。KEEP_TARGET 无业务写入，轮次可以直接登记结果。 |
+| 轮次提交 | 消费业务结果，按轮次和条目幂等推进。每轮每族至多一项；需要确认时用条目雪花 ID 追加确认行。若插入失败，条目和轮次状态都回滚，Tracker 对闸门保持占用。 |
+| 重投 | 重投已提交的业务结果即可继续轮次收敛；已经终结的 A 轮不会重新追加确认，不改变 B 轮基准。 |
+| 比较 | 只读查询按 Tracker 对和家族取最新行，再校验状态与双侧版次。比较凭据仍需在登记及执行时复核。 |
 
-### 6.2 不变量（契约候选，标注 Candidate）
-
-| 编号 | 不变量 | 依据 |
-| --- | --- | --- |
-| CK-1 | 同一（两侧 Tracker、家族键）的确认必须基于不低于已存决定版本的决定；更旧的决定版本不得覆盖新确认 | INV-010 的 Checkpoint 因果顺序；B10 |
-| CK-2 | 撤销一经记录，晚到的同版本或更旧确认不得使其失效 | 「旧确认不得覆盖更新的撤销」（INV-010） |
-| CK-3 | 确认不等于内容相等：`KEEP_TARGET` 可确认；确认不写业务内容、不改变业务 Revision | R11；CONCEPT-015 |
-| CK-4 | 任一侧业务 Revision 显式升级后，旧 Checkpoint 对该版本组合过时；普通编辑只增乐观锁 `lock_version` 时不失效 | R11/R12（已确认；2026-11-11 术语修正） |
-| CK-5 | Checkpoint 独立聚合，不持有业务内容、不以 MergeRound 为父，只按两侧 Tracker + 家族键 + 决定版本关联；WorkingSet 不参与 | D-019 |
+物理映射：`id=checkpointId`，`batch_id=roundId`；`diff_type` 使用 `ADD / UPDATED / DELETED`；`merge_action` 使用 `ACCEPTED / IGNORED`，仅展示；`merge_status` 读 `MERGED / REVOKED`，V4 新确认写 `MERGED`。追加历史保留旧批次和 `lastSeq` 范围读，不运行旧的物理清理任务。客户旧库切换前应验证雪花 ID 不碰撞、已有序列高于历史最大值，处理完旧版在途确认事件并停止旧端直接写入；并行旧端写入不受 V4 轮次闸门保护。旧端如果读取撤销，须先按 `batch_id+Tracker对+lastSeq` 选每族最新行，再筛 `MERGED`；批次内查询不自动覆盖其他批次的撤销。需要严格快照时，取上界与读取使用同一个数据库快照。
 
 ## 7. ACCEPT / KEEP_TARGET / DEFER 与 markAsMerged 行为矩阵
 

@@ -16,7 +16,7 @@
 | **ProductSpace** | 独立聚合根 | `ProductSpaceId` | 稳定归属身份；不随 WorkingSet 派生复制；删除前所有绑定为空 | 被 SpaceBinding 引用 |
 | **MergeRound** | 合并区域聚合根 | `MergeRoundId`；`requestId` 幂等 | 一页 1～50 条决策；同 Tracker 对不并发；终态不可重开；唯一 `ApplyResult` | 持有 MergeEntry（Entity）与决策；ID 引用 WorkingSet/Tracker/LTI |
 | **MergeEntry** | MergeRound 内 Entity | 轮次内 `Entry.id`；双侧业务定位保存在证据中 | 证据与决定绑定；终态后不可重执行 | 引用 Difference 证据 |
-| **MergeCheckpoint** | 独立聚合根 | 规范化 Tracker 对 + `CommonId` | 确认/撤销因果单调；方向只是属性；WorkingSet 不参与；不证明内容相等 | 按 Tracker 对/家族/双侧版次关联 MergeRound |
+| **合并确认** | MergeEntry 持有的值对象 | 无独立身份；保存时沿用条目 ID | 与轮次结果同事务；确认不证明内容相等 | 跨轮次只读查询按规范化 Tracker 对、家族和双侧版次命中 |
 | **TrackerItem** | 公共契约（非聚合） | 无 | 公共身份、Revision 与生命周期能力声明 | 业务 BC 聚合实现 |
 | **BusinessObject（Working Set 契约）** | 公共能力接口（非聚合） | 无 | `delete/undelete/delete2` 能力声明；实际规则由 BC 拥有。与 `sk.businessframework` 的同名通用接口不是同一概念 | `TrackerItem` 继承 |
 | **Reference／Association** | SK 关系聚合（WorkingSet 不拥有；本轮只发事件） | 业务关系聚合 ID | 端点意图、钉版、有效性、修复；不参与 Compare/Merge | 关系服务消费事件；引用业务对象/变体 |

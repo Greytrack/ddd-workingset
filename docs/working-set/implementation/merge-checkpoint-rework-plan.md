@@ -1,6 +1,6 @@
 # Merge Checkpoint 重构实施记录（2026-11-16）
 
-**状态：Historical（已实施）**。设计裁定见 [Checkpoint 对齐裁定](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)，现行表结构见 [schema.sql](../../../deploys/src/main/resources/schema.sql)。
+**状态：Historical（已实施）**。设计裁定见 [Checkpoint 对齐裁定](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)，现行实现见[合并执行契约 §6](../domain/merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)，下文只记录当期实现。
 
 ## 实施步骤
 

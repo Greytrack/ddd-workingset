@@ -7,10 +7,8 @@ import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeExecutionService.EntryRequest;
 import sk.workingset.application.merge.MergeComparisonService;
-import sk.workingset.domain.CommonId;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.merge.Comparison;
-import sk.workingset.domain.merge.MergeCheckpoint;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -103,18 +101,7 @@ public class MergeController {
         return rounds.get(id);
     }
 
-    @PostMapping("/merge-checkpoints/{trackerA}/{trackerB}/{family}/revoke")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revoke(@PathVariable String trackerA, @PathVariable String trackerB, @PathVariable String family,
-                       @RequestBody RevokeRequest request) {
-        rounds.revokeCheckpoint(new MergeCheckpoint.Key(TrackerId.of(trackerA), TrackerId.of(trackerB),
-                CommonId.of(family)), request.expectedDecisionVersion());
-    }
-
     public record SubmitRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {
-    }
-
-    public record RevokeRequest(long expectedDecisionVersion) {
     }
 
     public record ComparisonPage(WorkingSetId source, WorkingSetId target, Instant comparedAt,

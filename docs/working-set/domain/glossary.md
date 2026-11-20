@@ -32,7 +32,7 @@
 | `CONCEPT-025` | **SpaceBinding／空间绑定** | Working Set 聚合内的 Entity，表达当前工作集与 ProductSpace 的有效关联；TrackerBinding 的前置。 | 不是 ProductSpace 自身的字段；不是数据库外键。 |
 | `CONCEPT-026` | **TrackerBinding／Tracker 绑定** | Working Set 聚合内的 Entity，表达当前工作集与 Tracker 的有效关联。 | 不是 Tracker 自身生命周期的一部分。 |
 | `CONCEPT-027` | **MergeRound／合并轮次** | 一页合并决策的执行载体聚合；记录本轮参数、条目、进度与唯一终态结果。 | 不是三类核心聚合之一；终态不可重开。 |
-| `CONCEPT-028` | **MergeCheckpoint／合并检查点** | 表达“差异已处理”的确认/撤销事实的独立聚合；不证明内容相等。 | 不等同 Apply Result；不按 Working Set 定位。 |
+| `CONCEPT-028` | **MergeCheckpoint／合并检查点** | 跨轮次查询用的当前确认；确认记录归产生它的 MergeEntry，不证明内容相等。 | 不等同 Apply Result；不按 Working Set 定位。 |
 | `CONCEPT-029` | **WorkingSetCreation／工作集创建任务** | 按用户选择范围创建子工作集的异步执行记录；保存范围、进度与结果。 | 不拥有 Working Set/Tracker/LTI；不是创建入口本身。 |
 | `CONCEPT-030` | **Shared Kernel 内部模块** | `sharedkernel` 内的代码组织单元，如 `businessframework`、`tracker`、`productspace`、`workingset`；用于承载不同模型区域。 | 不自动等于独立限界上下文、微服务或已批准部署单元。 |
 | `CONCEPT-031` | **只读共享聚合访问** | 业务 BC 以只读方式使用 SK 共享聚合/仓储完成身份、来源和就绪校验；不得保存、删除或修改 SK 聚合状态。 | 不等于获得 SK 写入权；不替代跨聚合原子校验或事件协作。 |
@@ -81,7 +81,7 @@
 | Item Variant | Superseded | D-010/D-012 不引入；职责由 LightTrackerItem 承担。 |
 | Manifest | 不采用 | D-010 最小模型收敛；Working Set 直接维护绑定结构。 |
 | ComparisonToken（持久化冻结清单） | Superseded | 2026-11-15 compare 不持久化；决策与所选差异证据随 MergeRound 保存。 |
-| Merge Session | Superseded | 由 MergeRound 承载轮次；Checkpoint 独立聚合。 |
+| Merge Session | Superseded | 由 MergeRound 承载轮次及本轮确认；当前 Checkpoint 由只读查询取得。 |
 | LRT／Long-Running Transaction | 术语收敛 | 现称 LRO（Long-Running Operation）或异步任务；不是数据库长事务。 |
 
 ## 示例对话

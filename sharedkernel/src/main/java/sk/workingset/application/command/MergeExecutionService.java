@@ -22,6 +22,7 @@ import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.event.*;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Side;
+import sk.workingset.domain.merge.Comparison.TrackerPair;
 import sk.workingset.domain.merge.*;
 import sk.workingset.domain.merge.MergeDecision.FieldAction;
 import sk.workingset.domain.merge.MergeRound.Entry;
@@ -38,8 +39,8 @@ import java.util.Map;
  * Merge 轮次执行：登记决定、发布逐条应用事件、消费业务结果并收敛轮次。
  *
  * <p>业务 apply 不再由 SK 同步调用。SK 发布 {@link MergeEntryApprovedEvent}，ALM 在
- * 自己的事务中应用并发布 {@link MergeEntryResolvedEvent}，SK 监听结果后记录
- * Checkpoint 并完成轮次。LTI 切换仍由 {@link MergeAppliedEvent} 异步执行。
+ * 自己的事务中应用并发布 {@link MergeEntryResolvedEvent}，SK 监听结果后由 MergeRound 决定是否确认，
+ * 由轮次仓储在同一事务记录确认成员、条目结果及轮次状态。LTI 切换仍由 {@link MergeAppliedEvent} 异步执行。
  */
 @Slf4j
 @Service
@@ -47,35 +48,20 @@ import java.util.Map;
 public class MergeExecutionService {
 
     private final MergeRepository store;
-    private final MergeCheckpointRepository checkpoints;
-    private final MergeDecisionVersionGenerator decisionVersions;
     private final MergeComparisonService comparisons;
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
     private final MergeRelationRepairStep relationRepair;
 
-    private static MergeCheckpoint.Key trackerPair(List<EntryRequest> decisions) {
+    private static TrackerPair trackerPair(List<EntryRequest> decisions) {
         Difference evidence = decisions.getFirst().evidence();
         if (evidence == null) {
             throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "evidence is required");
         }
-        MergeCheckpoint.Key pair = new MergeCheckpoint.Key(evidence.trackers().source(), evidence.trackers().target(),
-                evidence.family());
-        WorkingSetId sourceWorkingSet = evidence.trackers().sourceWorkingSetId();
-        WorkingSetId targetWorkingSet = evidence.trackers().targetWorkingSetId();
-        boolean mixed = decisions.stream().anyMatch(request -> {
-            if (request.evidence() == null) {
-                return true;
-            }
-            Difference candidate = request.evidence();
-            MergeCheckpoint.Key other = new MergeCheckpoint.Key(candidate.trackers().source(),
-                    candidate.trackers().target(), candidate.family());
-            return !other.a().equals(pair.a()) || !other.b().equals(pair.b())
-                    || !candidate.trackers().sourceWorkingSetId().equals(sourceWorkingSet)
-                    || !candidate.trackers().targetWorkingSetId().equals(targetWorkingSet);
-        });
-        if (mixed) {
+        TrackerPair pair = evidence.trackers();
+        if (decisions.stream().anyMatch(request -> request.evidence() == null
+                || !pair.equals(request.evidence().trackers()))) {
             throw new IllegalArgumentException("decisions must belong to one tracker pair");
         }
         return pair;
@@ -135,7 +121,7 @@ public class MergeExecutionService {
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
-        MergeCheckpoint.Key pair = trackerPair(decisions);
+        TrackerPair pair = trackerPair(decisions);
         MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
         // 先占幂等键：并发提交同一 requestId 时，save 保留先到轮次，后到请求直接返回该轮次。
         store.save(prepared);
@@ -147,7 +133,7 @@ public class MergeExecutionService {
         try {
             registerDecisions(prepared, decisions);
         } catch (DataIntegrityViolationException conflict) {
-            throw DomainException.withMessage(MergeResCode.PAIR_MERGE_IN_PROGRESS, pair.a().value() + "/" + pair.b().value());
+            throw DomainException.withMessage(MergeResCode.PAIR_MERGE_IN_PROGRESS, pair.source().value() + "/" + pair.target().value());
         }
         events.publishEvent(new MergeRoundSubmittedEvent(prepared.id()));
         return round(prepared.id());
@@ -180,7 +166,7 @@ public class MergeExecutionService {
                 throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "decision is required");
             }
             request.decision().validate(frozen);
-            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()), decisionVersions.nextDecisionVersion(),
+            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()),
                     frozen, request.decision(), null));
         }
         store.save(updated);
@@ -189,14 +175,6 @@ public class MergeExecutionService {
 
     public MergeRound get(String id) {
         return round(id);
-    }
-
-    @Transactional
-    public void revokeCheckpoint(MergeCheckpoint.Key key, long expectedVersion) {
-        MergeCheckpoint checkpoint = checkpoints.findById(key)
-                .orElseThrow(() -> DomainException.withMessage(MergeResCode.CONFLICT,
-                        "checkpoint is missing, superseded or already revoked"));
-        checkpoints.save(checkpoint.revoke(expectedVersion, decisionVersions.nextDecisionVersion()));
     }
 
     /**
@@ -218,7 +196,6 @@ public class MergeExecutionService {
         }
         if (round.state() == State.Preparing) {
             round = round.start();
-            store.save(round);
         }
         for (Entry entry : round.entries()) {
             if (entry.result() != null || entry.requested()) {
@@ -226,22 +203,29 @@ public class MergeExecutionService {
             }
             if (entry.decision().deferred()) {
                 round = finish(round, entry, result(entry, Outcome.Deferred, "DEFER", null, null, null));
-                store.save(round);
                 continue;
             }
-            Difference current = comparisons.current(entry.evidence());
-            verifyCurrent(entry, current);
+            Difference current;
+            try {
+                current = comparisons.current(entry.evidence());
+                verifyCurrent(entry, current);
+            } catch (DomainException failure) {
+                if (failure.getResCode() != MergeResCode.STALE_EVIDENCE) {
+                    throw failure;
+                }
+                round = finish(round, entry,
+                        result(entry, Outcome.StaleEvidence, operation(entry), null, null, failure.getMessage()));
+                continue;
+            }
             String operation = operation(entry);
             if ("KEEP_TARGET".equals(operation)) {
                 MergeCommitReceipt receipt = new MergeCommitReceipt(null,
                         current.source().revision(), current.target().revision());
-                round = finish(round, entry, confirm(round, entry, receipt));
-                store.save(round);
+                round = round.finishApplied(entry.id(), operation, receipt);
                 continue;
             }
             events.publishEvent(approve(round, entry, current, operation));
             round = round.request(entry.id());
-            store.save(round);
         }
         completeIfReady(round);
         return round(id);
@@ -293,24 +277,23 @@ public class MergeExecutionService {
         if (event.outcome() == MergeEntryResolvedEvent.Outcome.APPLIED) {
             MergeCommitReceipt receipt = new MergeCommitReceipt(event.businessRef(),
                     event.sourceRevision(), event.targetRevision());
-            ItemResult result = confirm(round, entry, receipt);
+            round = round.finishApplied(entry.id(), operation(entry), receipt);
             MergeTargetEvent mergeTarget = new MergeTargetEvent(event.businessRef(), entry.evidence().family(),
                     entry.evidence().trackers().target(), round.target(), event.targetRevision(),
                     event.inherited(), event.created() && !WorkingSet.DEFAULT_ID.equals(round.target()));
             if (event.inherited() || event.created()) {
                 events.publishEvent(new MergeAppliedEvent(mergeTarget, Instant.now()));
             }
-            round = finish(round, entry, result);
         } else {
             round = finish(round, entry, result(entry, outcome(event.outcome()), operation(entry), null,
                     null, event.failure()));
         }
-        store.save(round);
         return completeIfReady(round);
     }
 
     private MergeRound.ApplyResult completeIfReady(MergeRound round) {
         if (round.awaitingResults()) {
+            store.save(round);
             return null;
         }
         MergeRound finished = round.complete(Instant.now());
@@ -331,36 +314,6 @@ public class MergeExecutionService {
                 || !entry.evidence().target().sameExecutionShape(current.target())) {
             throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, "identity, revision, presence or readability changed");
         }
-    }
-
-    private ItemResult confirm(MergeRound round, Entry entry, MergeCommitReceipt receipt) {
-        String operation = operation(entry);
-        String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
-        if (entry.decision().markAsMerged()) {
-            sk.workingset.domain.merge.Comparison.TrackerPair trackers = entry.evidence().trackers();
-            MergeCheckpoint.Key key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), entry.evidence().family());
-            boolean sourceIsA = key.a().equals(trackers.source());
-            LocalId sourceLocal = entry.evidence().source().localId();
-            LocalId targetLocal = receipt.businessRef() != null ? receipt.businessRef()
-                    : entry.evidence().target().localId();
-            LocalId localA = sourceIsA ? sourceLocal : targetLocal;
-            LocalId localB = sourceIsA ? targetLocal : sourceLocal;
-            Revision revisionA = sourceIsA ? receipt.sourceRevision() : receipt.targetRevision();
-            Revision revisionB = sourceIsA ? receipt.targetRevision() : receipt.sourceRevision();
-            MergeCheckpoint.Direction direction = sourceIsA ? MergeCheckpoint.Direction.A_TO_B : MergeCheckpoint.Direction.B_TO_A;
-            MergeCheckpoint proposed = new MergeCheckpoint(key, entry.decisionVersion(),
-                    revisionA, revisionB, localA, localB, round.id(), entry.evidence().kind(), direction, false,
-                    round.caller());
-            boolean confirmed = checkpoints.findById(key)
-                    .map(existing -> proposed.supersedes(existing))
-                    .orElse(true);
-            if (confirmed) {
-                checkpoints.save(proposed);
-            }
-            return result(entry, confirmed ? Outcome.Confirmed : Outcome.Applied, operation, businessRef,
-                    confirmed ? "Confirmed" : "Superseded", null);
-        }
-        return result(entry, Outcome.Applied, operation, businessRef, null, null);
     }
 
     private MergeRound round(String id) {

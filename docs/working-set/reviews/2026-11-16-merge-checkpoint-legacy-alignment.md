@@ -1,6 +1,6 @@
 # Merge Checkpoint 身份修正与旧表参考（2026-11-16）
 
-**状态：Accepted（用户 2026-11-16 裁定）**。范围：`merge_checkpoints` 的身份键、方向语义、命中规则、并发合并闸门。参考旧设计 `air_ws_items_merge_index`。
+**状态：Accepted（用户 2026-11-16 裁定）**。范围：`merge_checkpoints` 的身份键、方向语义、命中规则、并发合并闸门。参考旧设计 `air_ws_items_merge_index`。**历史取舍提示**：此处以下内容保留原裁定；物理表、决定版本与用户撤销入口已由[现行契约 §6](../domain/merge-execution-contract-v1.md#6-mergecheckpoint-主要领域行为与不变量)替换。
 
 ## 1. 旧设计的定位（澄清）
 

@@ -6,7 +6,7 @@ import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 
 /**
- * SK 监听 ALM 的条目结果，记录 Checkpoint 并收敛 MergeRound。
+ * SK 消费 ALM 条目结果，推进轮次并在需要时发起 Checkpoint 确认。
  */
 @Component
 public class MergeEntryResolvedListener {

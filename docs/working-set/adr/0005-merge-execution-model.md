@@ -5,7 +5,7 @@
 - **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem 的协作顺序、双侧比较证据要求（早期载体为 ComparisonToken，现行载体见文末补充裁定）、Checkpoint 确认的发起方
 - **确认人／决策权威**：用户已确认 Q1～Q3 三项裁定，并于 2026-11-10 明确批准本 ADR 为 Accepted
 - **替代**：无
-- **被替代于**：无
+- **被部分替代于**：[ADR-0006](0006-merge-confirmation-ownership.md) 替换 Checkpoint 聚合归属及对应确认交互；下文保留当期裁定。
 
 ## 背景
 
@@ -62,7 +62,7 @@ D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint �
 
 ## 验证与追溯
 
-- 业务场景／反例：SCN-055（未物化参与 Diff 与修改）、SCN-056（MergeRound/Checkpoint 定位）、SCN-057（过期审阅）、SCN-058（撤销晚到）、SCN-059（`DEFER` 残留与轮次终态）、SCN-060（部分成功后以新轮次重做）。B06（BC 拒绝不部分写入）、B08（部分成功）、B09（ACCEPT 读源最新值）、B10（丢回执与乱序）。
+- 业务场景／反例：SCN-055（未物化参与 Diff 与修改）、SCN-056（MergeRound/Checkpoint 定位）、SCN-057（过期审阅）、SCN-058（确认回执与旧轮次重放）、SCN-059（`DEFER` 残留与轮次终态）、SCN-060（部分成功后以新轮次重做）。B06（BC 拒绝不部分写入）、B08（部分成功）、B09（ACCEPT 读源最新值）、B10（丢回执与乱序）。
 - 验收条件或测试：§7 行为矩阵八行、§5 状态机迁移、§8 轮次终态与 `ApplyResult` 表达；测试 seam 与实现入口待 `implementation/`。
 - 实现入口：待办（当前无实现证据）。
 - 重新评估条件：出现跨轮次条目复用需求；Checkpoint 需要独立确认入口；Token 证据形式无法兑现「过期审阅」防护；BC 写能力与整体校验职责变化。

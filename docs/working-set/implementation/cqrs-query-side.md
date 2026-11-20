@@ -34,7 +34,7 @@ alm.requirement.application.query
 
 - `WorkingSetRepository.save` 保存新建根及其成员，或保存持锁重建聚合的成员差量；现有根字段没有修改命令。绑定的增删及 `shown` 修改均经聚合；空间绑定仍由根文件夹关系表示，未变更关系不重写。
 - Tracker 与创建任务也统一用 `save`，保存分支由实现处理。产品空间当前无更新命令；`save` 只写新对象，重复身份不覆盖。跨工作集的 Tracker 删除清理仍由删除用例协调。
-- MergeRound 与 MergeCheckpoint 使用独立仓储，决定版本由独立生成器分配；LTI 原子家族占位不以普通保存替代。
+- MergeRound 仓储原子写入轮次及条目确认；MergeCheckpointQuery 直接从旧表只读查询跨轮次最新基准。LTI 原子家族占位不以普通保存替代。
 - 产品空间、Tracker 与 Working Set 各有聚合仓储；入口及初始化的事务差距见 [实现边界](current-boundaries.md)。
 
 ## 后续

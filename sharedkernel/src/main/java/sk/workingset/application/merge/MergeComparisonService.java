@@ -16,8 +16,8 @@ import sk.workingset.domain.*;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.*;
-import sk.workingset.domain.merge.MergeCheckpoint;
-import sk.workingset.domain.merge.MergeCheckpointRepository;
+import sk.workingset.application.query.MergeCheckpoint;
+import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
@@ -41,19 +41,19 @@ public class MergeComparisonService {
     private final LightTrackerItemQueryProvider itemQueries;
     private final TrackerItemCatalogQueryProvider catalog;
     private final Function<LocalId, TrackerItemQueryProvider> readPorts;
-    private final MergeCheckpointRepository store;
+    private final MergeCheckpointQuery checkpoints;
 
     public MergeComparisonService(WorkingSetRepository workingSets, TrackerRepository trackers,
                                   LightTrackerItemRepository items, LightTrackerItemQueryProvider itemQueries,
                                   TrackerItemCatalogQueryProvider catalog,
-                                  Function<LocalId, TrackerItemQueryProvider> readPorts, MergeCheckpointRepository store) {
+                                  Function<LocalId, TrackerItemQueryProvider> readPorts, MergeCheckpointQuery checkpoints) {
         this.workingSets = workingSets;
         this.trackers = trackers;
         this.items = items;
         this.itemQueries = itemQueries;
         this.catalog = catalog;
         this.readPorts = readPorts;
-        this.store = store;
+        this.checkpoints = checkpoints;
     }
 
     private static void putFamily(Map<CommonId, LocalId> families, CommonId family, LocalId id) {
@@ -117,7 +117,7 @@ public class MergeComparisonService {
         boolean leftIsA = key.a().equals(trackers.source());
         sk.workingset.domain.Revision aRevision = leftIsA ? left.revision() : right.revision();
         sk.workingset.domain.Revision bRevision = leftIsA ? right.revision() : left.revision();
-        return store.findById(key)
+        return checkpoints.findLatest(key)
                 .filter(checkpoint -> !checkpoint.revoked())
                 .filter(checkpoint -> java.util.Objects.equals(checkpoint.revisionA(), aRevision)
                         && java.util.Objects.equals(checkpoint.revisionB(), bRevision))

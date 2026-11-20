@@ -21,7 +21,7 @@ import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.LocalId;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.merge.MergeCheckpointRepository;
+import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetCreationSnapshotStore;
 import sk.tracker.domain.repository.TrackerRepository;
@@ -88,7 +88,7 @@ public class ApplicationConfiguration {
             LightTrackerItemQueryProvider itemQueries,
             TrackerItemCatalogQueryProvider catalog,
             JdbcRequirementRepository requirements,
-            MergeCheckpointRepository store) {
+            MergeCheckpointQuery store) {
         return new MergeComparisonService(bindings, trackers, items, itemQueries, catalog,
                 id -> new RequirementAdapter(requirements, id), store);
     }

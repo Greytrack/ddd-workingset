@@ -16,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface MergeRepository {
     /**
-     * 保存轮次：新轮次插入，已有轮次更新；轮次条目随聚合根一并保存。
+     * 保存轮次：新轮次插入，已有轮次更新；轮次条目及其确认记录随聚合根在同一事务保存。
      */
     void save(MergeRound round);
 

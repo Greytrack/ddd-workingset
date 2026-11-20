@@ -17,17 +17,16 @@
 | 提交一页决策 | `POST /api/worksets/{target}/merge-rounds`，body `{sourceWorkingSetId, requestId, decisions}` |
 | 轮询轮次 | `GET /api/merge-rounds/{id}`（完整 entries/result，不分页） |
 | 执行触发器 | `POST /api/merge-rounds/{id}/apply`（幂等，重复调用返回原结果） |
-| 撤销 Checkpoint | `POST /api/merge-checkpoints/{trackerA}/{trackerB}/{family}/revoke` |
 
 ## 语义
 
 - 请求校验前置：`decisions` 1–50 条、`requestId` 非空且 ≤128；不满足直接 400，不存在空轮次或分批登记入口。
 - 每个 decision 只含 `evidence` + `decision`；`entryKey` 已于 2026-11-17 废弃。轮次内条目身份由服务端生成的 `Entry.id` 承担，跨轮次审计使用完整 evidence。
-- **旧数据不兼容**：旧 `merge_rounds.state` 中的 `Difference.key`/`entryKey` 不读取、不迁移；开发库清空 `merge_commit_receipts`、`merge_checkpoints`、`merge_rounds` 后重跑。
+- **开发基线**：按现行 schema 初始化，不迁移旧 V4 合并表和轮次 JSON。旧 V3 表沿用 `air_ws_items_merge_index`；切换前收敛旧版本的在途轮次和事件。
 - 同 `requestId` 返回原轮次；同键换方向 409 `Conflict`；登记阶段证据过期 409 `StaleEvidence`，整轮回滚，不留半成品轮次。
 - 并发同键：`insertOrFindRound` 以 `ON CONFLICT (request_id) DO UPDATE … RETURNING state` 单条语句返回已提交轮次，不依赖"插入失败后再查询"的可见性。
 - 提交后由 `MergeRoundSubmittedEvent` 异步逐条执行；`apply` 仅作幂等触发器与恢复入口。
-- Checkpoint 的业务身份是**两侧 Tracker 分支 + 家族**（`tracker_a_id, tracker_b_id, common_id`）；**WorkingSet 不参与**；左右 `local_id` 只作为确认时的变体证据。
+- Checkpoint 的业务身份是**两侧 Tracker 分支 + 家族**（旧表列 `branch_a_id, branch_b_id, common_id`）；**WorkingSet 不参与**；左右 `local_id` 只作为确认时的变体证据。
 
 ## 验证
 
@@ -40,6 +39,8 @@
 - `secondRoundWithRacedEvidenceCannotCommitTheSameFamilyTwice`：同家族旧证据第二次提交被拒。
 - `partialRoundRetainsKeepTargetCheckpointAndNewRoundOnlyProcessesSelectedItems`：KEEP_TARGET 确认、部分成功与重做边界。
 - `competingApplyIsRejectedAndResumeOnlyRecordsTheCommittedWrite`、`replayCompletesMergeTargetAfterListenerFailureWithoutApplyingBusinessWriteAgain`：并发执行、恢复与事件重投。
+
+- `confirmationFailureRollsBackRoundAndOldBusinessReplayCannotReplaceNewRound`：确认写入失败回滚轮次结果，后续同对轮次被拒；重投业务回执恢复后可继续，旧重投不会覆盖新确认。
 
 ## 前端
 

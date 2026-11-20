@@ -42,7 +42,8 @@
 - [ADR-0002：LightTrackerItem 作为 Working Set 权威聚合](adr/0002-lighttrackeritem-authoritative-aggregate.md)：Accepted（D-007/D-008/D-012，2026-11-10）。
 - [ADR-0003：COW 采用事件驱动最终一致与首次快照优先](adr/0003-cow-event-driven-final-consistency.md)：Accepted（D-009～D-018，2026-11-10）。
 - [ADR-0004：ProductSpace 独立聚合与 WorkingSet 绑定模型](adr/0004-productspace-independent-aggregate.md)：Accepted（FACT-024～026、POL-012～014、INV-053～059、SCN-050～054；2026-11-10）。
-- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（Q1～Q3 裁定：MergeEntry 为 MergeRound 内 Entity、所选差异证据必须绑双侧内容证据、Checkpoint 由 MergeRound 发起；2026-11-10）。2026-11-15 补充：compare 不持久化，不再要求持久化 `ComparisonToken`。
+- [ADR-0005：Merge 执行模型与 MergeEntry 行为契约](adr/0005-merge-execution-model.md)：Accepted（Q1～Q3 裁定：MergeEntry 为 MergeRound 内 Entity、所选差异证据必须绑双侧内容证据、Checkpoint 由 MergeRound 发起；2026-11-10）。2026-11-15 补充：compare 不持久化，不再要求持久化 `ComparisonToken`。确认归属已由 ADR-0006 替换。
+- [ADR-0006：合并确认归属轮次，跨轮次独立查询](adr/0006-merge-confirmation-ownership.md)：Accepted（2026-11-20），用户明确确认。
 
 ## 相关验收标准
 
@@ -89,7 +90,8 @@
 | 2026-11-17 | T7-G 扩展入口和部分成功边界见 [T7 §12A](domain/working-set-creation-lro-design.md)；T7-E 工作集侧发布已接入，消费守卫仍见 [开放问题](domain/open-questions.md)。 |
 | 2026-11-17 | 数值雪花身份和 Requirement 家族只读编号见 [T4](domain/cross-bc-contract-v1.md)；创建任务由服务端分配目标 ID，见 [T7 REST](domain/working-set-creation-lro-design.md#73-rest)。 |
 | 2026-11-17 | T6 收尾：B/C/D/E/F 完成；i（批量派生整批原子）被 T7-G 部分成功语义取代；`/derive` 公开入口已删除；T6-G 待 QUESTION-011／014；规模/保留转专题。见 [T6 收尾](implementation/t6-next-stage-outline.md)。 |
-| 2026-11-16 | Checkpoint 身份修正：以**两侧 Tracker 分支**（`tracker_a_id`/`tracker_b_id`）+ 家族 + 双侧版次定位，**WorkingSet 不参与**；`round_id` 取 `MergeRound`（旧 `batch_id` 无对应语义）；唯一键 `(tracker_a_id, tracker_b_id, common_id)`；同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；撤销方向无关。见 [裁定](reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)。 |
+| 2026-11-20 | 确认改归 MergeEntry；轮次仓储同事务保存确认和轮次状态，跨轮次比较只读旧表。见 [ADR-0006](adr/0006-merge-confirmation-ownership.md)。 |
+| 2026-11-16 | Checkpoint 身份修正（该行物理表和撤销入口已由 11-20 方案替换）：以**两侧 Tracker 分支**（`tracker_a_id`/`tracker_b_id`）+ 家族 + 双侧版次定位，**WorkingSet 不参与**；`round_id` 取 `MergeRound`（旧 `batch_id` 无对应语义）；唯一键 `(tracker_a_id, tracker_b_id, common_id)`；同一 Tracker 对禁止并发合并（`PairMergeInProgress`）；撤销方向无关。见 [裁定](reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)。 |
 | 2026-11-13 | T7-A/B/C：创建 LRO 契约、任务骨架、范围复制与绑定；见 [T7-A 评审](reviews/2026-11-13-t7-a-creation-lro-review.md)、[T7-B](implementation/t7-b-creation-task-verification.md)、[T7-C](implementation/t7-c-binding-verification.md)。 |
 | 2026-11-13 | T6-B/C/D：Merge 并发恢复、身份分配、子工作集回并；见 [T6-B](implementation/t6-b-merge-recovery-verification.md)、[T6-C](implementation/t6-c-identity-verification.md)、[T6-D](implementation/t6-d-merge-back-verification.md)。 |
 | 2026-11-13 | 实施边界与裁定：SK 契约优先、ALM 为参考实现；D16 软删占键、D17 生命周期不产生 Unknown、D10 工作集入口、D12-A JSONB 切片、D15-B Merge 事件切换、C7 LTI 家族唯一索引、D3-B COW 事件收敛；详见 [T4](domain/cross-bc-contract-v1.md)、[T3](domain/lighttrackeritem-materialization-contract-v1.md)、[T1](domain/merge-execution-contract-v1.md)。 |

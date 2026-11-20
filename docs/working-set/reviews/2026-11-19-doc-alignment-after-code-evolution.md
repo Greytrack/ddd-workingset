@@ -48,7 +48,7 @@
 
 ## 5. 未解决/未验证
 
-- ProductSpace 创建仍跨聚合同事务；Merge 结果与 Checkpoint 仍存在同事务路径；T7 进度仍待拆分。
+- 当期发现：ProductSpace 创建、Merge 结果与 Checkpoint、T7 进度存在同事务路径。Merge 路径已按[现行实施边界](../implementation/current-boundaries.md)拆分。
 - 当前工作区新增 `sk.businessframework` / `RequestThreadHolder` 未完成全量编译和测试；本轮不声称其已交付。
 - `tracker`/`productspace` 对 `workingset` 的同进程依赖尚未收敛为稳定跨 BC 合同。
 - 本轮不新建 ADR，也不把“直接只读”或模块拆分升级为 Accepted 业务基线；如需长期约束，应由用户确认后新建 ADR 并更新 BASELINE。

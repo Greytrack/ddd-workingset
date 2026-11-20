@@ -9,11 +9,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison;
+import sk.workingset.error.MergeResCode;
 import sk.workingset.domain.merge.MergeRepository;
 import sk.workingset.domain.merge.MergeRound;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,6 +34,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     private final ObjectMapper json;
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void save(MergeRound round) {
         // Serialize duplicate requestId submissions before touching the unique indexes.
         // The advisory lock is transaction scoped: the first committer owns the requestId,
@@ -50,6 +58,64 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
                             tracker_b_id = EXCLUDED.tracker_b_id
                         """, round.numericId(), round.token(), round.requestId(), encode(round),
                 trackers[0], trackers[1]);
+        saveConfirmations(round);
+    }
+
+    private void saveConfirmations(MergeRound round) {
+        List<MergeRound.Entry> confirmed = round.entries().stream()
+                .filter(entry -> entry.confirmation() != null).toList();
+        if (confirmed.isEmpty()) {
+            return;
+        }
+        var saved = new HashSet<>(jdbc.queryForList(
+                "SELECT id FROM air_ws_items_merge_index WHERE batch_id = ?", Long.class, round.numericId()));
+        for (MergeRound.Entry entry : confirmed) {
+            if (!saved.contains(entry.numericId())) {
+                insertConfirmation(round, entry);
+            }
+        }
+    }
+
+    private void insertConfirmation(MergeRound round, MergeRound.Entry entry) {
+        var evidence = entry.evidence();
+        var confirmation = entry.confirmation();
+        long source = evidence.trackers().source().numericValue();
+        long target = evidence.trackers().target().numericValue();
+        boolean sourceIsA = source <= target;
+        Long sourceLocal = numericId(evidence.source().localId());
+        Long targetLocal = entry.result().businessRef() != null
+                ? Long.valueOf(entry.result().businessRef()) : numericId(evidence.target().localId());
+        String diffType = switch (evidence.kind()) {
+            case ADDED -> "ADD";
+            case MODIFIED -> "UPDATED";
+            case DELETED -> "DELETED";
+        };
+        int inserted = jdbc.update("""
+                INSERT INTO air_ws_items_merge_index
+                    (id, batch_id, branch_a_id, branch_b_id, common_id, local_id_a, local_id_b,
+                     revision_a, revision_b, diff_type, merge_direction, merge_action, merge_status,
+                     operator, created_by, created_time, updated_by, updated_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MERGED', ?, ?,
+                    (extract(epoch FROM now()) * 1000)::bigint, ?, (extract(epoch FROM now()) * 1000)::bigint)
+                ON CONFLICT (id) DO NOTHING
+                """, entry.numericId(), round.numericId(), Math.min(source, target), Math.max(source, target),
+                evidence.family().numericValue(), sourceIsA ? sourceLocal : targetLocal, sourceIsA ? targetLocal : sourceLocal,
+                revision(sourceIsA ? confirmation.sourceRevision() : confirmation.targetRevision()),
+                revision(sourceIsA ? confirmation.targetRevision() : confirmation.sourceRevision()), diffType,
+                sourceIsA ? "A_TO_B" : "B_TO_A",
+                "KEEP_TARGET".equals(entry.result().operation()) ? "IGNORED" : "ACCEPTED",
+                round.caller(), round.caller(), round.caller());
+        if (inserted != 1) {
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "checkpoint ID belongs to another confirmation");
+        }
+    }
+
+    private static Long numericId(LocalId id) {
+        return id == null ? null : id.numericValue();
+    }
+
+    private static Integer revision(Revision revision) {
+        return revision == null ? null : revision.value();
     }
 
     @Override
