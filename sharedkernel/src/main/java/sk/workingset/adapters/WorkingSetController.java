@@ -123,10 +123,12 @@ public class WorkingSetController {
         }
     }
 
-    public record ClassificationView(String classificationId, SharingMode sharingMode, String name) {
+    public record ClassificationView(String classificationId, SharingMode sharingMode, String name,
+                                     String baseClassId, String classId) {
         static ClassificationView from(ClassificationSummary summary) {
             return new ClassificationView(String.valueOf(summary.classificationId()),
-                    SharingMode.valueOf(summary.sharingMode()), summary.name());
+                    SharingMode.valueOf(summary.sharingMode()), summary.name(),
+                    String.valueOf(summary.baseClassId()), String.valueOf(summary.classId()));
         }
     }
 

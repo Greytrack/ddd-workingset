@@ -222,21 +222,34 @@ CREATE TABLE IF NOT EXISTS product_spaces (
 CREATE TABLE IF NOT EXISTS classifications (
     classification_id BIGINT PRIMARY KEY,
     sharing_mode      VARCHAR(8) NOT NULL CHECK (sharing_mode IN ('SHARED', 'UNSHARED')),
-    name              VARCHAR(200) NOT NULL DEFAULT '需求',
-    base_class        BIGINT NOT NULL DEFAULT 1009,
-    class             BIGINT NOT NULL DEFAULT 100901,
-    type              BIGINT NOT NULL DEFAULT 10090101,
+    name              VARCHAR(200) NOT NULL,
+    base_class_id     BIGINT NOT NULL,
+    class_id          BIGINT NOT NULL,
     UNIQUE (classification_id, sharing_mode)
 );
 
-ALTER TABLE classifications ADD COLUMN IF NOT EXISTS base_class BIGINT NOT NULL DEFAULT 1009;
-ALTER TABLE classifications ADD COLUMN IF NOT EXISTS class BIGINT NOT NULL DEFAULT 100901;
-ALTER TABLE classifications ADD COLUMN IF NOT EXISTS type BIGINT NOT NULL DEFAULT 10090101;
+ALTER TABLE classifications ADD COLUMN IF NOT EXISTS base_class_id BIGINT;
+ALTER TABLE classifications ADD COLUMN IF NOT EXISTS class_id BIGINT;
+DO '
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ''classifications''::regclass
+               AND attname = ''base_class'' AND NOT attisdropped) THEN
+        UPDATE classifications SET base_class_id = base_class WHERE base_class_id IS NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ''classifications''::regclass
+               AND attname = ''class'' AND NOT attisdropped) THEN
+        UPDATE classifications SET class_id = class WHERE class_id IS NULL;
+    END IF;
+END';
 
--- Base requirement category. Demo-only categories are added by demo-data.sql.
-INSERT INTO classifications (classification_id, name, sharing_mode)
-VALUES (258519859202016, '需求', 'UNSHARED')
-ON CONFLICT (classification_id) DO NOTHING;
+INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id)
+VALUES (10030101, 'UNSHARED', '产品空间', 1003, 100301),
+       (10070101, 'UNSHARED', '文件夹', 1007, 100701),
+       (10080101, 'UNSHARED', '工作集', 1008, 100801),
+       (10090101, 'UNSHARED', 'Tracker', 1009, 100901),
+       (14010101, 'UNSHARED', '需求', 1401, 140101)
+ON CONFLICT (classification_id) DO UPDATE SET
+    base_class_id = EXCLUDED.base_class_id, class_id = EXCLUDED.class_id;
 
 -- ---------------------------------------------------------------------------
 -- Trackers and bindings
@@ -517,11 +530,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_name ON air_inst_tracker_rev (w
     WHERE name IS NOT NULL AND source_branch_id IS NULL AND delete_flag = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_source ON air_inst_tracker_rev (workingset_id, source_branch_id)
     WHERE source_branch_id IS NOT NULL AND delete_flag = 0;
-INSERT INTO classifications (classification_id, sharing_mode, name, base_class, class, type)
-VALUES (10070101, 'UNSHARED', '文件夹', 1007, 100701, 10070101)
-ON CONFLICT (classification_id) DO UPDATE SET base_class = EXCLUDED.base_class,
-    class = EXCLUDED.class, type = EXCLUDED.type;
-
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_parent ON air_inst_tracker_rev (parent_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_source ON air_inst_tracker_rev (source_branch_id);
 CREATE INDEX IF NOT EXISTS idx_tracker_rev_space ON air_inst_tracker_rev (work_space);
@@ -877,6 +885,63 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_air_inst_common_workingset_family
     ON air_inst_common (workingset_id, common_id);
 CREATE INDEX IF NOT EXISTS idx_air_inst_common_tracker_workingset
     ON air_inst_common (tracker, workingset_id);
+
+-- Prefer the existing Tracker projection when legacy catalog metadata is incomplete.
+WITH tracker_hierarchy AS (
+    SELECT t.tracker_class,
+           CASE WHEN count(DISTINCT t.base_class) = 1 THEN min(t.base_class) END AS base_class_id,
+           CASE WHEN count(DISTINCT t.class) = 1 THEN min(t.class) END AS class_id
+    FROM air_inst_tracker_rev t
+    JOIN classifications c ON c.classification_id = t.tracker_class
+    WHERE c.base_class_id IS NULL OR c.class_id IS NULL
+    GROUP BY t.tracker_class
+)
+UPDATE classifications c
+SET base_class_id = COALESCE(c.base_class_id, t.base_class_id),
+    class_id = COALESCE(c.class_id, t.class_id)
+FROM tracker_hierarchy t
+WHERE c.classification_id = t.tracker_class;
+
+-- Older catalogs defaulted to the Tracker hierarchy when no hierarchy was supplied.
+UPDATE classifications
+SET base_class_id = COALESCE(base_class_id, 1009),
+    class_id = COALESCE(class_id, 100901)
+WHERE base_class_id IS NULL OR class_id IS NULL;
+ALTER TABLE classifications ALTER COLUMN base_class_id SET NOT NULL;
+ALTER TABLE classifications ALTER COLUMN class_id SET NOT NULL;
+
+-- Upgrade the previous catalog and its Tracker projections together, retaining instance identities.
+DO '
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ''classifications''::regclass
+               AND attname IN (''base_class'', ''class'', ''type'', ''folder_tracker'') AND NOT attisdropped)
+        OR EXISTS (SELECT 1 FROM classifications WHERE classification_id = 258519859202016) THEN
+        UPDATE air_inst_tracker_rev t
+        SET base_class = c.base_class_id, class = c.class_id, type = c.classification_id,
+            tracker_class = c.classification_id
+        FROM classifications c
+        WHERE c.classification_id =
+            CASE WHEN t.tracker_class = 258519859202016 THEN 14010101 ELSE t.tracker_class END
+          AND (t.base_class, t.class, t.type, t.tracker_class)
+              IS DISTINCT FROM (c.base_class_id, c.class_id, c.classification_id, c.classification_id);
+
+        UPDATE air_ws_tracker mirror SET sub_class_id = t.tracker_class
+        FROM air_inst_tracker_rev t
+        WHERE mirror.id = t.id AND mirror.sub_class_id IS DISTINCT FROM t.tracker_class;
+
+        UPDATE air_inst_common summary SET base_class = t.base_class, class = t.class, type = t.type
+        FROM air_inst_tracker_rev t
+        WHERE summary.id = t.id AND (summary.base_class, summary.class, summary.type)
+                                 IS DISTINCT FROM (t.base_class, t.class, t.type);
+
+        DELETE FROM classifications WHERE classification_id = 258519859202016;
+        ALTER TABLE classifications DROP COLUMN IF EXISTS base_class;
+        ALTER TABLE classifications DROP COLUMN IF EXISTS class;
+        ALTER TABLE classifications DROP COLUMN IF EXISTS type;
+        ALTER TABLE classifications DROP COLUMN IF EXISTS folder_tracker;
+        ALTER TABLE classifications ALTER COLUMN name DROP DEFAULT;
+    END IF;
+END';
 
 -- Bootstrap only the missing default root summary.
 INSERT INTO air_inst_common (

@@ -55,13 +55,13 @@ class LegacyWideRowAcceptanceTest {
                     base_class, class, type, tracker_class, number, name, owner, share, revision, delete_flag,
                     lock_version, created_by, created_time, updated_by, updated_time, version,
                     reference1, reference01, reference001, numeric01, multilist001)
-                VALUES (?, ?, ?, 1, ?, 1009, 100901, 10090101, 258519859202016, 'legacy-tracker', 'before',
+                VALUES (?, ?, ?, 1, ?, 1401, 140101, 14010101, 14010101, 'legacy-tracker', 'before',
                     42, 0, 1, 0, 0, 'legacy', 1234, 'legacy', 1234, 'A.1',
                     101, 102, 103, 1234567890123456.000000000123, '3,2,1')
                 """, id, id, id, spaceId);
         jdbc.update("""
                 INSERT INTO air_ws_tracker (id, workingset_id, sub_class_id, name, locked, lock_version, attributes)
-                VALUES (?, 1, 258519859202016, 'before', 1, 0, '{"mirror": true}'::jsonb)
+                VALUES (?, 1, 14010101, 'before', 1, 0, '{"mirror": true}'::jsonb)
                 """, id);
 
         assertTrue(trackers.findLegacyRow(trackerId, spaceId + 1).isEmpty());

@@ -11,7 +11,7 @@ class TrackerTest {
     @Test
     void descendantsKeepFamilyIdentityAndLinkToTheirImmediateSource() {
         var classification = new Classification(301L, Classification.SharingMode.UNSHARED, "分类",
-                11L, 111L, 1111L);
+                11L, 111L);
         Tracker root = Tracker.original(TrackerId.of(101), new ProductSpace("201"),
                 classification, null);
         Tracker child = Tracker.derived(TrackerId.of(102), root, WorkingSetId.of(2L));
@@ -24,7 +24,6 @@ class TrackerTest {
         assertEquals(301L, grandchild.numericClassificationId());
         assertEquals(11L, grandchild.baseClassId());
         assertEquals(111L, grandchild.classId());
-        assertEquals(1111L, grandchild.typeId());
         assertEquals(TrackerId.of(103), grandchild.compatibility().trackerId());
         assertEquals(301L, grandchild.compatibility().originalClassificationId());
     }

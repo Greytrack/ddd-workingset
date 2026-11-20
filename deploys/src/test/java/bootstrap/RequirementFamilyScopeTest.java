@@ -52,7 +52,7 @@ class RequirementFamilyScopeTest {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", ws2);
         for (String tracker : new String[] {t1, t2, t3, t4}) {
             jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", fixtureId(tracker + "-space"));
-            jdbc.update("INSERT INTO classifications (classification_id, sharing_mode) VALUES (?, 'UNSHARED')",
+            jdbc.update("INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id) VALUES (?, 'UNSHARED', '测试分类', 1401, 140101)",
                     fixtureId(tracker + "-class"));
         }
         jdbc.update("""

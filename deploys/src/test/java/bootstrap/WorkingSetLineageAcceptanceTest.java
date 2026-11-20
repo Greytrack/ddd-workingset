@@ -145,6 +145,113 @@ class WorkingSetLineageAcceptanceTest {
     }
 
     @Test
+    void initializesDemoWithIncompleteLegacyClassifications() throws Exception {
+        try (java.sql.Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (java.sql.Statement sql = connection.createStatement()) {
+                String schema = "incomplete_classification_" + suffix.replace("-", "");
+                sql.execute("CREATE SCHEMA " + schema);
+                sql.execute("SET LOCAL search_path TO " + schema);
+                sql.execute("""
+                        CREATE TABLE classifications (
+                            classification_id BIGINT PRIMARY KEY, sharing_mode TEXT NOT NULL, name TEXT NOT NULL,
+                            base_class_id BIGINT, class_id BIGINT, base_class BIGINT, class BIGINT)
+                        """);
+                sql.execute("""
+                        INSERT INTO classifications (classification_id, sharing_mode, name, base_class, class)
+                        VALUES (14010101, 'UNSHARED', '需求', NULL, NULL),
+                               (258519859202016, 'UNSHARED', '旧需求', NULL, NULL),
+                               (25001, 'SHARED', '旧业务分类', 1700, 170001),
+                               (25002, 'SHARED', '未填写层级的旧分类', NULL, NULL)
+                        """);
+
+                ResourceDatabasePopulator startup = new ResourceDatabasePopulator(
+                        new ClassPathResource("schema.sql"), new ClassPathResource("demo-data.sql"));
+                startup.populate(connection);
+
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT classification_id, base_class_id, class_id
+                        FROM classifications WHERE classification_id IN (25001, 25002, 14010101)
+                        ORDER BY classification_id
+                        """)) {
+                    assertTrue(rows.next());
+                    assertEquals(List.of(25001L, 1700L, 170001L), List.of(rows.getLong(1), rows.getLong(2), rows.getLong(3)));
+                    assertTrue(rows.next());
+                    assertEquals(List.of(25002L, 1009L, 100901L), List.of(rows.getLong(1), rows.getLong(2), rows.getLong(3)));
+                    assertTrue(rows.next());
+                    assertEquals(List.of(14010101L, 1401L, 140101L), List.of(rows.getLong(1), rows.getLong(2), rows.getLong(3)));
+                }
+
+                sql.execute("UPDATE air_inst_workingset SET name = '保留已编辑的 Demo 名称' WHERE id = pg_temp.demo_id(200)");
+                startup.populate(connection);
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT name FROM air_inst_workingset WHERE id = pg_temp.demo_id(200)
+                        """)) {
+                    assertTrue(rows.next());
+                    assertEquals("保留已编辑的 Demo 名称", rows.getString(1));
+                }
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    @Test
+    void upgradesLegacyRequirementClassificationWithoutChangingTrackerIdentity() throws Exception {
+        try (java.sql.Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (java.sql.Statement sql = connection.createStatement()) {
+                String schema = "classification_" + suffix.replace("-", "");
+                sql.execute("CREATE SCHEMA " + schema);
+                sql.execute("SET LOCAL search_path TO " + schema);
+                ResourceDatabasePopulator schemaScript = new ResourceDatabasePopulator(new ClassPathResource("schema.sql"));
+                schemaScript.populate(connection);
+                new ResourceDatabasePopulator(new ClassPathResource("tracker-fixtures.sql")).populate(connection);
+                sql.execute("""
+                        ALTER TABLE classifications ADD COLUMN base_class BIGINT DEFAULT 1009,
+                            ADD COLUMN class BIGINT DEFAULT 100901, ADD COLUMN type BIGINT DEFAULT 10090101
+                        """);
+                sql.execute("""
+                        INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id)
+                        VALUES (258519859202016, 'UNSHARED', '旧需求', 1009, 100901)
+                        """);
+                sql.execute("INSERT INTO product_spaces (product_space_id, name) VALUES (201, '测试空间')");
+                sql.execute("""
+                        INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
+                        VALUES (301, 1, 201, 258519859202016, 'UNSHARED')
+                        """);
+                sql.execute("INSERT INTO air_inst_common (id, base_class, class, type) VALUES (301, 1009, 100901, 10090101)");
+
+                schemaScript.populate(connection);
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT t.base_class, t.class, t.type, t.tracker_class, mirror.sub_class_id, summary.type
+                        FROM air_inst_tracker_rev t
+                        JOIN air_ws_tracker mirror ON mirror.id = t.id
+                        JOIN air_inst_common summary ON summary.id = t.id
+                        WHERE t.id = 301
+                        """)) {
+                    assertTrue(rows.next());
+                    assertEquals(1401L, rows.getLong(1));
+                    assertEquals(140101L, rows.getLong(2));
+                    for (int column = 3; column <= 6; column++) {
+                        assertEquals(14010101L, rows.getLong(column));
+                    }
+                }
+                try (java.sql.ResultSet rows = sql.executeQuery("""
+                        SELECT EXISTS (SELECT 1 FROM classifications WHERE classification_id = 258519859202016)
+                            OR EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'classifications'::regclass
+                                AND attname IN ('base_class', 'class', 'type') AND NOT attisdropped)
+                        """)) {
+                    assertTrue(rows.next());
+                    assertFalse(rows.getBoolean(1));
+                }
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    @Test
     @Transactional
     void productSpaceProjectionUsesOwnIdentityAndDefaultWorkingSet() {
         long id = Long.parseLong(FixtureIds.fixtureId("product-space-summary-" + suffix));
@@ -178,7 +285,7 @@ class WorkingSetLineageAcceptanceTest {
                         """)) {
                     assertTrue(rows.next());
                     assertEquals(rows.getLong(1), rows.getLong(2));
-                    assertArrayEquals(new Long[]{1003L, 1007L, 1008L, 1009L, 1401L},
+                    assertArrayEquals(new Long[]{1003L, 1007L, 1008L, 1401L},
                             (Long[]) rows.getArray(3).getArray());
                 }
                 try (java.sql.ResultSet rows = sql.executeQuery("""

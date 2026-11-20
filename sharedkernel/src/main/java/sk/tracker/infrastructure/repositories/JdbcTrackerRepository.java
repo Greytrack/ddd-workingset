@@ -30,7 +30,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
     private static final String COLUMNS = """
             t.id, t.common_id, t.name, t.source_branch_id, t.workingset_id, t.work_space,
             t.tracker_class, t.share, NULLIF(t.parent_id, 0) AS parent_id, t.is_default,
-            t.base_class, t.class, t.type
+            t.base_class, t.class
             """;
     private static final String FROM_TRACKER = " FROM air_inst_tracker_rev t ";
     private static final RowMapper<Tracker> MAPPER = (rs, row) ->
@@ -44,7 +44,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
                 rs.getLong("tracker_class"),
                 rs.getLong("base_class"),
                 rs.getLong("class"),
-                rs.getLong("type"),
                 rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
                 optionalId(rs, "parent_id"),
                 rs.getInt("is_default") == 1
@@ -158,7 +157,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 584578917040480, 584532998805760, 0,
                             ?, ?, ?, ?, NULL, 1, 10001, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
                         """, id, id, tracker.commonId().numericValue(), workset, tracker.numericProductSpaceId(),
-                tracker.baseClassId(), tracker.classId(), tracker.typeId(), tracker.numericClassificationId(),
+                tracker.baseClassId(), tracker.classId(), tracker.numericClassificationId(), tracker.numericClassificationId(),
                 tracker.name(), number, actor, shared,
                 parent, source, defaultFlag, visible, auditActor, now, auditActor, now);
         jdbc.update("""

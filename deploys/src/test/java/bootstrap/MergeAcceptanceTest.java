@@ -80,7 +80,7 @@ class MergeAcceptanceTest {
     @BeforeEach
     void setup() {
         jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
-        jdbc.update("INSERT INTO classifications VALUES (?, 'UNSHARED')", classification);
+        FixtureIds.insertClassification(jdbc, classification, "UNSHARED");
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
@@ -610,7 +610,7 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.CONFLICT, rest.postForEntity(comparePath(sibling, child, rootTracker, childTracker), null, Map.class));
         assertStatus(HttpStatus.CONFLICT, rest.postForEntity(comparePath("1", grandchild, rootTracker, childTracker), null, Map.class));
         String shared = id("shared");
-        jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED')", sharedClassification);
+        FixtureIds.insertClassification(jdbc, sharedClassification, "SHARED");
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'SHARED')

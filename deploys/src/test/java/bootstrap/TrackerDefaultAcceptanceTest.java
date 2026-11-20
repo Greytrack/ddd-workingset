@@ -68,12 +68,27 @@ class TrackerDefaultAcceptanceTest {
     }
 
     @Test
+    void exposesThePresetClassificationTriples() {
+        ClassificationView[] metadata = rest.getForObject(
+                "/api/worksets/metadata/classifications", ClassificationView[].class);
+        var triples = Arrays.stream(metadata).map(row ->
+                java.util.List.of(row.baseClassId(), row.classId(), row.classificationId())).toList();
+
+        assertTrue(triples.containsAll(java.util.List.of(
+                java.util.List.of("1003", "100301", "10030101"),
+                java.util.List.of("1007", "100701", "10070101"),
+                java.util.List.of("1008", "100801", "10080101"),
+                java.util.List.of("1009", "100901", "10090101"),
+                java.util.List.of("1401", "140101", "14010101"))));
+    }
+
+    @Test
     void readsFolderTrackerBindingsWithClassificationMetadataWithoutFolderColumn() {
         String space = createSpace("1");
         transactions.executeWithoutResult(status -> {
             jdbc.execute("""
                     CREATE TEMP TABLE classifications ON COMMIT DROP AS
-                    SELECT classification_id, sharing_mode, name, base_class, class, type
+                    SELECT classification_id, sharing_mode, name, base_class_id, class_id
                     FROM public.classifications
                     """);
 
@@ -90,7 +105,8 @@ class TrackerDefaultAcceptanceTest {
             assertEquals(10070101L, tracker.numericClassificationId());
             assertEquals(1007L, tracker.baseClassId());
             assertEquals(100701L, tracker.classId());
-            assertEquals(10070101L, tracker.typeId());
+            assertEquals(10070101L, jdbc.queryForObject("SELECT type FROM air_inst_tracker_rev WHERE id = ?",
+                    Long.class, folder.trackerId()));
         });
     }
 
@@ -101,7 +117,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(10030101L, product.type());
         assertEquals(584189545406816L, product.tracker());
         assertEquals(584190236948832L, instanceSummaries.findById(1L).orElseThrow().tracker());
-        int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
+        int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications WHERE classification_id NOT IN (10030101, 10080101, 10090101)", Integer.class);
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND is_default", Integer.class, spaceId));
         assertEquals(classifications, jdbc.queryForObject(
@@ -110,15 +126,15 @@ class TrackerDefaultAcceptanceTest {
         java.util.List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
-        // 默认 Tracker 使用 Tracker 自举实例类型；文件夹 Tracker 单独使用文件夹实例类型（1007/100701/10070101）。
-        assertEquals(classifications - 1, jdbc.queryForObject("""
+        assertEquals(classifications, jdbc.queryForObject("""
                 SELECT count(*)
                 FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id
+                JOIN classifications metadata ON metadata.classification_id = r.tracker_class
                 WHERE r.work_space = ? AND r.workingset_id = 1 AND c.workingset_id = 1
                   AND r.id = r.instance_id AND r.id = r.common_id
                   AND r.revision = 1 AND r.revision_id IS NULL AND r.version_type = 10001
-                  AND r.tracker_class <> 10070101
-                  AND r.base_class = 1009 AND r.class = 100901 AND r.type = 10090101
+                  AND r.base_class = metadata.base_class_id AND r.class = metadata.class_id
+                  AND r.type = r.tracker_class
                   AND r.tracker = 584578917040480 AND r.default_layout = 584532998805760
                   AND r.owner = ? AND r.number = c.number AND r.tracker_class = c.sub_class_id
                   AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
@@ -147,7 +163,7 @@ class TrackerDefaultAcceptanceTest {
                 bindings.trackers().stream().filter(binding -> spaceId.equals(binding.productSpaceId()))
                         .map(binding -> binding.trackerId()).sorted().toList());
 
-        String trackerId = trackers.stream().filter(tracker -> "258519859202016".equals(tracker.classificationId()))
+        String trackerId = trackers.stream().filter(tracker -> "14010101".equals(tracker.classificationId()))
                 .findFirst().orElseThrow().trackerId();
         org.springframework.http.ResponseEntity<RequirementView> item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
@@ -217,7 +233,7 @@ class TrackerDefaultAcceptanceTest {
     void renamingTrackerUpdatesBothRowsAndDoesNotChangeIdentity() {
         String spaceId = createSpace("1");
         TrackerView tracker = rest.postForEntity("/api/worksets/1/trackers",
-                Map.of("productSpaceId", spaceId, "classificationId", "258519859202016",
+                Map.of("productSpaceId", spaceId, "classificationId", "14010101",
                         "sharingMode", "UNSHARED", "name", "变更前"), TrackerView.class).getBody();
         long id = Long.parseLong(tracker.trackerId());
         RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
@@ -253,7 +269,7 @@ class TrackerDefaultAcceptanceTest {
                 id.numericValue());
         try {
             Tracker tracker = new Tracker(id, "projection collision", null, WorkingSetId.of(1L),
-                    space, classifications.findClassification("258519859202016").orElseThrow(),
+                    space, classifications.findClassification("14010101").orElseThrow(),
                     Classification.SharingMode.UNSHARED, null, false);
             assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
@@ -271,7 +287,7 @@ class TrackerDefaultAcceptanceTest {
         long space = Long.parseLong(createSpace("1"));
         TrackerId id = TrackerId.of(fixtureId("TRACKER-ROLLBACK-" + suffix));
         Tracker tracker = new Tracker(id, "x".repeat(501), null, WorkingSetId.of(1L),
-                space, classifications.findClassification("258519859202016").orElseThrow(),
+                space, classifications.findClassification("14010101").orElseThrow(),
                 Classification.SharingMode.UNSHARED, null, false);
 
         assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
@@ -302,7 +318,7 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void createsAndBindsNamedTrackersUsingClassificationSharingRules() {
-        jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED')", sharedClassification);
+        FixtureIds.insertClassification(jdbc, sharedClassification, "SHARED");
         String spaceId = createSpace("1");
         ClassificationView[] classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
         assertTrue(Arrays.stream(classifications).anyMatch(classification ->
@@ -312,7 +328,7 @@ class TrackerDefaultAcceptanceTest {
         String url = "/api/worksets/1/trackers";
         for (Classification.SharingMode mode : Classification.SharingMode.values()) {
             Map<String,String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
-                    "258519859202016", "sharingMode", mode.name());
+                    "14010101", "sharingMode", mode.name());
             org.springframework.http.ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
             TrackerView tracker = response.getBody();
@@ -357,7 +373,7 @@ class TrackerDefaultAcceptanceTest {
         String spaceId = fixtureId("PS-DEF-" + suffix);
         testSpaces.add(spaceId);
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", spaceId, "空间-" + suffix);
-        String classification = jdbc.queryForObject("SELECT classification_id FROM classifications LIMIT 1", String.class);
+        String classification = jdbc.queryForObject("SELECT classification_id FROM classifications WHERE classification_id = 14010101", String.class);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id,
                     sharing_mode, is_default)
@@ -375,7 +391,7 @@ class TrackerDefaultAcceptanceTest {
         String spaceId = fixtureId("PS-NAME-" + suffix);
         testSpaces.add(spaceId);
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", spaceId, "空间-" + suffix);
-        String classification = jdbc.queryForObject("SELECT classification_id FROM classifications LIMIT 1", String.class);
+        String classification = jdbc.queryForObject("SELECT classification_id FROM classifications WHERE classification_id = 14010101", String.class);
         String name = "同名-" + suffix;
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)
@@ -401,7 +417,7 @@ class TrackerDefaultAcceptanceTest {
         FixtureIds.insertWorkingSet(jdbc, "1", child);
         String spaceId = createSpace(child);
 
-        int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
+        int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications WHERE classification_id NOT IN (10030101, 10080101, 10090101)", Integer.class);
         assertEquals(classifications, jdbc.queryForObject("""
                 SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'
                 """, Integer.class, spaceId));
@@ -421,7 +437,7 @@ class TrackerDefaultAcceptanceTest {
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
         ProductSpace space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
         Classification classification = new Classification(258831141156800L, Classification.SharingMode.UNSHARED,
-                "测试分类", 11L, 111L, 1111L);
+                "测试分类", 11L, 111L);
         assertThrows(DomainException.class, () -> new Tracker(
                 TrackerId.of(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
                 WorkingSetId.of(child), space.numericId(), classification, classification.sharingMode(), null, false));
@@ -432,7 +448,7 @@ class TrackerDefaultAcceptanceTest {
         String firstSpace = fixtureId("PS-NAME1-" + suffix);
         String secondSpace = fixtureId("PS-NAME2-" + suffix);
         String classification = jdbc.queryForObject(
-                "SELECT classification_id FROM classifications LIMIT 1", String.class);
+                "SELECT classification_id FROM classifications WHERE classification_id = 14010101", String.class);
         String name = "同名跨空间-" + suffix;
         for (String spaceId : Arrays.asList(firstSpace, secondSpace)) {
             testSpaces.add(spaceId);
@@ -456,7 +472,7 @@ class TrackerDefaultAcceptanceTest {
         String id = response.getBody().productSpaceId();
         testSpaces.add(id);
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications", Integer.class);
+            int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications WHERE classification_id NOT IN (10030101, 10080101, 10090101)", Integer.class);
             assertEquals(classifications, jdbc.queryForObject(
                     "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
                     Integer.class, id));

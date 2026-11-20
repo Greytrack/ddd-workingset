@@ -30,7 +30,6 @@ public final class Tracker {
     private final long classificationId;
     private final long baseClassId;
     private final long classId;
-    private final long typeId;
     private final SharingMode sharingMode;
     private final TrackerId parentId;
     private final boolean isDefault;
@@ -58,13 +57,13 @@ public final class Tracker {
                     WorkingSetId workingSetId, Long numericProductSpaceId, Classification classification,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate) {
         this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
-                classification.numericId(), classification.baseClassId(), classification.classId(), classification.typeId(),
+                classification.numericId(), classification.baseClassId(), classification.classId(),
                 sharingMode, parentId, isDefault, newAggregate, true, null);
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
                     WorkingSetId workingSetId, Long numericProductSpaceId, long classificationId,
-                    long baseClassId, long classId, long typeId,
+                    long baseClassId, long classId,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate,
                     boolean initiallyVisible, Long createdBy) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
@@ -78,7 +77,6 @@ public final class Tracker {
         this.classificationId = classificationId;
         this.baseClassId = baseClassId;
         this.classId = classId;
-        this.typeId = typeId;
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
         this.compatibility = new TrackerCompatibility(trackerId, classificationId);
         this.newAggregate = newAggregate;
@@ -100,10 +98,10 @@ public final class Tracker {
 
     public static Tracker reconstitute(TrackerId id, TrackerId commonId, String name, TrackerId source,
                                        WorkingSetId owner, Long productSpace, long classificationId,
-                                       long baseClassId, long classId, long typeId,
+                                       long baseClassId, long classId,
                                        SharingMode sharing, TrackerId parent, boolean isDefault) {
         return new Tracker(id, commonId, name, source, owner, productSpace, classificationId,
-                baseClassId, classId, typeId, sharing, parent, isDefault, false, true, null);
+                baseClassId, classId, sharing, parent, isDefault, false, true, null);
     }
 
     /**
@@ -143,7 +141,7 @@ public final class Tracker {
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault,
                                   boolean initiallyVisible, Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
-                source.numericProductSpaceId(), source.classificationId, source.baseClassId, source.classId, source.typeId,
+                source.numericProductSpaceId(), source.classificationId, source.baseClassId, source.classId,
                 source.sharingMode(), null,
                 isDefault, true, initiallyVisible, createdBy);
     }
@@ -198,10 +196,6 @@ public final class Tracker {
 
     public long classId() {
         return classId;
-    }
-
-    public long typeId() {
-        return typeId;
     }
 
     public Long numericClassificationId() {

@@ -11,7 +11,7 @@ record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
 
     void provision() {
         jdbc.update("INSERT INTO product_spaces VALUES (?)", spaceId());
-        jdbc.update("INSERT INTO classifications VALUES (?, 'UNSHARED')", classificationId());
+        FixtureIds.insertClassification(jdbc, classificationId(), "UNSHARED");
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')

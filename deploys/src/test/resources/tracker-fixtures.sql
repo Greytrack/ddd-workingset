@@ -56,7 +56,7 @@ BEGIN
         created_by, created_time, updated_by, updated_time)
     SELECT NEW.tracker_id, NEW.tracker_id, family_id, NEW.name, ''FIX-'' || NEW.tracker_id, NEW.source_id,
         NEW.working_set_id, NEW.product_space_id, NEW.classification_id, shared_flag, NEW.parent_id, default_flag, visible_flag,
-        c.base_class, c.class, c.type, 584578917040480, 1, 1, 0, 0, ''fixture'', 0, ''fixture'', 0
+        c.base_class_id, c.class_id, c.classification_id, 584578917040480, 1, 1, 0, 0, ''fixture'', 0, ''fixture'', 0
     FROM classifications c WHERE c.classification_id = NEW.classification_id;
     INSERT INTO air_ws_tracker (id, name, number, source_branch_id, workingset_id, sub_class_id, shared,
         parent_id, is_default, visible, locked, delete_flag, lock_version, created_by, created_time, updated_by, updated_time)

@@ -78,7 +78,7 @@ public interface WorkingSetQueryMapper {
     List<TrackerSummary> findTrackers(@Param("id") long id, @Param("workspace") Long workspace);
 
     @Select("""
-            SELECT classification_id, sharing_mode, name
+            SELECT classification_id, sharing_mode, name, base_class_id, class_id
             FROM classifications ORDER BY classification_id
             """)
     List<ClassificationSummary> findClassifications();

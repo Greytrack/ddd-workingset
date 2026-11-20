@@ -37,7 +37,7 @@ class SnowflakeStorageAcceptanceTest {
         try {
             TrackerView root = java.util.Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                     .filter(tracker -> space.getBody().productSpaceId().equals(tracker.productSpaceId()))
-                    .filter(tracker -> "258519859202016".equals(tracker.classificationId()))
+                    .filter(tracker -> "14010101".equals(tracker.classificationId()))
                     .filter(tracker -> "UNSHARED".equals(tracker.sharingMode())).findFirst().orElseThrow();
             org.springframework.http.ResponseEntity<RequirementView> created = rest.postForEntity("/api/requirements", Map.of("trackerId", root.trackerId(),
                     "workingSetId", "1", "title", "编号初稿", "description", "编号验收", "revision", 1),

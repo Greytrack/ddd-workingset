@@ -632,7 +632,8 @@ class WorkingSetCreationAcceptanceTest {
 
     private void seedRange() {
         jdbc.update("INSERT INTO product_spaces VALUES (?), (?)", space, otherSpace);
-        jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED'), (?, 'UNSHARED')", shared, unshared);
+        FixtureIds.insertClassification(jdbc, shared, "SHARED");
+        FixtureIds.insertClassification(jdbc, unshared, "UNSHARED");
         seedFolderTracker(space);
         seedFolderTracker(otherSpace);
         seedTracker(shared, space, shared, "SHARED");

@@ -30,6 +30,13 @@ public final class FixtureIds {
                 Long.valueOf(child), Long.valueOf(parent));
     }
 
+    static void insertClassification(JdbcTemplate jdbc, String id, String sharingMode) {
+        jdbc.update("""
+                INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id)
+                VALUES (?, ?, '测试分类', 1401, 140101)
+                """, Long.valueOf(id), sharingMode);
+    }
+
     static String ensureDefaultTracker(JdbcTemplate jdbc, String workingSet, String space) {
         var existing = jdbc.queryForList("""
                 SELECT tracker_id FROM trackers

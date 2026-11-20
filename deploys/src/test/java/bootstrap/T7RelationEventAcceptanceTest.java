@@ -86,7 +86,7 @@ class T7RelationEventAcceptanceTest {
 
     private void seedParentRange() {
         jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
-        jdbc.update("INSERT INTO classifications VALUES (?, 'UNSHARED')", classification);
+        FixtureIds.insertClassification(jdbc, classification, "UNSHARED");
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')

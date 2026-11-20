@@ -56,7 +56,8 @@ class BindingAcceptanceTest {
             createChild("1", child);
         }
         jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
-        jdbc.update("INSERT INTO classifications VALUES (?, 'SHARED'), (?, 'UNSHARED')", sharedClass, unsharedClass);
+        FixtureIds.insertClassification(jdbc, sharedClass, "SHARED");
+        FixtureIds.insertClassification(jdbc, unsharedClass, "UNSHARED");
         original(shared, sharedClass, "SHARED", null);
         original(unshared, unsharedClass, "UNSHARED", null);
         businessItem(sourceItem, unshared);

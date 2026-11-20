@@ -20,6 +20,7 @@ import sk.workingset.error.BindingResCode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 产品空间默认 Tracker 批量创建。
@@ -29,6 +30,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class DefaultTrackerInitCommandService {
+    private static final Set<Long> INSTANCE_CLASSIFICATIONS = Set.of(10030101L, 10080101L, 10090101L);
+
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
@@ -46,6 +49,9 @@ public class DefaultTrackerInitCommandService {
         List<TrackerId> created = new ArrayList<>();
         List<Tracker> pending = new ArrayList<>();
         for (Classification classification : classifications.findClassifications()) {
+            if (INSTANCE_CLASSIFICATIONS.contains(classification.numericId())) {
+                continue;
+            }
             var existing = trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId());
             if (existing.isPresent()) {
                 created.add(existing.orElseThrow().trackerId());
