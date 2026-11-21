@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import sk.RequestThreadHolder;
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
@@ -36,9 +37,9 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     private static final String INSERT = """
             INSERT INTO air_ws_items_index
                 (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision,
-                 has_copied, flags, work_space_id, master_id, parent_branch_id, sub_class_id)
+                 has_copied, flags, work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time)
             SELECT ?, ?, ?, t.id, t.workingset_id, ?, ?, ?, ?, ?,
-                   t.work_space, t.common_id, t.source_branch_id, t.tracker_class
+                   t.work_space, t.common_id, t.source_branch_id, t.tracker_class, ?, ?
             FROM air_inst_tracker_rev t
             WHERE t.id = ? AND t.workingset_id = ?
               AND t.work_space = ? AND t.tracker_class = ?
@@ -103,10 +104,13 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     }
 
     private int insert(LightTrackerItem item, String onConflict) {
+        long now = System.currentTimeMillis();
+        String actor = RequestThreadHolder.getUserId();
         return jdbc.update(INSERT + onConflict,
                 ids.nextId(null).longValue(), item.localId().numericValue(), item.commonId().numericValue(),
                 item.revision().value(), item.sourceLocalId().numericValue(), item.sourceRevision().value(),
                 (short) (item.materialized() ? 1 : 0), item.deleted() ? 1 : 0,
+                actor, now,
                 item.trackerId().numericValue(), item.workingSetId().numericValue(),
                 item.numericProductSpaceId(), item.classificationId());
     }

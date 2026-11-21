@@ -75,7 +75,7 @@ class RequirementFamilyScopeTest {
     @AfterEach
     void cleanup() {
         jdbc.update("DELETE FROM air_inst_common WHERE common_id = ?", family);
-        jdbc.update("DELETE FROM light_tracker_items WHERE common_id = ?", family);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE common_id = ?", family);
         jdbc.update("DELETE FROM requirements WHERE common_id = ?", family);
         // Child trackers reference parents through source_id; remove them first.
         for (String tracker : new String[]{t3, t4, t2, t1}) {
@@ -133,12 +133,7 @@ class RequirementFamilyScopeTest {
 
     private void insertVariant(String prefix, String tracker, String workingSet) {
         String localId = fixtureId(prefix + suffix);
-        jdbc.update("""
-                INSERT INTO light_tracker_items
-                    (local_id, common_id, tracker_id, working_set_id, revision,
-                     source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, ?, 3, ?, 3, true)
-                """, localId, family, tracker, workingSet, localId);
+        ItemIndexFixture.insert(jdbc, localId, family, tracker, workingSet, 3, localId, 3, true);
     }
 
     private Requirement requirement(String prefix, String tracker) {

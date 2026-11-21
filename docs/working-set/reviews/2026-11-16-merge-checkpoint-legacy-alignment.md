@@ -1,8 +1,9 @@
 # Merge Checkpoint 身份修正与旧表参考（2026-11-16）
 
-**状态：Accepted（用户 2026-11-16 裁定）**。范围：`merge_checkpoints` 的身份键、方向语义、命中规则、并发合并闸门。参考旧设计
+**状态：Accepted（用户 2026-11-16 裁定）**。范围：Checkpoint 的身份键、方向语义、命中规则、并发合并闸门。参考旧设计
 `air_ws_items_merge_index`。**历史取舍提示**
-：此处以下内容保留原裁定；物理表、决定版本与用户撤销入口已由[现行契约 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)
+：此处以下内容保留原裁定；当时的物理表按 V4 初版命名为 `merge_checkpoints`，**当前实际表是 V3 旧表
+`air_ws_items_merge_index`**，`MergeCheckpoint` 只是 V4 领域模型；物理表、决定版本与用户撤销入口已由[现行契约 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)
 替换。
 
 ## 1. 旧设计的定位（澄清）
@@ -69,7 +70,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
 
 | 层                               | 改动                                                                                                                                                                                              |
 |----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| schema                           | 重建 `merge_checkpoints`（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` + `merge_direction` + `revoked` + 审计列）；`merge_rounds` 增加 `tracker_a_id`/`tracker_b_id` 与并发闸门索引 |
+| schema                           | 按 V4 初版名 `merge_checkpoints` 规划的 Checkpoint 列（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` + `merge_direction` + `revoked` + 审计列），落地到 V3 承载表 `air_ws_items_merge_index`；`merge_rounds` 增加 `tracker_a_id`/`tracker_b_id` 与并发闸门索引 |
 | `MergeCheckpoint`                | `Key(TrackerId a, TrackerId b, CommonId family)`，构造时规范化；`mergeDirection` 作为属性                                                                                                         |
 | `JdbcMergeStore`                 | 按新列读写；upsert 冲突目标 `(tracker_a_id, tracker_b_id, common_id)`；`revokeCheckpoint` 按 Tracker 对+家族；新增未终态轮次查询                                                                  |
 | `MergeComparisonService.handled` | 命中比较改为 Tracker 对 + `common_id` + `revision_a/b`                                                                                                                                            |
@@ -85,11 +86,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
 2. **撤销方向无关**：撤销后两个方向都重新视为未处理。
 3. **旧数据**：开发基线直接重构，不迁移既有 Checkpoint。
 
-## 6. 目标表结构（`merge_checkpoints`）
+## 6. 目标表结构（V4 初版名 `merge_checkpoints`；当前实际表 `air_ws_items_merge_index`）
 
-目标列：`checkpoint_id`（代理主键）、`round_id`（确认时的 MergeRound）、`tracker_a_id`/`tracker_b_id`（规范化 Tracker 对，A≤B）、
-`common_id`（家族）、`local_id_a/b` 与 `revision_a/b`（双侧证据，`revision` 为命中锚点）、`change_kind`、`merge_direction`（属性）、
-`decision_version`（晚到保护）、`revoked`、`operator`/`remark`、`confirmed_at`/`updated_at`。
+目标列：`checkpoint_id`（代理主键，对应承载表 `id`）、`round_id`（确认时的 MergeRound，对应 `batch_id`）、
+`tracker_a_id`/`tracker_b_id`（规范化 Tracker 对，A≤B，对应 `branch_a_id`/`branch_b_id`）、
+`common_id`（家族）、`local_id_a/b` 与 `revision_a/b`（双侧证据，`revision` 为命中锚点）、`change_kind`（对应 `diff_type`）、
+`merge_direction`（属性）、`revoked`、`operator`/`remark`、`confirmed_at`/`updated_at`（对应 `merge_time` 与审计列）。
 
 唯一键 `(tracker_a_id, tracker_b_id, common_id)`；命中条件为唯一键 + `revision_a`/`revision_b` 且 `revoked = false`；
 `local_id` 只作证据，不参与命中。

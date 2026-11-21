@@ -96,3 +96,6 @@
 | `TC-003` | 现有业务内容可能采用覆盖式表结构，历史读取能力有限。                                                     | 历史能力盘点；T3 快照表已提供最小证据                                                                       |
 | `TC-004` | 旧实现存在 Long 主键、旧 branch 字段、SDK/Biz 分层。                                                     | 只作为迁移证据，不定义领域身份                                                                              |
 | `TC-005` | 事件可能至少一次投递，投影存在延迟。                                                                     | 幂等键、因果序列、最大延迟                                                                                  |
+| `TC-006` | 客户 V3 库表以 `created_by VARCHAR + created_time BIGINT` 记录创建审计，没有 `created_at`。              | 用户 2026-11-21 裁定：`requirements`/`air_ws_items_index` 只保留该审计对，写入由 Java `System.currentTimeMillis()` 赋值；基线时间比较用 `created_time <= epochMillis`。 |
+| `TC-007` | `light_tracker_items` 是 V4 初版物理表，已由 `air_ws_items_index` + `air_ws_items_revision_index` 取代。 | 生产与测试主路径都不再引用；仅保留文档历史说明。                                                            |
+| `TC-008` | Checkpoint 的物理承载表是 V3 旧表 `air_ws_items_merge_index`，`MergeCheckpoint` 只是 V4 领域模型。       | 不存在当前的 `merge_checkpoints` 表；列不足走增量 DDL，不新建第二张表。                                      |

@@ -23,7 +23,7 @@ record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
     }
 
     void remove() {
-        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id = ?", trackerId);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id = ?", trackerId);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", trackerId);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", spaceId());
     }
@@ -31,7 +31,7 @@ record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
     void removeRequirement(String localId) {
         jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + localId + "%");
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", localId);
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", localId);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", localId);
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", localId);
     }
 }

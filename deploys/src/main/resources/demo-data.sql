@@ -100,27 +100,27 @@ CREATE TEMP TABLE demo_items AS
     FROM demo_trackers t CROSS JOIN generate_series(1, 20) AS i;
 
 INSERT INTO requirements (local_id, common_id, tracker_id, title, name, description, revision, version, lock_version,
-                          working_set_id)
+                          working_set_id, created_by, created_time)
 SELECT d.id, d.id, d.tracker, d.title, d.title, '定义' || d.title || '的验收条件，记录预期结果和异常处理方式。',
-    CASE WHEN d.i % 5 = 0 THEN 2 ELSE 1 END, '1.0', 0, t.workingset_id
+    CASE WHEN d.i % 5 = 0 THEN 2 ELSE 1 END, '1.0', 0, t.workingset_id, 'demo', 1704067200000
 FROM demo_items d JOIN air_inst_tracker_rev t ON t.id = d.tracker;
 
 WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_local_id, source_revision, materialized) AS (SELECT local_id, common_id, tracker_id, working_set_id, revision, local_id, revision, true FROM requirements)
 INSERT INTO air_ws_items_index
     (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
-        work_space_id, master_id, parent_branch_id, sub_class_id)
+        work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time)
 SELECT d.local_id, d.local_id, d.common_id, d.tracker_id, d.working_set_id,
     d.revision, d.source_local_id, d.source_revision, CASE WHEN d.materialized THEN 1 ELSE 0 END, 0,
-    t.work_space, t.common_id, t.source_branch_id, 14010101
+    t.work_space, t.common_id, t.source_branch_id, 14010101, 'demo', 1704067200000
 FROM indexed d JOIN air_inst_tracker_rev t ON t.id = d.tracker_id;
 
 -- A sample of edited V1 copies supports viewing differences and comparing materialized content.
 INSERT INTO requirements (local_id, common_id, tracker_id, title, name, description, revision, version, lock_version,
-                          working_set_id)
+                          working_set_id, created_by, created_time)
 SELECT pg_temp.demo_id(200000 + d.ws * 1000 + d.space * 100 + d.slot * 20 + i.i),
     i.id, pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot),
     i.title || '（V1 修订）', i.title || '（V1 修订）',
-    '新增回归验收条件，记录系统状态和边界场景。', 1, '1.0', 0, t.workingset_id
+    '新增回归验收条件，记录系统状态和边界场景。', 1, '1.0', 0, t.workingset_id, 'demo', 1704067200000
 FROM demo_derivations d
     JOIN demo_items i ON i.space = d.space AND i.slot = d.slot
     JOIN air_inst_tracker_rev t ON t.id = pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot)
@@ -137,10 +137,10 @@ WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_
 FROM demo_derivations d JOIN demo_items i ON i.space = d.space AND i.slot = d.slot)
 INSERT INTO air_ws_items_index
     (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
-        work_space_id, master_id, parent_branch_id, sub_class_id)
+        work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time)
 SELECT d.local_id, d.local_id, d.common_id, d.tracker_id, d.working_set_id,
     d.revision, d.source_local_id, d.source_revision, CASE WHEN d.materialized THEN 1 ELSE 0 END, 0,
-    t.work_space, t.common_id, t.source_branch_id, 14010101
+    t.work_space, t.common_id, t.source_branch_id, 14010101, 'demo', 1704067200000
 FROM indexed d JOIN air_inst_tracker_rev t ON t.id = d.tracker_id;
 
 INSERT INTO air_ws_items_revision_index

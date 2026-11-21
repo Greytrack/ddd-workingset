@@ -201,7 +201,7 @@ class RequirementAcceptanceTest {
     }
 
     private int indexedRows() {
-        return jdbc.queryForObject("SELECT COUNT(*) FROM light_tracker_items WHERE local_id = ?",
+        return jdbc.queryForObject("SELECT COUNT(*) FROM air_ws_items_index WHERE local_id = ?",
                 Integer.class, localId);
     }
 

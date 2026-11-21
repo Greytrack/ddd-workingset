@@ -42,9 +42,10 @@ LocalId、业务及内容版次、发布版本、乐观锁与字段证据。分�
 - [Requirement 生命周期](../../../alm/src/main/java/alm/requirement/adapters/RequirementController.java) 增加 `delete`、
   `undelete`、`delete2`。标记删除用 `requirements.delete_flag` 保留业务行，正常读取返回 410。永久删除清除业务行、该对象的业务快照和对应
   LightTrackerItem；未物化依赖仍需要内容时返回 `PREPARING`。T1 已冻结的比较与结果证据作为执行审计保留。
-- [schema.sql](../../../deploys/src/main/resources/schema.sql) 新增 `merge_comparisons`、`merge_rounds`、
-  `merge_checkpoints`、决定版本序列和 `delete_flag`，并建立 Tracker 内 Requirement 家族唯一索引。已有库如含同 Tracker、同
-  CommonId 的重复 Requirement，初始化前须按真实身份事实消解。
+- [schema.sql](../../../deploys/src/main/resources/schema.sql) 新增 `merge_comparisons`、`merge_rounds`、Checkpoint 承载表
+  与 `delete_flag`，并建立 Tracker 内 Requirement 家族唯一索引。已有库如含同 Tracker、同
+  CommonId 的重复 Requirement，初始化前须按真实身份事实消解。（Checkpoint 承载表当时按 V4 初版命名为 `merge_checkpoints`，
+  当前实际表是 V3 旧表 `air_ws_items_merge_index`。）
 
 ## S7-D · HTTP 与真实验收
 

@@ -79,7 +79,7 @@ class SnowflakeStorageAcceptanceTest {
                             """, Long.class, Long.valueOf(tracker.trackerId()), Long.valueOf(root.trackerId()),
                     Long.valueOf(root.trackerId())));
             Map<String, Object> item = jdbc.queryForMap("""
-                    SELECT local_id, common_id FROM light_tracker_items
+                    SELECT local_id, common_id FROM air_ws_items_index
                     WHERE tracker_id = ? ORDER BY local_id LIMIT 1
                     """, Long.valueOf(tracker.trackerId()));
             String itemLocalId = String.valueOf(item.get("local_id"));
@@ -102,7 +102,7 @@ class SnowflakeStorageAcceptanceTest {
                     String.class, Long.valueOf(itemLocalId)));
         } finally {
             String trackerFilter = "SELECT tracker_id FROM trackers WHERE product_space_id = ?";
-            jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id IN (" + trackerFilter + ")", spaceId);
+            jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id IN (" + trackerFilter + ")", spaceId);
             jdbc.update("DELETE FROM requirement_snapshots WHERE tracker_id IN (" + trackerFilter + ")", spaceId);
             jdbc.update("DELETE FROM requirements WHERE tracker_id IN (" + trackerFilter + ")", spaceId);
             jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", spaceId);

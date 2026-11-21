@@ -92,7 +92,7 @@ class BindingAcceptanceTest {
     void cleanUp() {
         jdbc.update("DELETE FROM requirements WHERE tracker_id IN (?, ?)", shared, unshared);
         for (String id : worksets.reversed()) {
-            jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", id);
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", id);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", id);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", id);
@@ -238,11 +238,11 @@ class BindingAcceptanceTest {
         DeriveFixture.Result target = derive(ws, unshared, sourceItem);
         String tracker = target.trackerId();
         assertFailure(delete(trackerPath(tracker)), HttpStatus.CONFLICT, "TrackerHasItems");
-        assertEquals(1, count("SELECT count(*) FROM light_tracker_items WHERE tracker_id = ?", tracker));
+        assertEquals(1, count("SELECT count(*) FROM air_ws_items_index WHERE branch_id = ?", tracker));
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
 
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target.item().localId().value());
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", target.item().localId().value());
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasDerivedChildren");
@@ -423,10 +423,10 @@ class BindingAcceptanceTest {
     private void businessItem(String id, String tracker) {
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id)
+                    working_set_id, created_by, created_time)
                 VALUES (?, ?, ?, 'A', 'test', 3, 0,
-                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
-                """, id, fixtureId("family-" + id), tracker, tracker);
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
+                """, id, fixtureId("family-" + id), tracker, tracker, System.currentTimeMillis());
     }
 
     private int count(String sql, String parameter) {

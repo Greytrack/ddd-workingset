@@ -1,5 +1,6 @@
 package sk.workingset.application;
 
+import bootstrap.ItemIndexFixture;
 import bootstrap.WorkingsetApplication;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,7 @@ class WorkingSetItemIndexerTest {
 
     @AfterEach
     void cleanUp() {
-        jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id IN (?, ?)", child, parent);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
@@ -92,15 +93,11 @@ class WorkingSetItemIndexerTest {
                 """, parent, parentTracker, space, "14010101", child, childTracker, space, "14010101");
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision,
-                    lock_version, delete_flag, working_set_id)
+                    lock_version, delete_flag, working_set_id, created_by, created_time)
                 VALUES (?, ?, ?, 'source', 'description', 3, 0, TRUE,
-                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
-                """, source, family, sourceTracker, sourceTracker);
-        jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                    source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, ?, 3, ?, 3, FALSE)
-                """, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, source);
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
+                """, source, family, sourceTracker, sourceTracker, System.currentTimeMillis());
+        ItemIndexFixture.insert(jdbc, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, 3, source, 3, false);
         LocalId winner = LocalId.of(fixtureId("existing-" + suffix));
         LocalId contender = LocalId.of(fixtureId("contender-" + suffix));
         ItemClassification classification = new ItemClassification(Long.parseLong(space), 14010101L);
@@ -127,6 +124,6 @@ class WorkingSetItemIndexerTest {
         assertEquals(1, result.indexProgress().get(parentTracker).skipped());
         assertEquals(0, result.indexProgress().get(parentTracker).failed());
         assertEquals(1, jdbc.queryForObject(
-                "SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?", Integer.class, child));
+                "SELECT count(*) FROM air_ws_items_index WHERE workingset_id = ?", Integer.class, child));
     }
 }

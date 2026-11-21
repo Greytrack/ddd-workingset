@@ -38,7 +38,6 @@ import sk.workingset.error.BindingResCode;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -86,8 +85,8 @@ class WorkingSetCreationAcceptanceTest {
     @AfterEach
     void cleanUp() {
         indexEvents.clear(child);
-        jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", child);
-        jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", parent);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", child);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", parent);
         jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id IN (?, ?))",
                 space, otherSpace);
         jdbc.update("""
@@ -191,7 +190,7 @@ class WorkingSetCreationAcceptanceTest {
                 .filter(binding -> !"10070101".equals(binding.classificationId()))
                 .findFirst().orElseThrow().trackerId();
         assertEquals(unshared, jdbc.queryForObject("SELECT source_id FROM trackers WHERE tracker_id = ?", String.class, copy));
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_items_index WHERE workingset_id = ?",
                 Integer.class, child));
         assertEquals(id, submit(request));
         transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmittedEvent(id)));
@@ -377,12 +376,12 @@ class WorkingSetCreationAcceptanceTest {
         seedItem(unshared, later, later, false);
         seedItem(second, head, head, false);
         seedItem(second, afterHead, afterHead, false);
-        jdbc.update("UPDATE requirements SET created_at = ? WHERE local_id = ?",
-                Timestamp.from(cutoff), earlier);
-        jdbc.update("UPDATE requirements SET created_at = ? WHERE local_id = ?",
-                Timestamp.from(cutoff.plusSeconds(1)), later);
-        jdbc.update("UPDATE requirements SET created_at = clock_timestamp() + interval '1 hour' WHERE local_id = ?",
-                afterHead);
+        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+                cutoff.toEpochMilli(), earlier);
+        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+                cutoff.plusSeconds(1).toEpochMilli(), later);
+        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+                System.currentTimeMillis() + 3_600_000L, afterHead);
         String requestId = "baseline-" + child;
         Map<String, Object> request = Map.of("parentWorkingSetId", "1", "requestId", requestId, "mode", "CREATE",
                 "productSpaceIds", List.of(space, otherSpace), "unsharedParentTrackerIds", List.of(unshared, second),
@@ -399,7 +398,7 @@ class WorkingSetCreationAcceptanceTest {
                 SELECT jsonb_exists(result->'baselineAtByTracker', ?) FROM working_set_creations WHERE id = ?
                 """, Boolean.class, second, submitted.creationId()));
         assertEquals(Set.of(earlier, head), Set.copyOf(jdbc.queryForList("""
-                SELECT common_id FROM light_tracker_items WHERE working_set_id = ?
+                SELECT common_id FROM air_ws_items_index WHERE workingset_id = ?
                 """, String.class, child)));
 
         CreationView replay = rest.postForEntity(CREATIONS, request, CreationView.class).getBody();
@@ -416,8 +415,8 @@ class WorkingSetCreationAcceptanceTest {
         Instant cutoff = Instant.parse("2025-02-01T00:00:00Z");
         seedItem(unshared, included, included, false);
         seedItem(unshared, excluded, excluded, false);
-        jdbc.update("UPDATE requirements SET created_at = ? WHERE local_id = ?",
-                Timestamp.from(cutoff), included);
+        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+                cutoff.toEpochMilli(), included);
         String endpoint = "/api/worksets/" + child + "/extensions";
         String requestId = "extension-baseline-" + child;
         Map<String, Object> request = Map.of("requestId", requestId, "trackerIds", List.of(unshared),
@@ -428,7 +427,7 @@ class WorkingSetCreationAcceptanceTest {
         CreationView submitted = response.getBody();
         awaitStatus(submitted.creationId(), Status.Succeeded);
         assertEquals(List.of(included), jdbc.queryForList("""
-                SELECT common_id FROM light_tracker_items WHERE working_set_id = ?
+                SELECT common_id FROM air_ws_items_index WHERE workingset_id = ?
                 """, String.class, child));
 
         CreationView replay = rest.postForEntity(endpoint, request, CreationView.class).getBody();
@@ -459,7 +458,7 @@ class WorkingSetCreationAcceptanceTest {
         String copiedTracker = bindings().trackers().stream()
                 .filter(binding -> !"10070101".equals(binding.classificationId()))
                 .filter(binding -> space.equals(binding.productSpaceId())).findFirst().orElseThrow().trackerId();
-        List<String> indexed = jdbc.queryForList("SELECT local_id FROM light_tracker_items WHERE tracker_id = ? ORDER BY common_id",
+        List<String> indexed = jdbc.queryForList("SELECT local_id FROM air_ws_items_index WHERE branch_id = ? ORDER BY common_id",
                 String.class, copiedTracker);
         assertEquals(families.size(), indexed.size());
         for (int index = 0; index < families.size(); index++) {
@@ -524,7 +523,7 @@ class WorkingSetCreationAcceptanceTest {
             assertEquals(Set.of(copied, folderCopy), new HashSet<>(event.trackerIds()));
             assertNotNull(event.occurredAt());
         });
-        String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
+        String local = jdbc.queryForObject("SELECT local_id FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?",
                 String.class, child, nativeId);
         LightTrackerItem item = items.findById(LocalId.of(local)).orElseThrow();
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child + "/items/" + local, Map.class).getStatusCode());
@@ -556,7 +555,7 @@ class WorkingSetCreationAcceptanceTest {
                     assertEquals(2, running.indexProgress().get(unshared).succeeded());
                 });
                 String firstLocal = jdbc.queryForObject(
-                        "SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
+                        "SELECT local_id FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?",
                         String.class, child, first);
                 ResponseEntity<Map> response = rest.getForEntity("/api/requirements/" + firstLocal, Map.class);
                 assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
@@ -565,10 +564,7 @@ class WorkingSetCreationAcceptanceTest {
                 String tracker = jdbc.queryForObject(
                         "SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?",
                         String.class, child, unshared);
-                jdbc.update("""
-                        INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                            source_local_id, source_revision, materialized) VALUES (?, ?, ?, ?, 3, ?, 3, false)
-                        """, fixtureId("existing-" + child), last, tracker, child, last);
+                ItemIndexFixture.insert(jdbc, fixtureId("existing-" + child), last, tracker, child, 3, last, 3, false);
                 transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmittedEvent(id)));
             } finally {
                 connection.rollback();
@@ -577,7 +573,7 @@ class WorkingSetCreationAcceptanceTest {
         CreationView completed = awaitStatus(id, Status.Succeeded);
         assertEquals(2, completed.indexProgress().get(unshared).succeeded());
         assertEquals(1, completed.indexProgress().get(unshared).skipped());
-        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
+        assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM air_ws_items_index WHERE workingset_id = ?",
                 Integer.class, child));
     }
 
@@ -593,15 +589,15 @@ class WorkingSetCreationAcceptanceTest {
         CreationView completed = awaitStatus(extension(List.of(unshared)), Status.Succeeded);
         assertTrue(completed.failures().isEmpty());
         assertEquals(1, jdbc.queryForObject("""
-                SELECT count(*) FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?
+                SELECT count(*) FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?
                 """, Integer.class, Long.valueOf(child), Long.valueOf(conflicted)));
         assertEquals(1, jdbc.queryForObject("""
-                SELECT count(*) FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?
+                SELECT count(*) FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?
                 """, Integer.class, Long.valueOf(child), Long.valueOf(valid)));
         // 公共查询视图由业务 BC 消费索引完成事件后投影；当前为待实现的空监听器。
         assertEquals(0, jdbc.queryForObject("""
                 SELECT count(*) FROM air_inst_common
-                WHERE id IN (SELECT local_id FROM light_tracker_items WHERE working_set_id = ?)
+                WHERE id IN (SELECT local_id FROM air_ws_items_index WHERE workingset_id = ?)
                 """, Integer.class, Long.valueOf(child)));
     }
 
@@ -620,7 +616,7 @@ class WorkingSetCreationAcceptanceTest {
                 Integer.class, child));
         assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?",
                 Integer.class, child));
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM light_tracker_items WHERE working_set_id = ?",
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM air_ws_items_index WHERE workingset_id = ?",
                 Integer.class, child));
         TrackerView[] trackers = rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class);
         assertEquals(4, trackers.length);
@@ -710,17 +706,14 @@ class WorkingSetCreationAcceptanceTest {
     private void seedItem(String tracker, String localId, String commonId, boolean deleted) {
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    delete_flag, working_set_id)
+                    delete_flag, working_set_id, created_by, created_time)
                 VALUES (?, ?, ?, 'source', 'description', 3, 0, ?,
-                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
-                """, localId, commonId, tracker, deleted, tracker);
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
+                """, localId, commonId, tracker, deleted, tracker, System.currentTimeMillis());
     }
 
     private void seedParentLti(String tracker, String localId, String commonId, String sourceId, boolean materialized) {
-        jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                    source_local_id, source_revision, materialized) VALUES (?, ?, ?, ?, 3, ?, 3, ?)
-                """, localId, commonId, tracker, parent, sourceId, materialized);
+        ItemIndexFixture.insert(jdbc, localId, commonId, tracker, parent, 3, sourceId, 3, materialized);
     }
 
     private void seedRange() {

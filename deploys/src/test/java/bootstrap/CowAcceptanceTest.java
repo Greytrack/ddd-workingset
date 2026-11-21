@@ -67,18 +67,18 @@ class CowAcceptanceTest {
         for (String target : targets) {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + target + "%");
             jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", target);
-            jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", target);
+            jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", target);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
         }
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", source);
         for (String ws : worksets.reversed()) {
-            jdbc.update("DELETE FROM light_tracker_items WHERE working_set_id = ?", ws);
+            jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", ws);
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws);
         }
-        jdbc.update("DELETE FROM light_tracker_items WHERE tracker_id = ?", tracker);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id = ?", tracker);
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
@@ -100,8 +100,8 @@ class CowAcceptanceTest {
         assertTrue(failures.findBySource(LocalId.of(source)).isEmpty());
         System.out.printf("AT-03/04 HTTP B→C source=%s target=%s; DB=%s; completed=%d%n", source, first.id(),
                 jdbc.queryForMap("""
-                        SELECT r.title, l.materialized, l.source_local_id, l.source_revision
-                        FROM requirements r JOIN light_tracker_items l USING (local_id) WHERE r.local_id = ?
+                        SELECT r.title, l.has_copied = 1 AS materialized, l.source_local_id, l.source_revision
+                        FROM requirements r JOIN air_ws_items_index l USING (local_id) WHERE r.local_id = ?
                         """, first.id()), completedEvents());
     }
 
@@ -165,7 +165,7 @@ class CowAcceptanceTest {
     void readsUnindexedSourceAndRebuildsIndexedChildWithoutSavingIt() {
         createSource();
         Target child = derive();
-        jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", source);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", source);
 
         RequirementView sourceView = rest.getForObject("/api/requirements/" + source, RequirementView.class);
         assertEquals(source, sourceView.localId());
@@ -209,11 +209,12 @@ class CowAcceptanceTest {
         createSource();
         Target child = derive();
         String childTracker = jdbc.queryForObject(
-                "SELECT tracker_id FROM light_tracker_items WHERE local_id = ?", String.class, child.id());
+                "SELECT branch_id FROM air_ws_items_index WHERE local_id = ?", String.class, child.id());
         Target grandchild = derive(child.ws(), childTracker, child.id());
 
         assertEquals(childTracker, jdbc.queryForObject("""
-                SELECT t.source_id FROM trackers t JOIN light_tracker_items l USING (tracker_id) WHERE l.local_id = ?
+                SELECT t.source_id FROM trackers t JOIN air_ws_items_index l ON l.branch_id = t.tracker_id
+                WHERE l.local_id = ?
                 """, String.class, grandchild.id()));
         assertEquals(source, read(grandchild).contentLocalId());
 
@@ -232,8 +233,7 @@ class CowAcceptanceTest {
         createSource();
         Target invalid = derive();
         // 模拟早期数据的家族身份损坏，直接验证 COW 对持久化证据的防护。
-        jdbc.update("UPDATE light_tracker_items SET common_id = ? WHERE local_id = ?",
-                fixtureId("INVALID-" + UUID.randomUUID()), invalid.id());
+        ItemIndexFixture.updateFamily(jdbc, invalid.id(), fixtureId("INVALID-" + UUID.randomUUID()));
 
         change("B", 0);
 
@@ -249,7 +249,7 @@ class CowAcceptanceTest {
     void revision_upgrade_materializes_from_before_revision_and_preserves_target_revision() {
         createSource();
         Target target = derive();
-        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
+        ItemIndexFixture.updateRevision(jdbc, target.id(), 1);
         Requirement upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
         assertEquals(Revision.of(4), upgraded.revision());
         assertEquals(LockVersion.of(1), upgraded.lockVersion());
@@ -264,7 +264,7 @@ class CowAcceptanceTest {
     void permanentDeletionWaitsForSoftDeleteMaterializationAndChildStaysEditable() throws InterruptedException {
         createSource();
         Target target = derive();
-        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
+        ItemIndexFixture.updateRevision(jdbc, target.id(), 1);
         CountDownLatch reachedSwitch = new CountDownLatch(1);
         CountDownLatch releaseSwitch = new CountDownLatch(1);
         doAnswer(invocation -> {
@@ -339,7 +339,7 @@ class CowAcceptanceTest {
         source = result.getBody().localId();
         common = result.getBody().commonId();
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE local_id = ?)", Boolean.class, source)));
+                "SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE local_id = ?)", Boolean.class, source)));
     }
 
     // COW starts with a valid mounted space; mounting itself is a separate use case.

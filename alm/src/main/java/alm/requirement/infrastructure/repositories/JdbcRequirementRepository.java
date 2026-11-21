@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.FailureReason;
@@ -31,8 +32,8 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     private static final String INSERT = """
             INSERT INTO requirements
                 (local_id, common_id, tracker_id, name, title, description, revision, version, lock_version,
-                 delete_flag, working_set_id)
-            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, t.workingset_id
+                 delete_flag, working_set_id, created_by, created_time)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, t.workingset_id, ?, ?
             FROM air_inst_tracker_rev t
             WHERE t.id = ?
             """;
@@ -64,6 +65,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             jdbc.update(INSERT, requirement.localId().numericValue(), requirement.commonId().numericValue(),
                     requirement.trackerId().numericValue(), requirement.title(), requirement.title(), requirement.description(),
                     requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted(),
+                    RequestThreadHolder.getUserId(), System.currentTimeMillis(),
                     requirement.trackerId().numericValue());
             saveCommonInstance(requirement.localId().numericValue());
             return;

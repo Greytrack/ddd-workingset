@@ -12,7 +12,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -59,8 +58,8 @@ public class LightTrackerItemQueryProviderImpl implements LightTrackerItemQueryP
     @Override
     public List<LightTrackerItemSummary> pageInTracker(TrackerId trackerId, Instant baselineAt, String afterLocalId, int limit) {
         return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? "
-                        + "AND flags IS DISTINCT FROM 1 AND created_at <= ? AND local_id > ? ORDER BY local_id LIMIT ?",
-                MAPPER, trackerId.numericValue(), Timestamp.from(baselineAt),
+                        + "AND flags IS DISTINCT FROM 1 AND created_time <= ? AND local_id > ? ORDER BY local_id LIMIT ?",
+                MAPPER, trackerId.numericValue(), baselineAt.toEpochMilli(),
                 afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 

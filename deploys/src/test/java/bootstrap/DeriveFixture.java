@@ -76,13 +76,8 @@ final class DeriveFixture {
 
         Content content = content(jdbc, sourceTrackerId, sourceLocalId, commonId, revision);
         String localId = fixtureId("DERIVED-L-" + UUID.randomUUID());
-        jdbc.update("""
-                        INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                            source_local_id, source_revision, materialized)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, FALSE)
-                        """, Long.valueOf(localId), Long.valueOf(commonId.value()), Long.valueOf(trackerId),
-                Long.valueOf(targetWorkingSet), revision.value(), Long.valueOf(content.localId()),
-                content.revision().value());
+        ItemIndexFixture.insert(jdbc, localId, commonId.value(), trackerId, targetWorkingSet, revision.value(),
+                content.localId(), content.revision().value(), false);
 
         LightTrackerItem item = LightTrackerItem.restore(LocalId.of(localId), commonId, TrackerId.of(trackerId),
                 WorkingSetId.of(targetWorkingSet), revision, LocalId.of(content.localId()),
@@ -109,8 +104,9 @@ final class DeriveFixture {
                 Boolean.class, Long.valueOf(sourceTrackerId));
         if (derived) {
             List<Map<String, Object>> rows = jdbc.queryForList("""
-                    SELECT tracker_id, common_id, revision, source_local_id, source_revision, materialized
-                    FROM light_tracker_items WHERE local_id = ?
+                    SELECT branch_id AS tracker_id, common_id, revision, source_local_id, source_revision,
+                           (has_copied = 1) AS materialized
+                    FROM air_ws_items_index WHERE local_id = ?
                     """, Long.valueOf(sourceLocalId));
             if (rows.isEmpty()) {
                 throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);

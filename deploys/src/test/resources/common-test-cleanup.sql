@@ -23,6 +23,6 @@ WHERE (c.base_class, c.class, c.type) IN (
                   WHERE local_id = c.id
                   UNION ALL
                   SELECT 1
-                  FROM light_tracker_items
+                  FROM air_ws_items_index
                   WHERE local_id = c.id
-                    AND NOT materialized);
+                    AND has_copied = 0);

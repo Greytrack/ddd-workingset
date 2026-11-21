@@ -3,9 +3,12 @@
 **状态：Historical（已实施）**。设计裁定见 [Checkpoint 对齐裁定](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)
 ，现行实现见[合并执行契约 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)，下文只记录当期实现。
 
+> **表名提示**：下文 `merge_checkpoints` 是当时 V4 初版设计提出的物理表名，**从未成为当前表**。当前实际存储是 V3 旧表
+> `air_ws_items_merge_index`，`MergeCheckpoint` 只是 V4 领域模型，由仓储适配到该表；列不足时走增量 DDL，不新建第二张表。
+
 ## 实施步骤
 
-1. `merge_checkpoints` 重建为 Tracker 分支对身份（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` +
+1. Checkpoint 身份重建为 Tracker 分支对（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` +
    `merge_direction` + `revoked` + 审计列），唯一键 `(tracker_a_id, tracker_b_id, common_id)`；
 2. `merge_rounds` 增加 `tracker_a_id`/`tracker_b_id` 与并发闸门索引；
 3. `MergeCheckpoint`、`MergeRepository`、`JdbcMergeRepository`、`MergeComparisonService`、`MergeExecutionService`、
@@ -18,7 +21,7 @@
 
 - 全量测试 165 项通过；
 - 新增用例：反向命中、同 Tracker 对并发 409、终态后可再提交、跨 Tracker 对 400、被超越锚点清理；
-- 开发库按 `schema.sql` 重建，`merge_checkpoints` 无 `source_id`/`target_id`。
+- 开发库按 `schema.sql` 重建，承载表 `air_ws_items_merge_index` 无 `source_id`/`target_id`。
 
 ## 旧数据处置记录（2026-11-17）
 

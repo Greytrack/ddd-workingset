@@ -57,7 +57,7 @@ EVENT:    listener_id=bootstrap.RequirementChangedListener.on(sk.workingset.appl
 
 - `requirements`：聚合内容、`revision`、可空发布大版本 `version`、`lock_version`
 - `light_tracker_items`
-  ：本次历史实验使用的原物理表。现行映射见[双表索引与版次成员](../domain/lighttrackeritem-materialization-contract-v1.md#31-双表索引与版次成员)。
+  ：本次历史实验使用的原物理表，现行库存只保留 `air_ws_items_index` 与 `air_ws_items_revision_index`，该表已在生产与测试主路径中移除。
 - `requirement_snapshots`：修改前不可变快照
 
 实测数据库记录：

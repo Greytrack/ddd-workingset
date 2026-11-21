@@ -163,7 +163,7 @@ class MergeAcceptanceTest {
         List<String> itemIds = jdbc.queryForList("""
                 SELECT local_id FROM requirements WHERE tracker_id IN
                     (SELECT tracker_id FROM trackers WHERE product_space_id = ?)
-                UNION SELECT local_id FROM light_tracker_items WHERE tracker_id IN
+                UNION SELECT local_id FROM air_ws_items_index WHERE branch_id IN
                     (SELECT tracker_id FROM trackers WHERE product_space_id = ?)
                 """, String.class, space, space);
         for (String local : itemIds) {
@@ -171,7 +171,7 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", local);
             jdbc.update("DELETE FROM cow_materializations WHERE source_local_id = ?", local);
             jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", local);
-            jdbc.update("DELETE FROM light_tracker_items WHERE local_id = ?", local);
+            jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", local);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", local);
         }
         for (String workset : worksets.reversed()) {
@@ -493,7 +493,7 @@ class MergeAcceptanceTest {
                 RequirementView.class);
         assertStatus(HttpStatus.CREATED, response);
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM light_tracker_items WHERE local_id = ?)",
+                "SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE local_id = ?)",
                 Boolean.class, response.getBody().localId())));
         return response.getBody();
     }
@@ -528,11 +528,8 @@ class MergeAcceptanceTest {
         String family = id("approved");
         String source = seed(rootTracker, family, "approved source");
         String target = seed(childTracker, family, "original target");
-        jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id,
-                    revision, source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, '1', 3, ?, 3, true), (?, ?, ?, ?, 3, ?, 3, true)
-                """, source, family, rootTracker, source, target, family, childTracker, child, target);
+        ItemIndexFixture.insert(jdbc, source, family, rootTracker, "1", 3, source, 3, true);
+        ItemIndexFixture.insert(jdbc, target, family, childTracker, child, 3, target, 3, true);
         Difference selected = diff(compare("1", child), family);
         EntryRequest request = new EntryRequest(selected, new MergeDecision(Map.of("title", FieldAction.ACCEPT), null, true));
 
@@ -640,19 +637,17 @@ class MergeAcceptanceTest {
         createChild(child, grandchild);
         mountSpaceWithLocalFolder(grandchild);
         String parentItem = childTracker;
-        String parentLocal = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE tracker_id = ?",
+        String parentLocal = jdbc.queryForObject("SELECT local_id FROM air_ws_items_index WHERE branch_id = ?",
                 String.class, parentItem);
         MergeAcceptanceTest.Derived grand = derive(grandchild, childTracker, parentLocal, anchor);
-        jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", grand.item().localId().value());
+        jdbc.update("UPDATE air_ws_items_index SET revision = 1 WHERE local_id = ?", grand.item().localId().value());
 
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id)
+                    working_set_id, created_by, created_time)
                 VALUES (?, ?, ?, 'parent local', 'description', 3, 0,
-                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
-                """, parentLocal, anchor, childTracker, childTracker);
-        jdbc.update("UPDATE light_tracker_items SET materialized = TRUE, source_local_id = local_id WHERE local_id = ?",
-                parentLocal);
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
+                """, parentLocal, anchor, childTracker, childTracker, System.currentTimeMillis());
 
         ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
         Difference item = diff(compared, anchor);
@@ -670,7 +665,7 @@ class MergeAcceptanceTest {
         assertEquals(Revision.of(3), sourceIsA ? checkpoint.revisionA() : checkpoint.revisionB());
         assertEquals(Revision.of(1), sourceIsA ? checkpoint.revisionB() : checkpoint.revisionA());
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT materialized FROM light_tracker_items WHERE local_id = ?",
+                "SELECT has_copied = 1 FROM air_ws_items_index WHERE local_id = ?",
                 Boolean.class, grand.item().localId().value())));
         change(grand.item().localId().value(), "ordinary target edit", 0);
         assertTrue(compare(child, grandchild, childTracker, grand.trackerId()).differences().stream()
@@ -917,7 +912,7 @@ class MergeAcceptanceTest {
 
     @Test
     void unreadableHistoryRemainsDistinctFromAnAbsentVariant() {
-        jdbc.update("UPDATE light_tracker_items SET source_revision = 2 WHERE tracker_id = ?", childTracker);
+        jdbc.update("UPDATE air_ws_items_index SET source_revision = 2 WHERE branch_id = ?", childTracker);
         Difference difference = diff(compare("1", child), anchor);
         assertEquals(Presence.PRESENT, difference.source().presence());
         assertEquals(Presence.UNREADABLE, difference.target().presence());
@@ -947,10 +942,10 @@ class MergeAcceptanceTest {
         String local = fixtureId("L-" + UUID.randomUUID());
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id)
+                    working_set_id, created_by, created_time)
                 VALUES (?, ?, ?, ?, 'description', 3, 0,
-                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
-                """, local, common, tracker, title, tracker);
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
+                """, local, common, tracker, title, tracker, System.currentTimeMillis());
         return local;
     }
 

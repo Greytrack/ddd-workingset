@@ -576,7 +576,8 @@ FROM tracker_bindings;
 
 CREATE TABLE IF NOT EXISTS requirements
 (
-    created_at     TIMESTAMPTZ                                                                  NOT NULL DEFAULT clock_timestamp(),
+    created_by     VARCHAR(50)                                                                  NOT NULL,
+    created_time   BIGINT                                                                       NOT NULL,
     local_id       BIGINT PRIMARY KEY,
     common_id      BIGINT                                                                       NOT NULL,
     number         VARCHAR(200) GENERATED ALWAYS AS ('REQ-' || upper(to_hex(common_id))) STORED NOT NULL,
@@ -600,7 +601,6 @@ CREATE INDEX IF NOT EXISTS idx_requirement_active_tracker_local
 
 CREATE TABLE IF NOT EXISTS air_ws_items_index
 (
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     id                    BIGINT PRIMARY KEY,
     work_space_id         BIGINT NOT NULL CHECK (work_space_id > 0),
     workingset_id         BIGINT,
