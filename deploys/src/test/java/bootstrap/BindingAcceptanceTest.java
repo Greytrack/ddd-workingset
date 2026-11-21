@@ -143,6 +143,34 @@ class BindingAcceptanceTest {
         assertEquals(List.of(owned, shared).stream().sorted().toList(), trackerIds(listPath));
     }
 
+    @Test
+    void sharedTrackerItemsAreListedFromChildWorkingSet() {
+        bindSpace(ws);
+        extendShared(ws, shared);
+        ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
+                "title", "共享可见", "description", "", "revision", 3), Map.class);
+        assertEquals(HttpStatus.CREATED, created.getStatusCode(), () -> String.valueOf(created.getBody()));
+        String localId = String.valueOf(created.getBody().get("localId"));
+        try {
+            Map[] fromChild = rest.getForObject(
+                    "/api/requirements?trackerId=" + shared + "&workingSetId=" + ws, Map[].class);
+            assertTrue(java.util.Arrays.stream(fromChild)
+                    .anyMatch(item -> localId.equals(String.valueOf(item.get("localId")))));
+        } finally {
+            jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + localId + "%");
+            jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", localId);
+            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", localId);
+            jdbc.update("DELETE FROM requirements WHERE local_id = ?", localId);
+        }
+    }
+
+    @Test
+    void unsharedTrackerItemsAreNotVisibleFromAnotherWorkingSet() {
+        Map[] fromChild = rest.getForObject(
+                "/api/requirements?trackerId=" + unshared + "&workingSetId=" + ws, Map[].class);
+        assertEquals(0, fromChild.length);
+    }
+
     private List<String> trackerIds(String path) {
         return List.of(rest.getForObject(path, TrackerView[].class)).stream()
                 .filter(tracker -> !"10070101".equals(tracker.classificationId())).map(TrackerView::trackerId).toList();

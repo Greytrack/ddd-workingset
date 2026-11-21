@@ -10,8 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
+import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
@@ -33,6 +36,7 @@ public class RequirementQueryService {
     private final RequirementRepository repository;
     private final LightTrackerItemRepository items;
     private final WorkingSetRepository workingSets;
+    private final TrackerRepository trackers;
 
     private static DomainException notFound(LocalId localId) {
         return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value());
@@ -51,9 +55,30 @@ public class RequirementQueryService {
         return detail;
     }
 
+    /**
+     * 共享 Tracker 的 Item 属于其权威工作集，但通过绑定对所有子工作集可见；
+     * 非共享 Tracker 的 Item 属于单一工作集。工作集参数用于可见性校验，列表按 Tracker 读取。
+     */
     @Transactional(readOnly = true)
     public List<RequirementDetail> findByTracker(WorkingSetId workingSetId, TrackerId trackerId) {
-        return query.findByTracker(trackerId.numericValue(), workingSetId.numericValue());
+        Tracker tracker = trackers.findById(trackerId)
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, trackerId.value()));
+        if (!visibleIn(tracker, workingSetId)) {
+            return List.of();
+        }
+        return query.findByTracker(trackerId.numericValue());
+    }
+
+    private boolean visibleIn(Tracker tracker, WorkingSetId workingSetId) {
+        if (tracker.workingSetId().equals(workingSetId)) {
+            return true;
+        }
+        if (tracker.sharingMode() != SharingMode.SHARED) {
+            return false;
+        }
+        return workingSets.findById(workingSetId)
+                .map(workingSet -> workingSet.hasTrackerBinding(tracker.trackerId()))
+                .orElse(false);
     }
 
     private RequirementDetail findInherited(LocalId localId) {

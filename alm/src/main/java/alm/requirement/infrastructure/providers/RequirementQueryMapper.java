@@ -24,9 +24,8 @@ public interface RequirementQueryMapper {
             SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
                    lock_version, delete_flag AS deleted, TRUE AS materialized
             FROM requirements
-            WHERE tracker_id = #{trackerId} AND working_set_id = #{workingSetId} AND NOT delete_flag
+            WHERE tracker_id = #{trackerId} AND NOT delete_flag
             ORDER BY local_id
             """)
-    List<RequirementDetail> findByTracker(@Param("trackerId") long trackerId,
-                                          @Param("workingSetId") long workingSetId);
+    List<RequirementDetail> findByTracker(@Param("trackerId") long trackerId);
 }

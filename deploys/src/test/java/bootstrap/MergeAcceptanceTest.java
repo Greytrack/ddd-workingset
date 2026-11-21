@@ -526,8 +526,6 @@ class MergeAcceptanceTest {
         String family = id("approved");
         String source = seed(rootTracker, family, "approved source");
         String target = seed(childTracker, family, "original target");
-        ItemIndexFixture.insert(jdbc, source, family, rootTracker, "1", 3, source, 3, true);
-        ItemIndexFixture.insert(jdbc, target, family, childTracker, child, 3, target, 3, true);
         Difference selected = diff(compare("1", child), family);
         EntryRequest request = new EntryRequest(selected, new MergeDecision(Map.of("title", FieldAction.ACCEPT), null, true));
 
@@ -646,6 +644,12 @@ class MergeAcceptanceTest {
                 VALUES (?, ?, ?, 'parent local', 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, parentLocal, anchor, childTracker, childTracker, System.currentTimeMillis());
+        // The grandchild already points to the original source when its parent materializes.
+        jdbc.update("""
+                UPDATE air_ws_items_index
+                SET has_copied = 1, source_local_id = local_id, source_revision = revision
+                WHERE local_id = ?
+                """, parentLocal);
 
         ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
         Difference item = diff(compared, anchor);
@@ -944,6 +948,9 @@ class MergeAcceptanceTest {
                 VALUES (?, ?, ?, ?, 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, local, common, tracker, title, tracker, System.currentTimeMillis());
+        String owner = jdbc.queryForObject("SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?",
+                String.class, tracker);
+        ItemIndexFixture.insert(jdbc, local, common, tracker, owner, 3, local, 3, true);
         return local;
     }
 
