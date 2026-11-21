@@ -41,6 +41,7 @@ class ApplicationContextTest {
             assertNotNull(context.getBean(WorkingSetQueryService.class));
             assertNotNull(context.getBean(RequirementCommandService.class));
             assertNotNull(context.getBean(IdentifierGenerator.class));
+            assertNotNull(context.getBean(sk.workingset.application.query.provider.BusinessObjectTypeRegistry.class));
         }
     }
 

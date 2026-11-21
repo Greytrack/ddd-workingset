@@ -1,5 +1,8 @@
 package bootstrap;
 
+import alm.requirement.domain.Requirement;
+import java.util.concurrent.CountDownLatch;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import alm.requirement.adapters.RequirementView;
 import alm.requirement.application.command.RequirementCommandService;
 import org.junit.jupiter.api.AfterEach;
@@ -14,8 +17,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.application.query.WorkingSetQueryService;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
@@ -42,7 +43,6 @@ class CowAcceptanceTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private CowFailureLogQueryProvider failures;
     @Autowired private RequirementCommandService requirements;
-    @Autowired private WorkingSetQueryService workingSetQueries;
     @SpyBean private LightTrackerItemRepository items;
 
     private final List<String> targets = new ArrayList<>();
@@ -51,7 +51,7 @@ class CowAcceptanceTest {
     private String common;
     private final String tracker = fixtureId("T-" + UUID.randomUUID());
     private final String space = fixtureId("S-" + UUID.randomUUID());
-    private final String classification = fixtureId("CL-" + UUID.randomUUID());
+    private final String classification = "14010101";
 
     @AfterEach
     void cleanUp() {
@@ -79,7 +79,6 @@ class CowAcceptanceTest {
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
-        jdbc.update("DELETE FROM classifications WHERE classification_id = ?", classification);
     }
 
     @Test
@@ -263,8 +262,8 @@ class CowAcceptanceTest {
         createSource();
         Target target = derive();
         jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
-        var reachedSwitch = new java.util.concurrent.CountDownLatch(1);
-        var releaseSwitch = new java.util.concurrent.CountDownLatch(1);
+        CountDownLatch reachedSwitch = new java.util.concurrent.CountDownLatch(1);
+        CountDownLatch releaseSwitch = new java.util.concurrent.CountDownLatch(1);
         doAnswer(invocation -> {
             reachedSwitch.countDown();
             if (!releaseSwitch.await(8, java.util.concurrent.TimeUnit.SECONDS)) {
@@ -296,7 +295,7 @@ class CowAcceptanceTest {
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class).getStatusCode());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
                 Integer.class, source));
-        var edited = requirements.changeTitle(LocalId.of(target.id()), "editable after purge", LockVersion.of(0));
+        Requirement edited = requirements.changeTitle(LocalId.of(target.id()), "editable after purge", LockVersion.of(0));
         assertEquals("editable after purge", edited.title());
         assertEquals(Revision.of(1), edited.revision());
     }
@@ -386,7 +385,7 @@ class CowAcceptanceTest {
 
     private ReadContent read(Target target) {
         RequirementView requirement = rest.getForObject("/api/requirements/" + target.id(), RequirementView.class);
-        var item = workingSetQueries.resolve(WorkingSetId.of(target.ws()), LocalId.of(target.id()));
+        LightTrackerItem item = items.findById(LocalId.of(target.id())).orElseThrow();
         boolean materialized = item.materialized();
         return new ReadContent(
                 Map.<String, Object>of("title", requirement.title(), "description", requirement.description()),

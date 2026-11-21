@@ -18,10 +18,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.adapters.MergeController.ComparisonPage;
 import sk.workingset.adapters.WorkingSetController;
+import sk.workingset.application.command.MergeExecutionService.EntryRequest;
 import sk.workingset.application.query.MergeCheckpoint;
 import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.CommonId;
@@ -32,6 +33,8 @@ import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
+import sk.workingset.domain.merge.MergeDecision;
+import sk.workingset.domain.merge.MergeDecision.FieldAction;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.ApplyResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
@@ -54,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class MergeAcceptanceTest {
     @Autowired private TestRestTemplate rest;
-    @Autowired private WorkingSetQueryService workingSetQueries;
+    @Autowired private LightTrackerItemRepository items;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MergeCheckpointQuery checkpoints;
     @Autowired private org.springframework.modulith.events.IncompleteEventPublications publications;
@@ -67,9 +70,9 @@ class MergeAcceptanceTest {
     private final String suffix = UUID.randomUUID().toString();
     private final String child = id("child");
     private final String space = id("space");
-    private final String classification = id("class");
+    private final String classification = "14010101";
     private final String rootTracker = id("root");
-    private final String sharedClassification = id("shared-class");
+    private final String sharedClassification = "14010102";
     private final String anchor = id("anchor");
     private final List<String> tokens = new ArrayList<>();
     private final List<String> rounds = new ArrayList<>();
@@ -132,7 +135,7 @@ class MergeAcceptanceTest {
         }
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
-        jdbc.update("DELETE FROM classifications WHERE classification_id IN (?, ?)", classification, sharedClassification);
+        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (?, ?)", rootTracker, childTracker);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
     }
 
@@ -394,8 +397,8 @@ class MergeAcceptanceTest {
         assertEquals(source.title(), target.title());
         assertEquals(created, apply(round));
         if (!"1".equals(parent)) {
-            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertEquals(parentLocal,
-                    workingSetQueries.resolve(WorkingSetId.of(parent), LocalId.of(parentLocal)).localId().value()));
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                    assertTrue(items.findById(LocalId.of(parentLocal)).isPresent()));
         }
 
         change(source.localId(), "updated child", 0);
@@ -448,7 +451,7 @@ class MergeAcceptanceTest {
     }
 
     @Test
-    void registrationRejectsChangedEvidenceThenExecutionUsesCurrentFieldsAndGuardsRevision() {
+    void registrationRejectsChangedEvidenceAndRevision() {
         String edit = id("edit");
         String source = seed(rootTracker, edit, "source");
         String target = seed(childTracker, edit, "target");
@@ -469,6 +472,34 @@ class MergeAcceptanceTest {
         assertEquals("StaleEvidence",
                 submitFailure(child, beforeRevision, field(diff(beforeRevision, edit), "ACCEPT", false)));
         assertEquals("latest source", requirement(target).title());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void executionUsesApprovedValuesAndTheBusinessListenerChecksTargetConcurrency(boolean editTarget) {
+        String family = id("approved");
+        String source = seed(rootTracker, family, "approved source");
+        String target = seed(childTracker, family, "original target");
+        jdbc.update("""
+                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id,
+                    revision, source_local_id, source_revision, materialized)
+                VALUES (?, ?, ?, '1', 3, ?, 3, true), (?, ?, ?, ?, 3, ?, 3, true)
+                """, source, family, rootTracker, source, target, family, childTracker, child, target);
+        Difference selected = diff(compare("1", child), family);
+        EntryRequest request = new EntryRequest(selected, new MergeDecision(Map.of("title", FieldAction.ACCEPT), null, true));
+
+        // Publish the round submission only after the concurrent edit has committed.
+        String round = transactions.execute(tx -> {
+            MergeRound submitted = mergeExecution.submit(WorkingSetId.of(child), WorkingSetId.of("1"),
+                    UUID.randomUUID().toString(), List.of(request), "1");
+            requirements.changeTitle(LocalId.of(editTarget ? target : source), "edited after approval", LockVersion.of(0));
+            return submitted.id();
+        });
+        rounds.add(round);
+
+        ApplyResult result = awaitResult(round);
+        assertEquals(editTarget ? Outcome.Conflict : Outcome.Confirmed, result.itemResults().getFirst().outcome());
+        assertEquals(editTarget ? "edited after approval" : "approved source", requirement(target).title());
     }
 
     @Test
@@ -583,8 +614,8 @@ class MergeAcceptanceTest {
         String round = submit(grandchild, compared, field(item, "ACCEPT", true));
         assertEquals(Outcome.Confirmed, awaitResult(round).itemResults().getFirst().outcome());
         assertEquals("parent local", requirement(grand.item().localId().value()).title());
-        var key = new MergeCheckpoint.Key(TrackerId.of(childTracker), TrackerId.of(grand.trackerId()), CommonId.of(anchor));
-        var checkpoint = checkpoints.findLatest(key).orElseThrow();
+        MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(childTracker), TrackerId.of(grand.trackerId()), CommonId.of(anchor));
+        MergeCheckpoint checkpoint = checkpoints.findLatest(key).orElseThrow();
         boolean sourceIsA = key.a().equals(TrackerId.of(childTracker));
         assertEquals(Revision.of(3), sourceIsA ? checkpoint.revisionA() : checkpoint.revisionB());
         assertEquals(Revision.of(1), sourceIsA ? checkpoint.revisionB() : checkpoint.revisionA());

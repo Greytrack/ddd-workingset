@@ -1,5 +1,7 @@
 package bootstrap;
 
+import org.springframework.http.ResponseEntity;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,15 +16,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.common.error.DomainException;
-import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.CommonId;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
@@ -49,6 +50,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import(WorkingSetCreationAcceptanceTest.IndexEventConfiguration.class)
 class WorkingSetCreationAcceptanceTest {
     private static final String CREATIONS = "/api/working-set-creations";
+    private static final String SHARED_CLASSIFICATION = "14010102";
+    private static final String UNSHARED_CLASSIFICATION = "14010101";
     private String child = fixtureId("child-" + UUID.randomUUID());
     private final String parent = fixtureId("p-" + child);
     private final String space = fixtureId("space-" + child);
@@ -63,7 +66,7 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private TransactionTemplate transaction;
     @Autowired private IndexEvents indexEvents;
     @Autowired private WorkingSetCreationService creations;
-    @Autowired private WorkingSetQueryService workingSetQueries;
+    @Autowired private LightTrackerItemRepository items;
     @Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
 
     @AfterEach
@@ -85,7 +88,6 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", parent);
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE product_space_id IN (?, ?)", space, otherSpace);
-        jdbc.update("DELETE FROM classifications WHERE classification_id IN (?, ?)", shared, unshared);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id IN (?, ?)", space, otherSpace);
     }
 
@@ -113,7 +115,7 @@ class WorkingSetCreationAcceptanceTest {
                         Map.of("workingSetId", fixtureId("unused-" + child)), Map.class);
                 assertEquals(HttpStatus.CONFLICT, use.getStatusCode());
                 assertEquals("PREPARING", use.getBody().get("reason"));
-                var extension = rest.postForEntity("/api/worksets/" + child + "/extensions",
+                ResponseEntity<Map> extension = rest.postForEntity("/api/worksets/" + child + "/extensions",
                         Map.of("requestId", "pending-" + child, "trackerIds", List.of(shared)), Map.class);
                 assertEquals(HttpStatus.CONFLICT, extension.getStatusCode());
                 assertEquals("PREPARING", extension.getBody().get("reason"));
@@ -323,16 +325,20 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
-    void ancestorsExcludeCreatingWorkingSet() {
+    void ancestorsExcludeCreatingWorkingSet() throws Exception {
         String mid = fixtureId("mid-" + child);
         String leaf = fixtureId("leaf-" + child);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", mid);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, ?)", leaf, mid);
+        String taskId = fixtureId("task-" + child);
+        Request request = new Request("1", mid, "running", List.of(), List.of(), List.of(), null, Mode.CREATE);
+        Instant now = Instant.now();
+        WorkingSetCreation running = WorkingSetCreation.submit(taskId, request, "test", now).start(now);
         jdbc.update("""
                 INSERT INTO working_set_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, '1', ?, 'running', 'Running', CAST(? AS jsonb), now())
-                """, fixtureId("task-" + child), mid, "{}");
+                """, taskId, mid, mapper.writeValueAsString(running));
         try {
             List ancestors = rest.getForObject("/api/worksets/" + leaf + "/ancestors", List.class);
             assertFalse(ancestors.contains(mid));
@@ -368,7 +374,7 @@ class WorkingSetCreationAcceptanceTest {
         for (int index = 0; index < families.size(); index++) {
             String family = families.get(index);
             String localId = indexed.get(index);
-            var item = workingSetQueries.resolve(WorkingSetId.of(child), LocalId.of(localId));
+            LightTrackerItem item = items.findById(LocalId.of(localId)).orElseThrow();
             assertEquals(family, item.commonId().value());
             assertFalse(family.equals(item.localId().value()));
             assertEquals(3, item.revision().value());
@@ -429,7 +435,7 @@ class WorkingSetCreationAcceptanceTest {
         });
         String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
                 String.class, child, nativeId);
-        var item = workingSetQueries.resolve(WorkingSetId.of(child), LocalId.of(local));
+        LightTrackerItem item = items.findById(LocalId.of(local)).orElseThrow();
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child + "/items/" + local, Map.class).getStatusCode());
         assertEquals(nativeId, item.sourceLocalId().value());
         assertEquals(3, item.sourceRevision().value());
@@ -485,33 +491,27 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
-    void extensionRollsBackOnlyTheIndexItemWhosePublicSummaryConflicts() {
+    void extensionKeepsIndexesWhenBusinessProjectionIsDeferred() {
         seedRange();
         createTarget();
         String conflicted = fixtureId("public-index-conflict-" + child);
         String valid = fixtureId("public-index-valid-" + child);
-        long blocker = Long.parseLong(fixtureId("public-index-blocker-" + child));
         seedItem(unshared, conflicted, conflicted, false);
         seedItem(unshared, valid, valid, false);
-        jdbc.update("""
-                INSERT INTO air_inst_common (id, base_class, class, type, workingset_id, common_id)
-                VALUES (?, 1401, 140101, 14010101, ?, ?)
-                """, blocker, Long.valueOf(child), Long.valueOf(conflicted));
-        try {
-            CreationView completed = awaitStatus(extension(List.of(unshared)), Status.PartiallySucceeded);
-            assertEquals(Stage.INDEX_UNSHARED_TRACKERS, completed.failures().getFirst().stage());
-            assertEquals(0, jdbc.queryForObject("""
-                    SELECT count(*) FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?
-                    """, Integer.class, Long.valueOf(child), Long.valueOf(conflicted)));
-            assertEquals(1, jdbc.queryForObject("""
-                    SELECT count(*)
-                    FROM light_tracker_items l JOIN air_inst_common c ON c.id = l.local_id
-                    WHERE l.working_set_id = ? AND l.common_id = ?
-                      AND c.workingset_id = l.working_set_id AND c.common_id = l.common_id AND c.tracker = l.tracker_id
-                    """, Integer.class, Long.valueOf(child), Long.valueOf(valid)));
-        } finally {
-            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", blocker);
-        }
+
+        CreationView completed = awaitStatus(extension(List.of(unshared)), Status.Succeeded);
+        assertTrue(completed.failures().isEmpty());
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?
+                """, Integer.class, Long.valueOf(child), Long.valueOf(conflicted)));
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?
+                """, Integer.class, Long.valueOf(child), Long.valueOf(valid)));
+        // 公共查询视图由业务 BC 消费索引完成事件后投影；当前为待实现的空监听器。
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT count(*) FROM air_inst_common
+                WHERE id IN (SELECT local_id FROM light_tracker_items WHERE working_set_id = ?)
+                """, Integer.class, Long.valueOf(child)));
     }
 
     @Test
@@ -632,13 +632,13 @@ class WorkingSetCreationAcceptanceTest {
 
     private void seedRange() {
         jdbc.update("INSERT INTO product_spaces VALUES (?), (?)", space, otherSpace);
-        FixtureIds.insertClassification(jdbc, shared, "SHARED");
-        FixtureIds.insertClassification(jdbc, unshared, "UNSHARED");
+        FixtureIds.insertClassification(jdbc, SHARED_CLASSIFICATION, "SHARED");
+        FixtureIds.insertClassification(jdbc, UNSHARED_CLASSIFICATION, "UNSHARED");
         seedFolderTracker(space);
         seedFolderTracker(otherSpace);
-        seedTracker(shared, space, shared, "SHARED");
-        seedTracker(unshared, space, unshared, "UNSHARED");
-        seedTracker(fixtureId("unselected-" + child), otherSpace, shared, "SHARED");
+        seedTracker(shared, space, SHARED_CLASSIFICATION, "SHARED");
+        seedTracker(unshared, space, UNSHARED_CLASSIFICATION, "UNSHARED");
+        seedTracker(fixtureId("unselected-" + child), otherSpace, SHARED_CLASSIFICATION, "SHARED");
     }
 
     private void seedTracker(String id, String spaceId, String classification, String mode) {

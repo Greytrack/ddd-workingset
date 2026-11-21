@@ -26,6 +26,7 @@ class ModuleEntrypointsTest {
                 .map(BeanDefinition::getBeanClassName).collect(Collectors.toSet());
 
         assertTrue(components.contains("alm.requirement.adapters.RequirementController"));
+        assertTrue(components.contains("alm.requirement.application.eventhandler.RequirementDerivedItemSummaryListener"));
         assertTrue(components.contains("sk.workingset.adapters.WorkingSetController"));
         assertTrue(components.contains("bootstrap.web.ApiExceptionHandler"));
 

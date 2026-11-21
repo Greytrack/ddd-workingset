@@ -1,5 +1,6 @@
 package sk.workingset.application;
 
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,7 +30,7 @@ import static org.mockito.Mockito.*;
 class CowEventHandlerTest {
     private static LightTrackerItem target(String id, LocalId source, Revision own, Revision sourceRevision) {
         return LightTrackerItem.restore(LocalId.of(id), CommonId.of("264220103598016"), TrackerId.of("264443044134848"),
-                WorkingSetId.of("266514385749952"), own, source, sourceRevision, false);
+                WorkingSetId.of("266514385749952"), own, source, sourceRevision, false, new ItemClassification(42L, 14010101L));
     }
 
     @Test

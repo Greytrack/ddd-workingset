@@ -101,7 +101,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void missing_requested_working_set_rejects_creation() {
-        var failure = assertThrows(DomainException.class,
+        DomainException failure = assertThrows(DomainException.class,
                 () -> service.create(TRACKER, WorkingSetId.of("42"), "A", "d", REVISION));
 
         assertSame(BindingResCode.WORKING_SET_NOT_EXISTS, failure.getResCode());

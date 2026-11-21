@@ -6,11 +6,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
+import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.WorkingSetItemIndexer;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetCreation.Progress;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +27,8 @@ import java.util.UUID;
 
 import static bootstrap.FixtureIds.fixtureId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** H1 回归：目标已有同族 LTI 时，来源后来软删也只能计为跳过，不得转成排除/失败。 */
 @SpringBootTest(classes = bootstrap.WorkingsetApplication.class)
@@ -27,7 +37,6 @@ class WorkingSetItemIndexerTest {
     private final String parent = fixtureId("parent-" + suffix);
     private final String child = fixtureId("child-" + suffix);
     private final String space = fixtureId("space-" + suffix);
-    private final String classification = fixtureId("classification-" + suffix);
     private final String sourceTracker = fixtureId("source-" + suffix);
     private final String parentTracker = fixtureId("parent-tracker-" + suffix);
     private final String childTracker = fixtureId("child-tracker-" + suffix);
@@ -35,6 +44,7 @@ class WorkingSetItemIndexerTest {
     private final String family = fixtureId("family-" + suffix);
 
     @Autowired private WorkingSetItemIndexer indexer;
+    @Autowired private LightTrackerItemRepository items;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TransactionTemplate transaction;
 
@@ -48,35 +58,32 @@ class WorkingSetItemIndexerTest {
         jdbc.update("DELETE FROM requirements WHERE tracker_id = ?", sourceTracker);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", sourceTracker);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", child, parent);
-        jdbc.update("DELETE FROM classifications WHERE classification_id = ?", classification);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
     }
 
     @Test
     void existingFamilyWinsOverDeletedSource() {
         jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", space);
-        jdbc.update("INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id) VALUES (?, 'UNSHARED', '测试分类', 1401, 140101)",
-                classification);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", parent);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, ?)", child, parent);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
-                VALUES (?, '1', ?, ?, 'UNSHARED')
-                """, sourceTracker, space, classification);
+                VALUES (?, '1', ?, 14010101, 'UNSHARED')
+                """, sourceTracker, space);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode)
-                VALUES (?, ?, ?, ?, ?, 'UNSHARED')
-                """, parentTracker, sourceTracker, parent, space, classification);
+                VALUES (?, ?, ?, ?, 14010101, 'UNSHARED')
+                """, parentTracker, sourceTracker, parent, space);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode)
-                VALUES (?, ?, ?, ?, ?, 'UNSHARED')
-                """, childTracker, parentTracker, child, space, classification);
+                VALUES (?, ?, ?, ?, 14010101, 'UNSHARED')
+                """, childTracker, parentTracker, child, space);
         jdbc.update("""
                 INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id, classification_id,
                     sharing_mode, origin)
                 VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION'),
                        (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
-                """, parent, parentTracker, space, classification, child, childTracker, space, classification);
+                """, parent, parentTracker, space, "14010101", child, childTracker, space, "14010101");
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision,
                     lock_version, delete_flag)
@@ -87,11 +94,19 @@ class WorkingSetItemIndexerTest {
                     source_local_id, source_revision, materialized)
                 VALUES (?, ?, ?, ?, 3, ?, 3, FALSE)
                 """, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, source);
-        jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                    source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, ?, 3, ?, 3, TRUE)
-                """, fixtureId("existing-" + suffix), family, childTracker, child, fixtureId("existing-" + suffix));
+        LocalId winner = LocalId.of(fixtureId("existing-" + suffix));
+        LocalId contender = LocalId.of(fixtureId("contender-" + suffix));
+        ItemClassification classification = new ItemClassification(Long.parseLong(space), 14010101L);
+        LightTrackerItem existing = LightTrackerItem.local(winner, CommonId.of(family), TrackerId.of(childTracker),
+                WorkingSetId.of(child), Revision.of(3), classification);
+        LightTrackerItem duplicate = LightTrackerItem.local(contender, CommonId.of(family), TrackerId.of(childTracker),
+                WorkingSetId.of(child), Revision.of(3), classification);
+        transaction.executeWithoutResult(status -> {
+            assertTrue(items.claimFamily(existing));
+            assertFalse(items.claimFamily(duplicate));
+        });
+        assertEquals(Revision.of(3), items.findById(winner).orElseThrow().currentRevisionIndex().revision());
+        assertTrue(items.findById(contender).isEmpty());
 
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parent, child, "request",
                 List.of(space), List.of(), List.of(parentTracker));

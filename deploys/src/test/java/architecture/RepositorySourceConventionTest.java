@@ -18,7 +18,9 @@ import org.junit.jupiter.api.Test;
 class RepositorySourceConventionTest {
 
     private static final Set<String> BUSINESS_TABLES = Set.of(
-            "requirements", "parts", "quality_objects", "dqa_items", "gates");
+            "requirements", "requirement_snapshots",
+            "parts", "quality_objects", "dqa_items", "gates",
+            "reviews", "test_cases", "bugs", "documents");
 
     @Test
     void repository_implementations_have_repository_and_slf4j_annotations() throws IOException {
@@ -37,23 +39,24 @@ class RepositorySourceConventionTest {
     }
 
     @Test
-    void shared_kernel_repositories_do_not_query_business_tables() throws IOException {
-        for (Path file : repositorySources()) {
-            String name = file.getFileName().toString();
-            if (!name.endsWith("RepositoryImpl.java")
-                    || file.toString().contains("alm" + java.io.File.separator + "requirement")) {
-                continue;
-            }
+    void shared_kernel_sources_do_not_query_business_tables() throws IOException {
+        for (Path file : sharedKernelSources()) {
             String source = Files.readString(file).toLowerCase();
             for (String table : BUSINESS_TABLES) {
                 if (source.matches("(?s).*\\b(from|join|update|into|delete\\s+from)\\s+" + table + "\\b.*")) {
-                    fail(name + " 直接查询业务表: " + table);
+                    fail(file.getFileName() + " 直接查询业务表: " + table);
                 }
             }
         }
     }
 
     private static List<Path> repositorySources() throws IOException {
+        return sharedKernelSources().stream()
+                .filter(path -> path.getFileName().toString().endsWith("RepositoryImpl.java"))
+                .toList();
+    }
+
+    private static List<Path> sharedKernelSources() throws IOException {
         Path root = Path.of("").toAbsolutePath();
         while (root != null && !Files.isDirectory(root.resolve("sharedkernel"))) {
             root = root.getParent();

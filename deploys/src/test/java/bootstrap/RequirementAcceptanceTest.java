@@ -1,5 +1,6 @@
 package bootstrap;
 
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,7 +139,7 @@ class RequirementAcceptanceTest {
         assertEquals(0, indexFlags());
 
         assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete", null, Void.class).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemDeletionChangedEvent") == 1);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications(BusinessObjectDeleteEvent.class.getSimpleName()) == 1);
         assertEquals(1, indexFlags());
         assertTrue(items.findById(id).orElseThrow().deleted());
         assertTrue(indexQueries.findInTracker(trackerId).isEmpty());
@@ -147,11 +148,11 @@ class RequirementAcceptanceTest {
         assertEquals(List.of(3), indexedRevisions());
 
         assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/undelete", null, Void.class).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemDeletionChangedEvent") == 2);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications(BusinessObjectDeleteEvent.class.getSimpleName()) == 2);
         assertEquals(0, indexFlags());
-        var staleDelete = new BusinessObjectDeleteEvent(id, true);
+        BusinessObjectDeleteEvent staleDelete = new BusinessObjectDeleteEvent(id, true);
         transaction.executeWithoutResult(status -> events.publishEvent(staleDelete));
-        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemDeletionChangedEvent") == 3);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications(BusinessObjectDeleteEvent.class.getSimpleName()) == 3);
         assertFalse(items.findById(id).orElseThrow().deleted());
         assertEquals(0, indexFlags());
         assertEquals(List.of(id), indexQueries.findInTracker(trackerId).stream()
@@ -171,7 +172,8 @@ class RequirementAcceptanceTest {
         new RootTrackerFixture(jdbc, trackerId).provision();
         LocalId id = LocalId.of(fixtureId("revision-item-" + UUID.randomUUID()));
         items.save(sk.workingset.domain.lighttrackeritem.LightTrackerItem.local(id, CommonId.of(id.value()),
-                TrackerId.of(trackerId), WorkingSet.DEFAULT_ID, Revision.of(3)));
+                TrackerId.of(trackerId), WorkingSet.DEFAULT_ID, Revision.of(3),
+                new ItemClassification(Long.parseLong(fixtureId(trackerId + "-s")), 14010101L)));
 
         indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));
         indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));

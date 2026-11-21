@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TrackerTest {
     @Test
     void descendantsKeepFamilyIdentityAndLinkToTheirImmediateSource() {
-        var classification = new Classification(301L, Classification.SharingMode.UNSHARED, "分类",
+        Classification classification = new Classification(301L, Classification.SharingMode.UNSHARED, "分类",
                 11L, 111L);
         Tracker root = Tracker.original(TrackerId.of(101), new ProductSpace("201"),
                 classification, null);

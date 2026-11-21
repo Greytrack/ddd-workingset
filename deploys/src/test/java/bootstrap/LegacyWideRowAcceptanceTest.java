@@ -1,5 +1,9 @@
 package bootstrap;
 
+import sk.tracker.domain.Tracker;
+import sk.tracker.infrastructure.repositories.TrackerCompatibilityRow;
+import sk.tracker.infrastructure.repositories.TrackerRow;
+import sk.workingset.infrastructure.repositories.WorkingSetRow;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,7 +36,7 @@ class LegacyWideRowAcceptanceTest {
                     'legacy', 1234, 9, '{"enabled": true}'::jsonb, '', 'three-digit', 1700000000123)
                 """, id, id, id, id);
 
-        var row = workingSets.findLegacyRow(WorkingSetId.of(id)).orElseThrow();
+        WorkingSetRow row = workingSets.findLegacyRow(WorkingSetId.of(id)).orElseThrow();
         assertEquals(9L, row.workingSetScope());
         assertEquals("{\"enabled\": true}", row.attributes());
         assertEquals(150, row.customFields().size());
@@ -66,11 +70,11 @@ class LegacyWideRowAcceptanceTest {
 
         assertTrue(trackers.findLegacyRow(trackerId, spaceId + 1).isEmpty());
         assertTrue(trackers.findLegacyCompatibilityRow(trackerId, spaceId + 1).isEmpty());
-        var tracker = trackers.findById(trackerId).orElseThrow();
+        Tracker tracker = trackers.findById(trackerId).orElseThrow();
         assertTrue(tracker.rename("after"));
         trackers.save(tracker);
 
-        var row = trackers.findLegacyRow(trackerId, spaceId).orElseThrow();
+        TrackerRow row = trackers.findLegacyRow(trackerId, spaceId).orElseThrow();
         assertEquals("after", row.name());
         assertEquals("A.1", row.version());
         assertNull(row.revisionId());
@@ -81,7 +85,7 @@ class LegacyWideRowAcceptanceTest {
         assertEquals(new BigDecimal("1234567890123456.000000000123"), row.customFields().get("numeric01"));
         assertEquals("3,2,1", row.customFields().get("multilist001"));
 
-        var mirror = trackers.findLegacyCompatibilityRow(trackerId, spaceId).orElseThrow();
+        TrackerCompatibilityRow mirror = trackers.findLegacyCompatibilityRow(trackerId, spaceId).orElseThrow();
         assertEquals("after", mirror.name());
         assertEquals((short) 1, mirror.locked());
         assertNull(mirror.deleteFlag());

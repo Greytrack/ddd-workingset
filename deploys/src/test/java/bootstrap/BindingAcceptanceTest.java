@@ -1,5 +1,6 @@
 package bootstrap;
 
+import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,8 +44,8 @@ class BindingAcceptanceTest {
     private final String ws = fixtureId("WS-" + suffix);
     private final String other = fixtureId("OTHER-" + suffix);
     private final String space = fixtureId("SPACE-" + suffix);
-    private final String sharedClass = fixtureId("SC-" + suffix);
-    private final String unsharedClass = fixtureId("UC-" + suffix);
+    private final String sharedClass = "14010102";
+    private final String unsharedClass = "14010101";
     private final String shared = fixtureId("SH-" + suffix);
     private final String unshared = fixtureId("UN-" + suffix);
     private final String sourceItem = fixtureId("SOURCE-" + suffix);
@@ -76,7 +77,6 @@ class BindingAcceptanceTest {
         }
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
-        jdbc.update("DELETE FROM classifications WHERE classification_id IN (?, ?)", sharedClass, unsharedClass);
     }
 
     @Test
@@ -443,7 +443,7 @@ class BindingAcceptanceTest {
     }
 
     private void assertSharedOutsideParent(String target) {
-        var task = FixtureIds.extendScope(rest, target, Status.PartiallySucceeded, shared);
+        CreationView task = FixtureIds.extendScope(rest, target, Status.PartiallySucceeded, shared);
         assertTrue(task.failures().stream().anyMatch(failure ->
                 shared.equals(failure.trackerId()) && "SourceTrackerNotFound".equals(failure.reason())));
     }

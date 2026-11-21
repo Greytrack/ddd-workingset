@@ -52,27 +52,25 @@ class RequirementFamilyScopeTest {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", ws2);
         for (String tracker : new String[] {t1, t2, t3, t4}) {
             jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", fixtureId(tracker + "-space"));
-            jdbc.update("INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id) VALUES (?, 'UNSHARED', '测试分类', 1401, 140101)",
-                    fixtureId(tracker + "-class"));
         }
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
-                VALUES (?, '1', ?, ?, 'UNSHARED')
-                """, t1, fixtureId(t1 + "-space"), fixtureId(t1 + "-class"));
+                VALUES (?, '1', ?, 14010101, 'UNSHARED')
+                """, t1, fixtureId(t1 + "-space"));
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
-                VALUES (?, '1', ?, ?, 'UNSHARED')
-                """, t2, fixtureId(t2 + "-space"), fixtureId(t2 + "-class"));
+                VALUES (?, '1', ?, 14010101, 'UNSHARED')
+                """, t2, fixtureId(t2 + "-space"));
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id,
                                       sharing_mode)
-                VALUES (?, ?, ?, ?, ?, 'UNSHARED')
-                """, t3, t1, ws2, fixtureId(t3 + "-space"), fixtureId(t3 + "-class"));
+                VALUES (?, ?, ?, ?, 14010101, 'UNSHARED')
+                """, t3, t1, ws2, fixtureId(t3 + "-space"));
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id,
                                       sharing_mode)
-                VALUES (?, ?, ?, ?, ?, 'UNSHARED')
-                """, t4, t2, ws2, fixtureId(t4 + "-space"), fixtureId(t4 + "-class"));
+                VALUES (?, ?, ?, ?, 14010101, 'UNSHARED')
+                """, t4, t2, ws2, fixtureId(t4 + "-space"));
     }
 
     @AfterEach
@@ -84,7 +82,6 @@ class RequirementFamilyScopeTest {
         for (String tracker : new String[] {t3, t4, t2, t1}) {
             jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
             jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", fixtureId(tracker + "-space"));
-            jdbc.update("DELETE FROM classifications WHERE classification_id = ?", fixtureId(tracker + "-class"));
         }
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws2);
     }

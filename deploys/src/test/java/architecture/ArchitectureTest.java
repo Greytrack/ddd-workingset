@@ -16,7 +16,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
  * AC-01：Working Set 编译期不依赖 ALM 的实现模块或业务聚合类型（A1/T4 §3.1）。
  */
 @AnalyzeClasses(
-        packages = {"sk.workingset", "sk.productspace", "alm.requirement"},
+        packages = {"sk.workingset", "sk.productspace", "alm.requirement", "bootstrap"},
         importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
 
@@ -107,4 +107,19 @@ class ArchitectureTest {
             noClasses()
                     .that().resideInAnyPackage("sk.workingset.infrastructure.repositories..")
                     .should().dependOnClassesThat().resideInAnyPackage("alm.requirement..");
+
+    @ArchTest
+    static final ArchRule shared_kernel_infrastructure_must_not_depend_on_business_bc_types =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "sk.workingset.infrastructure..", "sk.tracker.infrastructure..",
+                            "sk.productspace.infrastructure..")
+                    .should().dependOnClassesThat().resideInAnyPackage("alm.requirement..");
+
+    @ArchTest
+    static final ArchRule composition_root_must_not_depend_on_business_bc_adapters_or_infrastructure =
+            noClasses()
+                    .that().resideInAPackage("bootstrap..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "alm.requirement.adapters..", "alm.requirement.infrastructure..");
 }

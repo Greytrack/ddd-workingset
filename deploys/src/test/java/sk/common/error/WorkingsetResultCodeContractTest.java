@@ -1,5 +1,6 @@
 package sk.common.error;
 
+import org.springframework.http.ResponseEntity;
 import alm.requirement.domain.RequirementResultCode;
 import bootstrap.web.ApiExceptionHandler;
 import org.junit.jupiter.api.Test;
@@ -19,10 +20,10 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void bindingFailureResponseKeepsItsPublicReasonAndContext() {
-        var error = DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN,
+        DomainException error = DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN,
                 "42", Map.of("childWorkingSetIds", java.util.List.of("43")));
 
-        var response = new ApiExceptionHandler().handleDomainFailure(error);
+        ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
 
         assertEquals(409, response.getStatusCode().value());
         assertEquals(Map.of("code", 1207, "reason", "WorkingSetHasChildren", "message", "42",
@@ -31,9 +32,9 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void mergeFailureResponseKeepsItsPublicReasonAndFallbackMessage() {
-        var error = DomainException.withMessage(MergeResCode.STALE_EVIDENCE, null);
+        DomainException error = DomainException.withMessage(MergeResCode.STALE_EVIDENCE, null);
 
-        var response = new ApiExceptionHandler().handleDomainFailure(error);
+        ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
 
         assertEquals(409, response.getStatusCode().value());
         assertEquals(Map.of("code", 1306, "reason", "StaleEvidence", "message", "StaleEvidence"), response.getBody());

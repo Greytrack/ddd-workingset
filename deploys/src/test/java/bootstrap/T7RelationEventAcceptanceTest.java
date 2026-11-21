@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class T7RelationEventAcceptanceTest {
     private final String suffix = java.util.UUID.randomUUID().toString();
     private final String space = fixtureId("space-" + suffix);
-    private final String classification = fixtureId("class-" + suffix);
+    private final String classification = "14010101";
     private final String parentTracker = fixtureId("parent-" + suffix);
     private final String child = fixtureId("child-" + suffix);
     private final String parentItem = fixtureId("item-" + suffix);
@@ -60,7 +60,6 @@ class T7RelationEventAcceptanceTest {
         jdbc.update("DELETE FROM requirements WHERE tracker_id = ?", parentTracker);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", parentTracker);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
-        jdbc.update("DELETE FROM classifications WHERE classification_id = ?", classification);
     }
 
     @Test

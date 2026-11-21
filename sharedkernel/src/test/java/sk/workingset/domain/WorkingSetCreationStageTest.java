@@ -13,10 +13,10 @@ import static sk.workingset.domain.workingset.WorkingSetCreation.Stage.*;
 class WorkingSetCreationStageTest {
     @Test
     void createsChildAndCopiesEverySelectedTrackerBeforeBindingAnySpace() {
-        var now = Instant.EPOCH;
-        var request = new WorkingSetCreation.Request("1", "2", "range", List.of("10", "11"),
+        Instant now = Instant.EPOCH;
+        WorkingSetCreation.Request request = new WorkingSetCreation.Request("1", "2", "range", List.of("10", "11"),
                 List.of("30"), List.of("20", "21"));
-        var task = WorkingSetCreation.submit("3", request, "4", now).start(now);
+        WorkingSetCreation task = WorkingSetCreation.submit("3", request, "4", now).start(now);
 
         assertEquals(CREATE_WORKING_SET, task.stage());
         assertEquals("2", task.currentItem());

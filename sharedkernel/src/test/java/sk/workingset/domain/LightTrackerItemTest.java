@@ -3,12 +3,14 @@ package sk.workingset.domain;
 import org.junit.jupiter.api.Test;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class LightTrackerItemTest {
+    private static final ItemClassification CLASSIFICATION = new ItemClassification(42L, 14010101L);
 
     private static final LocalId L0 = LocalId.of("260574482192320");
     private static final LocalId L1 = LocalId.of("261158455371712");
@@ -19,7 +21,7 @@ class LightTrackerItemTest {
 
     @Test
     void derive_creates_source_backed_variant() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
 
         assertEquals(L1, item.localId());
         assertEquals(C1, item.commonId());
@@ -34,7 +36,7 @@ class LightTrackerItemTest {
 
     @Test
     void deletionChangesDoNotAlterRevisionOrContentLocation() {
-        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3);
+        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, CLASSIFICATION);
         assertFalse(item.deleted());
         assertTrue(item.recordDeletionState(true));
         assertFalse(item.recordDeletionState(true));
@@ -49,12 +51,12 @@ class LightTrackerItemTest {
     @Test
     void derive_rejects_local_id_equal_to_source() {
         assertThrows(DomainException.class,
-                () -> LightTrackerItem.derive(L0, C1, T1, WS1, R3, L0));
+                () -> LightTrackerItem.derive(L0, C1, T1, WS1, R3, L0, R3, CLASSIFICATION));
     }
 
     @Test
     void switchToLocalBacked_updates_three_fields_and_keeps_identity() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
         LocalId before = item.localId();
 
         item.switchToLocalBacked(R3);
@@ -70,7 +72,7 @@ class LightTrackerItemTest {
 
     @Test
     void switchToLocalBacked_rejects_second_call() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
         item.switchToLocalBacked(R3);
 
         assertThrows(DomainException.class, () -> item.switchToLocalBacked(R3));
@@ -78,14 +80,14 @@ class LightTrackerItemTest {
 
     @Test
     void switchToLocalBacked_rejects_revision_mismatch() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
 
         assertThrows(DomainException.class, () -> item.switchToLocalBacked(Revision.of(4)));
     }
 
     @Test
     void explicitUpgradeRetainsPreviousRevisionAndIgnoresReplay() {
-        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3);
+        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, CLASSIFICATION);
         Revision r4 = Revision.of(4);
         assertThrows(DomainException.class, () -> item.advanceRevision(r4, Revision.of(5)));
         assertTrue(item.advanceRevision(R3, r4));
@@ -96,10 +98,20 @@ class LightTrackerItemTest {
 
     @Test
     void restore_keeps_identity_and_state() {
-        LightTrackerItem item = LightTrackerItem.restore(L1, C1, T1, WS1, R3, L0, R3, false);
+        LightTrackerItem item = LightTrackerItem.restore(L1, C1, T1, WS1, R3, L0, R3, false, CLASSIFICATION);
 
         assertEquals(L1, item.localId());
         assertFalse(item.materialized());
         assertEquals(L0, item.effectiveContentSource());
+    }
+
+    @Test
+    void derivedItemCarriesTrackerClassificationAndSpace() {
+        ItemClassification classification = new ItemClassification(42L, 14010101L);
+
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, classification);
+
+        assertEquals(42L, item.numericProductSpaceId());
+        assertEquals(14010101L, item.classificationId());
     }
 }

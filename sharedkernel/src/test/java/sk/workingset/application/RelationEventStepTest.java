@@ -1,5 +1,6 @@
 package sk.workingset.application;
 
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.junit.jupiter.api.Test;
 import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
@@ -52,7 +53,7 @@ class RelationEventStepTest {
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
         LightTrackerItem item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
-                LocalId.of("260574482192320"), Revision.of(3));
+                LocalId.of("260574482192320"), Revision.of(3), new ItemClassification(42L, 14010101L));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
@@ -96,7 +97,7 @@ class RelationEventStepTest {
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
         LightTrackerItem item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
-                LocalId.of("260574482192320"), Revision.of(3));
+                LocalId.of("260574482192320"), Revision.of(3), new ItemClassification(42L, 14010101L));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);

@@ -1,5 +1,10 @@
 package bootstrap;
 
+import sk.businessframework.domain.litebusinessobject.LiteBusinessObject;
+import java.util.List;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import sk.workingset.application.query.model.TrackerBindingSummary;
 import alm.requirement.adapters.RequirementView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +53,7 @@ class TrackerDefaultAcceptanceTest {
 
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = fixtureId("WS-CHILD-" + suffix);
-    private final String sharedClassification = fixtureId("CL-SHARED-" + suffix);
+    private final String sharedClassification = "14010102";
     private final java.util.Set<String> testSpaces = new java.util.HashSet<>();
 
     @AfterEach
@@ -64,14 +69,13 @@ class TrackerDefaultAcceptanceTest {
         }
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
-        jdbc.update("DELETE FROM classifications WHERE classification_id = ?", sharedClassification);
     }
 
     @Test
     void exposesThePresetClassificationTriples() {
         ClassificationView[] metadata = rest.getForObject(
                 "/api/worksets/metadata/classifications", ClassificationView[].class);
-        var triples = Arrays.stream(metadata).map(row ->
+        List<List<String>> triples = Arrays.stream(metadata).map(row ->
                 java.util.List.of(row.baseClassId(), row.classId(), row.classificationId())).toList();
 
         assertTrue(triples.containsAll(java.util.List.of(
@@ -92,10 +96,10 @@ class TrackerDefaultAcceptanceTest {
                     FROM public.classifications
                     """);
 
-            var bindings = workingSetQueries.findBindings(WorkingSetId.of("1")).trackers().stream()
+            List<TrackerBindingSummary> bindings = workingSetQueries.findBindings(WorkingSetId.of("1")).trackers().stream()
                     .filter(binding -> binding.productSpaceId().equals(Long.valueOf(space))).toList();
 
-            var folder = bindings.stream().filter(binding -> binding.classificationId().equals(10070101L))
+            TrackerBindingSummary folder = bindings.stream().filter(binding -> binding.classificationId().equals(10070101L))
                     .findFirst().orElseThrow();
             assertTrue(bindings.stream().anyMatch(binding -> !binding.classificationId().equals(10070101L)));
             assertEquals(10070101L, classifications.findClassification("10070101").orElseThrow().numericId());
@@ -113,7 +117,7 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void creatingProductSpacePublishesDefaultTrackerBindingsAndItemReadAccess() {
         String spaceId = createSpace("1");
-        var product = instanceSummaries.findById(Long.valueOf(spaceId)).orElseThrow();
+        LiteBusinessObject product = instanceSummaries.findById(Long.valueOf(spaceId)).orElseThrow();
         assertEquals(10030101L, product.type());
         assertEquals(584189545406816L, product.tracker());
         assertEquals(584190236948832L, instanceSummaries.findById(1L).orElseThrow().tracker());
@@ -201,11 +205,11 @@ class TrackerDefaultAcceptanceTest {
                 .requestFactory(new JdkClientHttpRequestFactory()).build();
         String path = "/api/worksets/" + child;
         String visibility = path + "/product-spaces/" + space + "/trackers/" + folder + "/visibility";
-        var wrongSpace = client.patch().uri(path + "/product-spaces/" + fixtureId("other-" + space)
+        HttpStatusCode wrongSpace = client.patch().uri(path + "/product-spaces/" + fixtureId("other-" + space)
                         + "/trackers/" + folder + "/visibility")
                 .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, wrongSpace);
-        var oldRoute = client.patch().uri(path + "/trackers/" + folder + "/visibility")
+        HttpStatusCode oldRoute = client.patch().uri(path + "/trackers/" + folder + "/visibility")
                 .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, oldRoute);
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
@@ -219,7 +223,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
-        var deletion = client.delete().uri("/api/worksets/1/product-spaces/" + space)
+        HttpStatusCode deletion = client.delete().uri("/api/worksets/1/product-spaces/" + space)
                 .exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.ACCEPTED, deletion);
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
@@ -251,7 +255,7 @@ class TrackerDefaultAcceptanceTest {
                   AND r.lock_version = 1 AND c.lock_version = r.lock_version
                   AND r.updated_by = c.updated_by AND r.updated_time = c.updated_time
                 """, Integer.class, id, "变更后"));
-        var common = instanceSummaries.findById(id).orElseThrow();
+        LiteBusinessObject common = instanceSummaries.findById(id).orElseThrow();
         assertEquals("变更后", common.name());
         assertEquals(584578917040480L, common.tracker());
         assertEquals(1L, jdbc.queryForObject("SELECT lock_version FROM air_inst_common WHERE id = ?", Long.class, id));
@@ -300,7 +304,7 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void createsAndDeletesAnAdditionalTrackerInTheDefaultIncludedClassification() {
         String spaceId = createSpace("1");
-        var response = rest.postForEntity("/api/worksets/1/trackers",
+        ResponseEntity<TrackerView> response = rest.postForEntity("/api/worksets/1/trackers",
                 Map.of("productSpaceId", spaceId, "name", "第二个文件夹分类 Tracker",
                         "classificationId", "10070101", "sharingMode", "UNSHARED"), TrackerView.class);
 
