@@ -1,6 +1,7 @@
 package bootstrap;
 
 import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.domain.Requirement;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;
@@ -12,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.WorkingSetCommandService;
 import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
@@ -41,7 +43,7 @@ class ApplicationContextTest {
             assertNotNull(context.getBean(WorkingSetQueryService.class));
             assertNotNull(context.getBean(RequirementCommandService.class));
             assertNotNull(context.getBean(IdentifierGenerator.class));
-            assertNotNull(context.getBean(sk.workingset.application.query.provider.BusinessObjectTypeRegistry.class));
+            assertNotNull(context.getBean(BusinessObjectTypeRegistry.class));
         }
     }
 
@@ -61,7 +63,7 @@ class ApplicationContextTest {
             fixture.provision();
             LocalId created = null;
             try {
-                alm.requirement.domain.Requirement requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
+                Requirement requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
                 created = requirement.localId();
                 await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject("""
                         SELECT EXISTS (SELECT 1 FROM event_publication WHERE event_type LIKE '%.TrackerItemCreatedEvent'

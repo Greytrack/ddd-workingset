@@ -68,7 +68,7 @@ class MergeRelationRepairStepTest {
         }
         round = round.complete(Instant.now());
 
-        sk.workingset.application.command.MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourceQueryProvider.class),
+        MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourceQueryProvider.class),
                 new RelationEventPublisher(event -> {
                 }, entity -> 1L));
         assertEquals(0, step.changedTargets(round).size());
@@ -96,10 +96,10 @@ class MergeRelationRepairStepTest {
                         TrackerId.of("265625955250112"), Revision.of(3)), changedTarget)));
 
         ArrayList<Object> published = new ArrayList<Object>();
-        sk.workingset.application.command.RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
-        sk.workingset.application.command.MergeRelationRepairStep step = new MergeRelationRepairStep(source, publisher);
+        RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
+        MergeRelationRepairStep step = new MergeRelationRepairStep(source, publisher);
 
-        sk.workingset.application.command.MergeRelationRepairStep.StepResult result = step.repair(round);
+        MergeRelationRepairStep.StepResult result = step.repair(round);
 
         assertEquals(1, result.published());
         assertEquals(0, result.failed());

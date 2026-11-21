@@ -9,6 +9,7 @@ import sk.common.error.PersistenceResultCode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Spring Data JDBC 写模型的聚合软删除生命周期操作（软删除 / 恢复 / 物理删除）：<b>表名、主键列、版本列全部取自实体元数据</b> （{@code @Table} / {@code @Id} /
@@ -40,9 +41,9 @@ public final class AggregateSoftDelete {
      */
     public AggregateSoftDelete(JdbcTemplate jdbcTemplate,
             MappingContext<? extends RelationalPersistentEntity<?>, ?> mappingContext, JdbcSoftDelete.Columns columns) {
-        this.jdbcTemplate = java.util.Objects.requireNonNull(jdbcTemplate, "JDBC 模板不能为空");
-        this.mappingContext = java.util.Objects.requireNonNull(mappingContext, "映射上下文不能为空");
-        this.columns = java.util.Objects.requireNonNull(columns, "列模型声明不能为空");
+        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "JDBC 模板不能为空");
+        this.mappingContext = Objects.requireNonNull(mappingContext, "映射上下文不能为空");
+        this.columns = Objects.requireNonNull(columns, "列模型声明不能为空");
     }
 
     /**

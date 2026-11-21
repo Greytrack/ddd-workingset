@@ -1,6 +1,5 @@
 package sk.workingset.infrastructure.repositories;
 
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRevisionEntity;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +15,10 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRevisionEntity;
 import sk.workingset.domain.workingset.WorkingSetId;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,7 +61,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             LocalId.of(rs.getLong("source_local_id")),
             Revision.of(rs.getInt("source_revision")),
             rs.getBoolean("materialized"), rs.getBoolean("deleted"),
-            java.util.Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).map(Revision::of).toList(),
+            Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).map(Revision::of).toList(),
             new ItemClassification(rs.getLong("work_space_id"), rs.getLong("sub_class_id")));
 
     private final JdbcTemplate jdbc;

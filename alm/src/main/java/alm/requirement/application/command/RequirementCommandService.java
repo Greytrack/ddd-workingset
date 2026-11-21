@@ -20,8 +20,8 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.BusinessObjectDeleteEvent;
+import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
@@ -33,6 +33,7 @@ import sk.workingset.error.BindingResCode;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 
 /**
@@ -68,7 +69,7 @@ public class RequirementCommandService {
         if (requestedWorkingSetId != null) {
             requireWorkingSet(requestedWorkingSetId);
         }
-        java.util.Optional<Tracker> tracker = trackers.findById(trackerId);
+        Optional<Tracker> tracker = trackers.findById(trackerId);
         tracker.map(Tracker::workingSetId)
                 .filter(owner -> !owner.equals(requestedWorkingSetId))
                 .ifPresent(this::requireWorkingSet);
@@ -126,7 +127,7 @@ public class RequirementCommandService {
     }
 
     private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
-        java.util.Optional<LightTrackerItem> inherited = items.findById(localId)
+        Optional<LightTrackerItem> inherited = items.findById(localId)
                 .filter(item -> !item.materialized());
         Requirement current = inherited.map(target -> {
             requireWorkingSet(target.workingSetId());

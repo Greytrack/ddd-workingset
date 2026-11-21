@@ -26,9 +26,6 @@ import java.util.Set;
 @Component
 public class DefaultBusinessObjectTypeRegistry implements BusinessObjectTypeRegistry {
 
-    private static final Set<Long> ORGANIZATIONAL_CLASSIFICATIONS =
-            Set.of(10030101L, 10070101L, 10080101L, 10090101L);
-
     private final TrackerRepository trackers;
     private final LightTrackerItemQueryProvider items;
     private final Map<Long, BusinessObjectTypeAdapter> byType;

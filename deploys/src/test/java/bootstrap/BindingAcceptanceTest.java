@@ -1,15 +1,17 @@
 package bootstrap;
 
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.common.error.DomainException;
@@ -17,8 +19,10 @@ import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.TrackerBindingView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetController.WorkingSetView;
+import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 import sk.workingset.error.BindingResCode;
 
 import java.time.Duration;
@@ -27,11 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static bootstrap.FixtureIds.fixtureId;
-import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -149,7 +155,7 @@ class BindingAcceptanceTest {
     private Map<String, Boolean> trackerDefaults(String id) {
         return List.of(rest.getForObject(path(id) + "/trackers", TrackerView[].class)).stream()
                 .filter(tracker -> !"10070101".equals(tracker.classificationId()))
-                .collect(java.util.stream.Collectors.toMap(TrackerView::trackerId, TrackerView::isDefault));
+                .collect(Collectors.toMap(TrackerView::trackerId, TrackerView::isDefault));
     }
 
     @Test
@@ -344,12 +350,12 @@ class BindingAcceptanceTest {
     void concurrentChildCreationAndParentDeletionCannotLeaveADanglingParent() throws Exception {
         String child = fixtureId("RACE-CHILD-" + suffix);
         CyclicBarrier start = new CyclicBarrier(2);
-        try (java.util.concurrent.ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            java.util.concurrent.Future<ResponseEntity<Map>> create = executor.submit(() -> {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<ResponseEntity<Map>> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity(path(ws) + "/children", Map.of("name", "并发创建"), Map.class);
             });
-            java.util.concurrent.Future<ResponseEntity<Map>> remove = executor.submit(() -> {
+            Future<ResponseEntity<Map>> remove = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return delete(path(ws));
             });
@@ -371,14 +377,14 @@ class BindingAcceptanceTest {
     @Test
     void concurrentItemCreationAndTrackerDeletionCannotLeaveAnOrphan() throws Exception {
         CyclicBarrier start = new CyclicBarrier(2);
-        try (java.util.concurrent.ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            java.util.concurrent.Future<org.springframework.http.HttpStatusCode> create = executor.submit(() -> {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<HttpStatusCode> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
                         "title", "A", "description", "concurrent", "revision", 3), Map.class)
                         .getStatusCode();
             });
-            java.util.concurrent.Future<org.springframework.http.HttpStatusCode> remove = executor.submit(() -> {
+            Future<HttpStatusCode> remove = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return delete(trackerPath(shared)).getStatusCode();
             });
@@ -444,8 +450,8 @@ class BindingAcceptanceTest {
                 CommonId.of(fixtureId("family-" + sourceLocalId)));
     }
 
-    private static void assertDirectSourceFailure(org.junit.jupiter.api.function.Executable action) {
-        DomainException failure = org.junit.jupiter.api.Assertions.assertThrows(DomainException.class, action);
+    private static void assertDirectSourceFailure(Executable action) {
+        DomainException failure = Assertions.assertThrows(DomainException.class, action);
         assertEquals(BindingResCode.SOURCE_TRACKER_NOT_FOUND, failure.getResCode());
     }
 

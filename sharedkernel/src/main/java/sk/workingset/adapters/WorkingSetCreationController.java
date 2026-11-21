@@ -9,6 +9,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 工作集创建任务的 HTTP 入口；提交后异步执行，客户端轮询 {@code GET /api/working-set-creations/{id}} 至终态。
@@ -61,7 +62,7 @@ public class WorkingSetCreationController {
                     creation.progress(),
                     creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt(),
                     creation.stageProgress(), creation.indexProgress().entrySet().stream().collect(
-                    java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey,
+                    Collectors.toUnmodifiableMap(Map.Entry::getKey,
                             entry -> IndexCounts.from(entry.getValue()))));
         }
     }

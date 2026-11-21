@@ -2,9 +2,9 @@ package sk.workingset.infrastructure.providers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
+import sk.workingset.application.query.model.WorkingSetBindings;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.infrastructure.providers.mybatis.WorkingSetQueryMapper;
@@ -67,7 +67,7 @@ public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
     }
 
     @Override
-    public BindingsView findBindings(long workingSetId) {
-        return new BindingsView(mapper.findSpaceBindings(workingSetId), mapper.findTrackerBindings(workingSetId));
+    public WorkingSetBindings findBindings(long workingSetId) {
+        return new WorkingSetBindings(mapper.findSpaceBindings(workingSetId), mapper.findTrackerBindings(workingSetId));
     }
 }

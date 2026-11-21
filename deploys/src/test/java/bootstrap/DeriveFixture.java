@@ -1,16 +1,17 @@
 package bootstrap;
 
-import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.BindingResCode;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -91,7 +92,7 @@ final class DeriveFixture {
     }
 
     private static Map<String, Object> tracker(JdbcTemplate jdbc, String trackerId) {
-        java.util.List<Map<String,Object>> rows = jdbc.queryForList("""
+        List<Map<String,Object>> rows = jdbc.queryForList("""
                 SELECT name, source_id, product_space_id, classification_id, sharing_mode
                 FROM trackers WHERE tracker_id = ?
                 """, Long.valueOf(trackerId));
@@ -106,7 +107,7 @@ final class DeriveFixture {
         boolean derived = jdbc.queryForObject("SELECT source_id IS NOT NULL FROM trackers WHERE tracker_id = ?",
                 Boolean.class, Long.valueOf(sourceTrackerId));
         if (derived) {
-            java.util.List<Map<String,Object>> rows = jdbc.queryForList("""
+            List<Map<String,Object>> rows = jdbc.queryForList("""
                     SELECT tracker_id, common_id, revision, source_local_id, source_revision, materialized
                     FROM light_tracker_items WHERE local_id = ?
                     """, Long.valueOf(sourceLocalId));
@@ -123,7 +124,7 @@ final class DeriveFixture {
             return new Content(materialized ? sourceLocalId : row.get("source_local_id").toString(),
                     Revision.of(((Number) (materialized ? row.get("revision") : row.get("source_revision"))).intValue()));
         }
-        java.util.List<Map<String,Object>> rows = jdbc.queryForList("""
+        List<Map<String,Object>> rows = jdbc.queryForList("""
                 SELECT tracker_id, common_id FROM requirements WHERE local_id = ?
                 """, Long.valueOf(sourceLocalId));
         if (rows.isEmpty()) {

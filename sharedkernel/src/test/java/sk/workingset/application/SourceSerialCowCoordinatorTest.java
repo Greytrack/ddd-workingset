@@ -8,6 +8,7 @@ import sk.workingset.application.command.SourceSerialCowCoordinator;
 import sk.workingset.domain.LocalId;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SourceSerialCowCoordinatorTest {
     @Test
     void queued_tasks_run_by_sequence_while_another_source_can_progress() throws InterruptedException {
-        sk.workingset.application.command.SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator();
+        SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator();
         LocalId source = LocalId.of("265222440669120");
         CopyOnWriteArrayList<Integer> order = new CopyOnWriteArrayList<Integer>();
         CountDownLatch firstStarted = new CountDownLatch(1);
@@ -56,7 +57,7 @@ class SourceSerialCowCoordinatorTest {
 
     @Test
     void sequence_two_waits_for_one_without_blocking_another_source() throws InterruptedException {
-        sk.workingset.application.command.SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator(Duration.ofSeconds(3));
+        SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator(Duration.ofSeconds(3));
         LocalId source = LocalId.of("262840182583232");
         CopyOnWriteArrayList<Integer> order = new CopyOnWriteArrayList<Integer>();
         Thread second = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
@@ -70,7 +71,7 @@ class SourceSerialCowCoordinatorTest {
 
     @Test
     void reports_gap_and_propagates_failure_without_stalling_source(CapturedOutput output) {
-        sk.workingset.application.command.SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator(Duration.ofMillis(100));
+        SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator(Duration.ofMillis(100));
         LocalId source = LocalId.of("263956507357120");
         IllegalStateException failure = new IllegalStateException("target failed");
         coordinator.runSerial(source, 1, () -> {
@@ -80,7 +81,7 @@ class SourceSerialCowCoordinatorTest {
                     throw failure;
                 })));
         assertTrue(output.getAll().contains("ORDER_GAP sourceLocalId=" + source.value() + " expected=2 actual=3"));
-        java.util.ArrayList<Integer> visited = new java.util.ArrayList<Integer>();
+        ArrayList<Integer> visited = new ArrayList<Integer>();
         coordinator.runSerial(source, 4, () -> visited.add(4));
         assertEquals(List.of(4), visited);
     }

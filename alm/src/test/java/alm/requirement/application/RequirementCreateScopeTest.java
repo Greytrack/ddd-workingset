@@ -1,6 +1,7 @@
 package alm.requirement.application;
 
 import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.domain.RequirementSnapshotStore;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
@@ -62,7 +63,7 @@ class RequirementCreateScopeTest {
         Tracker tracker = tracker("1", SharingMode.UNSHARED);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
-        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 
         assertEquals(created.localId().value(), created.commonId().value());
     }
@@ -72,7 +73,7 @@ class RequirementCreateScopeTest {
         Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
-        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
         assertNotEquals(created.localId().value(), created.commonId().value());
     }
@@ -93,7 +94,7 @@ class RequirementCreateScopeTest {
         Tracker tracker = tracker("1", SharingMode.SHARED);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
-        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
 
         assertEquals(created.localId().value(), created.commonId().value());
         verify(repository).save(any());
@@ -112,7 +113,7 @@ class RequirementCreateScopeTest {
     void unknown_tracker_is_left_to_persistence_validation() {
         when(trackers.findById(TRACKER)).thenReturn(Optional.empty());
 
-        alm.requirement.domain.Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
 
         assertNotEquals(created.localId().value(), created.commonId().value());
         verify(repository).save(any());

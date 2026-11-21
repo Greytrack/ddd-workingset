@@ -10,6 +10,7 @@ import sk.common.error.PersistenceResultCode;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -271,7 +272,7 @@ final class JdbcWriteExecutor {
     private Map<String, Boolean> databaseManagedColumns(Table table) {
         // to_regclass 使用当前连接的 search_path，避免误读 public 或另一个测试 schema。
         return jdbc.query(DATABASE_MANAGED_COLUMNS_SQL, rs -> {
-            Map<String, Boolean> result = new java.util.LinkedHashMap<>();
+            Map<String, Boolean> result = new LinkedHashMap<>();
             while (rs.next()) {
                 result.put(rs.getString("attname"), rs.getBoolean("managed"));
             }

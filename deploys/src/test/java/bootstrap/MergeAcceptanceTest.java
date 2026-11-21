@@ -3,8 +3,10 @@ package bootstrap;
 
 import alm.requirement.adapters.RequirementView;
 import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.domain.Requirement;
 import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,33 +14,41 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.modulith.events.IncompleteEventPublications;
+import org.springframework.transaction.support.TransactionTemplate;
+import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.adapters.MergeController.ComparisonPage;
 import sk.workingset.adapters.WorkingSetController;
 import sk.workingset.application.command.MergeExecutionService.EntryRequest;
+import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.query.MergeCheckpoint;
 import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.event.MergeEntryResolvedEvent;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
-import sk.workingset.domain.merge.MergeDecision;
+import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeDecision.FieldAction;
-import sk.workingset.domain.merge.MergeRound;
+import sk.workingset.domain.merge.MergeDecision;
 import sk.workingset.domain.merge.MergeRound.ApplyResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
 import sk.workingset.domain.merge.MergeRound.State;
+import sk.workingset.domain.merge.MergeRound;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Duration;
@@ -47,8 +57,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static bootstrap.FixtureIds.fixtureId;
 import static org.awaitility.Awaitility.await;
@@ -60,12 +75,12 @@ class MergeAcceptanceTest {
     @Autowired private LightTrackerItemRepository items;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MergeCheckpointQuery checkpoints;
-    @Autowired private org.springframework.modulith.events.IncompleteEventPublications publications;
-    @Autowired private sk.workingset.application.command.MergeExecutionService mergeExecution;
+    @Autowired private IncompleteEventPublications publications;
+    @Autowired private MergeExecutionService mergeExecution;
     @Autowired private RequirementCommandService requirements;
     @Autowired private JdbcRequirementRepository repository;
-    @Autowired private org.springframework.context.ApplicationEventPublisher events;
-    @Autowired private org.springframework.transaction.support.TransactionTemplate transactions;
+    @Autowired private ApplicationEventPublisher events;
+    @Autowired private TransactionTemplate transactions;
 
     private final String suffix = UUID.randomUUID().toString();
     private final String child = id("child");
@@ -287,7 +302,7 @@ class MergeAcceptanceTest {
                 Map.of("sourceWorkingSetId", "1", "requestId", id("empty")), Map.class));
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
                 Map.of("sourceWorkingSetId", "1", "decisions", List.of(field(difference, "ACCEPT", false))), Map.class));
-        List<Map<String,Object>> oversized = java.util.stream.IntStream.range(0, 51)
+        List<Map<String,Object>> oversized = IntStream.range(0, 51)
                 .mapToObj(index -> field(difference, "ACCEPT", false)).toList();
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", id("oversized"), "decisions", oversized), Map.class));
@@ -302,12 +317,12 @@ class MergeAcceptanceTest {
         Map<String,Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(existence(difference, "ACCEPT")));
         CountDownLatch start = new CountDownLatch(1);
-        try (java.util.concurrent.ExecutorService executor = Executors.newFixedThreadPool(2)) {
-            java.util.concurrent.Future<ResponseEntity<Map>> one = executor.submit(() -> {
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<ResponseEntity<Map>> one = executor.submit(() -> {
                 start.await();
                 return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
             });
-            java.util.concurrent.Future<ResponseEntity<Map>> two = executor.submit(() -> {
+            Future<ResponseEntity<Map>> two = executor.submit(() -> {
                 start.await();
                 return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
             });
@@ -646,7 +661,7 @@ class MergeAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'SHARED')
                 """, shared, space, sharedClassification);
-        FixtureIds.extendScope(rest, child, sk.workingset.domain.workingset.WorkingSetCreation.Status.Succeeded, shared);
+        FixtureIds.extendScope(rest, child, WorkingSetCreation.Status.Succeeded, shared);
         RequirementView sharedItem = createRequirement(child, shared, "shared child entry");
         assertEquals(sharedItem.localId(), sharedItem.commonId());
         assertTrue(compare(child, "1").differences().stream()
@@ -719,7 +734,7 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "source");
         Difference difference = diff(compare("1", child), family);
         Difference other = new Difference(difference.kind(), difference.family(),
-                new sk.workingset.domain.merge.Comparison.TrackerPair(WorkingSetId.of("1"),
+                new Comparison.TrackerPair(WorkingSetId.of("1"),
                         TrackerId.of("265564874633152"), WorkingSetId.of(child), TrackerId.of("264912685293504")),
                 difference.source(), difference.target(), difference.fields());
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
@@ -771,7 +786,7 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "source");
         Difference difference = diff(compare("1", child), family);
         Difference other = new Difference(difference.kind(), difference.family(),
-                new sk.workingset.domain.merge.Comparison.TrackerPair(WorkingSetId.of(child),
+                new Comparison.TrackerPair(WorkingSetId.of(child),
                         difference.trackers().source(), WorkingSetId.of("1"), difference.trackers().target()),
                 difference.source(), difference.target(), difference.fields());
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
@@ -792,19 +807,19 @@ class MergeAcceptanceTest {
         jdbc.execute("ALTER TABLE air_ws_items_merge_index ADD CONSTRAINT " + constraint
                 + " CHECK (common_id <> " + Long.parseLong(family) + ") NOT VALID");
         String firstRound;
-        sk.workingset.domain.event.MergeEntryResolvedEvent replay;
+        MergeEntryResolvedEvent replay;
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
                 CommonId.of(family));
         try {
             firstRound = submit(child, first, field(diff(first, family), "ACCEPT", true));
             await().atMost(Duration.ofSeconds(8)).until(() -> "source".equals(requirement(target).title()));
             MergeRound snapshot = roundState(firstRound);
-            replay = new sk.workingset.domain.event.MergeEntryResolvedEvent(firstRound,
-                    snapshot.entries().getFirst().id(), sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome.APPLIED,
+            replay = new MergeEntryResolvedEvent(firstRound,
+                    snapshot.entries().getFirst().id(), MergeEntryResolvedEvent.Outcome.APPLIED,
                     LocalId.of(target), Revision.of(3), Revision.of(3), false, false, null);
-            assertThrows(sk.common.error.DomainException.class, () -> mergeExecution.recordResult(replay));
+            assertThrows(DomainException.class, () -> mergeExecution.recordResult(replay));
             assertEquals(State.Running, roundState(firstRound).state());
-            org.junit.jupiter.api.Assertions.assertNull(roundState(firstRound).entries().getFirst().result());
+            Assertions.assertNull(roundState(firstRound).entries().getFirst().result());
             assertTrue(checkpoints.findLatest(key).isEmpty());
             ComparisonPage competing = compare("1", child);
             assertEquals("PairMergeInProgress", submitFailure(child, competing,
@@ -854,11 +869,11 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.GONE, rest.getForEntity(path, Map.class));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/undelete", null, Void.class));
         assertEquals("lifecycle", requirement(local).title());
-        alm.requirement.domain.Requirement staleUpdate = repository.findById(LocalId.of(local)).orElseThrow().changeTitle("stale", LockVersion.of(2));
+        Requirement staleUpdate = repository.findById(LocalId.of(local)).orElseThrow().changeTitle("stale", LockVersion.of(2));
         assertStatus(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete", null, Void.class));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete2", null, Void.class));
-        assertThrows(sk.common.error.DomainException.class, () -> repository.save(staleUpdate));
+        assertThrows(DomainException.class, () -> repository.save(staleUpdate));
         assertStatus(HttpStatus.NOT_FOUND, rest.postForEntity(path + "/undelete", null, Map.class));
         assertStatus(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class));
 
@@ -990,7 +1005,7 @@ class MergeAcceptanceTest {
 
     private static Map<String, Object> field(Difference diff, String action, boolean mark) {
         Map<String, String> fields = diff.fields().stream().collect(
-                java.util.stream.Collectors.toMap(java.util.function.Function.identity(), key -> action));
+                Collectors.toMap(Function.identity(), key -> action));
         return Map.of("evidence", diff,
                 "decision", Map.of("fields", fields, "markAsMerged", mark));
     }

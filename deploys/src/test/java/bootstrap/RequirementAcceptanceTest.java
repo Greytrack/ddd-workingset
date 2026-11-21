@@ -1,6 +1,5 @@
 package bootstrap;
 
-import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,14 +12,18 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.tracker.domain.TrackerId;
+import sk.workingset.application.command.TrackerItemLifecycleService;
+import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.event.BusinessObjectDeleteEvent;
-import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import sk.workingset.domain.event.TrackerItemCreatedEvent;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSet;
 
@@ -54,7 +57,7 @@ class RequirementAcceptanceTest {
     @Autowired private TransactionTemplate transaction;
     @SpyBean private LightTrackerItemRepository items;
     @Autowired private LightTrackerItemQueryProvider indexQueries;
-    @Autowired private sk.workingset.application.command.TrackerItemLifecycleService indexLifecycle;
+    @Autowired private TrackerItemLifecycleService indexLifecycle;
 
     private RootTrackerFixture fixture;
     private String localId;
@@ -166,12 +169,12 @@ class RequirementAcceptanceTest {
     }
 
     @Test
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     void committedUpgradeUpdatesBothLegacyIndexesAndPreservesPreviousRevision() {
         String trackerId = fixtureId("revision-tracker-" + UUID.randomUUID());
         new RootTrackerFixture(jdbc, trackerId).provision();
         LocalId id = LocalId.of(fixtureId("revision-item-" + UUID.randomUUID()));
-        items.save(sk.workingset.domain.lighttrackeritem.LightTrackerItem.local(id, CommonId.of(id.value()),
+        items.save(LightTrackerItem.local(id, CommonId.of(id.value()),
                 TrackerId.of(trackerId), WorkingSet.DEFAULT_ID, Revision.of(3),
                 new ItemClassification(Long.parseLong(fixtureId(trackerId + "-s")), 14010101L)));
 

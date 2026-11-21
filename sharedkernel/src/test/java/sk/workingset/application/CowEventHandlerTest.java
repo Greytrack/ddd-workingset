@@ -1,10 +1,10 @@
 package sk.workingset.application;
 
-import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.CowEventHandler;
@@ -12,12 +12,13 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.cow.CowMaterializationStore;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.cow.CowMaterializationStore;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Instant;
@@ -54,7 +55,7 @@ class CowEventHandlerTest {
 
         TransactionTemplate transaction = mock(TransactionTemplate.class);
         when(transaction.execute(any())).thenAnswer(invocation ->
-                ((org.springframework.transaction.support.TransactionCallback<?>) invocation.getArgument(0))
+                ((TransactionCallback<?>) invocation.getArgument(0))
                         .doInTransaction(mock(TransactionStatus.class)));
 
         CowEventHandler handler = new CowEventHandler(items, transaction, store, events);

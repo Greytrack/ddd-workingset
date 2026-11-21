@@ -1,7 +1,6 @@
 package bootstrap;
 
-import org.springframework.http.ResponseEntity;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,34 +11,45 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.common.error.DomainException;
-import sk.workingset.domain.LocalId;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.CommonId;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
-import sk.workingset.domain.workingset.WorkingSetCreation;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetCreation.Mode;
 import sk.workingset.domain.workingset.WorkingSetCreation.Request;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.error.BindingResCode;
 
-import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.sql.DataSource;
 
 import static bootstrap.FixtureIds.fixtureId;
 import static org.awaitility.Awaitility.await;
@@ -67,7 +77,7 @@ class WorkingSetCreationAcceptanceTest {
     @Autowired private IndexEvents indexEvents;
     @Autowired private WorkingSetCreationService creations;
     @Autowired private LightTrackerItemRepository items;
-    @Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
+    @Autowired private ObjectMapper mapper;
 
     @AfterEach
     void cleanUp() {
@@ -95,12 +105,12 @@ class WorkingSetCreationAcceptanceTest {
     void createsOneChildAndExposesProgressWithoutPublishingPreparingRange() throws Exception {
         Request request = request("1", "first");
         String task;
-        try (java.sql.Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
-            try (java.sql.PreparedStatement statement = connection.prepareStatement(
+            try (PreparedStatement statement = connection.prepareStatement(
                     "SELECT working_set_id FROM working_sets WHERE working_set_id = '1' FOR UPDATE")) {
                 statement.executeQuery().close();
-                org.springframework.http.ResponseEntity<CreationView> accepted = rest.postForEntity(CREATIONS, request, CreationView.class);
+                ResponseEntity<CreationView> accepted = rest.postForEntity(CREATIONS, request, CreationView.class);
                 assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
                 task = accepted.getBody().creationId();
                 child = accepted.getBody().targetWorkingSetId();
@@ -108,10 +118,10 @@ class WorkingSetCreationAcceptanceTest {
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                         assertEquals(Status.Running, task(task).status()));
 
-                org.springframework.http.ResponseEntity<Map> preparing = rest.getForEntity("/api/worksets/" + child, Map.class);
+                ResponseEntity<Map> preparing = rest.getForEntity("/api/worksets/" + child, Map.class);
                 assertEquals(HttpStatus.CONFLICT, preparing.getStatusCode());
                 assertEquals("PREPARING", preparing.getBody().get("reason"));
-                org.springframework.http.ResponseEntity<Map> use = rest.postForEntity("/api/worksets/" + child + "/children",
+                ResponseEntity<Map> use = rest.postForEntity("/api/worksets/" + child + "/children",
                         Map.of("workingSetId", fixtureId("unused-" + child)), Map.class);
                 assertEquals(HttpStatus.CONFLICT, use.getStatusCode());
                 assertEquals("PREPARING", use.getBody().get("reason"));
@@ -119,7 +129,7 @@ class WorkingSetCreationAcceptanceTest {
                         Map.of("requestId", "pending-" + child, "trackerIds", List.of(shared)), Map.class);
                 assertEquals(HttpStatus.CONFLICT, extension.getStatusCode());
                 assertEquals("PREPARING", extension.getBody().get("reason"));
-                org.springframework.http.ResponseEntity<Map> createItem = rest.postForEntity("/api/requirements", Map.of("workingSetId", child,
+                ResponseEntity<Map> createItem = rest.postForEntity("/api/requirements", Map.of("workingSetId", child,
                         "trackerId", shared, "title", "item", "description", "description", "revision", 1), Map.class);
                 assertEquals(HttpStatus.CONFLICT, createItem.getStatusCode());
                 assertEquals("PREPARING", createItem.getBody().get("reason"));
@@ -135,7 +145,7 @@ class WorkingSetCreationAcceptanceTest {
         assertNotNull(task(task).completedAt());
         assertEquals("1", rest.getForObject("/api/worksets/" + child, WorkingSetView.class).parentWorkingSetId());
         assertEquals(task, rest.postForEntity(CREATIONS, request, CreationView.class).getBody().creationId());
-        org.springframework.http.ResponseEntity<Map> differentRequest = rest.postForEntity(CREATIONS,
+        ResponseEntity<Map> differentRequest = rest.postForEntity(CREATIONS,
                 new Request("1", child, request.requestId(), List.of(), List.of(), List.of(), "另一个名称"), Map.class);
         assertEquals(HttpStatus.CONFLICT, differentRequest.getStatusCode());
         assertEquals("WorkingSetAlreadyExists", differentRequest.getBody().get("reason"));
@@ -143,7 +153,7 @@ class WorkingSetCreationAcceptanceTest {
 
     @Test
     void bodyFailureIsTerminalAndVisibleThroughPolling() {
-        org.springframework.http.ResponseEntity<CreationView> accepted = rest.postForEntity(CREATIONS, request(fixtureId("missing-" + child), "first"), CreationView.class);
+        ResponseEntity<CreationView> accepted = rest.postForEntity(CREATIONS, request(fixtureId("missing-" + child), "first"), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
         String id = accepted.getBody().creationId();
         child = accepted.getBody().targetWorkingSetId();
@@ -169,8 +179,8 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(3, completed.stageProgress().get(Stage.COPY_UNSHARED_TRACKERS).succeeded());
         assertEquals(1, completed.stageProgress().get(Stage.BIND_PRODUCT_AND_TRACKER).succeeded());
         BindingsView bindings = bindings();
-        assertEquals(java.util.Set.of(space, otherSpace), bindings.spaces().stream()
-                .map(binding -> binding.productSpaceId()).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(Set.of(space, otherSpace), bindings.spaces().stream()
+                .map(binding -> binding.productSpaceId()).collect(Collectors.toSet()));
         assertEquals(4, bindings.trackers().size());
         assertEquals(1, bindings.trackers().stream().filter(binding -> shared.equals(binding.trackerId())).count());
         String copy = bindings.trackers().stream().filter(binding -> "UNSHARED".equals(binding.sharingMode()))
@@ -187,7 +197,7 @@ class WorkingSetCreationAcceptanceTest {
                 """, Integer.class, "%" + id + "%")));
         assertEquals(completed, task(id));
         assertEquals(bindings, bindings());
-        assertEquals(java.util.Set.of(unshared, firstFolder, secondFolder), new java.util.HashSet<>(jdbc.queryForList(
+        assertEquals(Set.of(unshared, firstFolder, secondFolder), new HashSet<>(jdbc.queryForList(
                 "SELECT source_id FROM trackers WHERE working_set_id = ? AND source_id IS NOT NULL", String.class, child)));
         assertEquals(2, jdbc.queryForObject("""
                 SELECT COUNT(*) FROM air_inst_tracker_rev r JOIN air_ws_tracker t ON t.id = r.id
@@ -269,16 +279,16 @@ class WorkingSetCreationAcceptanceTest {
     void rejectsParentThatIsBeingCreated() throws Exception {
         String pendingParent = fixtureId("pending-" + child);
         String id;
-        try (java.sql.Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
-            try (java.sql.PreparedStatement statement = connection.prepareStatement(
+            try (PreparedStatement statement = connection.prepareStatement(
                     "SELECT working_set_id FROM working_sets WHERE working_set_id = '1' FOR UPDATE")) {
                 statement.executeQuery().close();
                 id = submit(new Request("1", pendingParent, "pending-parent",
                         List.of(), List.of(), List.of()));
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                         assertEquals(Status.Running, task(id).status()));
-                org.springframework.http.ResponseEntity<Map> rejected = rest.postForEntity(CREATIONS, new Request(pendingParent, child, "child-of-pending",
+                ResponseEntity<Map> rejected = rest.postForEntity(CREATIONS, new Request(pendingParent, child, "child-of-pending",
                         List.of(), List.of(), List.of()), Map.class);
                 assertEquals(HttpStatus.CONFLICT, rejected.getStatusCode());
                 assertEquals("PREPARING", rejected.getBody().get("reason"));
@@ -297,9 +307,9 @@ class WorkingSetCreationAcceptanceTest {
     void filtersCreatingWorkingSetFromQueriesButTaskViewIsAvailable() throws Exception {
         seedRange();
         String id;
-        try (java.sql.Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
-            try (java.sql.PreparedStatement statement = connection.prepareStatement(
+            try (PreparedStatement statement = connection.prepareStatement(
                     "SELECT product_space_id FROM product_spaces WHERE product_space_id = ? FOR UPDATE")) {
                 statement.setString(1, space);
                 statement.executeQuery().close();
@@ -309,11 +319,11 @@ class WorkingSetCreationAcceptanceTest {
                     assertEquals(1, jdbc.queryForObject(
                             "SELECT count(*) FROM working_sets WHERE working_set_id = ?", Integer.class, child));
                 });
-                org.springframework.http.ResponseEntity<Map> ordinary = rest.getForEntity("/api/worksets/" + child, Map.class);
+                ResponseEntity<Map> ordinary = rest.getForEntity("/api/worksets/" + child, Map.class);
                 assertEquals(HttpStatus.CONFLICT, ordinary.getStatusCode());
                 assertEquals("PREPARING", ordinary.getBody().get("reason"));
                 assertFalse(rest.getForObject("/api/worksets/1/children", List.class).contains(child));
-                org.springframework.http.ResponseEntity<WorkingSetView> view = rest.getForEntity(CREATIONS + "/" + id + "/working-set", WorkingSetView.class);
+                ResponseEntity<WorkingSetView> view = rest.getForEntity(CREATIONS + "/" + id + "/working-set", WorkingSetView.class);
                 assertEquals(HttpStatus.OK, view.getStatusCode());
                 assertEquals(child, view.getBody().workingSetId());
             } finally {
@@ -430,7 +440,7 @@ class WorkingSetCreationAcceptanceTest {
             TrackerItemsIndexedEvent event = indexEvents.find(child);
             assertNotNull(event);
             assertEquals(id, event.creationId());
-            assertEquals(java.util.Set.of(copied, folderCopy), new java.util.HashSet<>(event.trackerIds()));
+            assertEquals(Set.of(copied, folderCopy), new HashSet<>(event.trackerIds()));
             assertNotNull(event.occurredAt());
         });
         String local = jdbc.queryForObject("SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
@@ -451,9 +461,9 @@ class WorkingSetCreationAcceptanceTest {
             seedItem(unshared, family, family, false);
         }
         String id;
-        try (java.sql.Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
-            try (java.sql.PreparedStatement statement = connection.prepareStatement("SELECT local_id FROM requirements WHERE local_id = ? FOR UPDATE")) {
+            try (PreparedStatement statement = connection.prepareStatement("SELECT local_id FROM requirements WHERE local_id = ? FOR UPDATE")) {
                 statement.setString(1, last);
                 statement.executeQuery().close();
                 id = submit(new Request("1", child, "index-running", List.of(space), List.of(), List.of(unshared)));
@@ -467,7 +477,7 @@ class WorkingSetCreationAcceptanceTest {
                 String firstLocal = jdbc.queryForObject(
                         "SELECT local_id FROM light_tracker_items WHERE working_set_id = ? AND common_id = ?",
                         String.class, child, first);
-                org.springframework.http.ResponseEntity<Map> response = rest.getForEntity("/api/requirements/" + firstLocal, Map.class);
+                ResponseEntity<Map> response = rest.getForEntity("/api/requirements/" + firstLocal, Map.class);
                 assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
                 assertEquals("PREPARING", response.getBody().get("reason"));
                 assertEquals(HttpStatus.OK, rest.getForEntity(CREATIONS + "/" + id + "/working-set", Map.class).getStatusCode());
@@ -533,14 +543,14 @@ class WorkingSetCreationAcceptanceTest {
                 Integer.class, child));
         TrackerView[] trackers = rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class);
         assertEquals(4, trackers.length);
-        assertTrue(java.util.Arrays.stream(trackers).anyMatch(tracker -> shared.equals(tracker.trackerId())));
+        assertTrue(Arrays.stream(trackers).anyMatch(tracker -> shared.equals(tracker.trackerId())));
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/derive",
                 Map.of("sourceTrackerId", unshared, "sourceLocalId", fixtureId("extension-" + child),
                         "sourceRevision", 3, "commonId", fixtureId("extension-" + child)), Map.class).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity("/api/worksets/" + child + "/spaces/" + space
                 + "/classifications/" + unshared + "/derive", Map.of(), Map.class).getStatusCode());
 
-        org.springframework.http.ResponseEntity<Map> duplicate = rest.postForEntity("/api/worksets/" + child + "/extensions",
+        ResponseEntity<Map> duplicate = rest.postForEntity("/api/worksets/" + child + "/extensions",
                 Map.of("requestId", fixtureId("duplicate-" + child), "trackerIds", List.of(unshared, secondSource, shared)), Map.class);
         assertEquals(HttpStatus.CONFLICT, duplicate.getStatusCode());
         assertEquals("NoDerivableTracker", duplicate.getBody().get("reason"));
@@ -554,16 +564,16 @@ class WorkingSetCreationAcceptanceTest {
         createTarget();
         seedItem(unshared, fixtureId("extension-visible-" + child), fixtureId("extension-visible-" + child), false);
         String id;
-        try (java.sql.Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
-            try (java.sql.PreparedStatement statement = connection.prepareStatement(
+            try (PreparedStatement statement = connection.prepareStatement(
                     "SELECT working_set_id FROM working_sets WHERE working_set_id = ? FOR UPDATE")) {
                 statement.setLong(1, Long.parseLong(child));
                 statement.executeQuery().close();
                 id = extension(List.of(unshared));
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                         assertEquals(Stage.COPY_UNSHARED_TRACKERS, task(id).stage()));
-                org.springframework.http.ResponseEntity<Map> visible = rest.getForEntity("/api/worksets/" + child, Map.class);
+                ResponseEntity<Map> visible = rest.getForEntity("/api/worksets/" + child, Map.class);
                 assertEquals(HttpStatus.OK, visible.getStatusCode());
             } finally {
                 connection.rollback();
@@ -599,7 +609,7 @@ class WorkingSetCreationAcceptanceTest {
                 VALUES (?, '1', ?, ?, 'Running', CAST(? AS jsonb), now())
                 """, activeId, child, request.requestId(), mapper.writeValueAsString(active));
 
-        org.springframework.http.ResponseEntity<Map> response = rest.postForEntity("/api/worksets/" + child + "/extensions",
+        ResponseEntity<Map> response = rest.postForEntity("/api/worksets/" + child + "/extensions",
                 Map.of("requestId", fixtureId("another-" + child), "trackerIds", List.of(unshared)), Map.class);
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("PREPARING", response.getBody().get("reason"));
@@ -610,7 +620,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private String extension(List<String> trackerIds) {
-        org.springframework.http.ResponseEntity<CreationView> response = rest.postForEntity("/api/worksets/" + child + "/extensions",
+        ResponseEntity<CreationView> response = rest.postForEntity("/api/worksets/" + child + "/extensions",
                 Map.of("requestId", "extension-" + UUID.randomUUID(), "trackerIds", trackerIds), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         return response.getBody().creationId();
@@ -666,8 +676,8 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private List<String> orderedFamilies() {
-        return java.util.stream.Stream.of("a-", "b-", "c-").map(label -> fixtureId(label + child))
-                .sorted(java.util.Comparator.comparingLong(Long::parseLong)).toList();
+        return Stream.of("a-", "b-", "c-").map(label -> fixtureId(label + child))
+                .sorted(Comparator.comparingLong(Long::parseLong)).toList();
     }
 
     private CreationView awaitStatus(String id, Status expected) {
@@ -692,7 +702,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     static class IndexEvents {
-        private final Map<String, TrackerItemsIndexedEvent> byWorkingSet = new java.util.concurrent.ConcurrentHashMap<>();
+        private final Map<String, TrackerItemsIndexedEvent> byWorkingSet = new ConcurrentHashMap<>();
 
         public TrackerItemsIndexedEvent find(String workingSetId) {
             return byWorkingSet.get(workingSetId);

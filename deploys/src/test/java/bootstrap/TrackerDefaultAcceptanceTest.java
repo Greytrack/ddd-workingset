@@ -1,10 +1,5 @@
 package bootstrap;
 
-import sk.businessframework.domain.litebusinessobject.LiteBusinessObject;
-import java.util.List;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
-import sk.workingset.application.query.model.TrackerBindingSummary;
 import alm.requirement.adapters.RequirementView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -12,11 +7,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
+import sk.RequestThreadHolder;
+import sk.businessframework.domain.litebusinessobject.LiteBusinessObject;
 import sk.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
 import sk.common.error.DomainException;
 import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
@@ -27,13 +27,20 @@ import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.ClassificationView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
+import sk.workingset.adapters.WorkingSetController;
 import sk.workingset.application.query.WorkingSetQueryService;
+import sk.workingset.application.query.model.TrackerBindingSummary;
+import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.domain.Classification;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static bootstrap.FixtureIds.fixtureId;
@@ -46,7 +53,7 @@ class TrackerDefaultAcceptanceTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TrackerRepository trackerRepository;
-    @Autowired private sk.workingset.application.query.provider.ClassificationCatalog classifications;
+    @Autowired private ClassificationCatalog classifications;
     @Autowired private LiteBusinessObjectProvider instanceSummaries;
     @Autowired private WorkingSetQueryService workingSetQueries;
     @Autowired private TransactionTemplate transactions;
@@ -54,7 +61,7 @@ class TrackerDefaultAcceptanceTest {
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = fixtureId("WS-CHILD-" + suffix);
     private final String sharedClassification = "14010102";
-    private final java.util.Set<String> testSpaces = new java.util.HashSet<>();
+    private final Set<String> testSpaces = new HashSet<>();
 
     @AfterEach
     void cleanup() {
@@ -76,14 +83,14 @@ class TrackerDefaultAcceptanceTest {
         ClassificationView[] metadata = rest.getForObject(
                 "/api/worksets/metadata/classifications", ClassificationView[].class);
         List<List<String>> triples = Arrays.stream(metadata).map(row ->
-                java.util.List.of(row.baseClassId(), row.classId(), row.classificationId())).toList();
+                List.of(row.baseClassId(), row.classId(), row.classificationId())).toList();
 
-        assertTrue(triples.containsAll(java.util.List.of(
-                java.util.List.of("1003", "100301", "10030101"),
-                java.util.List.of("1007", "100701", "10070101"),
-                java.util.List.of("1008", "100801", "10080101"),
-                java.util.List.of("1009", "100901", "10090101"),
-                java.util.List.of("1401", "140101", "14010101"))));
+        assertTrue(triples.containsAll(List.of(
+                List.of("1003", "100301", "10030101"),
+                List.of("1007", "100701", "10070101"),
+                List.of("1008", "100801", "10080101"),
+                List.of("1009", "100901", "10090101"),
+                List.of("1401", "140101", "14010101"))));
     }
 
     @Test
@@ -131,7 +138,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
                 Integer.class, spaceId));
-        java.util.List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
+        List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
         assertEquals(classifications, jdbc.queryForObject("""
@@ -147,7 +154,7 @@ class TrackerDefaultAcceptanceTest {
                   AND r.owner = ? AND r.number = c.number AND r.tracker_class = c.sub_class_id
                   AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
                   AND r.created_time = c.created_time AND r.created_by = c.created_by
-                """, Integer.class, Long.valueOf(spaceId), sk.RequestThreadHolder.getLongUserId()));
+                """, Integer.class, Long.valueOf(spaceId), RequestThreadHolder.getLongUserId()));
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*)
                 FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id
@@ -157,14 +164,14 @@ class TrackerDefaultAcceptanceTest {
                   AND r.tracker = 584578917040480 AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
                 """, Integer.class, Long.valueOf(spaceId)));
         for (TrackerView tracker : trackers) {
-            org.springframework.http.ResponseEntity<String> items = rest.getForEntity(
+            ResponseEntity<String> items = rest.getForEntity(
                     "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class);
             assertEquals(HttpStatus.OK, items.getStatusCode(), items::getBody);
             assertEquals("[]", items.getBody());
         }
 
         BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
-        sk.workingset.adapters.WorkingSetController.SpaceBindingView projectedSpace = bindings.spaces().stream()
+        WorkingSetController.SpaceBindingView projectedSpace = bindings.spaces().stream()
                 .filter(binding -> spaceId.equals(binding.productSpaceId())).findFirst().orElseThrow();
         assertEquals("RELATION", projectedSpace.origin());
         assertEquals(trackers.stream().map(TrackerView::trackerId).sorted().toList(),
@@ -173,7 +180,7 @@ class TrackerDefaultAcceptanceTest {
 
         String trackerId = trackers.stream().filter(tracker -> "14010101".equals(tracker.classificationId()))
                 .findFirst().orElseThrow().trackerId();
-        org.springframework.http.ResponseEntity<RequirementView> item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
+        ResponseEntity<RequirementView> item = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId, "workingSetId", "1",
                 "title", "验证默认 Tracker", "description", "验证绑定范围", "revision", 1), RequirementView.class);
         assertEquals(HttpStatus.CREATED, item.getStatusCode());
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
@@ -256,8 +263,8 @@ class TrackerDefaultAcceptanceTest {
         assertEquals("变更后", common.name());
         assertEquals(584578917040480L, common.tracker());
         assertEquals(1L, jdbc.queryForObject("SELECT lock_version FROM air_inst_common WHERE id = ?", Long.class, id));
-        assertEquals(2, instanceSummaries.findByIds(java.util.List.of(id, 1L, id, Long.MAX_VALUE)).size());
-        assertEquals(HttpStatus.NO_CONTENT, rest.exchange("/api/trackers/" + id, org.springframework.http.HttpMethod.DELETE,
+        assertEquals(2, instanceSummaries.findByIds(List.of(id, 1L, id, Long.MAX_VALUE)).size());
+        assertEquals(HttpStatus.NO_CONTENT, rest.exchange("/api/trackers/" + id, HttpMethod.DELETE,
                 null, Void.class).getStatusCode());
         assertTrue(instanceSummaries.findById(id).isEmpty());
     }
@@ -330,7 +337,7 @@ class TrackerDefaultAcceptanceTest {
         for (Classification.SharingMode mode : Classification.SharingMode.values()) {
             Map<String,String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
                     "14010101", "sharingMode", mode.name());
-            org.springframework.http.ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
+            ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
             TrackerView tracker = response.getBody();
             assertEquals(mode.name(), tracker.sharingMode());
@@ -349,7 +356,7 @@ class TrackerDefaultAcceptanceTest {
                 FixtureIds.insertWorkingSet(jdbc, "1", child);
                 FixtureIds.extendWithRootFolder(rest, jdbc, child, spaceId);
                 FixtureIds.extendScope(rest, child,
-                        sk.workingset.domain.workingset.WorkingSetCreation.Status.Succeeded, tracker.trackerId());
+                        WorkingSetCreation.Status.Succeeded, tracker.trackerId());
                 assertEquals(1L, jdbc.queryForObject("""
                         SELECT r.workingset_id FROM air_inst_tracker_rev r
                         JOIN air_ws_tracker c ON c.id = r.id AND c.workingset_id = r.workingset_id
@@ -364,7 +371,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(HttpStatus.CREATED, rest.postForEntity(url, allowed, TrackerView.class).getStatusCode());
         Map<String,String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
                 sharedClassification, "sharingMode", "UNSHARED");
-        org.springframework.http.ResponseEntity<Map> refusal = rest.postForEntity(url, rejected, Map.class);
+        ResponseEntity<Map> refusal = rest.postForEntity(url, rejected, Map.class);
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, refusal.getStatusCode());
         assertEquals("SharingModeMismatch", refusal.getBody().get("reason"));
     }
@@ -479,7 +486,7 @@ class TrackerDefaultAcceptanceTest {
     }
 
     private String createSpace(String workingSet) {
-        org.springframework.http.ResponseEntity<ProductSpaceView> response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
+        ResponseEntity<ProductSpaceView> response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
                 Map.of("name", "新空间-" + suffix),
                 ProductSpaceView.class);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());

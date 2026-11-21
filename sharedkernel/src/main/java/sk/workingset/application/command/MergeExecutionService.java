@@ -125,7 +125,7 @@ public class MergeExecutionService {
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, String caller) {
-        java.util.Optional<MergeRound> existing = mergeRepository.findByRequestId(requestId);
+        Optional<MergeRound> existing = mergeRepository.findByRequestId(requestId);
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
@@ -151,14 +151,14 @@ public class MergeExecutionService {
      * 一页决策要么整页登记成功，要么整轮回滚。
      */
     private MergeRound registerDecisions(MergeRound round, List<EntryRequest> requests) {
-        List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = evidence.candidates(round.source(), round.target());
+        List<Comparison.TrackerPair> candidates = evidence.candidates(round.source(), round.target());
         MergeRound updated = round;
         for (EntryRequest request : requests) {
             Difference frozen = request.evidence();
             if (frozen == null) {
                 throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "evidence is required");
             }
-            sk.workingset.domain.merge.Comparison.TrackerPair pair = frozen.trackers();
+            Comparison.TrackerPair pair = frozen.trackers();
             if (!pair.sourceWorkingSetId().equals(round.source())
                     || !pair.targetWorkingSetId().equals(round.target())) {
                 throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
@@ -328,6 +328,6 @@ public class MergeExecutionService {
     /**
      * 一页决策只提交 evidence + decision；条目身份由服务端在登记时生成。
      */
-    public record EntryRequest(Difference evidence, sk.workingset.domain.merge.MergeDecision decision) {
+    public record EntryRequest(Difference evidence, MergeDecision decision) {
     }
 }

@@ -6,12 +6,13 @@ import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.Classification;
 import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * WorkingSet 聚合根：默认根不可删除、单父谱系（{@code parentWorkingSetId}）、
@@ -22,8 +23,8 @@ public final class WorkingSet {
 
     public static final WorkingSetId DEFAULT_ID = WorkingSetId.of("1");
     public static final String DEFAULT_COLOR = "#FFFF";
-    private static final java.util.regex.Pattern HEX_COLOR =
-            java.util.regex.Pattern.compile("#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
+    private static final Pattern HEX_COLOR =
+            Pattern.compile("#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
     private final WorkingSetId id;
     private final WorkingSetId parentWorkingSetId;
     private final boolean newAggregate;

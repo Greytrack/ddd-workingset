@@ -7,6 +7,8 @@ import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.WorkingSetId;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class LightTrackerItemTest {
@@ -92,7 +94,7 @@ class LightTrackerItemTest {
         assertThrows(DomainException.class, () -> item.advanceRevision(r4, Revision.of(5)));
         assertTrue(item.advanceRevision(R3, r4));
         assertFalse(item.advanceRevision(R3, r4));
-        assertEquals(java.util.List.of(R3, r4), item.revisions().stream().map(member -> member.revision()).toList());
+        assertEquals(List.of(R3, r4), item.revisions().stream().map(member -> member.revision()).toList());
         assertEquals(r4, item.effectiveContentRevision());
     }
 

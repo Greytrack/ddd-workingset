@@ -4,6 +4,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 软删除写路径的语句构建与执行工具：软删 / 恢复 / 物理删除 / 删除时刻探测均为<b>仓储显式调用</b>的受控语句， 不存在任何 SQL 自动改写通道——删除语义是领域决策，由仓储语句明说，本类只提供列模型安全的语句积木。
@@ -56,7 +57,7 @@ public final class JdbcSoftDelete {
      *            删除标志列 / 时间列 / 存活与已删标志值声明；列名构造期校验，非法即拒绝
      */
     public JdbcSoftDelete(Columns columns) {
-        this.columns = java.util.Objects.requireNonNull(columns, "列模型声明不能为空");
+        this.columns = Objects.requireNonNull(columns, "列模型声明不能为空");
     }
 
     /** 「未删除」行过滤条件（可带表别名）：{@code (t.delete_flag = 0)}。 */

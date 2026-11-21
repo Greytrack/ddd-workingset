@@ -9,6 +9,7 @@ import alm.requirement.domain.RequirementSnapshotStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.context.ApplicationEventPublisher;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
@@ -103,7 +104,7 @@ class RequirementChangeFlowTest {
 
         Requirement changed = service.changeTitle(L0, "B", LockVersion.of(0));
 
-        org.mockito.InOrder order = inOrder(requirements, publisher);
+        InOrder order = inOrder(requirements, publisher);
         order.verify(requirements).save(changed);
         order.verify(publisher).publishEvent(any(BusinessObjectUpdateEvent.class));
     }

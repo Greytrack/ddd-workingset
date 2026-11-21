@@ -1,10 +1,8 @@
 package bootstrap;
 
-import alm.requirement.domain.Requirement;
-import java.util.concurrent.CountDownLatch;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import alm.requirement.adapters.RequirementView;
 import alm.requirement.application.command.RequirementCommandService;
+import alm.requirement.domain.Requirement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,19 +14,24 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.application.query.provider.CowFailureLogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static bootstrap.FixtureIds.fixtureId;
@@ -113,7 +116,7 @@ class CowAcceptanceTest {
         }
         assertEquals(materializeBeforeEdit, read(child).materialized());
 
-        org.springframework.http.ResponseEntity<RequirementView> changed = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
+        ResponseEntity<RequirementView> changed = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
                         "expectedLockVersion", 0)), RequirementView.class);
 
@@ -121,7 +124,7 @@ class CowAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> read(child).materialized());
         RequirementView[] requirements = rest.getForObject("/api/requirements?trackerId=" + child.trackerId()
                 + "&workingSetId=" + child.ws(), RequirementView[].class);
-        assertTrue(java.util.Arrays.stream(requirements)
+        assertTrue(Arrays.stream(requirements)
                 .anyMatch(requirement -> child.id().equals(requirement.localId())
                         && "Child edit".equals(requirement.title())));
         ReadContent content = read(child);
@@ -142,7 +145,7 @@ class CowAcceptanceTest {
         ReadContent inherited = read(child);
         assertFalse(inherited.materialized());
 
-        org.springframework.http.ResponseEntity<RequirementView> response = rest.exchange("/api/requirements/" + child.id() + "/title", HttpMethod.PUT,
+        ResponseEntity<RequirementView> response = rest.exchange("/api/requirements/" + child.id() + "/title", HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child title", "expectedLockVersion", 0)), RequirementView.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -187,7 +190,7 @@ class CowAcceptanceTest {
         Target child = derive();
         failNextSwitch(child);
 
-        org.springframework.http.ResponseEntity<String> response = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
+        ResponseEntity<String> response = rest.exchange("/api/requirements/" + child.id(), HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", "Child edit", "description", "Child description",
                         "expectedLockVersion", 0)), String.class);
 
@@ -247,7 +250,7 @@ class CowAcceptanceTest {
         createSource();
         Target target = derive();
         jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
-        alm.requirement.domain.Requirement upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
+        Requirement upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
         assertEquals(Revision.of(4), upgraded.revision());
         assertEquals(LockVersion.of(1), upgraded.lockVersion());
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
@@ -262,11 +265,11 @@ class CowAcceptanceTest {
         createSource();
         Target target = derive();
         jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", target.id());
-        CountDownLatch reachedSwitch = new java.util.concurrent.CountDownLatch(1);
-        CountDownLatch releaseSwitch = new java.util.concurrent.CountDownLatch(1);
+        CountDownLatch reachedSwitch = new CountDownLatch(1);
+        CountDownLatch releaseSwitch = new CountDownLatch(1);
         doAnswer(invocation -> {
             reachedSwitch.countDown();
-            if (!releaseSwitch.await(8, java.util.concurrent.TimeUnit.SECONDS)) {
+            if (!releaseSwitch.await(8, TimeUnit.SECONDS)) {
                 throw new IllegalStateException("materialization gate timed out");
             }
             return invocation.callRealMethod();
@@ -277,7 +280,7 @@ class CowAcceptanceTest {
         assertEquals(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class).getStatusCode());
         try {
             assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete", null, Void.class).getStatusCode());
-            assertTrue(reachedSwitch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertTrue(reachedSwitch.await(5, TimeUnit.SECONDS));
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class).getStatusCode());
             assertEquals(HttpStatus.GONE, rest.getForEntity(path, Map.class).getStatusCode());
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
@@ -330,7 +333,7 @@ class CowAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
                 """, tracker, space, classification);
-        org.springframework.http.ResponseEntity<RequirementView> result = rest.postForEntity("/api/requirements", Map.of("trackerId", tracker,
+        ResponseEntity<RequirementView> result = rest.postForEntity("/api/requirements", Map.of("trackerId", tracker,
                 "title", "A", "description", "COW", "revision", 3), RequirementView.class);
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         source = result.getBody().localId();
@@ -364,7 +367,7 @@ class CowAcceptanceTest {
     }
 
     private void change(String title, int expectedLock) {
-        org.springframework.http.ResponseEntity<RequirementView> result = rest.exchange("/api/requirements/" + source + "/title", HttpMethod.PUT,
+        ResponseEntity<RequirementView> result = rest.exchange("/api/requirements/" + source + "/title", HttpMethod.PUT,
                 new HttpEntity<>(Map.of("title", title, "expectedLockVersion", expectedLock)), RequirementView.class);
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals(title, result.getBody().title());

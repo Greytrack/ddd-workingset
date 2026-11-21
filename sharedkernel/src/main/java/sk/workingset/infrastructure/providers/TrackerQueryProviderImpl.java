@@ -8,6 +8,7 @@ import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Tracker 只读布尔查询的 JDBC 适配器。
@@ -60,7 +61,7 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     }
 
     @Override
-    public java.util.Optional<TrackerId> findDefaultTrackerId(WorkingSetId workingSetId, long spaceId,
+    public Optional<TrackerId> findDefaultTrackerId(WorkingSetId workingSetId, long spaceId,
                                                               long classificationId) {
         return jdbc.queryForList("""
                         SELECT id FROM air_inst_tracker_rev

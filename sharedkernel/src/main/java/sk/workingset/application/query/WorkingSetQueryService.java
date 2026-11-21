@@ -6,9 +6,9 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
+import sk.workingset.application.query.model.WorkingSetBindings;
 import sk.workingset.application.query.model.WorkingSetSummary;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
 import sk.workingset.domain.workingset.WorkingSet;
@@ -62,7 +62,7 @@ public class WorkingSetQueryService {
     }
 
     @Transactional(readOnly = true)
-    public BindingsView findBindings(WorkingSetId id) {
+    public WorkingSetBindings findBindings(WorkingSetId id) {
         find(id);
         return query.findBindings(id.numericValue());
     }

@@ -13,6 +13,7 @@ import sk.workingset.application.common.TargetIdentity;
 import sk.workingset.domain.*;
 import sk.workingset.domain.event.SnapshotRefEvent;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -39,7 +40,7 @@ class RequirementMaterializationAdapterTest {
         assertThrows(DomainException.class,
                 () -> adapter.materialize(request, target));
 
-        java.util.List<RequirementSnapshot> invalid = java.util.List.of(
+        List<RequirementSnapshot> invalid = List.of(
                 snapshot("265987761440704", "264220103598016", 3, 1),
                 snapshot("261802623213504", "264220103598016", 4, 1),
                 snapshot("261802623213504", "264220103598016", 3, 2),

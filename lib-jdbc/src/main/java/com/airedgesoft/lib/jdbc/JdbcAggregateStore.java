@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
  * 主键冲突）；加载快照同时提供 CAS 基线版本。
  */
 public final class JdbcAggregateStore {
-    private static final java.util.Map<Class<?>, AggregateLifecycleListener> GLOBAL_LISTENERS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<Class<?>, AggregateLifecycleListener> GLOBAL_LISTENERS = new ConcurrentHashMap<>();
 
     /**
      * 注册全局聚合生命周期监听器（解耦基础设施与上层观测）。<b>按实现类幂等</b>：同类型重复注册（如 Spring 上下文刷新）以 {@code ConcurrentHashMap.put}

@@ -1,5 +1,6 @@
 package sk.workingset.application;
 
+import bootstrap.WorkingsetApplication;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,10 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetCreation.Progress;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Instant;
@@ -31,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** H1 回归：目标已有同族 LTI 时，来源后来软删也只能计为跳过，不得转成排除/失败。 */
-@SpringBootTest(classes = bootstrap.WorkingsetApplication.class)
+@SpringBootTest(classes = WorkingsetApplication.class)
 class WorkingSetItemIndexerTest {
     private final String suffix = UUID.randomUUID().toString();
     private final String parent = fixtureId("parent-" + suffix);

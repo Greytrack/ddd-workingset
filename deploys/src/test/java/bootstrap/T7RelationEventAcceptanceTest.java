@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
@@ -26,6 +27,7 @@ import sk.workingset.domain.workingset.WorkingSetCreation;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static bootstrap.FixtureIds.fixtureId;
@@ -36,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(T7RelationEventAcceptanceTest.RelationConfiguration.class)
 class T7RelationEventAcceptanceTest {
-    private final String suffix = java.util.UUID.randomUUID().toString();
+    private final String suffix = UUID.randomUUID().toString();
     private final String space = fixtureId("space-" + suffix);
     private final String classification = "14010101";
     private final String parentTracker = fixtureId("parent-" + suffix);
@@ -66,7 +68,7 @@ class T7RelationEventAcceptanceTest {
     void extensionPublishesReferenceAssociationAndDanglingRepairEvents() {
         seedParentRange();
         FixtureIds.insertWorkingSet(jdbc, "1", child);
-        org.springframework.http.ResponseEntity<CreationView> accepted = rest.postForEntity("/api/worksets/" + child + "/extensions",
+        ResponseEntity<CreationView> accepted = rest.postForEntity("/api/worksets/" + child + "/extensions",
                 Map.of("requestId", "extension-" + suffix, "trackerIds", List.of(parentTracker)), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
 

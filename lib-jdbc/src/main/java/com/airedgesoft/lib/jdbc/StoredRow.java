@@ -1,6 +1,7 @@
 package com.airedgesoft.lib.jdbc;
 
 import java.math.BigDecimal;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -28,7 +29,7 @@ public record StoredRow(Map<String, Object> values) {
         values = Collections.unmodifiableMap(new LinkedHashMap<>(values));
         values.forEach((name, value) -> {
             // 复用公共列标识符校验；OTHER 仅用于校验名称，不推断或替换真实 JDBC 类型。
-            new JdbcWritePlan.Column(name, java.sql.Types.OTHER);
+            new JdbcWritePlan.Column(name, Types.OTHER);
             // 只读 Map 无法冻结可变的内部值；限制为不可变标量，才不会在加载后被间接篡改。
             if (value != null && !(value instanceof String || value instanceof Long || value instanceof Integer
                     || value instanceof Double || value instanceof Boolean || value instanceof Short

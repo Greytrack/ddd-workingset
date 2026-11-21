@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import sk.workingset.domain.CommonId;
+import sk.workingset.domain.LocalId;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.workingset.WorkingSetCreationSnapshotStore;
 
 import java.sql.Timestamp;
@@ -52,11 +55,11 @@ public class JdbcWorkingSetCreationSnapshotStore implements WorkingSetCreationSn
                         WHERE creation_id = ? AND parent_tracker_id = ? AND local_id > ?
                         ORDER BY local_id LIMIT ?
                         """, (rs, row) -> new Item(rs.getString("parent_tracker_id"),
-                        sk.workingset.domain.LocalId.of(rs.getLong("local_id")),
-                        sk.workingset.domain.CommonId.of(rs.getLong("common_id")),
-                        sk.workingset.domain.Revision.of(rs.getInt("revision")),
-                        sk.workingset.domain.LocalId.of(rs.getLong("source_local_id")),
-                        sk.workingset.domain.Revision.of(rs.getInt("source_revision"))),
+                        LocalId.of(rs.getLong("local_id")),
+                        CommonId.of(rs.getLong("common_id")),
+                        Revision.of(rs.getInt("revision")),
+                        LocalId.of(rs.getLong("source_local_id")),
+                        Revision.of(rs.getInt("source_revision"))),
                 Long.valueOf(creationId), Long.valueOf(parentTrackerId), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 

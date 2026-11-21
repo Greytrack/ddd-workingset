@@ -1,9 +1,9 @@
 package sk.common.error;
 
-import org.springframework.http.ResponseEntity;
 import alm.requirement.domain.RequirementResultCode;
 import bootstrap.web.ApiExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
 import sk.workingset.application.FailureReason;
 import sk.workingset.error.BindingResCode;
 import sk.workingset.error.MergeResCode;
@@ -11,7 +11,9 @@ import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,13 +23,13 @@ class WorkingsetResultCodeContractTest {
     @Test
     void bindingFailureResponseKeepsItsPublicReasonAndContext() {
         DomainException error = DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN,
-                "42", Map.of("childWorkingSetIds", java.util.List.of("43")));
+                "42", Map.of("childWorkingSetIds", List.of("43")));
 
         ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
 
         assertEquals(409, response.getStatusCode().value());
         assertEquals(Map.of("code", 1207, "reason", "WorkingSetHasChildren", "message", "42",
-                "childWorkingSetIds", java.util.List.of("43")), response.getBody());
+                "childWorkingSetIds", List.of("43")), response.getBody());
     }
 
     @Test
@@ -54,7 +56,7 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void codesAreUniqueAndInsideDeclaredPublicRanges() {
-        java.util.List<Integer> codes = java.util.stream.Stream.of(WorkingsetResultCode.values(),
+        List<Integer> codes = Stream.of(WorkingsetResultCode.values(),
                         BindingResCode.values(), MergeResCode.values(), RequirementResultCode.values())
                 .flatMap(Arrays::stream).map(DomainResCode::getCode).toList();
         assertEquals(codes.size(), new HashSet<>(codes).size(), "duplicate public error code");

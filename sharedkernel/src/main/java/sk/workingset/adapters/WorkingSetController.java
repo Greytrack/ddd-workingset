@@ -96,8 +96,6 @@ public class WorkingSetController {
         return queries.findClassifications().stream().map(ClassificationView::from).toList();
     }
 
-    // Query-side model has the same simple name as the REST view; keep the conversion explicit.
-
     /**
      * 查询工作集的空间绑定与 Tracker 绑定。
      */
@@ -149,7 +147,7 @@ public class WorkingSetController {
     }
 
     public record BindingsView(List<SpaceBindingView> spaces, List<TrackerBindingView> trackers) {
-        static BindingsView from(sk.workingset.application.query.model.BindingsView model) {
+        static BindingsView from(WorkingSetBindings model) {
             return new BindingsView(model.spaces().stream().map(SpaceBindingView::from).toList(),
                     model.trackers().stream().map(TrackerBindingView::from).toList());
         }

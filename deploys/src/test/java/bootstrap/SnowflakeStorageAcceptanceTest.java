@@ -8,6 +8,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
@@ -15,6 +16,7 @@ import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,17 +31,17 @@ class SnowflakeStorageAcceptanceTest {
 
     @Test
     void storesNumericIdsAndPreservesOneReadOnlyNumberAcrossTheFamily() {
-        org.springframework.http.ResponseEntity<ProductSpaceView> space = rest.postForEntity("/api/product-spaces",
+        ResponseEntity<ProductSpaceView> space = rest.postForEntity("/api/product-spaces",
                 Map.of("name", "编号验收"), ProductSpaceView.class);
         assertEquals(HttpStatus.CREATED, space.getStatusCode());
         long spaceId = Long.parseLong(space.getBody().productSpaceId());
         Long targetId = null;
         try {
-            TrackerView root = java.util.Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
+            TrackerView root = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
                     .filter(tracker -> space.getBody().productSpaceId().equals(tracker.productSpaceId()))
                     .filter(tracker -> "14010101".equals(tracker.classificationId()))
                     .filter(tracker -> "UNSHARED".equals(tracker.sharingMode())).findFirst().orElseThrow();
-            org.springframework.http.ResponseEntity<RequirementView> created = rest.postForEntity("/api/requirements", Map.of("trackerId", root.trackerId(),
+            ResponseEntity<RequirementView> created = rest.postForEntity("/api/requirements", Map.of("trackerId", root.trackerId(),
                     "workingSetId", "1", "title", "编号初稿", "description", "编号验收", "revision", 1),
                     RequirementView.class);
             assertEquals(HttpStatus.CREATED, created.getStatusCode());
@@ -53,7 +55,7 @@ class SnowflakeStorageAcceptanceTest {
             Map<String,Object> request = Map.of("parentWorkingSetId", "1", "requestId", UUID.randomUUID().toString(),
                     "name", "编号子工作集", "productSpaceIds", List.of(Long.toString(spaceId)),
                     "unsharedParentTrackerIds", List.of(root.trackerId()));
-            org.springframework.http.ResponseEntity<CreationView> accepted = rest.postForEntity("/api/working-set-creations", request, CreationView.class);
+            ResponseEntity<CreationView> accepted = rest.postForEntity("/api/working-set-creations", request, CreationView.class);
             assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
             CreationView task = accepted.getBody();
             targetId = Long.valueOf(task.targetWorkingSetId());
@@ -63,7 +65,7 @@ class SnowflakeStorageAcceptanceTest {
                     assertEquals(Status.Succeeded, rest.getForObject("/api/working-set-creations/"
                             + task.creationId(), CreationView.class).status()));
 
-            TrackerView tracker = java.util.Arrays.stream(rest.getForObject("/api/worksets/" + targetId + "/trackers",
+            TrackerView tracker = Arrays.stream(rest.getForObject("/api/worksets/" + targetId + "/trackers",
                             TrackerView[].class)).filter(view -> root.trackerId().equals(view.sourceId()))
                     .findFirst().orElseThrow();
             assertEquals(Long.valueOf(root.trackerId()), jdbc.queryForObject("""
@@ -74,7 +76,7 @@ class SnowflakeStorageAcceptanceTest {
                       AND child.id = child.instance_id AND child.id <> child.common_id
                     """, Long.class, Long.valueOf(tracker.trackerId()), Long.valueOf(root.trackerId()),
                     Long.valueOf(root.trackerId())));
-            java.util.Map<String, Object> item = jdbc.queryForMap("""
+            Map<String, Object> item = jdbc.queryForMap("""
                     SELECT local_id, common_id FROM light_tracker_items
                     WHERE tracker_id = ? ORDER BY local_id LIMIT 1
                     """, Long.valueOf(tracker.trackerId()));
@@ -87,7 +89,7 @@ class SnowflakeStorageAcceptanceTest {
                     """, String.class, childLocalId, targetId, Long.valueOf(tracker.trackerId())));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
                     Integer.class, childLocalId));
-            org.springframework.http.ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + itemLocalId + "/title", HttpMethod.PUT,
+            ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + itemLocalId + "/title", HttpMethod.PUT,
                     new HttpEntity<>(Map.of("title", "编号修订", "expectedLockVersion", 0)), RequirementView.class);
             assertEquals(HttpStatus.OK, edited.getStatusCode());
             assertEquals(requirement.number(), edited.getBody().number());

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.CommonId;
@@ -34,7 +35,7 @@ class RequirementFamilyScopeTest {
     private JdbcRequirementRepository repository;
 
     @Autowired
-    private org.springframework.transaction.support.TransactionTemplate transactions;
+    private TransactionTemplate transactions;
 
     @Autowired
     private TrackerItemCatalogQueryProvider catalog;

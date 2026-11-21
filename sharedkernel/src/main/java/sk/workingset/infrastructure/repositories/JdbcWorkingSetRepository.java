@@ -16,6 +16,7 @@ import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.List;
 import java.util.Optional;
@@ -126,7 +127,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         long id = workingSet.id().numericValue();
         Long owner = RequestThreadHolder.getLongUserId();
         if (owner == null || owner <= 0) {
-            throw new DomainException(sk.workingset.error.WorkingsetResultCode.APPLICATION_DENIED);
+            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
         }
         String auditActor = owner.toString();
         long now = System.currentTimeMillis();

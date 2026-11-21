@@ -1,6 +1,5 @@
 package sk.workingset.application;
 
-import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.junit.jupiter.api.Test;
 import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
@@ -10,23 +9,25 @@ import sk.workingset.application.command.RelationEventPublisher;
 import sk.workingset.application.command.RelationEventStep;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
-import sk.workingset.domain.Classification;
+import sk.workingset.application.query.provider.RelationSourceQueryProvider;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.AssociationCreationRequestedEvent;
+import sk.workingset.domain.event.AssociationEndpointEvent;
 import sk.workingset.domain.event.DanglingReferenceRepairRequestedEvent;
 import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
 import sk.workingset.domain.workingset.WorkingSet.TrackerOrigin;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
@@ -68,17 +69,17 @@ class RelationEventStepTest {
         when(source.upstreamReferences(any())).thenReturn(List.of(new ReferenceFact("reference-1", sourceEndpoint,
                 targetEndpoint)));
         when(source.upstreamAssociations(any())).thenReturn(List.of(new AssociationFact("association-1",
-                new sk.workingset.domain.event.AssociationEndpointEvent(target, item.localId(), item.commonId(), childId),
-                new sk.workingset.domain.event.AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
+                new AssociationEndpointEvent(target, item.localId(), item.commonId(), childId),
+                new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
                         CommonId.of("261349487529920"), TrackerId.of("259649290751936")))));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-2", sourceEndpoint,
                 targetEndpoint)));
 
         ArrayList<Object> published = new ArrayList<Object>();
-        sk.workingset.application.command.RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
-        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source, publisher);
+        RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
+        RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source, publisher);
 
-        sk.workingset.application.command.RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
+        RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 
         assertEquals(3, result.published());
         assertEquals(0, result.failed());
@@ -108,11 +109,11 @@ class RelationEventStepTest {
         when(itemQueries.findInTracker(childId)).thenReturn(List.of(LightTrackerItemSummary.from(item)));
         when(source.upstreamReferences(any())).thenThrow(new IllegalStateException("source unavailable"));
 
-        sk.workingset.application.command.RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source,
+        RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source,
                 new RelationEventPublisher(event -> {
                 }, entity -> 1L));
 
-        sk.workingset.application.command.RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
+        RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 
         assertEquals(0, result.published());
         assertEquals(1, result.failed());

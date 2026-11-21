@@ -11,11 +11,11 @@ import sk.workingset.application.port.BusinessObjectTypeAdapter;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.Side;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
+import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
@@ -25,6 +25,8 @@ import sk.workingset.error.MergeResCode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.TreeSet;
 
 /**
  * Compare/Merge 共用的只读证据读取：按 Tracker 路由到业务对象类型，不触达任何写仓储。
@@ -62,9 +64,9 @@ public class MergeEvidenceReader {
         if (source.presence() != Presence.PRESENT || target.presence() != Presence.PRESENT) {
             return List.of();
         }
-        java.util.TreeSet<String> keys = new java.util.TreeSet<>(source.fields().keySet());
+        TreeSet<String> keys = new TreeSet<>(source.fields().keySet());
         keys.addAll(target.fields().keySet());
-        return keys.stream().filter(key -> !java.util.Objects.equals(source.fields().get(key), target.fields().get(key)))
+        return keys.stream().filter(key -> !Objects.equals(source.fields().get(key), target.fields().get(key)))
                 .toList();
     }
 

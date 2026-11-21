@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import sk.common.error.APIException;
 import sk.common.error.AppException;
 import sk.common.error.DomainException;
+import sk.common.error.ResCode;
 import sk.workingset.error.BindingResCode;
 import sk.workingset.error.MergeResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * REST 错误映射：保留 NotFound 与 NotIncluded 的区分，乐观锁冲突显式返回 409。
@@ -45,7 +47,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<?> handleDomainFailure(DomainException failure) {
-        sk.common.error.ResCode resultCode = failure.getResCode();
+        ResCode resultCode = failure.getResCode();
         String reason = switch (resultCode) {
             case BindingResCode binding -> binding.reason();
             case MergeResCode merge -> merge.reason();
@@ -57,7 +59,7 @@ public class ApiExceptionHandler {
         body.put("reason", reason);
         String fallbackMessage = resultCode instanceof MergeResCode ? reason : "Unexpected error";
         body.put("message", failure.getType().httpStatus() >= 500 ? "Unexpected error"
-                : java.util.Objects.toString(failure.getMessage(), fallbackMessage));
+                : Objects.toString(failure.getMessage(), fallbackMessage));
         return domainResponse(failure, body);
     }
 
@@ -77,7 +79,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(APIException.class)
     public ResponseEntity<Map<String, Object>> handleCodedFailure(APIException failure) {
-        sk.common.error.ResCode resultCode = failure instanceof AppException app ? app.getResCode() : null;
+        ResCode resultCode = failure instanceof AppException app ? app.getResCode() : null;
         int status = switch (resultCode) {
             case WorkingsetResultCode.BAD_REQUEST -> 400;
             case BindingResCode.WORKING_SET_NOT_EXISTS -> 404;

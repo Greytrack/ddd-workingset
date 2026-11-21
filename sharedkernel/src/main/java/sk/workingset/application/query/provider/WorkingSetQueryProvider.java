@@ -1,8 +1,8 @@
 package sk.workingset.application.query.provider;
 
-import sk.workingset.application.query.model.BindingsView;
 import sk.workingset.application.query.model.ClassificationSummary;
 import sk.workingset.application.query.model.TrackerSummary;
+import sk.workingset.application.query.model.WorkingSetBindings;
 import sk.workingset.application.query.model.WorkingSetSummary;
 
 import java.util.List;
@@ -25,7 +25,7 @@ public interface WorkingSetQueryProvider {
 
     List<ClassificationSummary> findClassifications();
 
-    BindingsView findBindings(long workingSetId);
+    WorkingSetBindings findBindings(long workingSetId);
 
     boolean hasWorkingSetBinding(String spaceId);
 

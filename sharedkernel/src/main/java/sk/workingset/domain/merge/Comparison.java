@@ -10,6 +10,7 @@ import sk.workingset.domain.workingset.WorkingSetId;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 瞬时比较结果：双侧工作集、候选 Tracker 对与差异清单；不作为持久化事实。
@@ -37,10 +38,10 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
     public record TrackerPair(WorkingSetId sourceWorkingSetId, TrackerId source,
                               WorkingSetId targetWorkingSetId, TrackerId target) {
         public TrackerPair {
-            java.util.Objects.requireNonNull(sourceWorkingSetId, "sourceWorkingSetId");
-            java.util.Objects.requireNonNull(source, "source");
-            java.util.Objects.requireNonNull(targetWorkingSetId, "targetWorkingSetId");
-            java.util.Objects.requireNonNull(target, "target");
+            Objects.requireNonNull(sourceWorkingSetId, "sourceWorkingSetId");
+            Objects.requireNonNull(source, "source");
+            Objects.requireNonNull(targetWorkingSetId, "targetWorkingSetId");
+            Objects.requireNonNull(target, "target");
         }
     }
 

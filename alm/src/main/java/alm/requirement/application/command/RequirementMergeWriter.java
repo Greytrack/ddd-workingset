@@ -10,11 +10,12 @@ import sk.common.error.DomainException;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Version;
 import sk.workingset.domain.event.MergeEntryApprovedEvent;
-import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
+import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.error.MergeResCode;
 
 import java.util.Map;
+import java.util.Optional;
 
 /** ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。 */
 @Slf4j
@@ -28,7 +29,7 @@ public final class RequirementMergeWriter {
 
     /** 幂等应用合并条目：整体校验目标、提交并返回结果事件。 */
     public MergeEntryResolvedEvent apply(MergeEntryApprovedEvent command) {
-        java.util.Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());
+        Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());
         if (existing.isPresent()) {
             return existing.orElseThrow();
         }
@@ -56,7 +57,7 @@ public final class RequirementMergeWriter {
                 && repository.lockFamilyInWorkingSet(command.trackerId(), command.commonId()).isPresent()) {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "target working set family is already occupied");
         }
-        java.util.Optional<Requirement> existing = repository.lockById(command.localId());
+        Optional<Requirement> existing = repository.lockById(command.localId());
         if (command.expectedLockVersion() == null && existing.isPresent()
                 || command.expectedLockVersion() != null && existing.isEmpty()) {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "target business state changed");

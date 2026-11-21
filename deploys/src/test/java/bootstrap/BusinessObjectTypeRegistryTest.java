@@ -22,6 +22,7 @@ import sk.workingset.infrastructure.providers.DefaultBusinessObjectTypeRegistry;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -91,7 +92,7 @@ class BusinessObjectTypeRegistryTest {
 
     private static BusinessObjectTypeAdapter requirementAdapter() {
         BusinessObjectTypeAdapter adapter = mock(BusinessObjectTypeAdapter.class);
-        when(adapter.types()).thenReturn(java.util.Set.of(new BusinessObjectType(14010101L)));
+        when(adapter.types()).thenReturn(Set.of(new BusinessObjectType(14010101L)));
         when(adapter.capabilities()).thenReturn(new Capabilities(true, true));
         when(adapter.sourceLock()).thenReturn(mock(TrackerItemSourceLock.class));
         TrackerItemCatalogQueryProvider catalog = mock(TrackerItemCatalogQueryProvider.class);

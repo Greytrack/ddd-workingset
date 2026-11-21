@@ -5,5 +5,5 @@ import java.util.List;
 /**
  * Working Set 绑定读模型。
  */
-public record BindingsView(List<SpaceBindingSummary> spaces, List<TrackerBindingSummary> trackers) {
+public record WorkingSetBindings(List<SpaceBindingSummary> spaces, List<TrackerBindingSummary> trackers) {
 }

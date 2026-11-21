@@ -14,9 +14,10 @@ import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
-import sk.workingset.domain.Classification;
 import sk.workingset.domain.Classification.SharingMode;
+import sk.workingset.domain.Classification;
 import sk.workingset.domain.event.TrackerCreatedEvent;
+import sk.workingset.domain.event.TrackerDeletionRequestedEvent;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
@@ -88,7 +89,7 @@ public class TrackerCommandService {
                 trackerQueries.hasOrgChildren(id),
                 trackerQueries.hasDerivedChildren(id)
         );
-        events.publishEvent(new sk.workingset.domain.event.TrackerDeletionRequestedEvent(id));
+        events.publishEvent(new TrackerDeletionRequestedEvent(id));
     }
 
     private void requireOwningWorkingSet(WorkingSetId id) {

@@ -1,26 +1,29 @@
 package sk.workingset.application.query;
 
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.stereotype.Service;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.MergeEvidenceReader;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
-import sk.workingset.domain.merge.Comparison;
+import sk.workingset.domain.Revision;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.Side;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
+import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.MergeResCode;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeSet;
 
 /**
@@ -54,7 +57,7 @@ public class MergeComparisonService {
         ArrayList<Difference> differences = new ArrayList<Difference>();
         Map<CommonId, LocalId> sources = evidence.familyIds(pair.source());
         Map<CommonId, LocalId> targets = evidence.familyIds(pair.target());
-        TreeSet<CommonId> families = new TreeSet<>(java.util.Comparator.comparing(CommonId::value));
+        TreeSet<CommonId> families = new TreeSet<>(Comparator.comparing(CommonId::value));
         families.addAll(sources.keySet());
         families.addAll(targets.keySet());
         for (CommonId family : families) {
@@ -85,12 +88,12 @@ public class MergeComparisonService {
         }
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), family);
         boolean leftIsA = key.a().equals(trackers.source());
-        sk.workingset.domain.Revision aRevision = leftIsA ? left.revision() : right.revision();
-        sk.workingset.domain.Revision bRevision = leftIsA ? right.revision() : left.revision();
+        Revision aRevision = leftIsA ? left.revision() : right.revision();
+        Revision bRevision = leftIsA ? right.revision() : left.revision();
         return checkpoints.findLatest(key)
                 .filter(checkpoint -> !checkpoint.revoked())
-                .filter(checkpoint -> java.util.Objects.equals(checkpoint.revisionA(), aRevision)
-                        && java.util.Objects.equals(checkpoint.revisionB(), bRevision))
+                .filter(checkpoint -> Objects.equals(checkpoint.revisionA(), aRevision)
+                        && Objects.equals(checkpoint.revisionB(), bRevision))
                 .isPresent();
     }
 }
