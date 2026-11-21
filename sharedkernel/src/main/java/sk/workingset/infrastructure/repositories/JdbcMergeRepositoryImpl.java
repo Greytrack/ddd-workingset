@@ -1,5 +1,6 @@
 package sk.workingset.infrastructure.repositories;
 
+import java.util.Set;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -85,7 +86,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
         if (confirmed.isEmpty()) {
             return;
         }
-        var saved = new HashSet<>(jdbc.queryForList(
+        Set<Long> saved = new HashSet<>(jdbc.queryForList(
                 "SELECT id FROM air_ws_items_merge_index WHERE batch_id = ?", Long.class, round.numericId()));
         for (MergeRound.Entry entry : confirmed) {
             if (!saved.contains(entry.numericId())) {
@@ -95,8 +96,8 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     }
 
     private void insertConfirmation(MergeRound round, MergeRound.Entry entry) {
-        var evidence = entry.evidence();
-        var confirmation = entry.confirmation();
+        Comparison.Difference evidence = entry.evidence();
+        MergeRound.Confirmation confirmation = entry.confirmation();
         long source = evidence.trackers().source().numericValue();
         long target = evidence.trackers().target().numericValue();
         boolean sourceIsA = source <= target;

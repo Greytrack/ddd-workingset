@@ -1,5 +1,6 @@
 package sk.tracker.application.command;
 
+import java.util.Optional;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -52,7 +53,7 @@ public class DefaultTrackerInitCommandService {
             if (INSTANCE_CLASSIFICATIONS.contains(classification.numericId())) {
                 continue;
             }
-            var existing = trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId());
+            Optional<Tracker> existing = trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId());
             if (existing.isPresent()) {
                 created.add(existing.orElseThrow().trackerId());
             } else {

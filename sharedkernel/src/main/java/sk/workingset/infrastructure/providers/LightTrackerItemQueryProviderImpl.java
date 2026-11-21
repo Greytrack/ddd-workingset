@@ -13,6 +13,7 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * LightTrackerItem 查询适配器；只读，不重建聚合。
@@ -33,6 +34,12 @@ public class LightTrackerItemQueryProviderImpl implements LightTrackerItemQueryP
             rs.getBoolean("materialized"));
 
     private final JdbcTemplate jdbc;
+
+    @Override
+    public Optional<LightTrackerItemSummary> findById(LocalId localId) {
+        return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE local_id = ?",
+                MAPPER, localId.numericValue()).stream().findFirst();
+    }
 
     @Override
     public List<LightTrackerItemSummary> findInTracker(TrackerId trackerId) {

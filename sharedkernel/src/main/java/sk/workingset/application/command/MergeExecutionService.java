@@ -1,5 +1,6 @@
 package sk.workingset.application.command;
 
+import java.util.Optional;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +12,10 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import sk.common.error.DomainException;
+import sk.tracker.domain.Tracker;
+import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.merge.MergeComparisonService;
+import sk.workingset.application.query.provider.MergeEvidenceReader;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.*;
@@ -46,8 +49,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MergeExecutionService {
 
-    private final MergeRepository store;
-    private final MergeComparisonService comparisons;
+    private final MergeRepository mergeRepository;
+    private final MergeEvidenceReader evidence;
+    private final TrackerRepository trackers;
     private final IdentifierGenerator ids;
     private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
@@ -87,11 +91,11 @@ public class MergeExecutionService {
         };
     }
 
-    private static Map<String, Object> acceptedFields(Entry entry, Difference current) {
+    private static Map<String, Object> acceptedFields(Entry entry) {
         LinkedHashMap<String, Object> accepted = new LinkedHashMap<>();
         entry.decision().fields().forEach((path, decision) -> {
             if (decision == FieldAction.ACCEPT) {
-                Object value = current.source().fields().get(path);
+                Object value = entry.evidence().source().fields().get(path);
                 if (value == null) {
                     throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, path);
                 }
@@ -121,15 +125,15 @@ public class MergeExecutionService {
     @Transactional
     public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
                              List<EntryRequest> decisions, String caller) {
-        java.util.Optional<MergeRound> existing = store.findByRequestId(requestId);
+        java.util.Optional<MergeRound> existing = mergeRepository.findByRequestId(requestId);
         if (existing.isPresent()) {
             return matching(existing.get(), source, target);
         }
         TrackerPair pair = trackerPair(decisions);
         MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
         // 先占幂等键：并发提交同一 requestId 时，save 保留先到轮次，后到请求直接返回该轮次。
-        store.save(prepared);
-        MergeRound winner = store.findByRequestId(requestId)
+        mergeRepository.save(prepared);
+        MergeRound winner = mergeRepository.findByRequestId(requestId)
                 .orElseThrow(() -> DomainException.withMessage(MergeResCode.CONFLICT, requestId));
         if (!winner.id().equals(prepared.id())) {
             return matching(winner, source, target);
@@ -147,7 +151,7 @@ public class MergeExecutionService {
      * 一页决策要么整页登记成功，要么整轮回滚。
      */
     private MergeRound registerDecisions(MergeRound round, List<EntryRequest> requests) {
-        List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = comparisons.candidates(round.source(), round.target());
+        List<sk.workingset.domain.merge.Comparison.TrackerPair> candidates = evidence.candidates(round.source(), round.target());
         MergeRound updated = round;
         for (EntryRequest request : requests) {
             Difference frozen = request.evidence();
@@ -162,7 +166,7 @@ public class MergeExecutionService {
             if (!candidates.contains(pair)) {
                 throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
             }
-            Difference current = comparisons.current(frozen);
+            Difference current = evidence.current(frozen);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
                 throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
             }
@@ -173,7 +177,7 @@ public class MergeExecutionService {
             updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()),
                     frozen, request.decision(), null));
         }
-        store.save(updated);
+        mergeRepository.save(updated);
         return updated;
     }
 
@@ -208,39 +212,45 @@ public class MergeExecutionService {
             if (entry.result() != null || entry.requested()) {
                 continue;
             }
-            Difference current;
-            try {
-                current = comparisons.current(entry.evidence());
-                verifyCurrent(entry, current);
-            } catch (DomainException failure) {
-                if (failure.getResCode() != MergeResCode.STALE_EVIDENCE) {
-                    throw failure;
-                }
-                round = finish(round, entry,
-                        result(entry, Outcome.StaleEvidence, operation(entry), null, null, failure.getMessage()));
-                continue;
-            }
+            Difference frozen = entry.evidence();
             String operation = operation(entry);
             if ("IGNORED".equals(operation)) {
                 MergeCommitReceipt receipt = new MergeCommitReceipt(null,
-                        current.source().revision(), current.target().revision());
+                        frozen.source().revision(), frozen.target().revision());
                 round = round.finishApplied(entry.id(), operation, receipt);
                 continue;
             }
-            events.publishEvent(approve(round, entry, current, operation));
+            Optional<Tracker> targetTracker = trackers.findById(frozen.trackers().target());
+            if (targetTracker.isEmpty()) {
+                round = finish(round, entry, result(entry, Outcome.Conflict, operation, null, null,
+                        "target tracker no longer exists"));
+                continue;
+            }
+            MergeEntryApprovedEvent approved;
+            try {
+                approved = approve(round, entry, targetTracker.orElseThrow(), operation);
+            } catch (DomainException failure) {
+                if (FailureReason.of(failure) != FailureReason.HISTORY_UNAVAILABLE) {
+                    throw failure;
+                }
+                round = finish(round, entry, result(entry, Outcome.Rejected, operation, null, null, failure.getMessage()));
+                continue;
+            }
+            events.publishEvent(approved);
             round = round.request(entry.id());
         }
         completeIfReady(round);
         return round(id);
     }
 
-    private MergeEntryApprovedEvent approve(MergeRound round, Entry entry, Difference current, String operation) {
-        Side target = current.target();
-        Side source = current.source();
+    private MergeEntryApprovedEvent approve(MergeRound round, Entry entry, Tracker tracker, String operation) {
+        Difference frozen = entry.evidence();
+        Side target = frozen.target();
+        Side source = frozen.source();
         MergeEntryApprovedEvent.Operation action = MergeEntryApprovedEvent.Operation.valueOf(operation);
         LocalId localId = action == MergeEntryApprovedEvent.Operation.CREATE
                 ? (WorkingSet.DEFAULT_ID.equals(round.target())
-                ? LocalId.of(current.family().value())
+                ? LocalId.of(frozen.family().value())
                 : LocalId.of(Long.toString(ids.nextId(null).longValue())))
                 : target.localId();
         boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
@@ -249,12 +259,12 @@ public class MergeExecutionService {
         Revision targetRevision = create ? sourceRevision
                 : target.revision() != null ? target.revision() : Revision.of(0);
         return new MergeEntryApprovedEvent(round.id(), entry.id(), round.token(), action,
-                current.trackers().target(), current.family(), localId,
+                tracker.trackerId(), frozen.family(), localId,
                 sourceRevision, targetRevision,
                 inherited || create ? null : target.lockVersion(),
                 create ? source.version() : target.version(),
                 create || action == MergeEntryApprovedEvent.Operation.RESTORE ? source.fields() : target.fields(),
-                acceptedFields(entry, current), inherited);
+                acceptedFields(entry), inherited, tracker.numericClassificationId());
     }
 
     /**
@@ -295,11 +305,11 @@ public class MergeExecutionService {
 
     private MergeRound.ApplyResult completeIfReady(MergeRound round) {
         if (round.awaitingResults()) {
-            store.save(round);
+            mergeRepository.save(round);
             return null;
         }
         MergeRound finished = round.complete(Instant.now());
-        store.save(finished);
+        mergeRepository.save(finished);
         try {
             MergeRelationRepairStep.StepResult repair = relationRepair.repair(finished);
             if (repair.failed() > 0) {
@@ -311,15 +321,8 @@ public class MergeExecutionService {
         return finished.result();
     }
 
-    private void verifyCurrent(Entry entry, Difference current) {
-        if (!entry.evidence().source().sameExecutionShape(current.source())
-                || !entry.evidence().target().sameExecutionShape(current.target())) {
-            throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, "identity, revision, presence or readability changed");
-        }
-    }
-
     private MergeRound round(String id) {
-        return store.findById(id).orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, id));
+        return mergeRepository.findById(id).orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, id));
     }
 
     /**

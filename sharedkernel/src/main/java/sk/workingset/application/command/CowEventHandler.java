@@ -48,7 +48,7 @@ public final class CowEventHandler {
             // Publish the reliable event in the same transaction as its receipt.
             // A technical publication failure rolls back both so the source event can be replayed.
             transactionTemplate.execute(status -> {
-                var receipt = store.markPending(event.eventId(), target.localId(),
+                CowMaterializationStore.Entry receipt = store.markPending(event.eventId(), target.localId(),
                         event.sourceLocalId(), event.beforeRevision());
                 if (receipt.status() != CowMaterializationStore.Status.SWITCHED) {
                     events.publishEvent(request(event, target));

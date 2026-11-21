@@ -56,15 +56,6 @@ public record Comparison(WorkingSetId source, WorkingSetId target, Instant compa
             return new Side(null, null, null, null, null, null, Presence.ABSENT, null, Map.of());
         }
 
-        public boolean sameExecutionShape(Side other) {
-            return new Shape(localId, revision, contentRevision, version, presence, failure)
-                    .equals(new Shape(other.localId, other.revision, other.contentRevision,
-                            other.version, other.presence, other.failure));
-        }
-
-        private record Shape(LocalId localId, Revision revision, Revision contentRevision,
-                             String version, Presence presence, String failure) {
-        }
     }
 
     /**

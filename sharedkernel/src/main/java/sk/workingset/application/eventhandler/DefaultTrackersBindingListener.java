@@ -1,5 +1,6 @@
 package sk.workingset.application.eventhandler;
 
+import sk.tracker.domain.TrackerId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,7 @@ public class DefaultTrackersBindingListener {
                             "product space disappeared: " + spaceId));
             workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
         }
-        for (var trackerId : event.trackerIds()) {
+        for (TrackerId trackerId : event.trackerIds()) {
             if (workingSet.hasTrackerBinding(trackerId)) {
                 continue;
             }

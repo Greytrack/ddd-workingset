@@ -27,11 +27,6 @@ public interface TrackerItemQueryProvider {
         throw new UnsupportedOperationException("comparison evidence is unavailable");
     }
 
-    /**
-     * 当前业务版次。
-     */
-    Revision revision();
-
     record ContentEvidence(CommonId commonId, Revision revision, String version, long lockVersion, boolean deleted) {
     }
 

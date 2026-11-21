@@ -33,6 +33,8 @@ public final class LightTrackerItem {
     private final CommonId commonId;
     private final TrackerId trackerId;
     private final WorkingSetId workingSetId;
+    private final long numericProductSpaceId;
+    private final long classificationId;
     private final Map<Revision, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
     private Revision revision;
     private LocalId sourceLocalId;
@@ -44,6 +46,7 @@ public final class LightTrackerItem {
                              CommonId commonId,
                              TrackerId trackerId,
                              WorkingSetId workingSetId,
+                             ItemClassification classification,
                              Revision revision,
                              LocalId sourceLocalId,
                              Revision sourceRevision,
@@ -52,6 +55,8 @@ public final class LightTrackerItem {
         this.commonId = commonId;
         this.trackerId = trackerId;
         this.workingSetId = workingSetId;
+        this.numericProductSpaceId = classification.numericProductSpaceId();
+        this.classificationId = classification.classificationId();
         this.revision = revision;
         this.revisions.put(revision, new LightTrackerItemRevisionEntity(revision));
         this.sourceLocalId = sourceLocalId;
@@ -63,18 +68,10 @@ public final class LightTrackerItem {
      * 派生创建：预分配 {@code localId}（由调用方生成）、继承 {@code commonId}、
      * 记录来源与初始业务版次，初始为 Source-backed。
      */
-    public static LightTrackerItem derive(LocalId localId,
-                                          CommonId commonId,
-                                          TrackerId trackerId,
-                                          WorkingSetId workingSetId,
-                                          Revision revision,
-                                          LocalId sourceLocalId) {
-        return derive(localId, commonId, trackerId, workingSetId, revision, sourceLocalId, revision);
-    }
-
     public static LightTrackerItem derive(LocalId localId, CommonId commonId, TrackerId trackerId,
                                           WorkingSetId workingSetId, Revision revision,
-                                          LocalId sourceLocalId, Revision sourceRevision) {
+                                          LocalId sourceLocalId, Revision sourceRevision,
+                                          ItemClassification classification) {
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
@@ -82,19 +79,22 @@ public final class LightTrackerItem {
         Objects.requireNonNull(revision, "revision");
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
         Objects.requireNonNull(sourceRevision, "sourceRevision");
+        Objects.requireNonNull(classification, "classification");
         if (localId.equals(sourceLocalId)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST,
                     "derived variant must be source-backed: localId must differ from sourceLocalId");
         }
         LightTrackerItem item = new LightTrackerItem(
-                localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision, false);
+                localId, commonId, trackerId, workingSetId, classification,
+                revision, sourceLocalId, sourceRevision, false);
         item.checkInvariants();
         return item;
     }
 
     public static LightTrackerItem local(LocalId id, CommonId commonId, TrackerId trackerId,
-                                         WorkingSetId workingSetId, Revision revision) {
-        return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true);
+                                         WorkingSetId workingSetId, Revision revision,
+                                         ItemClassification classification) {
+        return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true, classification);
     }
 
     /**
@@ -107,7 +107,8 @@ public final class LightTrackerItem {
                                            Revision revision,
                                            LocalId sourceLocalId,
                                            Revision sourceRevision,
-                                           boolean materialized) {
+                                           boolean materialized,
+                                           ItemClassification classification) {
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
@@ -115,8 +116,10 @@ public final class LightTrackerItem {
         Objects.requireNonNull(revision, "revision");
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
         Objects.requireNonNull(sourceRevision, "sourceRevision");
+        Objects.requireNonNull(classification, "classification");
         LightTrackerItem item = new LightTrackerItem(
-                localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision, materialized);
+                localId, commonId, trackerId, workingSetId, classification,
+                revision, sourceLocalId, sourceRevision, materialized);
         item.checkInvariants();
         return item;
     }
@@ -124,9 +127,9 @@ public final class LightTrackerItem {
     public static LightTrackerItem restore(LocalId localId, CommonId commonId, TrackerId trackerId,
                                            WorkingSetId workingSetId, Revision revision, LocalId sourceLocalId,
                                            Revision sourceRevision, boolean materialized, boolean deleted,
-                                           List<Revision> indexedRevisions) {
+                                           List<Revision> indexedRevisions, ItemClassification classification) {
         LightTrackerItem item = restore(localId, commonId, trackerId, workingSetId, revision,
-                sourceLocalId, sourceRevision, materialized);
+                sourceLocalId, sourceRevision, materialized, classification);
         item.deleted = deleted;
         item.revisions.clear();
         for (Revision indexed : indexedRevisions) {
@@ -211,6 +214,20 @@ public final class LightTrackerItem {
 
     public WorkingSetId workingSetId() {
         return workingSetId;
+    }
+
+    /**
+     * 所属 Tracker 的产品空间 ID。
+     */
+    public long numericProductSpaceId() {
+        return numericProductSpaceId;
+    }
+
+    /**
+     * 所属子分类 ID（Tracker 的 {@code tracker_class}/{@code classificationId}）。
+     */
+    public long classificationId() {
+        return classificationId;
     }
 
     public Revision revision() {

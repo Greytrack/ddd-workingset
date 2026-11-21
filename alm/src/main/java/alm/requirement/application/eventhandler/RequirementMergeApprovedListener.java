@@ -1,9 +1,11 @@
 package alm.requirement.application.eventhandler;
 
+import alm.requirement.application.RequirementTypes;
 import alm.requirement.application.command.RequirementMergeWriter;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
+import sk.workingset.application.port.BusinessObjectType;
 import sk.workingset.domain.event.MergeEntryApprovedEvent;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 
@@ -24,6 +26,9 @@ public class RequirementMergeApprovedListener {
 
     @ApplicationModuleListener(id = "bootstrap.RequirementMergeApprovedListener.on(sk.workingset.domain.event.MergeEntryApprovedEvent)")
     public void on(MergeEntryApprovedEvent event) {
+        if (!RequirementTypes.SUPPORTED.contains(new BusinessObjectType(event.targetClassificationId()))) {
+            return;
+        }
         MergeEntryResolvedEvent result = writer.apply(event);
         events.publishEvent(result);
     }

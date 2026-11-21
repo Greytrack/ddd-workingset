@@ -1,0 +1,24 @@
+package alm.requirement.adapters.workingset;
+
+import alm.requirement.application.port.RequirementMutationStore;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import sk.workingset.application.port.TrackerItemSourceLock;
+import sk.workingset.domain.LocalId;
+
+/**
+ * Requirement 来源行锁租约：与 ALM 的永久删除路径使用同一行锁。
+ *
+ * <p>该锁只降低竞态，不作为跨聚合原子校验；删除守卫仍在 ALM 本地事务中重新检查依赖。
+ */
+@Component
+@RequiredArgsConstructor
+public class RequirementSourceLockAdapter implements TrackerItemSourceLock {
+
+    private final RequirementMutationStore requirements;
+
+    @Override
+    public boolean lock(LocalId sourceLocalId) {
+        return requirements.lockById(sourceLocalId).isPresent();
+    }
+}

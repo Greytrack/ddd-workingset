@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * SK 已批准应用某个 Merge 条目；ALM 在自己的事务中执行并返回结果事件。
+ * SK 已批准应用某个 Merge 条目；目标业务 BC 在自己的事务中执行并返回结果事件。
  *
- * <p>事件携带冻结证据和期望版本，ALM 必须重新校验后整体应用。
+ * <p>事件携带目标分类、冻结的应用值与目标期望版本。
  */
 public record MergeEntryApprovedEvent(String roundId,
                                       String entryId,
@@ -26,7 +26,8 @@ public record MergeEntryApprovedEvent(String roundId,
                                       String version,
                                       Map<String, Object> baseFields,
                                       Map<String, Object> acceptedFields,
-                                      boolean inherited) {
+                                      boolean inherited,
+                                      long targetClassificationId) {
 
     public MergeEntryApprovedEvent {
         Objects.requireNonNull(roundId, "roundId");
@@ -38,6 +39,9 @@ public record MergeEntryApprovedEvent(String roundId,
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(sourceRevision, "sourceRevision");
         Objects.requireNonNull(targetRevision, "targetRevision");
+        if (targetClassificationId <= 0) {
+            throw new IllegalArgumentException("targetClassificationId must be positive");
+        }
         baseFields = baseFields == null ? Map.of() : Map.copyOf(baseFields);
         acceptedFields = acceptedFields == null ? Map.of() : Map.copyOf(acceptedFields);
     }

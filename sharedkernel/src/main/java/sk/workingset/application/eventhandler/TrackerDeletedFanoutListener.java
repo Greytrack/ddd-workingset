@@ -1,5 +1,6 @@
 package sk.workingset.application.eventhandler;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -21,7 +22,7 @@ public class TrackerDeletedFanoutListener {
 
     @ApplicationModuleListener(id = "bootstrap.TrackerDeletedFanoutListener.on(sk.workingset.domain.event.TrackerDeletionRequestedEvent)")
     public void on(TrackerDeletionRequestedEvent event) {
-        var bound = queries.findWorkingSetIdsBoundToTracker(event.trackerId().numericValue());
+        List<Long> bound = queries.findWorkingSetIdsBoundToTracker(event.trackerId().numericValue());
         if (bound.isEmpty()) {
             events.publishEvent(new TrackerDeletedEvent(event.trackerId()));
             return;

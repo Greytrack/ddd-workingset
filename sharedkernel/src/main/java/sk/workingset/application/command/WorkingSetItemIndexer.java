@@ -9,8 +9,9 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.BusinessTrackerItems;
-import sk.workingset.application.port.LightTrackerItemFamilyStore;
+import sk.workingset.application.port.BusinessObjectTypeAdapter;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
@@ -18,6 +19,7 @@ import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.workingset.*;
 import sk.workingset.domain.workingset.WorkingSetCreation.Failure;
@@ -30,10 +32,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
-import java.util.function.Function;
 
 /**
  * Indexes the frozen parent-item snapshot under the creation task's transaction.
+ *
+ * <p>所有跨 BC 读取都经由 {@link BusinessObjectTypeRegistry} 按父 Tracker 路由；SK 不直接
+ * 依赖任何业务 BC 的仓储或表语义。
  */
 @Slf4j
 public final class WorkingSetItemIndexer {
@@ -43,19 +47,17 @@ public final class WorkingSetItemIndexer {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemQueryProvider itemQueries;
-    private final LightTrackerItemFamilyStore familyStore;
-    private final TrackerItemCatalogQueryProvider catalog;
+    private final LightTrackerItemRepository items;
     private final WorkingSetCreationSnapshotStore snapshots;
-    private final BusinessTrackerItems businessItems;
-    private final Function<LocalId, TrackerItemQueryProvider> readPorts;
+    private final BusinessObjectTypeRegistry registry;
     private final IdentifierGenerator ids;
     private final int batchSize;
 
     public WorkingSetItemIndexer(WorkingSetRepository workingSets, TrackerRepository trackers,
                                  LightTrackerItemQueryProvider itemQueries,
-                                 LightTrackerItemFamilyStore familyStore, TrackerItemCatalogQueryProvider catalog,
-                                 WorkingSetCreationSnapshotStore snapshots, BusinessTrackerItems businessItems,
-                                 Function<LocalId, TrackerItemQueryProvider> readPorts,
+                                 LightTrackerItemRepository items,
+                                 WorkingSetCreationSnapshotStore snapshots,
+                                 BusinessObjectTypeRegistry registry,
                                  IdentifierGenerator ids, int batchSize) {
         if (batchSize < 1) {
             throw new IllegalArgumentException("Index batch size must be positive");
@@ -63,11 +65,9 @@ public final class WorkingSetItemIndexer {
         this.workingSets = workingSets;
         this.trackers = trackers;
         this.itemQueries = itemQueries;
-        this.familyStore = familyStore;
-        this.catalog = catalog;
+        this.items = items;
         this.snapshots = snapshots;
-        this.businessItems = businessItems;
-        this.readPorts = readPorts;
+        this.registry = registry;
         this.ids = ids;
         this.batchSize = batchSize;
     }
@@ -90,6 +90,10 @@ public final class WorkingSetItemIndexer {
                 ? FailureReason.DEPENDENCY_UNAVAILABLE : FailureReason.UNKNOWN;
     }
 
+    private static FailureReason unsupportedEvidence() {
+        return FailureReason.CAPABILITY_NOT_SUPPORTED;
+    }
+
     /**
      * 在受理事务内冻结父 Tracker 的 Item 身份与有效来源。软删项不进入快照；缺失或版次
      * 不可读的身份仍保留，由索引执行时记录跳过明细。
@@ -102,14 +106,19 @@ public final class WorkingSetItemIndexer {
         }
         for (String parent : parents) {
             TrackerId parentTracker = TrackerId.of(parent);
+            BusinessObjectTypeAdapter adapter = registry.forTracker(parentTracker);
+            if (!adapter.capabilities().derivable()) {
+                throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED,
+                        "Tracker type " + adapter.types() + " does not support derivation");
+            }
             ArrayList<WorkingSetCreationSnapshotStore.Item> frozen = new ArrayList<WorkingSetCreationSnapshotStore.Item>();
             String cursor = "";
             while (true) {
-                List<WorkingSetItemIndexer.Candidate> candidates = livePage(parentTracker, cursor);
+                List<WorkingSetItemIndexer.Candidate> candidates = livePage(parentTracker, cursor, adapter);
                 for (Candidate candidate : candidates) {
                     if (candidate.lightweight()
-                            && (businessItems.isDeleted(candidate.sourceId())
-                            || catalog.hasActiveFamily(parentTracker, candidate.commonId()))) {
+                            && (isDeleted(adapter, candidate.sourceId())
+                            || adapter.catalog().hasActiveFamily(parentTracker, candidate.commonId()))) {
                         continue;
                     }
                     frozen.add(new WorkingSetCreationSnapshotStore.Item(parent, candidate.localId(),
@@ -140,11 +149,12 @@ public final class WorkingSetItemIndexer {
         if (child == null || !targetSet.hasTrackerBinding(child.trackerId())) {
             return creation.advance(ItemOutcome.Skipped, null, Instant.now());
         }
+        BusinessObjectTypeAdapter adapter = registry.forTracker(parent);
         WorkingSetCreation.IndexProgress progress = creation.indexProgress().getOrDefault(parent.value(), IndexProgress.initial());
         Object savepoint = transaction.createSavepoint();
         List<Candidate> page;
         try {
-            page = page(creation, parent, progress.afterLocalId());
+            page = page(creation, parent, progress.afterLocalId(), adapter);
         } catch (RuntimeException failure) {
             transaction.rollbackToSavepoint(savepoint);
             return creation.advance(ItemOutcome.Failed, failure(parent, child, null, reason(failure)), Instant.now());
@@ -159,7 +169,7 @@ public final class WorkingSetItemIndexer {
         for (Candidate candidate : page) {
             Object itemSavepoint = transaction.createSavepoint();
             try {
-                WorkingSetItemIndexer.Outcome outcome = index(parent, child, candidate);
+                WorkingSetItemIndexer.Outcome outcome = index(parent, child, candidate, adapter);
                 switch (outcome.result()) {
                     case Indexed -> succeeded++;
                     case Existing -> skipped++;
@@ -184,35 +194,36 @@ public final class WorkingSetItemIndexer {
                 finished ? child.trackerId().value() : null), failures, finished, Instant.now());
     }
 
-    private List<Candidate> page(WorkingSetCreation creation, TrackerId parent, String cursor) {
+    private List<Candidate> page(WorkingSetCreation creation, TrackerId parent, String cursor,
+                                 BusinessObjectTypeAdapter adapter) {
         if (snapshots.contains(creation.id())) {
             return snapshots.page(creation.id(), parent.value(), cursor, batchSize).stream()
                     .map(Candidate::from).toList();
         }
-        return livePage(parent, cursor);
+        return livePage(parent, cursor, adapter);
     }
 
-    private List<Candidate> livePage(TrackerId parent, String cursor) {
+    private List<Candidate> livePage(TrackerId parent, String cursor, BusinessObjectTypeAdapter adapter) {
         TreeMap<String, WorkingSetItemIndexer.Candidate> candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
         itemQueries.pageInTracker(parent, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
-        catalog.page(parent, cursor, batchSize).forEach(item ->
+        adapter.catalog().page(parent, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
         return candidates.values().stream().limit(batchSize).toList();
     }
 
-    private Outcome index(TrackerId parent, Tracker child, Candidate candidate) {
+    private Outcome index(TrackerId parent, Tracker child, Candidate candidate, BusinessObjectTypeAdapter adapter) {
         // 重入/重复执行时先认已提交的同族，避免来源后来软删或不可读被误记为失败。
         if (itemQueries.hasFamily(child.workingSetId(), candidate.commonId())) {
             return new Outcome(IndexResult.Existing, null);
         }
-        if (candidate.lightweight() && catalog.hasActiveFamily(parent, candidate.commonId())) {
+        if (candidate.lightweight() && adapter.catalog().hasActiveFamily(parent, candidate.commonId())) {
             return new Outcome(IndexResult.Excluded, null);
         }
-        if (!businessItems.lockContentSource(candidate.sourceId())) {
+        if (!adapter.sourceLock().lock(candidate.sourceId())) {
             return skipped(parent, child, candidate, FailureReason.NOT_FOUND);
         }
-        TrackerItemQueryProvider reader = readPorts.apply(candidate.sourceId());
+        TrackerItemQueryProvider reader = adapter.query(candidate.sourceId());
         try {
             reader.readInheritedAt(candidate.sourceRevision());
         } catch (DomainException failure) {
@@ -222,15 +233,37 @@ public final class WorkingSetItemIndexer {
             }
             throw failure;
         }
+        if (!adapter.capabilities().derivable()) {
+            return skipped(parent, child, candidate, FailureReason.CAPABILITY_NOT_SUPPORTED);
+        }
         LocalId id;
         do {
             id = LocalId.of(Long.toString(ids.nextId(null).longValue()));
         } while (id.value().equals(candidate.commonId().value()) || id.equals(candidate.sourceId()));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
-                candidate.revision(), candidate.sourceId(), candidate.sourceRevision());
-        return familyStore.claim(item)
-                ? new Outcome(IndexResult.Indexed, null)
-                : new Outcome(IndexResult.Existing, null);
+                candidate.revision(), candidate.sourceId(), candidate.sourceRevision(), classificationOf(child));
+        if (!items.claimFamily(item)) {
+            return new Outcome(IndexResult.Existing, null);
+        }
+        return new Outcome(IndexResult.Indexed, null);
+    }
+
+    private static ItemClassification classificationOf(Tracker tracker) {
+        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
+    }
+
+    private boolean isDeleted(BusinessObjectTypeAdapter adapter, LocalId sourceId) {
+        try {
+            return adapter.query(sourceId).evidence().deleted();
+        } catch (DomainException failure) {
+            if (FailureReason.of(failure) == FailureReason.NOT_FOUND) {
+                return false;
+            }
+            throw failure;
+        } catch (UnsupportedOperationException failure) {
+            throw DomainException.withMessage(unsupportedEvidence(),
+                    "Lifecycle evidence is unavailable for source " + sourceId.value());
+        }
     }
 
     private enum IndexResult {Indexed, Existing, Skipped, Excluded}

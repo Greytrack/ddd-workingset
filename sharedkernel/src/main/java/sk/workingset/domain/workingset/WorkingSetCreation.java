@@ -20,8 +20,8 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                                  Map<Stage, Progress> stageProgress, Map<String, IndexProgress> indexProgress) {
     public WorkingSetCreation {
         failures = List.copyOf(failures);
-        stageProgress = stageProgress == null ? Map.of(Stage.CREATE_WORKING_SET, progress) : Map.copyOf(stageProgress);
-        indexProgress = indexProgress == null ? Map.of() : Map.copyOf(indexProgress);
+        stageProgress = Map.copyOf(stageProgress);
+        indexProgress = Map.copyOf(indexProgress);
     }
 
     public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
@@ -212,7 +212,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
             numericSharedTrackerIds = normalize(numericSharedTrackerIds);
             numericUnsharedTrackerIds = normalize(numericUnsharedTrackerIds);
             name = WorkingSet.normalizeName(name);
-            mode = mode == null ? Mode.CREATE : mode;
+            Objects.requireNonNull(mode, "mode");
             color = mode == Mode.CREATE ? WorkingSet.normalizeColor(color) : null;
         }
 

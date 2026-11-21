@@ -1,5 +1,6 @@
 package bootstrap;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
@@ -34,11 +35,12 @@ public final class FixtureIds {
         jdbc.update("""
                 INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id)
                 VALUES (?, ?, '测试分类', 1401, 140101)
+                ON CONFLICT (classification_id) DO NOTHING
                 """, Long.valueOf(id), sharingMode);
     }
 
     static String ensureDefaultTracker(JdbcTemplate jdbc, String workingSet, String space) {
-        var existing = jdbc.queryForList("""
+        List<Long> existing = jdbc.queryForList("""
                 SELECT tracker_id FROM trackers
                 WHERE working_set_id = ? AND product_space_id = ? AND classification_id = 10070101 AND is_default
                 """, Long.class, Long.valueOf(workingSet), Long.valueOf(space));
@@ -67,7 +69,7 @@ public final class FixtureIds {
     }
 
     static CreationView extendScope(TestRestTemplate rest, String target, Status expected, String... trackerIds) {
-        var response = rest.postForEntity("/api/worksets/" + target + "/extensions",
+        ResponseEntity<CreationView> response = rest.postForEntity("/api/worksets/" + target + "/extensions",
                 extensionRequest(trackerIds), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         String task = "/api/working-set-creations/" + response.getBody().creationId();

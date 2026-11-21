@@ -11,7 +11,7 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.application.query.provider.ClassificationCatalog;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
@@ -30,7 +30,7 @@ import sk.workingset.error.BindingResCode;
 @RequiredArgsConstructor
 public class TrackerCommandService {
     private final LightTrackerItemQueryProvider itemQueries;
-    private final BusinessTrackerItems businessItems;
+    private final BusinessObjectTypeRegistry registry;
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
@@ -86,7 +86,7 @@ public class TrackerCommandService {
         Tracker tracker = trackers.lockTracker(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
         requireOwningWorkingSet(tracker.workingSetId());
-        tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
+        tracker.requireDeletable(itemQueries.existsInTracker(id) || registry.hasBusinessItems(id),
                 trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
         events.publishEvent(new sk.workingset.domain.event.TrackerDeletionRequestedEvent(id));
     }

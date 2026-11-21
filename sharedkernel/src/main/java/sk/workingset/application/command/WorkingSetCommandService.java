@@ -172,7 +172,7 @@ public class WorkingSetCommandService {
         }
 
         boolean changed = false;
-        for (var selection : bySpace.entrySet()) {
+        for (Map.Entry<String, List<TrackerToBind>> selection : bySpace.entrySet()) {
             String spaceId = selection.getKey();
             List<TrackerToBind> candidates = selection.getValue();
             try {

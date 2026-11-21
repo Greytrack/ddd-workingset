@@ -7,7 +7,7 @@ import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
@@ -37,7 +37,7 @@ public class WorkingSetDeletionService {
     private final LightTrackerItemQueryProvider itemQueries;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
-    private final BusinessTrackerItems businessItems;
+    private final BusinessObjectTypeRegistry registry;
 
     /**
      * 删除工作集；预检全部绑定可解除后按 TrackerBinding → SpaceBinding → WorkingSet 顺序解除并删除。
@@ -93,7 +93,7 @@ public class WorkingSetDeletionService {
 
     private void requireDeletable(Tracker tracker) {
         TrackerId id = tracker.trackerId();
-        tracker.requireDeletable(itemQueries.existsInTracker(id) || businessItems.existsInTracker(id),
+        tracker.requireDeletable(itemQueries.existsInTracker(id) || registry.hasBusinessItems(id),
                 trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
     }
 

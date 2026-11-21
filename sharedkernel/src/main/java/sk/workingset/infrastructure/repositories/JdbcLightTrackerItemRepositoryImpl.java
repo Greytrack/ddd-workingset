@@ -1,6 +1,6 @@
 package sk.workingset.infrastructure.repositories;
 
-import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRevisionEntity;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +13,7 @@ import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
@@ -24,6 +25,7 @@ import java.util.Optional;
  * LightTrackerItem 的 PostgreSQL/Spring JDBC 仓储。
  *
  * <p>聚合级保存使用整行 upsert；三字段一致性由 {@link LightTrackerItem} 聚合行为保证。
+ * {@code sub_class_id}/{@code work_space_id} 由聚合带入，不再从公共摘要读取。
  */
 @Slf4j
 @Repository
@@ -34,15 +36,17 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             INSERT INTO air_ws_items_index
                 (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision,
                  has_copied, flags, work_space_id, master_id, parent_branch_id, sub_class_id)
-            SELECT ?, ?, ?, t.id, t.workingset_id, ?, ?, ?, ?, ?, t.work_space, t.common_id, t.source_branch_id, c.type
+            SELECT ?, ?, ?, t.id, t.workingset_id, ?, ?, ?, ?, ?,
+                   t.work_space, t.common_id, t.source_branch_id, t.tracker_class
             FROM air_inst_tracker_rev t
-            LEFT JOIN air_inst_common c ON c.id = ?
             WHERE t.id = ? AND t.workingset_id = ?
+              AND t.work_space = ? AND t.tracker_class = ?
             """;
 
     private static final String COLUMNS = """
             i.local_id, i.common_id, i.branch_id, i.workingset_id, i.revision, i.source_local_id,
             i.source_revision, (i.has_copied = 1) AS materialized, (i.flags = 1) AS deleted,
+            i.work_space_id, i.sub_class_id,
             ARRAY(SELECT r.revision FROM air_ws_items_revision_index r
                 WHERE r.local_id = i.local_id ORDER BY r.revision) AS indexed_revisions
             """;
@@ -56,12 +60,10 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             LocalId.of(rs.getLong("source_local_id")),
             Revision.of(rs.getInt("source_revision")),
             rs.getBoolean("materialized"), rs.getBoolean("deleted"),
-            java.util.Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).map(Revision::of).toList());
+            java.util.Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).map(Revision::of).toList(),
+            new ItemClassification(rs.getLong("work_space_id"), rs.getLong("sub_class_id")));
 
     private final JdbcTemplate jdbc;
-    private final JdbcCommonInstanceStore commonInstances;
-
-
     private final IdentifierGenerator ids;
 
     @Override
@@ -82,9 +84,17 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
         saveCurrentMember(item);
     }
 
-    boolean claimFamily(LightTrackerItem item) {
+    @Override
+    public boolean claimFamily(LightTrackerItem item) {
         int affected = insert(item, "ON CONFLICT (workingset_id, common_id) DO NOTHING");
         if (affected == 0) {
+            boolean occupied = Boolean.TRUE.equals(jdbc.queryForObject("""
+                    SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?)
+                    """, Boolean.class, item.workingSetId().numericValue(), item.commonId().numericValue()));
+            if (!occupied) {
+                throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+                        "Could not claim item index " + item.localId());
+            }
             return false;
         }
         saveCurrentMember(item);
@@ -95,12 +105,13 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
         return jdbc.update(INSERT + onConflict,
                 ids.nextId(null).longValue(), item.localId().numericValue(), item.commonId().numericValue(),
                 item.revision().value(), item.sourceLocalId().numericValue(), item.sourceRevision().value(),
-                (short) (item.materialized() ? 1 : 0), item.deleted() ? 1 : 0, item.effectiveContentSource().numericValue(),
-                item.trackerId().numericValue(), item.workingSetId().numericValue());
+                (short) (item.materialized() ? 1 : 0), item.deleted() ? 1 : 0,
+                item.trackerId().numericValue(), item.workingSetId().numericValue(),
+                item.numericProductSpaceId(), item.classificationId());
     }
 
     private void saveCurrentMember(LightTrackerItem item) {
-        var member = item.currentRevisionIndex();
+        LightTrackerItemRevisionEntity member = item.currentRevisionIndex();
         jdbc.update("""
                     INSERT INTO air_ws_items_revision_index
                         (id, work_space_id, workingset_id, master_id, branch_id, common_id, local_id, revision, sub_class_id)
@@ -129,12 +140,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
 
     @Override
     public void remove(LocalId id) {
-        long local = id.numericValue();
-        List<Boolean> deleted = jdbc.queryForList(
-                "DELETE FROM air_ws_items_index WHERE local_id = ? RETURNING has_copied = 1", Boolean.class, local);
-        if (!deleted.isEmpty() && !deleted.getFirst()) {
-            commonInstances.remove(local);
-        }
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", id.numericValue());
     }
 
     @Override

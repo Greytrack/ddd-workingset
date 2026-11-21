@@ -19,6 +19,12 @@ public interface LightTrackerItemRepository {
     void save(LightTrackerItem item);
 
     /**
+     * 初次写入聚合及其版次成员。目标工作集已有同一 CommonId 时返回 false，
+     * 保留原聚合。并发调用依赖持久化唯一约束判定。
+     */
+    boolean claimFamily(LightTrackerItem item);
+
+    /**
      * 按 LocalId 重建聚合；读模型查询使用 {@code LightTrackerItemQueryProvider}。
      */
     Optional<LightTrackerItem> findById(LocalId localId);

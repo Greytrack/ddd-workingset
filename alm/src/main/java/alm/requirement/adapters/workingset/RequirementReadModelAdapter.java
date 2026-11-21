@@ -46,11 +46,6 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
                 detail.version(), detail.lockVersion(), detail.deleted());
     }
 
-    @Override
-    public Revision revision() {
-        return Revision.of(find().revision());
-    }
-
     private TrackerItemContent content(RequirementDetail detail, Revision revision) {
         if (detail.deleted()) {
             throw DomainException.withMessage(FailureReason.DELETED, "requirement deleted: " + localId.value());

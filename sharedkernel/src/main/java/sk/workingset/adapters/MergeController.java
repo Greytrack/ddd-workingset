@@ -6,7 +6,7 @@ import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.command.MergeExecutionService;
 import sk.workingset.application.command.MergeExecutionService.EntryRequest;
-import sk.workingset.application.merge.MergeComparisonService;
+import sk.workingset.application.query.MergeComparisonService;
 import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.workingset.WorkingSetId;

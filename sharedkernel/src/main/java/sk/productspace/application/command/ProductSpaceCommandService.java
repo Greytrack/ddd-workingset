@@ -14,7 +14,7 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.command.WorkingSetBindingRemovalService;
-import sk.workingset.application.port.BusinessTrackerItems;
+import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
@@ -36,7 +36,7 @@ public class ProductSpaceCommandService {
     private final TrackerQueryProvider trackerQueries;
     private final TrackerRepository trackers;
     private final LightTrackerItemQueryProvider itemQueries;
-    private final BusinessTrackerItems businessItems;
+    private final BusinessObjectTypeRegistry registry;
     private final WorkingSetBindingRemovalService bindingRemovals;
     private final IdentifierGenerator ids;
 
@@ -97,7 +97,7 @@ public class ProductSpaceCommandService {
     }
 
     private boolean hasItems(TrackerId id) {
-        return itemQueries.existsInTracker(id) || businessItems.existsInTracker(id);
+        return itemQueries.existsInTracker(id) || registry.hasBusinessItems(id);
     }
 
     private void deleteLeafTracker(List<TrackerId> inSpace, String spaceId) {

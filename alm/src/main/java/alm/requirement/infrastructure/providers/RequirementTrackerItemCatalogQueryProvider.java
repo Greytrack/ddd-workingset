@@ -22,6 +22,12 @@ public class RequirementTrackerItemCatalogQueryProvider implements TrackerItemCa
     private final JdbcTemplate jdbc;
 
     @Override
+    public boolean hasAnyItem(TrackerId trackerId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ?)",
+                Boolean.class, trackerId.numericValue()));
+    }
+    @Override
     public List<Identity> page(TrackerId trackerId, String afterLocalId, int limit) {
         return jdbc.query("""
                 SELECT local_id, common_id, revision FROM requirements

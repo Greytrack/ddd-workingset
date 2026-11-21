@@ -1,5 +1,6 @@
 package sk.workingset.application.command;
 
+import java.util.Set;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -188,7 +189,7 @@ public class WorkingSetCreationService {
                 }
                 trackerQueries.findDefaultTrackerId(parent, spaceId, classificationId)
                         .flatMap(trackers::findById).ifPresent(tracker -> {
-                            var selection = tracker.sharingMode() == SharingMode.SHARED ? shared : unshared;
+                            TreeSet<Long> selection = tracker.sharingMode() == SharingMode.SHARED ? shared : unshared;
                             selection.add(tracker.trackerId().numericValue());
                         });
             }
@@ -338,11 +339,11 @@ public class WorkingSetCreationService {
     }
 
     private WorkingSetCreation bindProductAndTrackers(WorkingSetCreation creation, WorkingSetId target) {
-        var failedCopies = creation.failures().stream()
+        Set<String> failedCopies = creation.failures().stream()
                 .filter(failure -> failure.stage() == Stage.COPY_UNSHARED_TRACKERS)
                 .map(Failure::trackerId)
                 .collect(Collectors.toSet());
-        var binding = workingSetService.bindProductAndTrackersForTask(target, creation.request(), failedCopies,
+        WorkingSetCommandService.BindingResult binding = workingSetService.bindProductAndTrackersForTask(target, creation.request(), failedCopies,
                 REQUIRED_TRACKER_CLASSIFICATIONS);
         return creation.recordBindingResult(binding.changed(), binding.failures(), Instant.now());
     }

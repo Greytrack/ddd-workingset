@@ -1,5 +1,6 @@
 package bootstrap;
 
+import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
@@ -83,7 +84,9 @@ final class DeriveFixture {
 
         LightTrackerItem item = LightTrackerItem.restore(LocalId.of(localId), commonId, TrackerId.of(trackerId),
                 WorkingSetId.of(targetWorkingSet), revision, LocalId.of(content.localId()),
-                content.revision(), false);
+                content.revision(), false, new ItemClassification(
+                        ((Number) source.get("product_space_id")).longValue(),
+                        ((Number) source.get("classification_id")).longValue()));
         return new Result(trackerId, sourceTrackerId, item);
     }
 

@@ -123,11 +123,6 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         commonInstances.save(common);
     }
 
-    public boolean existsInTracker(TrackerId trackerId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ?)", Boolean.class, trackerId.numericValue()));
-    }
-
     private LockVersion currentLockVersion(LocalId localId) {
         Long value = jdbc.query(
                 "SELECT lock_version FROM requirements WHERE local_id = ?",

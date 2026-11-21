@@ -26,7 +26,6 @@ public class MergeRoundSubmittedListener {
         try {
             rounds.apply(event.roundId());
         } catch (DomainException failure) {
-            // A deleted/cleaned-up round makes the event moot; don't retry it forever.
             if (failure.getResCode() != MergeResCode.ROUND_NOT_FOUND) {
                 throw failure;
             }
