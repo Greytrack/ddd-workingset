@@ -24,4 +24,4 @@ java -jar deploys/target/deploys-0.1.0-SNAPSHOT.jar
 
 构建默认使用 `dev`，可在 IDEA 的 Maven Profiles 勾选 `local` 或 `demo`，命令行可用 `-Plocal` 或 `-Pdemo`。IDEA 中运行 `bootstrap.WorkingsetApplication`。应用需连接 PostgreSQL 和 Redis，默认端口及连接配置见 [application.yml](deploys/src/main/resources/application.yml)。
 
-雪花 ID 版本使用 BIGINT schema。Demo 默认连接专用数据库 `ddd-demo`，也可由 `DEMO_DB_URL` 指定。Demo 启动依次运行 [schema.sql](deploys/src/main/resources/schema.sql) 和 [demo-data.sql](deploys/src/main/resources/demo-data.sql)，首次写入演示数据，重启沿用现有数据。全量测试默认连接独立的 `ddd-bigint-test` 库。启动前创建对应库，覆盖测试连接时在 `DB_URL` 中保留 `stringtype=unspecified`，供测试夹具传入十进制 ID 字符串。
+雪花 ID 版本使用 BIGINT schema。Demo 默认连接专用数据库 `ddd-demo`，也可由 `DEMO_DB_URL` 指定。Demo 启动依次运行 [schema.sql](deploys/src/main/resources/schema.sql) 和 [demo-data.sql](deploys/src/main/resources/demo-data.sql)，首次写入演示数据，重启沿用现有数据。旧版开发或 Demo 库使用新建空库重建，启动脚本只负责初始化当前结构。全量测试默认连接独立的 `ddd-bigint-test` 库。覆盖测试连接时在 `DB_URL` 中保留 `stringtype=unspecified`，供测试夹具传入十进制 ID 字符串。

@@ -48,7 +48,7 @@ Compare 只读且结果即时生成。各页重新比较，跨请求的差异清
 
 ### 3.2 瞬时比较证据
 
-Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPair`（source WorkingSet + Tracker、target WorkingSet + Tracker）、家族、双侧证据和字段；轮次内条目身份由服务端在登记时生成的 `MergeRound.Entry.id` 承担。用户提交决定时必须携带所选差异证据（四元组身份、presence、revision、字段与失败状态）；MergeRound 保存该证据和决定。登记时以当前状态校验证据；apply 只执行轮次内的决策范围，并继续校验证据未过期。
+Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPair`（source WorkingSet + Tracker、target WorkingSet + Tracker）、家族、双侧证据和字段；轮次内条目身份由服务端在登记时生成的 `MergeRound.Entry.id` 承担。用户提交决定时必须携带所选差异证据（四元组身份、presence、revision、字段与失败状态）；MergeRound 保存该证据和决定。登记时以当前状态校验证据；apply 依据已登记的决定和冻结值执行。[ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)
 
 ### 3.3 证据时点区分（已确认语义）
 
@@ -68,9 +68,9 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 `executeEntry` 的内部步骤（一次执行的完整行为契约）：
 
-1. **复核证据**：以用户提交并随 MergeRound 持久化的所选差异证据与当前双侧状态比对；不一致 → `StaleEvidence`，不写任何内容，要求重新比较。
+1. **读取已批准条目**：读取 MergeRound 持久化的决定与冻结证据。登记时发现双侧证据不一致会返回 `StaleEvidence`；来源在登记后变化仍允许使用已批准的值执行。
 2. **确定目标操作**：依 `ItemMergeDecision` 得到目标操作——按差异类型应用行决策或字段决策；忽略时不写目标，软删目标的新增接收见 §8。
-3. **请求业务 BC 执行**：通过可靠事件提交（携带期望版本与证据引用）；BC 构建目标聚合并**整体校验**；成功 → Save 并返回真实结果与业务 Revision；拒绝 → `Rejected`（保留决定与拒绝原因，目标不得部分写入，INV-009）。
+3. **请求业务 BC 执行**：按目标 Tracker 分类发送可靠事件，携带冻结应用值与目标期望锁版本。对应 BC 独立校验目标身份、并发状态和完整聚合，提交后返回结果与业务 Revision。目标并发修改返回 `Conflict`；业务校验拒绝返回 `Rejected`，保留决定与拒绝原因（INV-009）。
 4. **维护 LightTrackerItem**：目标若尚未物化，业务聚合 Save 成功后按既定机制转为 Local-backed（有效来源=自身、Revision=自身 Revision，D-012/D-018/D-019）；**不新增 Merge 专用物化协议**。
 5. **登记业务结果和确认**：按 §7 判定本次成功是否需要写确认；需要时条目生成不可变确认，轮次仓储在同一事务记录结果和确认行；其他情况只记录条目结果。
 6. **结束**：所有条目完成时，保存唯一终态；若最后的条目需要确认，确认行与终态同事务提交。写入失败会回滚本次轮次变更；可重投已提交的业务结果。
@@ -83,7 +83,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 
 | 状态 | 含义 | 可迁移到 |
 | --- | --- | --- |
-| `Decided` | 决定已登记，等待执行 | `Applying`、`StaleEvidence` |
+| `Decided` | 决定已登记，等待执行 | `Applying`；无需业务写入时直接完成 |
 | `Applying` | 已提交业务 BC，等待结果 | `Applied`、`Rejected` |
 | `Applied` | 业务操作成功（含 `IGNORED` 的无写入） | 轮次保存时无需确认则记 `Applied`；需确认则同事务记 `Confirmed` 和确认行 |
 | `Rejected` | 业务 BC 校验拒绝 | 终态（重做须新建 MergeRound） |
@@ -107,7 +107,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | 业务提交 | 业务 BC 独立提交目标内容和结果事件。没有接收任何变更时无业务写入，轮次可以直接登记结果。 |
 | 轮次提交 | 消费业务结果，按轮次和条目幂等推进。每轮每族至多一项；需要确认时用条目雪花 ID 追加确认行。若插入失败，条目和轮次状态都回滚，Tracker 对闸门保持占用。 |
 | 重投 | 重投已提交的业务结果即可继续轮次收敛；已经终结的 A 轮不会重新追加确认，不改变 B 轮基准。 |
-| 比较 | 只读查询按 Tracker 对和家族取最新行，再校验状态与双侧版次。比较凭据仍需在登记及执行时复核。 |
+| 比较 | 只读查询按 Tracker 对和家族取最新行，再校验状态与双侧版次。所选比较证据在登记时校验。 |
 
 物理映射、旧表列与旧端兼容细节见[实施记录](../implementation/merge-checkpoint-rework-plan.md)；本契约只约束领域语义和跨轮次查询规则。
 
@@ -123,7 +123,7 @@ Compare 返回瞬时差异和双侧证据。`Difference` 描述有向 `TrackerPa
 | 删除 | `IGNORED` | 无 | 不写 |
 | 更新 | 每字段 `ACCEPT` / `IGNORED` | 一次提交所有接收字段；忽略值保留目标原值；全部忽略不写内容 | 仅当 `markAsMerged=true` 才写；确认覆盖当前版次的整行 |
 
-执行接收字段仍取源端最新值（B09/R08）；同版次目标字段变动遵循决策优先（R09）；任一实际接收值不可读则整条失败，不部分写入。
+接收字段取登记时批准的冻结值；目标并发修改时由业务 BC 根据期望锁版本拒绝。全部忽略并确认时使用登记的双侧版次。[ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)
 
 行级新增/删除不接受由客户端开启 `markAsMerged`。忽略是本轮正常完成；未确认且差异仍存在时，下次比较继续展示。BC 拒绝、冲突、过期证据不写确认。
 

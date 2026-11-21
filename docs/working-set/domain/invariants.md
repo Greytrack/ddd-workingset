@@ -18,7 +18,7 @@
 | `INV-003` | Item 变体的家族身份、`LocalId` 和所属 Tracker 在查询、重试、物化时保持稳定。 | Candidate；FACT-004/005；T3 已兑现 `LocalId` 稳定 | 重试与 COW |
 | `INV-004` | 未物化变体的固定来源在依赖存续期间可按 Source Cut 回读；历史缺失不得以当前值冒充。 | FACT-006；`QUESTION-006` 已裁定软删除物化与永久删除守卫 | 历史、附件、关系、删除态 |
 | `INV-005` | COW 只改变内容承载，不改变既有逻辑变体身份与直接来源。 | Candidate；D-012/D-013 | 并发首次写 |
-| `INV-006` | Compare/Merge 的方向、范围与双侧证据固定；执行读取源最新值并另记实际证据。 | Candidate；FACT-007；R08/B09 | 反向与过期证据 |
+| `INV-006` | Compare/Merge 的方向、范围与双侧证据固定；执行使用登记时已批准的值。 | Candidate；FACT-007；[ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md) | 反向、登记前过期与登记后来源修改 |
 | `INV-007` | 存在性差异必须显式裁决；一侧缺失不能自动推导 CREATE、RESTORE 或 DELETE。 | Candidate；FACT-007；T1 §7 | 来源删除、目标已编辑反例 |
 | `INV-008` | 更新的每个差异字段必须明确选择 ACCEPT 或 IGNORED；行级确认按差异类型与成功结果判定。 | Candidate；FACT-008；T1 §7 | 四组合契约测试 |
 | `INV-009` | 字段级决定应用后目标整体仍须通过其业务不变量；Merge 不能绕过目标能力写字段。 | Candidate；B06；T4 | 交叉字段反例 |

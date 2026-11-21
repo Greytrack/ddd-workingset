@@ -2,7 +2,7 @@
 
 **Status: Draft**
 
-schema.sql 用于初始化新库，也能升级已有 V4 分类目录及其 Tracker 分类投影。旧需求分类改为 `14010101`，保留 Tracker 的实例 ID 与绑定。旧版 trackers 实表的切换仍需独立评估和迁移。tracker-fixtures.sql 仅用于测试；Demo 直接执行 schema.sql 和 demo-data.sql。
+schema.sql 初始化当前结构。开发和 Demo 环境使用空库重建，需求分类直接使用当前目录值 `14010101`。tracker-fixtures.sql 仅用于测试；Demo 依次执行 schema.sql 和 demo-data.sql。需要保留的存量库按下述流程独立评估。
 
 1. 在隔离的旧库副本上执行[只读对账](tracker-legacy-preflight.sql)，核对两表覆盖、身份、派生链及默认槽位。用真实样本对比旧系统读取结果。V4 仍通过 working_sets 管理工作集，核对旧 Tracker 的工作集、产品空间和分类在 V4 元数据中都有对应记录。
 2. 若目标已有 V4 实表 trackers，先在停写窗口对账和回填，保留原有 Tracker ID 和引用。历史所有者、编号和审计信息按来源补齐。停写前排空仍以 web 记录提交人的创建和扩展任务；新任务记录数字账号供异步恢复。

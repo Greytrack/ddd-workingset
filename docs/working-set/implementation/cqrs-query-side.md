@@ -39,7 +39,7 @@ alm.requirement.application.query
 
 ## 后续
 
-- LTI 横向扫描已由 `LightTrackerItemQueryProvider` 承接；`resolve` 仍可按 ID 装载身份聚合。Tracker 集合读取由 `TrackerQueryProvider` 承接，Tracker 创建/改名命令使用该只读 Provider 判定可见性。
+- LTI 横向扫描已由 `LightTrackerItemQueryProvider` 承接；按 ID 读取身份聚合使用 `LightTrackerItemRepository`，不再在查询服务暴露仅供测试的 `resolve` 入口。Tracker 集合读取由 `TrackerQueryProvider` 承接，Tracker 创建/改名命令使用该只读 Provider 判定可见性。
 - Creation/Merge 查询迁移到查询端口。
 - Controller 按 command/query 拆成独立入口。
 - 关系事件 outbox/消费方仍按 T7-E 开放项处理。

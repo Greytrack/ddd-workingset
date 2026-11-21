@@ -85,7 +85,7 @@
 
 ### 4.6 关系事件发布
 
-索引阶段结束时登记 `TrackerItemsIndexedEvent`，提交后交付。扫描完成的 Tracker 可以含单项失败或带明细的跳过。关系请求由后续独立步骤 `PUBLISH_RELATION_EVENTS` 发布。事件字段、Merge 修复时点与失败边界统一见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
+索引阶段结束时登记 `TrackerItemsIndexedEvent`，提交后交付。扫描完成的 Tracker 可以含单项失败或带明细的跳过。业务 BC 可消费该事件投影公共查询视图（如 `air_inst_common`）；SK 不写该表，投影当前为待实现的空监听器，最终一致。关系请求由后续独立步骤 `PUBLISH_RELATION_EVENTS` 发布。事件字段、Merge 修复时点与失败边界统一见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 
 ## 5. 事务、事件与一致性
 

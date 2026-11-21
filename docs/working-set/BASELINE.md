@@ -6,11 +6,11 @@
 - **Released Git Commit**: None（仓库已有 Git 提交，但尚无正式发布的设计基线提交）
 - **Carrying Git Commit(s)**: `4f5c8fb`（阶段 4 规则与评审更新：BASELINE、ADR-0001、facts/glossary/invariants/aggregate-model、core-scenarios 等 11 文件）；`cc17d1c`（阶段 4 新增：ADR-0002～0004、首版基线候选、阶段 4 评审、domain-mainline 与 productspace-tracker-workingset 两图，8 文件）；`8231d33`（2026-11-16 Checkpoint 身份改为两侧 Tracker 对）；`da8685b`（2026-11-20 ADR-0006：合并确认归 MergeEntry，跨轮次只读查询）
 - **Released Git Tag**: None
-- **Last Updated**: 2026-11-20
+- **Last Updated**: 2026-11-21
 
 ## 当前基线状态
 
-事实与政策主题、首版领域模型候选及 ADR-0001～0008 已接受；ADR-0007 已由 0008 替代。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
+事实与政策主题、首版领域模型候选及 ADR-0001～0009 已接受；替代关系见下文。T1～T4 契约为 Reviewed，各主题接受范围见下文。当前文档入口见 [知识库导航](README.md)，实现状态与后续计划见 [实施与验收](implementation/README.md)。
 
 2026-11-19 的模块拆分、直接只读边界和事件协作澄清登记为 **Reviewed 实现边界**，不是新的 Accepted 业务基线；其权威说明见[当前实现边界](implementation/current-boundaries.md)与[对齐记录](reviews/2026-11-19-doc-alignment-after-code-evolution.md)。
 
@@ -46,6 +46,7 @@
 - [ADR-0006：合并确认归属轮次，跨轮次独立查询](adr/0006-merge-confirmation-ownership.md)：Accepted（2026-11-20），用户明确确认。
 - [ADR-0007：每个 Working Set 的产品空间拥有独立根文件夹 Tracker](adr/0007-root-folder-tracker-per-working-set-space.md)：Superseded（由 ADR-0008 替代）。
 - [ADR-0008：Tracker 是产品空间下的第三级容器，Folder 是业务对象](adr/0008-tracker-third-level-container.md)：Accepted（2026-11-20），用户明确确认。
+- [ADR-0009：合并按批准时冻结的值分发](adr/0009-merge-dispatch-frozen-evidence.md)：Accepted（2026-11-21），替代 ADR-0005 的执行期复核规则。
 
 ## 相关验收标准
 

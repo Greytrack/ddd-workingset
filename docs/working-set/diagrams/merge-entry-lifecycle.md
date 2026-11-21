@@ -3,7 +3,7 @@
 **状态：Draft / Candidate（T6-E 后的当前交互；Q1～Q4 语义见 ADR-0005，确认归属见 ADR-0006；图本身未纳入正式基线）**
 
 - 目的：表达一页 Merge 决策从 Compare、提交、异步执行、业务 BC 提交、LightTrackerItem 维护到合并确认的协作顺序，以及 MergeRound 的一次执行与终态。
-- 适用范围：直属父子非共享 Tracker。证据分界见 [S7 实施裁定](../reviews/2026-11-12-s7-merge-implementation-decisions.md)。
+- 适用范围：直属父子非共享 Tracker。登记与分发的证据边界见 [ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)。
 - 依据：[Merge 执行契约 v1](../domain/merge-execution-contract-v1.md)、ADR-0005、ADR-0006、D-019、T6-E、T6-B。
 - 不表达：事件中间件、数据库表、事务隔离级别；不表达共享 Tracker 与兄弟/跨代合并。
 - **2026-11-16 更新**：Compare 只读瞬时，不返回可回读的 `ComparisonToken`；提交入口改为整页决策（1～50 条，`requestId` 幂等），轮次由事件异步执行，客户端轮询。
@@ -38,26 +38,22 @@ sequenceDiagram
 
     R->>R: apply 取得执行权，状态 Running
     loop 每个未完成条目
-        R->>E: 复核身份、版次、存在性、可读性
-        alt 证据已变化
-            E-->>R: StaleEvidence
-        else 执行准入通过
-            opt 决定要求写入
-                R--)BC: MergeEntryApprovedEvent（决定、字段与证据）
-                BC->>BC: 校验并独立提交业务结果与回执
-                BC--)R: MergeEntryResolvedEvent
-            end
-            alt 业务拒绝
-                R->>E: Rejected 保留原因
-            else 成功或 IGNORED
-                par 轮次提交条目结果
-                    R->>E: 应用结果，按差异类型及适用的确认规则生成确认
-                    R->>C: 同事务保存轮次状态和所需确认
-                    C-->>R: 提交；写失败则整次轮次变更回滚
-                and LTI 独立收敛（仅适用的业务写入）
-                    R--)H: MergeAppliedEvent（业务结果已消费）
-                    H->>L: 在 SK 独立事务中维护 LTI
-                end
+        R->>E: 读取已登记决定及冻结值
+        opt 决定要求写入
+            R--)BC: MergeEntryApprovedEvent（分类、冻结值、目标期望锁）
+            BC->>BC: 校验目标并独立提交结果与回执
+            BC--)R: MergeEntryResolvedEvent
+        end
+        alt 冲突或业务拒绝
+            R->>E: 保存失败结果与原因
+        else 成功或 IGNORED
+            par 轮次提交条目结果
+                R->>E: 应用结果，按差异类型及适用的确认规则生成确认
+                R->>C: 同事务保存轮次状态和所需确认
+                C-->>R: 提交；写失败则整次轮次变更回滚
+            and LTI 独立收敛（仅适用的业务写入）
+                R--)H: MergeAppliedEvent（业务结果已消费）
+                H->>L: 在 SK 独立事务中维护 LTI
             end
         end
     end
@@ -76,15 +72,16 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> Decided: 一页决策提交并登记
-    Decided --> StaleEvidence: 执行准入证据变化
-    Decided --> Applying: 执行准入通过
-    Applying --> Applied: BC 接受或忽略操作
+    Decided --> Applying: 按目标分类分发冻结值
+    Decided --> Applied: 忽略操作
+    Applying --> Applied: BC 接受
     Applying --> Rejected: BC 拒绝
+    Applying --> Conflict: 目标并发修改
     Applied --> Confirmed: 符合确认规则，随轮次同事务持久化
     Applied --> [*]: 无需确认
     Confirmed --> [*]
     Rejected --> [*]: 重做须新建 MergeRound
-    StaleEvidence --> [*]: 重新 compare 后新建轮次
+    Conflict --> [*]: 重新 compare 后新建轮次
 ```
 
 状态定义与责任边界见 [T1 §5、§8](../domain/merge-execution-contract-v1.md)，落地证据见 [T6-E 验收](../implementation/t6-e-merge-round-verification.md)。

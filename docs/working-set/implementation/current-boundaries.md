@@ -34,11 +34,12 @@
 | Requirement 普通修改/继承编辑保存 | ALM `BusinessObjectUpdateEvent` | SK COW 请求；`TrackerItemLocalizedListener` 对首次继承编辑在独立事务切换 LTI |
 | COW 业务保存 | SK `TrackerItemMaterializationRequestedEvent` | ALM 保存 Requirement 并发布 `TrackerItemMaterializationCompletedEvent` |
 | COW 完成 | ALM `TrackerItemMaterializationCompletedEvent` | SK 在独立事务切换 Local-backed / 记录失败终态 |
-| Merge 条目批准 | SK `MergeEntryApprovedEvent` | ALM 校验并保存目标 Requirement，发布 `MergeEntryResolvedEvent` |
+| Merge 条目批准 | SK `MergeEntryApprovedEvent` 携带目标 Tracker 分类、冻结应用值及目标期望锁 | ALM 只处理 Requirement 分类，在自己的事务中校验并保存目标，发布 `MergeEntryResolvedEvent`。证据校验留在轮次登记阶段。[ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md) |
 | Merge 条目结果与确认 | ALM `MergeEntryResolvedEvent` | SK 在同一轮次事务持久化条目结果和所需确认，按需发布 `MergeAppliedEvent`；确认写失败时轮次不结束 |
 | Merge 目标 LTI | SK `MergeAppliedEvent` | SK 独立事务切换/创建 LTI |
 | 当前索引软删 / 恢复 | ALM `BusinessObjectDeleteEvent` | SK 独立事务核对当前业务状态，更新 LTI `deleted` 并映射到旧表 `flags`；保留版次成员 |
 | 来源软删 / 永久删除 | ALM `BusinessObjectUpdateEvent` / `CompleteDeleteEvent` | 软删保存快照并触发物化；仍有来源依赖时拒绝永久删除，完成后 SK 异步清理来源 LTI |
+| 派生索引完成 | SK `TrackerItemsIndexedEvent` | 各业务 BC 投影公共查询视图（当前 ALM 空监听器，待定）；SK 不写 `air_inst_common` |
 
 事件只表达已发生事实；请求不是完成事实。以上流程不引入通用写 Port，也不要求消息代理或事件溯源。
 

@@ -1,6 +1,7 @@
 # ADR-0005：Merge 执行模型与 MergeEntry 行为契约
 
 - **状态**：Accepted
+- **部分替代**：执行期证据复核由 [ADR-0009](0009-merge-dispatch-frozen-evidence.md) 替代。
 - **日期**：2026-11-10
 - **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem 的协作顺序、双侧比较证据要求（早期载体为 ComparisonToken，现行载体见文末补充裁定）、Checkpoint 确认的发起方
 - **确认人／决策权威**：用户已确认 Q1～Q3 三项裁定，并于 2026-11-10 明确批准本 ADR 为 Accepted
