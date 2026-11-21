@@ -709,9 +709,11 @@ class WorkingSetCreationAcceptanceTest {
 
     private void seedItem(String tracker, String localId, String commonId, boolean deleted) {
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version, delete_flag)
-                VALUES (?, ?, ?, 'source', 'description', 3, 0, ?)
-                """, localId, commonId, tracker, deleted);
+                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
+                    delete_flag, working_set_id)
+                VALUES (?, ?, ?, 'source', 'description', 3, 0, ?,
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
+                """, localId, commonId, tracker, deleted, tracker);
     }
 
     private void seedParentLti(String tracker, String localId, String commonId, String sourceId, boolean materialized) {

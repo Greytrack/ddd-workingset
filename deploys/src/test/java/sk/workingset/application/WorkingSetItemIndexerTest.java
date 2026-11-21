@@ -92,9 +92,10 @@ class WorkingSetItemIndexerTest {
                 """, parent, parentTracker, space, "14010101", child, childTracker, space, "14010101");
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision,
-                    lock_version, delete_flag)
-                VALUES (?, ?, ?, 'source', 'description', 3, 0, TRUE)
-                """, source, family, sourceTracker);
+                    lock_version, delete_flag, working_set_id)
+                VALUES (?, ?, ?, 'source', 'description', 3, 0, TRUE,
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
+                """, source, family, sourceTracker, sourceTracker);
         jdbc.update("""
                 INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
                     source_local_id, source_revision, materialized)

@@ -30,8 +30,11 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private static final String INSERT = """
             INSERT INTO requirements
-                (local_id, common_id, tracker_id, name, title, description, revision, version, lock_version, delete_flag)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (local_id, common_id, tracker_id, name, title, description, revision, version, lock_version,
+                 delete_flag, working_set_id)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, t.workingset_id
+            FROM air_inst_tracker_rev t
+            WHERE t.id = ?
             """;
 
     private static final String UPDATE = """
@@ -60,7 +63,8 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         if (lockVersion == 0) {
             jdbc.update(INSERT, requirement.localId().numericValue(), requirement.commonId().numericValue(),
                     requirement.trackerId().numericValue(), requirement.title(), requirement.title(), requirement.description(),
-                    requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted());
+                    requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted(),
+                    requirement.trackerId().numericValue());
             saveCommonInstance(requirement.localId().numericValue());
             return;
         }

@@ -422,9 +422,11 @@ class BindingAcceptanceTest {
 
     private void businessItem(String id, String tracker) {
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
-                VALUES (?, ?, ?, 'A', 'test', 3, 0)
-                """, id, fixtureId("family-" + id), tracker);
+                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
+                    working_set_id)
+                VALUES (?, ?, ?, 'A', 'test', 3, 0,
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
+                """, id, fixtureId("family-" + id), tracker, tracker);
     }
 
     private int count(String sql, String parameter) {

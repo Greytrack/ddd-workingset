@@ -101,9 +101,11 @@ class T7RelationEventAcceptanceTest {
                 VALUES (?, '1', ?, 10070101, 'UNSHARED', TRUE)
                 """, fixtureId("folder-" + suffix), space);
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
-                VALUES (?, ?, ?, 'source', 'description', 3, 0)
-                """, parentItem, parentItem, parentTracker);
+                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
+                    working_set_id)
+                VALUES (?, ?, ?, 'source', 'description', 3, 0,
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
+                """, parentItem, parentItem, parentTracker, parentTracker);
     }
 
     private CreationView creation(String id) {

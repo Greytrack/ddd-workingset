@@ -35,7 +35,6 @@ class ModuleEntrypointsTest {
                 "TrackerItemChangedListener", "RequirementChangedListener",
                 "MergeAppliedListener", "RequirementMergeAppliedListener",
                 "TrackerItemCompleteDeteleListener", "RequirementPurgedListener",
-                "TrackerItemsIndexedListener", "TrackerItemsIndexedListener",
                 "TrackerItemCreatedListener", "TrackerItemCreatedListener",
                 "WorkingSetCreationSubmittedListener", "WorkingSetCreationSubmittedListener");
         for (Map.Entry<String, String> entry : existingListeners.entrySet()) {

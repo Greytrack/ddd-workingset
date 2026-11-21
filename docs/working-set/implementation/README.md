@@ -1,29 +1,37 @@
 # 实施与验收索引
 
-当前设计见 [BASELINE](../BASELINE.md)。本页索引验收证据、当前阶段和下一步。
+当前设计以 [BASELINE](../BASELINE.md) 为准；本页只记录实现状态、验收证据和下一步。代码现状与差距统一见 [当前实现边界](current-boundaries.md)。
 
-最新代码、近期提交及当前工作区的对照见 [当前实现边界与设计差距](current-boundaries.md)。以下测试记录保留各自执行时点，不证明当前工作区已通过。
+## 当前状态
 
-## 当前阶段
+| 主题 | 当前结论 | 入口 |
+| --- | --- | --- |
+| 运行基线 | Maven 多模块；BIGINT 身份；`air_inst_common` 是公共查询视图 | [当前实现边界](current-boundaries.md) |
+| T6 Merge | 直属父子、瞬时 compare、整页 Merge LRO、回并、轮次恢复已关闭 | [T6 验收](#当前验收) |
+| T7 创建/扩展 | 按 Tracker 基线时间尽力派生；`baselineAtByTracker` 缺省 HEAD；重放复用原任务和基线 | [T7 契约](../domain/working-set-creation-lro-design.md)、[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md) |
+| 公共查询视图 | SK 只写 LightTrackerItem 索引；业务 BC 消费 `TrackerItemsIndexedEvent` 投影公共视图，当前 ALM 为空监听器 | [T7 §4.6](../domain/working-set-creation-lro-design.md) |
+| T5 | 历史切片证据；不再作为当前设计入口 | [历史验收](#历史验收) |
 
-| 主题            | 已完成                                                                                      | 进行中/后续                                                                                                                                        |
-|-----------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| T6 Merge 与身份 | 直属派生 Tracker 对、瞬时 Compare、整页 Merge LRO、回并、轮次恢复和谱系约束                 | Merge 已关闭裁定见[开放问题的关闭索引](../domain/open-questions.md#已关闭问题索引)；业务 Baseline 与 SK 治理见 [T6 收尾](t6-next-stage-outline.md) |
-| T7 创建与扩展   | 范围绑定、受理快照、批量 LTI、任务中心，以及 T7-E 工作集侧关系事件发布                      | 真实关系 Adapter/消费服务接入；T7-F 规模、保留和恢复见 [后续计划](t7-implementation-prompt.md)                                                     |
-| 当前运行版本    | Maven 多模块；业务 ID 使用 BIGINT，Requirement 同族共享只读编号；默认工作集支持创建 Tracker | 部署与 Demo 见 [README](../../../README.md)，身份/API 见 [T4 §4](../domain/cross-bc-contract-v1.md)                                                |
+## 当前验收
 
-测试时点与未验证范围统一见[当前实现边界 §6](current-boundaries.md#6-未验证与阻塞)。CQRS
-查询侧实施见 [CQRS 记录](cqrs-query-side.md)。当前实现偏差和待验证项见 [当前实现边界](current-boundaries.md)
-与 [开放问题](../domain/open-questions.md)。
+| 范围 | 记录 |
+| --- | --- |
+| T7 创建/扩展 | [A 契约](../reviews/2026-11-13-t7-a-creation-lro-review.md)、[B 任务骨架](t7-b-creation-task-verification.md)、[C 范围绑定](t7-c-binding-verification.md)、[E 关系事件](../reviews/2026-11-17-t7-e-relation-guards-decision.md)、[G 扩展](t7-g-extension-verification.md) |
+| T6 Merge/身份 | [B 并发恢复](t6-b-merge-recovery-verification.md)、[C 身份](t6-c-identity-verification.md)、[D 回并](t6-d-merge-back-verification.md)、[E 轮次](t6-e-merge-round-verification.md)、[F 谱系](../reviews/2026-11-16-t6-f-lineage-constraints.md) |
+| 运行时 | [T5 运行时验证](t5-runtime-verification.md)（历史执行时点，不证明当前工作区） |
+| 规模/保留 | [性能测试](performance-testing.md) |
 
-## 验收记录
+## 历史验收
 
-| 范围                                      | 验收记录                                                                                                                                                                                                                                                                                                                      |
-|-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| T7 工作集异步创建/扩展                    | [A 契约评审](../reviews/2026-11-13-t7-a-creation-lro-review.md)、[B 任务骨架](t7-b-creation-task-verification.md)、[C 范围绑定](t7-c-binding-verification.md)、[D 批量索引](t7-d-index-verification.md)、[E 关系事件](../reviews/2026-11-17-t7-e-relation-guards-decision.md)、[G 扩展工作集](t7-g-extension-verification.md) |
-| T6 Merge 与身份                           | [B 并发与恢复](t6-b-merge-recovery-verification.md)、[C 身份分配](t6-c-identity-verification.md)、[D 回并](t6-d-merge-back-verification.md)、[E 一页决策](t6-e-merge-round-verification.md)、[F 谱系](../reviews/2026-11-16-t6-f-lineage-constraints.md)                                                                      |
-| T5 历史验收（保留证据，不再作为当前入口） | [S1 查询](t5-s1-verification-result.md)、[S2 保存与事件](t5-s2-verification-result.md)、[S3 首次物化](t5-s3-verification-result.md)、[S4 恢复](t5-s4-verification-result.md)、[S5 绑定与删除](t5-s5-verification-result.md)、[S6 谱系](t5-s6-verification-result.md)、[S7 Merge](t5-s7-verification-result.md)                |
-| T5 历史支撑证据                           | [运行时](t5-runtime-verification.md)、[D2 家族作用域](t5-d2-family-scope-verification.md)、[D4 SK 边界](t5-d4-sk-boundary-verification.md)                                                                                                                                                                                    |
+T5 的 S1～S7、D2/D4、S0 设计与索引旧方案保留证据，但已被后续契约和 ADR 替代：
 
-跟踪分类创建和数字身份见 [Tracker 验收](../../../deploys/src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java)
-与 [Snowflake 存储验收](../../../deploys/src/test/java/bootstrap/SnowflakeStorageAcceptanceTest.java)。
+- [T5 S0 设计](t5-s0-minimal-slice-design.md)、[场景映射](t5-s0-scenario-test-mapping.md)、[S0 评审](../reviews/2026-11-11-t5-s0-design-review.md)
+- [S1](t5-s1-verification-result.md) · [S2](t5-s2-verification-result.md) · [S3](t5-s3-verification-result.md) · [S4](t5-s4-verification-result.md) · [S5](t5-s5-verification-result.md) · [S6](t5-s6-verification-result.md) · [S7](t5-s7-verification-result.md)
+- [D2 家族作用域](t5-d2-family-scope-verification.md)、[D4 SK 边界](t5-d4-sk-boundary-verification.md)
+- [T7-D 批量索引旧验收](t7-d-index-verification.md)：**Superseded by ADR-0010**
+
+## 未验证与后续
+
+- 数据库/Redis 集成回归需在专用空库执行；当前工作区未执行全量。
+- T7-F 规模、失败明细保留和关系消费仍待专题验证。
+- 权限接入、SK 契约版本治理仍是开放问题，见 [开放问题](../domain/open-questions.md)。

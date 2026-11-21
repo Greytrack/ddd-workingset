@@ -646,9 +646,11 @@ class MergeAcceptanceTest {
         jdbc.update("UPDATE light_tracker_items SET revision = 1 WHERE local_id = ?", grand.item().localId().value());
 
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
-                VALUES (?, ?, ?, 'parent local', 'description', 3, 0)
-                """, parentLocal, anchor, childTracker);
+                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
+                    working_set_id)
+                VALUES (?, ?, ?, 'parent local', 'description', 3, 0,
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
+                """, parentLocal, anchor, childTracker, childTracker);
         jdbc.update("UPDATE light_tracker_items SET materialized = TRUE, source_local_id = local_id WHERE local_id = ?",
                 parentLocal);
 
@@ -944,9 +946,11 @@ class MergeAcceptanceTest {
     private String seed(String tracker, String common, String title) {
         String local = fixtureId("L-" + UUID.randomUUID());
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
-                VALUES (?, ?, ?, ?, 'description', 3, 0)
-                """, local, common, tracker, title);
+                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
+                    working_set_id)
+                VALUES (?, ?, ?, ?, 'description', 3, 0,
+                    (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?))
+                """, local, common, tracker, title, tracker);
         return local;
     }
 

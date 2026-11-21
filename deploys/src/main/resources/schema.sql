@@ -1,23 +1,9 @@
 -- Working Set authoritative schema (PostgreSQL).
--- Development baseline: no legacy data migration. The schema is applied to a
--- clean database/test database; demo data is loaded separately by profile.
+-- Development baseline: applied to a clean database/test database; demo data is loaded separately by profile.
 
 -- ---------------------------------------------------------------------------
 -- Working Sets and platform metadata
 -- ---------------------------------------------------------------------------
-
--- Existing V4 storage needs an explicit data and foreign-key migration before bootstrap.
-DO 'BEGIN
-IF EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass(''trackers'') AND relkind IN (''r'', ''p'')) THEN
-    RAISE EXCEPTION ''Existing trackers table requires an explicit Tracker data migration before startup.'';
-    END IF;
-END';
-
-DO 'BEGIN
-IF EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass(''working_sets'') AND relkind IN (''r'', ''p'')) THEN
-    RAISE EXCEPTION ''Existing working_sets table requires an explicit Working Set migration before startup.'';
-    END IF;
-END';
 
 CREATE TABLE IF NOT EXISTS air_inst_workingset
 (
@@ -524,21 +510,6 @@ CREATE TABLE IF NOT EXISTS air_ws_tracker
     FOREIGN KEY (id) REFERENCES air_inst_tracker_rev (id)
 );
 
--- The legacy API accepts both 0 and NULL as the organization root sentinel.
-CREATE OR REPLACE FUNCTION normalize_tracker_parent() RETURNS trigger
-    LANGUAGE plpgsql AS
-'
-    BEGIN
-        NEW.parent_id := NULLIF(NEW.parent_id, 0);
-        RETURN NEW;
-    END';
-DROP TRIGGER IF EXISTS tracker_parent_sentinel ON air_inst_tracker_rev;
-CREATE TRIGGER tracker_parent_sentinel
-    BEFORE INSERT OR UPDATE OF parent_id
-    ON air_inst_tracker_rev
-    FOR EACH ROW
-EXECUTE FUNCTION normalize_tracker_parent();
-
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_owner ON air_inst_tracker_rev (id, workingset_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_binding ON air_inst_tracker_rev (id, work_space, tracker_class, share);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_default ON air_inst_tracker_rev (workingset_id, work_space, tracker_class)
@@ -555,14 +526,6 @@ CREATE INDEX IF NOT EXISTS idx_tracker_revision ON air_inst_tracker_rev (revisio
 CREATE INDEX IF NOT EXISTS idx_tracker_version ON air_inst_tracker_rev (version);
 CREATE INDEX IF NOT EXISTS tracker_number_test_index ON air_inst_tracker_rev (number);
 CREATE INDEX IF NOT EXISTS tracker_number_ws_test_index ON air_inst_tracker_rev (number, workingset_id);
-
--- Only one physical binding table. Existing legacy data is never reset at startup.
-DO 'BEGIN
-IF EXISTS (SELECT 1 FROM pg_class WHERE oid IN (to_regclass(''space_bindings''), to_regclass(''tracker_bindings''))
-    AND relkind IN (''r'', ''p'')) THEN
-    RAISE EXCEPTION ''V4 binding tables found. Rebuild the authorized development database before startup.'';
-    END IF;
-END';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_space_id ON air_inst_tracker_rev (id, work_space);
 CREATE TABLE IF NOT EXISTS air_ws_workingset_branch_relation
@@ -613,7 +576,7 @@ FROM tracker_bindings;
 
 CREATE TABLE IF NOT EXISTS requirements
 (
-    created_at     TIMESTAMPTZ                                                                           DEFAULT clock_timestamp(),
+    created_at     TIMESTAMPTZ                                                                  NOT NULL DEFAULT clock_timestamp(),
     local_id       BIGINT PRIMARY KEY,
     common_id      BIGINT                                                                       NOT NULL,
     number         VARCHAR(200) GENERATED ALWAYS AS ('REQ-' || upper(to_hex(common_id))) STORED NOT NULL,
@@ -627,34 +590,6 @@ CREATE TABLE IF NOT EXISTS requirements
     working_set_id BIGINT                                                                       NOT NULL REFERENCES air_inst_workingset (id),
     name           VARCHAR(255)
 );
-ALTER TABLE requirements
-    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
-ALTER TABLE requirements
-    ALTER COLUMN created_at SET DEFAULT clock_timestamp();
-
-CREATE OR REPLACE FUNCTION set_requirement_working_set() RETURNS trigger AS
-'
-    BEGIN
-        SELECT t.workingset_id
-        INTO NEW.working_set_id
-        FROM air_inst_tracker_rev t
-        WHERE t.id = NEW.tracker_id
-          AND t.delete_flag = 0;
-        IF NEW.working_set_id IS NULL THEN
-            RAISE EXCEPTION ''tracker % not found for requirement %'', NEW.tracker_id, NEW.local_id
-                USING ERRCODE = ''23503'';
-        END IF;
-        RETURN NEW;
-    END;
-' LANGUAGE plpgsql;
-
-
-DROP TRIGGER IF EXISTS trg_requirements_working_set ON requirements;
-CREATE TRIGGER trg_requirements_working_set
-    BEFORE INSERT OR UPDATE OF tracker_id
-    ON requirements
-    FOR EACH ROW
-EXECUTE FUNCTION set_requirement_working_set();
 
 -- POL-005/D2: one active or soft-deleted family per Working Set.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_requirements_working_set_family
@@ -663,16 +598,9 @@ CREATE INDEX IF NOT EXISTS idx_requirements_tracker ON requirements (tracker_id)
 CREATE INDEX IF NOT EXISTS idx_requirement_active_tracker_local
     ON requirements (tracker_id, local_id) WHERE NOT delete_flag;
 
--- An existing V4 physical index requires an explicit migration before startup.
-DO 'BEGIN
-IF EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass(''light_tracker_items'') AND relkind IN (''r'', ''p'')) THEN
-    RAISE EXCEPTION ''V4 light_tracker_items exists; migrate the index before startup.'';
-    END IF;
-END';
-
 CREATE TABLE IF NOT EXISTS air_ws_items_index
 (
-    created_at            TIMESTAMPTZ DEFAULT clock_timestamp(),
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     id                    BIGINT PRIMARY KEY,
     work_space_id         BIGINT NOT NULL CHECK (work_space_id > 0),
     workingset_id         BIGINT,
@@ -707,10 +635,6 @@ CREATE TABLE IF NOT EXISTS air_ws_items_index
            ((has_copied = 0 AND source_local_id <> local_id)
                OR (has_copied = 1 AND source_local_id = local_id AND source_revision = revision)))
 );
-ALTER TABLE air_ws_items_index
-    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
-ALTER TABLE air_ws_items_index
-    ALTER COLUMN created_at SET DEFAULT clock_timestamp();
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_local ON air_ws_items_index (local_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_family ON air_ws_items_index (workingset_id, common_id);
@@ -893,8 +817,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_active_extension_target
     WHERE (result -> 'request' ->> 'mode' = 'EXTEND'
         AND status IN ('Pending', 'Running'));
 
--- Common business instance index. Writes are invoked by the owning repository,
--- in the source transaction; there are no automatic triggers on legacy tables.
+-- Common business instance index. The owning repository writes it in its own transaction;
+-- there are no database triggers or automatic projections.
 CREATE TABLE IF NOT EXISTS air_inst_common
 (
     id            BIGINT PRIMARY KEY,

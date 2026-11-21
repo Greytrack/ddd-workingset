@@ -2,64 +2,33 @@
 
 **状态：Draft（目录用途；不接受任何具体评审结论）**
 
-存放对领域模型、提案、ADR、验证证据或实现偏差的评审记录。评审记录应忠实保留异议、未决问题和所检查的证据，不把“已评审”偷换成“已接受”。
+评审记录保留异议、证据和当时结论；“Reviewed”不等于“Accepted”，业务规则以 [BASELINE](../BASELINE.md) 为准。
 
-新评审可从 [REVIEW-TEMPLATE.md](REVIEW-TEMPLATE.md) 开始，并链接被评审对象及后续处理结果。
+## 当前决策与裁定
 
-## 当前评审
+- [2026-11-15 Compare 不持久化](2026-11-15-compare-not-persisted-decision.md)：compare 只读瞬时；MergeRound 保存决策与所选证据。
+- [2026-11-15 QUESTION-010 关系身份](2026-11-15-question-010-relation-identity-decision.md)：Reference 用逻辑 Family，Association 用具体 Variant。
+- [2026-11-16 Merge Checkpoint 对齐](2026-11-16-merge-checkpoint-legacy-alignment.md)：Tracker 对 + 家族 + 双侧版次定位。
+- [2026-11-16 T6-F 谱系约束](2026-11-16-t6-f-lineage-constraints.md)：Shared 悬挂、同槽多 Tracker、`sourceId` 不可变、派生链 1:1。
+- [2026-11-17 T7-E 关系事件](2026-11-17-t7-e-relation-guards-decision.md)：SK 只发布关系请求，不操作关系聚合。
+- [2026-11-18 移除 COW Recovery](2026-11-18-remove-cow-recovery.md)：失败即终态，不重投、不补切换。
+- [2026-11-19 TC-002 反模式审查](2026-11-19-ddd-anti-pattern-scan.md)：单聚合写事务、跨聚合可靠事件。
+- [2026-11-19 代码演进后的文档对齐](2026-11-19-doc-alignment-after-code-evolution.md)：模块边界、直接只读、事件写入。
+- [2026-11-20 产品空间删除](2026-11-20-product-space-deletion.md)：存在绑定时拒绝删除。
+- [2026-11-21 Merge 分发 BC 边界](2026-11-21-merge-dispatch-bc-boundary.md)：批准时冻结值分发。
 
-- [2026-11-09-stage-2-domain-discovery-review.md](2026-11-09-stage-2-domain-discovery-review.md)：阶段 2 证据审查、冲突与风险。
-- [2026-11-09-stage-3-0-shared-kernel-boundary-review.md](2026-11-09-stage-3-0-shared-kernel-boundary-review.md)：Shared
-  Kernel 组织约束、四个业务 BC 外框及待确认合同。
+## 当前 ADR 依据
 
-- [阶段 3 正式架构评审](2026-11-09-stage-3-architecture-review.md)：边界、三方案、风险、验证与八项裁定。
+ADR 列表见 [ADR README](../adr/README.md) 与 [BASELINE](../BASELINE.md)。ADR 的状态独立于本目录评审记录。
 
-阶段 3.1 的限定确认矩阵、候选首版清单及不变量推导见 [规则收敛报告](2026-11-09-stage-3-1-rule-convergence.md)。全部推导仍待批准。
+## 历史评审
 
-- [2026-11-10 候选不变量逐条审查](2026-11-10-invariant-evidence-review.md)：区分已接受测试依据与仍待批准的 INV 全文。
-- [2026-11-10 阶段 4 集中评审](2026-11-10-stage-4-productspace-classification-review.md)
-  ：ProductSpace/Classification/绑定、删除语义与 D-019 Diff/Merge 衔接裁定。
-- [2026-11-10 首版基线审核](2026-11-10-baseline-v1-audit.md)：首版领域模型基线 v1 静态一致性审核；结论「通过（附观察项）」，不构成发布/Commit/Tag
-  授权。
-- [2026-11-10 阶段 5 契约层计划](2026-11-10-stage-5-contract-plan.md)：Historical；T1～T5
-  已完成，当前进度与下一步见[实施与验收索引](../implementation/README.md)。
-- [2026-11-11 T1 契约审核](2026-11-11-t1-contract-review.md)：T1 通过并关闭（Reviewed）；重试与终态话题不再新增领域问题，进入
-  T2。
-- [2026-11-11 T2 评审（冻结）](2026-11-11-t2-binding-deletion-review.md)：K1～K3 用户确认落地、4 项一致性修正、旧表述清理；绑定与删除契约
-  v1 冻结为 Reviewed，进入 T3。
-- [2026-11-11 T3 评审（冻结）](2026-11-11-t3-materialization-review.md)：K1′～K3′ 用户确认落地（独立 materialized 字段、LocalId
-  稳定复用、事件驱动最终一致）、旧推导候选标 Superseded；物化协议契约 v1 冻结为 Reviewed，进入 T4。
-- [2026-11-11 T4 评审（冻结）](2026-11-11-t4-cross-bc-review.md)：K1″（只读 TrackerItemReadPort + BC 自管写入）与
-  K2″（九分类公共失败语义）用户确认落地、架构前提（新 DDD、旧模块为历史）记录；K3″ 保持团队开放项；跨 BC 契约 v1 冻结为
-  Reviewed，进入 T5。
-- [2026-11-11 一致性修正](2026-11-11-consistency-reconciliation.md)：两项用户裁定（派生内容固定边界 A、TrackerItem 实现责任
-  B）与文档一致性修正；含 SCN-072/073。
-- [2026-11-11 T5-S0 设计审核](2026-11-11-t5-s0-design-review.md)：首切片设计、架构/COW 时序图、AT-01～AT-05 映射与 S1～S4
-  任务清单审核通过；S1 待 P1～P5 确认后交 Codex。
-- [2026-11-15 Compare 不持久化裁定](2026-11-15-compare-not-persisted-decision.md)：compare 只读瞬时；MergeRound
-  保存用户决策与所选差异证据；T6-E 转为瞬时 compare 与轮次证据的规模/保留验证。
-- [2026-11-15 QUESTION-010 关系身份裁定](2026-11-15-question-010-relation-identity-decision.md)：用户选择 C；Reference
-  使用逻辑 Family + 可选钉版/物理定位，Association 使用具体 Variant 端点；T7-E 只做构建/修复。
-- [2026-11-12 多级 WorkingSet 谱系评审](2026-11-12-working-set-lineage-review.md)：FACT-028 用户裁定落地（单父、
-  `parentWorkingSetId`、空范围子 WS、直属父 Tracker 来源、相邻父子 Merge、中间 WS 删除约束）；设计
-  Draft，开放问题见记录。WorkingSet/Tracker 不存在“停用”生命周期（2026-11-12 裁定），本记录中的停用表述为历史记录。
-- [2026-11-12 S7 Merge 实施裁定](2026-11-12-s7-merge-implementation-decisions.md)：Compare 以登记为分界、普通字段决策优先、Requirement
-  `delete`/`undelete`/`delete2` 最小生命周期；S7 验证 76 项通过（后续 D2/D5 回归为 77 项）。
-- 2026-11-12 收尾裁定（D4/D5/D8/D9/D11）：不存在“停用”概念，相关表述与 `assertDisableAllowed`
-  已清除；[QUESTION-001](../domain/open-questions.md) 按工作视图/范围清单关闭；QUESTION-008 已实现部分关闭，剩余转
-  `QUESTION-008.a`；D4 把 LTI 校验与移除移回 SK、跨聚合用 `CompleteDeleteEvent` 事件；D11
-  现阶段不接入权限、待权限模型完成后接入。登记见 [BASELINE](../BASELINE.md)。
-- [2026-11-17 T7-E 关系事件契约](2026-11-17-t7-e-relation-guards-decision.md)：Draft；SK 拥有独立关系聚合，WorkingSet
-  不操作关系聚合，只发布 `ReferenceCreationRequestedEvent`、`DanglingReferenceRepairRequestedEvent`、
-  `AssociationCreationRequestedEvent`；常规业务 BC 修改/删除由 BC 维护；权限跳过；列出关系事件、Step 与失败边界。
-- [2026-11-16 T6-F 谱系裁定](2026-11-16-t6-f-lineage-constraints.md)：Shared 允许悬挂；同槽多 Tracker（独立分类投影）允许并引入
-  `is_default`；`sourceId` 不可变；派生链 1:1；完成即可见。多 Tracker/默认/名称唯一/直接 `sourceId` 配对已实施；复合条目身份改为
-  `Entry.id` + evidence，Shared 默认语义见记录。
-- [2026-11-16 Merge Checkpoint 对齐](2026-11-16-merge-checkpoint-legacy-alignment.md)：吸收旧 `merge_index`
-  的“参考坐标系”定位；方向不进唯一键、不新增工作集 ID 列；命中按（Tracker 对，家族，双侧版次）；同一 Tracker 对禁止并发合并。
-- [2026-11-16 文档收敛与降噪](2026-11-16-doc-consolidation.md)：合并重复的术语/事实/不变量/开放问题，修正状态与矛盾，保留历史证据；未改变业务语义。
-- [2026-11-18 仓库降噪与对齐](2026-11-18-cleanup-and-alignment.md)：删除 AirEdge 遗留 `.lattice/`
-  与运行日志，修正文档断链/计数/状态，清理无调用代码，并修复 ID 排序、索引事件时间与扩展期间可读性。
-- [2026-11-19 代码演进后的文档对齐](2026-11-19-doc-alignment-after-code-evolution.md)：登记 `businessframework`/
-  `tracker`/`productspace`/`workingset` 模块边界、直接只读与事件写入边界；清理已移除 Port、`Caller`、缓存等过时声明；含
-  2026-11-20 ADR-0006 后续结构治理。
+以下记录保留阶段过程、旧实现和已关闭裁定，不作为当前实现依据：
+
+- 阶段 2/3：[领域发现](2026-11-09-stage-2-domain-discovery-review.md)、[Shared Kernel 边界](2026-11-09-stage-3-0-shared-kernel-boundary-review.md)、[正式架构](2026-11-09-stage-3-architecture-review.md)、[规则收敛](2026-11-09-stage-3-1-rule-convergence.md)
+- 阶段 4/5：[阶段 4 评审](2026-11-10-stage-4-productspace-classification-review.md)、[基线与不变量审核](2026-11-10-baseline-v1-audit.md)、[不变量证据](2026-11-10-invariant-evidence-review.md)、[契约计划](2026-11-10-stage-5-contract-plan.md)
+- T1～T4：[T1](2026-11-11-t1-contract-review.md) · [T2](2026-11-11-t2-binding-deletion-review.md) · [T3](2026-11-11-t3-materialization-review.md) · [T4](2026-11-11-t4-cross-bc-review.md) · [一致性修正](2026-11-11-consistency-reconciliation.md)
+- T5：[S0 审核](2026-11-11-t5-s0-design-review.md)、[S7 实施裁定](2026-11-12-s7-merge-implementation-decisions.md)、[谱系评审](2026-11-12-working-set-lineage-review.md)
+- T6/T7 过程：[T6-D 回并](2026-11-13-t6-d-merge-back-review.md)、[T7-A LRO](2026-11-13-t7-a-creation-lro-review.md)、[文档收敛](2026-11-16-doc-consolidation.md)、[仓库降噪](2026-11-18-cleanup-and-alignment.md)
+
+新评审从 [REVIEW-TEMPLATE.md](REVIEW-TEMPLATE.md) 开始。
