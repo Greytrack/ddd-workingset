@@ -50,7 +50,9 @@ CREATE OR REPLACE FUNCTION write_tracker_fixture() RETURNS trigger
         visible_flag smallint;
     BEGIN
         IF TG_OP = ''DELETE'' THEN
-            DELETE FROM air_ws_tracker WHERE id = OLD.tracker_id;
+            DELETE
+            FROM air_ws_tracker
+            WHERE id = OLD.tracker_id;
             DELETE
             FROM air_inst_tracker_rev
             WHERE id = OLD.tracker_id;

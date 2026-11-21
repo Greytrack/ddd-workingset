@@ -18,11 +18,6 @@ public interface TrackerItemCatalogQueryProvider {
     boolean hasAnyItem(TrackerId trackerId);
 
     /**
-     * Best-effort scan of active items created no later than the baseline. Missing time evidence is excluded.
-     */
-    List<Identity> page(TrackerId trackerId, long baselineAt, String afterLocalId, int limit);
-
-    /**
      * Full active identity list for a tracker.
      */
     List<Identity> identities(TrackerId trackerId);
@@ -33,10 +28,6 @@ public interface TrackerItemCatalogQueryProvider {
     default List<Identity> identitiesForMerge(TrackerId trackerId) {
         return identities(trackerId);
     }
-
-    boolean hasActiveFamily(TrackerId trackerId, CommonId commonId);
-
-    boolean hasActiveFamily(TrackerId trackerId, CommonId commonId, long baselineAt);
 
     record Identity(LocalId localId, CommonId commonId, Revision revision) {
     }

@@ -95,6 +95,7 @@ Port。跨聚合写入继续通过事件协作。业务对象永久删除后由 
 - 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectUpdateEvent` 触发
   SK 的 `TrackerItemLocalizedListener` 在独立事务切换 LTI；不修改来源，不保证两边原子可见。
 -
+
 每个写事务最多修改一个聚合（TC-002）。事件交付、失败与实现差距见 [实现边界](../implementation/current-boundaries.md)、[T1](merge-execution-contract-v1.md)、[T3](lighttrackeritem-materialization-contract-v1.md)
 和 [跨 BC 图](../diagrams/cross-bc-contract.md)。
 
@@ -143,8 +144,8 @@ Port、失败语义、事件、身份与跨聚合事务约束。参考实现不�
 | `diff` 有向比较         | 固定方向、瞬时比较证据与差异（T1 2026-11-15 后不持久化比较结果） | 定义字段语义、相等规则、不可比较与脱敏字段                         | §5.2；执行期见 T1             |
 | `merge` 应用并确认      | 保存决定、编排执行、记录结果与 Checkpoint（T1 已定）             | 重新授权、整体校验、提交目标变化                                   | §5.2；执行结果见 T1           |
 
-**按范围异步创建工作集（T7-A 用户确认）**：SK 管理创建任务和范围绑定，业务 BC 提供按 Tracker 分页的有效 Item 身份与业务
-Revision。SK 将业务目录与已纳入的 LTI 合并，依据 T3 确定有效内容来源。任务受理、轮询及 `Preparing`
+**按范围异步创建工作集（T7-A 用户确认）**：SK 管理创建任务和范围绑定，从父 Tracker 的 LTI 发现候选，并依据 T3 确定有效内容来源。
+业务 BC 通过事件提供原生登记及生命周期事实，并提供受来源锁保护的可读性检查。任务受理、轮询及 `Preparing`
 的边界见 [T7 LRO 设计](working-set-creation-lro-design.md)。
 
 **不要求每个接口统一返回九类**：§5.2 是适用分类的唯一矩阵。原本节三个创建/扩展用例遗漏 `Preparing` 的摘要按该矩阵及 T4 评审
@@ -309,8 +310,10 @@ K3″ 版本治理衔接）。
 ## 10. 追溯与下一步
 
 -
+
 追溯：AC-001、D-007、FACT-011/012、QUESTION-013/014、POL-002/003/004/007/008/014/016、INV-001/009/011/012/030、[Shared Kernel 边界](shared-kernel-boundary.md)、[Context Map](context-map.md)
 、B01～B12、SCN-069～071。
+
 - 图：[跨 BC 契约面与失败语义](../diagrams/cross-bc-contract.md)。
 - 评审：[T4 评审记录](../reviews/2026-11-11-t4-cross-bc-review.md)。
 - 下一步：进入 **T5 最小纵向切片**（首切片只涉及单一业务 BC 与 SK，不受 K3″ 阻塞）。

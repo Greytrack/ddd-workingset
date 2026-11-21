@@ -4,10 +4,14 @@
 ，未发布）**
 
 -
+
 依据：[FACT-028](../domain/facts.md)、[多级 WorkingSet 谱系](working-set-lineage-design.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[T3 物化](lighttrackeritem-materialization-contract-v1.md)、[T4 跨 BC](cross-bc-contract-v1.md)、[T1 Merge 执行](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)
+
 - 范围：创建工作集的异步长流程（LRO）；区别于现有的原子操作入口
 -
+
 追溯：[状态图](../diagrams/working-set-creation-lro.md)、[SCN-075](../scenarios/core-scenarios.md#scn-075-按范围异步创建工作集)
+
 - 不包含：权限（D11 延后）、附件/关系参与 Merge（D6）、停用（D5）
 
 ## 1. 背景与定位
@@ -83,7 +87,7 @@ Requirement 是业务 BC 参考实现。
 
 - 每个非共享父 Tracker 复制为**一个**子 Tracker（`sourceId=父 Tracker`）。所选 Tracker 的空间必须在请求的空间范围内，复制前检查该前置；实际建立
   TrackerBinding 时仍按 T2 复核。
-- 对每个有效父 Item 创建一条 LightTrackerItem，父范围包括业务原生 Item 与已纳入的 LTI，重合身份只计一次：
+- 对每个有效父 LTI 创建一条 LightTrackerItem，原生 Item 和继承变体均以已登记的 LTI 为候选：
     - `CommonId` 继承父 Item；`LocalId` 由服务端雪花生成；
     - 自身 Revision 固定为父变体 Revision。父变体已有本地业务内容时以父 LocalId 和 Revision 为有效来源。父变体仍为
       Source-backed 时沿用其实际 `SourceLocalId` 和 `SourceRevision`
@@ -91,9 +95,9 @@ Requirement 是业务 BC 参考实现。
     - 普通业务字段按 T3 读取，附件与关系的派生基准仍按 T3 §2.1。
 - 受理只记录选择及各 Tracker 的基线时间。索引按其时间上界和 LocalId 游标尽力扫描当前可用候选，终态后不补扫。已发现的来源缺失、软删或版次不可读时，该
   Item 计为跳过并保留明细。[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md)
-- 当前 ALM 与 LTI 目录读取创建时间不晚于基线的活跃行。结果允许受并发与历史保留影响；没有可信创建时间的行不纳入。缺 Folder
+- SK 只扫描未软删且登记时间不晚于基线的 LTI。业务对象先提交而索引晚于基线才登记时，本轮允许漏项。缺 Folder
   适配器且没有已登记业务索引时，默认 Folder 容器按空目录处理。其他类型缺适配器记单 Tracker 失败。
-- SK 按 LocalId 合并业务身份页与 LTI 页。重合同族优先有效业务身份，子工作集已有同族 LTI 计为跳过。
+- 子工作集已有同族 LTI 计为跳过。其余候选在业务来源锁下核对删除状态和版次，不读取普通业务字段。
 - 索引由系统任务执行，当前不校验用户级授权；权限接入后另行裁定。
 
 ### 4.6 关系事件发布
@@ -132,10 +136,8 @@ Requirement 是业务 BC 参考实现。
 
 ### 7.2 端口
 
-- `TrackerItemCatalogQueryProvider`（SK 定义、BC 实现）：按 Tracker、基线时间和 LocalId 游标提供未软删的业务身份页，另提供
-  Merge 的身份列表及同族查询。
-- `LightTrackerItemQueryProvider` 提供按时间分页，`LightTrackerItemRepository` 提供按工作集和家族抢占式插入。内容可读性沿用
-  T3 读取边界。
+- `LightTrackerItemQueryProvider` 提供按登记时间与 LocalId 分页，`LightTrackerItemRepository` 提供按工作集和家族认领。
+- `TrackerItemSourceLock` 返回受业务来源行锁保护的版次和删除状态。
 - 关系事件：WorkingSet 不定义 Reference/Association 仓储或写入
   Port；只定义关系事件契约与发布器。字段、事件类、失败明细见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 

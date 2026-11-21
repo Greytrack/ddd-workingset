@@ -7,7 +7,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class RelationEventContractTest {

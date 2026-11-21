@@ -31,6 +31,13 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     private final IdentifierGenerator ids;
     private final JdbcCommonInstanceStore commonInstances;
 
+    private static String requireActor(String actor) {
+        if (actor == null || actor.isBlank()) {
+            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
+        }
+        return actor;
+    }
+
     /**
      * Full physical row for internal compatibility reads, including soft-deleted rows.
      */
@@ -174,13 +181,6 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                           AND COALESCE(is_show, 1) <> ?
                         """, shown, actor, System.currentTimeMillis(),
                 binding.workingSetId().numericValue(), binding.trackerId().numericValue(), shown);
-    }
-
-    private static String requireActor(String actor) {
-        if (actor == null || actor.isBlank()) {
-            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
-        }
-        return actor;
     }
 
     private void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId) {

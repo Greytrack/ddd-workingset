@@ -15,7 +15,6 @@ import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -51,6 +50,9 @@ public class JdbcTrackerRepository implements TrackerRepository {
                 updatedBy
         );
     };
+    private final JdbcTemplate jdbc;
+    private final TrackerNumberGenerator numbers;
+    private final JdbcCommonInstanceStore commonInstances;
 
     private static Long optionalLong(String value) {
         if (value == null || value.isBlank()) {
@@ -62,10 +64,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
             return null;
         }
     }
-
-    private final JdbcTemplate jdbc;
-    private final TrackerNumberGenerator numbers;
-    private final JdbcCommonInstanceStore commonInstances;
 
     private static void requireOne(int affected, long id) {
         if (affected != 1) {

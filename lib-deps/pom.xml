@@ -1,5 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <!-- 独立 BOM：不设 parent，供 backend（旧空间）与 airedge-v4（新空间）共同 import。
@@ -14,7 +14,7 @@
         Import in backend/pom.xml and airedge-v4/pom.xml dependencyManagement;
         modules declare third-party deps without versions.
     </description>
-    
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -543,7 +543,7 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
-<properties>
+    <properties>
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <mybatis.plus.version>3.5.8</mybatis.plus.version>

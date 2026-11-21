@@ -1,15 +1,18 @@
 package sk.workingset.application.command;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.port.TrackerItemSourceLock;
+import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
+import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.MergeTargetEvent;
@@ -17,20 +20,21 @@ import sk.workingset.domain.event.TrackerItemCreatedEvent;
 import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetId;
 
 /**
  * SK 内部的 LTI 生命周期处理服务。
  *
  * <p>业务 BC 不再通过同步端口请求 LTI 切换；继承编辑完成与合并目标物化都由事件驱动。
- * 永久删除后的 LTI 清理由业务对象删除事件驱动。所有业务状态读取都按 Tracker 路由到
+ * 永久删除后的 LTI 清理由业务对象删除事件驱动。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TrackerItemLifecycleService {
 
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
+    private final BusinessObjectTypeRegistry registry;
 
     private static ItemClassification classificationOf(Tracker tracker) {
         return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
@@ -69,7 +73,15 @@ public class TrackerItemLifecycleService {
         if (current == null) {
             return;
         }
-        items.findByIdForUpdate(id).ifPresent(items::save);
+        TrackerItemSourceLock.State state = lockBusinessState(current.trackerId(), id);
+        if (state == null) {
+            return;
+        }
+        items.findByIdForUpdate(id).ifPresent(item -> {
+            if (item.recordDeletionState(state.deleted())) {
+                items.save(item);
+            }
+        });
     }
 
     /**
@@ -85,13 +97,7 @@ public class TrackerItemLifecycleService {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void registerCreated(TrackerItemCreatedEvent event) {
-        Tracker tracker = trackers.findById(event.trackerId())
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, event.trackerId().value()));
-        if (items.findById(event.localId()).isPresent()) {
-            return;
-        }
-        saveNewIndex(LightTrackerItem.local(event.localId(), event.commonId(), event.trackerId(),
-                event.workingSetId(), event.revision(), classificationOf(tracker), RequestThreadHolder.getUserId()));
+        registerLocal(event.localId(), event.commonId(), event.trackerId(), event.workingSetId(), event.revision());
     }
 
     /**
@@ -103,16 +109,30 @@ public class TrackerItemLifecycleService {
             switchToLocalContent(target.localId(), target.revision());
             return;
         }
-        if (target.create() && items.findById(target.localId()).isEmpty()) {
-            Tracker tracker = trackers.findById(target.trackerId())
-                    .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, target.trackerId().value()));
-            saveNewIndex(LightTrackerItem.local(target.localId(), target.commonId(), target.trackerId(),
-                    target.workingSetId(), target.revision(), classificationOf(tracker), RequestThreadHolder.getUserId()));
+        if (target.create()) {
+            registerLocal(target.localId(), target.commonId(), target.trackerId(), target.workingSetId(), target.revision());
         }
     }
 
-    private void saveNewIndex(LightTrackerItem item) {
+    private void registerLocal(LocalId id, CommonId commonId, TrackerId trackerId, WorkingSetId workingSetId,
+                               Revision revision) {
+        if (items.findById(id).isPresent()) {
+            return;
+        }
+        TrackerItemSourceLock.State state = lockBusinessState(trackerId, id);
+        if (state == null || items.findById(id).isPresent()) {
+            return;
+        }
+        Tracker tracker = trackers.findById(trackerId)
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, trackerId.value()));
+        LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
+                classificationOf(tracker), RequestThreadHolder.getUserId());
+        item.recordDeletionState(state.deleted());
         items.save(item);
+    }
+
+    private TrackerItemSourceLock.State lockBusinessState(TrackerId trackerId, LocalId id) {
+        return registry.forTracker(trackerId).sourceLock().lock(id).orElse(null);
     }
 
     private void switchToLocalContent(LocalId localId, Revision revision) {

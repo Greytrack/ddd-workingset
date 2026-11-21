@@ -5,8 +5,10 @@
 - 日期：2026-11-11
 - 阶段：阶段 5 契约层 T3（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
 -
+
 已确认依据：D-007～D-019、FACT-014～023/027、INV-024～052/061～063/069～071、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)
 、SCN-019～049
+
 - 本文件**不决定**：数据库表结构、事件中间件、快照序列化格式、并发锁与幂等键的具体实现。
 - 本文件**不重新裁定**：LightTrackerItem 的聚合地位、SourceLocalId/SourceRevision 语义、COW
   事件驱动与最终一致、首次快照优先、目标消费时确定、Revision 分离。
@@ -80,7 +82,8 @@ LightTrackerItem 保存当前版次与有效内容来源，并拥有按自身 `R
 版次变更：锁定根，前置版次未就绪时保留失败供重投，已处理事件不重复新增成员。物化与版次更新由 LTI
 自身执行，仓储只写当前变更与新成员。此切片尚未开放业务侧升版入口；撤销最新版次、版号能否重用及存在历史来源依赖时的处理仍待裁定。仅比较版号的重投判断不适用于撤销后重用版号。
 
-本仓库只支持从空库执行当前 schema；已有库不自动迁移，也不保留旧 V4 索引兼容。存量环境需要单独的一次性迁移与核对方案，不得把历史脚本重新放回当前 schema。
+本仓库只支持从空库执行当前 schema；已有库不自动迁移，也不保留旧 V4 索引兼容。存量环境需要单独的一次性迁移与核对方案，不得把历史脚本重新放回当前
+schema。
 
 ### 删除与来源保留（QUESTION-006）
 
@@ -196,9 +199,12 @@ K1′～K3′ 的接受范围对应 INV-069～071，见 [不变量登记](invari
 ## 11. 追溯与下一步
 
 -
+
 追溯：D-007～D-019、FACT-014～023/027、INV-024～052/061～063/069～071、SCN-019～049、SCN-066～068、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)。
 -
 图：[LightTrackerItem 生命周期](../diagrams/lighttrackeritem-lifecycle.md)、[物化状态与首次物化时序](../diagrams/lighttrackeritem-materialization.md)。
+
 - 评审：[T3 评审记录](../reviews/2026-11-11-t3-materialization-review.md)。
 -
+
 实施与恢复：[S3 首次物化](../implementation/t5-s3-verification-result.md)、[S4 恢复](../implementation/t5-s4-verification-result.md)。

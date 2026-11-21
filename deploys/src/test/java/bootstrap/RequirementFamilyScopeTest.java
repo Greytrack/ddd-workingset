@@ -17,7 +17,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.Version;
 
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
@@ -107,17 +106,11 @@ class RequirementFamilyScopeTest {
         TrackerItemCatalogQueryProvider.Identity identity =
                 new TrackerItemCatalogQueryProvider.Identity(saved.localId(), saved.commonId(), saved.revision());
         save(saved);
-        long baselineAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).getTime();
         assertEquals(List.of(identity), catalog.identities(trackerId));
-        assertEquals(List.of(identity), catalog.page(trackerId, baselineAt, "", 1));
-        assertTrue(catalog.page(trackerId, baselineAt, saved.localId().value(), 1).isEmpty());
-        assertTrue(catalog.hasActiveFamily(trackerId, saved.commonId()));
 
         save(saved.delete(saved.lockVersion()));
         assertTrue(catalog.identities(trackerId).isEmpty());
         assertEquals(List.of(identity), catalog.identitiesForMerge(trackerId));
-        assertTrue(catalog.page(trackerId, baselineAt, "", 1).isEmpty());
-        assertFalse(catalog.hasActiveFamily(trackerId, saved.commonId()));
     }
 
     @Test

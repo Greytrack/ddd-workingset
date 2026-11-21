@@ -444,10 +444,8 @@ class MergeAcceptanceTest {
         assertEquals("1".equals(parent), target.localId().equals(target.commonId()));
         assertEquals(source.title(), target.title());
         assertEquals(created, apply(round));
-        if (!"1".equals(parent)) {
-            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                    assertTrue(items.findById(LocalId.of(parentLocal)).isPresent()));
-        }
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertTrue(items.findById(LocalId.of(parentLocal)).isPresent()));
 
         change(source.localId(), "updated child", 0);
         assertTrue(compare(sourceWs, parent, sourceTracker, parentTracker).differences().stream()

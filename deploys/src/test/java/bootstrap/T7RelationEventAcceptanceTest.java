@@ -57,6 +57,7 @@ class T7RelationEventAcceptanceTest {
         relationEvents.clear();
         jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + child + "%");
         jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", child);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id = ?", parentTracker);
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
@@ -106,6 +107,7 @@ class T7RelationEventAcceptanceTest {
                 VALUES (?, ?, ?, 'source', 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, parentItem, parentItem, parentTracker, parentTracker, System.currentTimeMillis());
+        ItemIndexFixture.insert(jdbc, parentItem, parentItem, parentTracker, "1", 3, parentItem, 3, true);
     }
 
     private CreationView creation(String id) {

@@ -22,29 +22,33 @@ public final class ItemIndexFixture {
                               String workingSetId, int revision, String sourceLocalId, int sourceRevision,
                               boolean materialized) {
         jdbc.update("""
-                INSERT INTO air_ws_items_index
-                    (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision,
-                     has_copied, work_space_id, sub_class_id, created_by, created_time)
-                SELECT ?, ?, ?, t.id, ?, ?, ?, ?, ?, t.work_space, t.tracker_class, 'test', ?
-                FROM air_inst_tracker_rev t WHERE t.id = ?
-                """, Long.valueOf(localId), Long.valueOf(localId), Long.valueOf(commonId), Long.valueOf(workingSetId),
+                        INSERT INTO air_ws_items_index
+                            (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision,
+                             has_copied, work_space_id, sub_class_id, created_by, created_time)
+                        SELECT ?, ?, ?, t.id, ?, ?, ?, ?, ?, t.work_space, t.tracker_class, 'test', ?
+                        FROM air_inst_tracker_rev t WHERE t.id = ?
+                        """, Long.valueOf(localId), Long.valueOf(localId), Long.valueOf(commonId), Long.valueOf(workingSetId),
                 revision, Long.valueOf(sourceLocalId), sourceRevision, materialized ? 1 : 0,
                 System.currentTimeMillis(), Long.valueOf(trackerId));
         jdbc.update("""
-                INSERT INTO air_ws_items_revision_index (id, local_id, common_id, branch_id, workingset_id, revision)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (local_id, revision) DO NOTHING
-                """, Long.valueOf(localId), Long.valueOf(localId), Long.valueOf(commonId), Long.valueOf(trackerId),
+                        INSERT INTO air_ws_items_revision_index (id, local_id, common_id, branch_id, workingset_id, revision)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (local_id, revision) DO NOTHING
+                        """, Long.valueOf(localId), Long.valueOf(localId), Long.valueOf(commonId), Long.valueOf(trackerId),
                 Long.valueOf(workingSetId), revision);
     }
 
-    /** 只改当前索引的修订号，并同步其版次成员，等价于旧夹具视图的 UPDATE 语义。 */
+    /**
+     * 只改当前索引的修订号，并同步其版次成员，等价于旧夹具视图的 UPDATE 语义。
+     */
     public static void updateRevision(JdbcTemplate jdbc, String localId, int revision) {
         jdbc.update("UPDATE air_ws_items_index SET revision = ? WHERE local_id = ?", revision, Long.valueOf(localId));
         jdbc.update("UPDATE air_ws_items_revision_index SET revision = ? WHERE local_id = ?", revision, Long.valueOf(localId));
     }
 
-    /** 只改当前索引的家族身份，并同步其版次成员，等价于旧夹具视图的 UPDATE 语义。 */
+    /**
+     * 只改当前索引的家族身份，并同步其版次成员，等价于旧夹具视图的 UPDATE 语义。
+     */
     public static void updateFamily(JdbcTemplate jdbc, String localId, String commonId) {
         jdbc.update("UPDATE air_ws_items_index SET common_id = ? WHERE local_id = ?", Long.valueOf(commonId),
                 Long.valueOf(localId));

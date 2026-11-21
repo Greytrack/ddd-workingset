@@ -25,9 +25,9 @@ description: "Enforce architectural rules when generating or modifying code. Def
 - **Clean architecture mode:**
     1. Check `paths.architecture` in `.lattice/config.yaml` for custom doc
     2. If found, read doc and check YAML frontmatter for `mode`:
-        - **`mode: overlay`**: Read `./references/clean-architecture-defaults.md` first, then apply custom doc section
-          on top. Section match by heading — custom section replace matching default, new section append.
-        - **`mode: override`**: Custom doc take full precedence. Must be comprehensive.
+         - **`mode: overlay`**: Read `./references/clean-architecture-defaults.md` first, then apply custom doc section
+           on top. Section match by heading — custom section replace matching default, new section append.
+         - **`mode: override`**: Custom doc take full precedence. Must be comprehensive.
     3. If no custom doc → read `./references/clean-architecture-defaults.md`
 
 - **Custom mode:**

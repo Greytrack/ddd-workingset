@@ -13,7 +13,6 @@ import sk.workingset.domain.workingset.WorkingSetCreationRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.Timestamp;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -28,7 +27,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
 
     @Override
     public long acceptanceTime() {
-        return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class)).getTime();
+        return System.currentTimeMillis();
     }
 
     @Override

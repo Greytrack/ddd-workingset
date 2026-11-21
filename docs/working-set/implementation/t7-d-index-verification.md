@@ -2,9 +2,13 @@
 
 **后续裁定**：[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md) 替代下述冻结清单、实时回退和快照存储规则。以下保留原实现和验收记录。
 
-**状态：Superseded（ADR-0010）**。以下保留旧实现与旧验收证据，不再作为当前规则；当前规则见 [ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md) 与 [T7 §4.5](../domain/working-set-creation-lro-design.md)。
+**状态：Superseded（ADR-0010）**
+。以下保留旧实现与旧验收证据，不再作为当前规则；当前规则见 [ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md)
+与 [T7 §4.5](../domain/working-set-creation-lro-design.md)。
 
-- 历史：受理事务曾将父 Item 身份与有效来源写入 `working_set_creation_items`，索引阶段只读该快照；该冻结清单与快照存储已由 [ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md) 替代。冻结后来源缺失、软删或版次不可读时，当时按跳过并保留明细处理。
+- 历史：受理事务曾将父 Item 身份与有效来源写入 `working_set_creation_items`
+  ，索引阶段只读该快照；该冻结清单与快照存储已由 [ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md)
+  替代。冻结后来源缺失、软删或版次不可读时，当时按跳过并保留明细处理。
 - 生产新增 `TrackerItemsIndexedListener` 占位监听器，使事件进入 Modulith 发布记录并可重投；T7-E 接入关系构建时替换。
 - 本切片索引以系统任务身份读取父内容，不校验用户级授权；权限语义留待跨 BC 权限接入时另行裁定。
 - 多 Tracker 独立索引，业务 Revision、家族与有效内容来源均可通过工作集查询核对。受理时已软删的原生对象及实际来源已软删的父变体不进入候选，业务目录和父
@@ -24,7 +28,8 @@
 
 游标和每 Tracker 的 Item 计数保存在任务
 JSONB。历史终态任务继续可读；未终态的旧任务在推进时重新计算阶段总数，没有快照时回退实时分页，仅作为兼容路径。上述“新任务在受理事务内冻结快照”的规则已由
-[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md) 替代：当前新任务按各 Tracker 的基线时间与 LocalId 游标分页扫描，不再冻结清单。关系消费与规模验证分别属于
+[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md) 替代：当前新任务按各 Tracker 的基线时间与 LocalId
+游标分页扫描，不再冻结清单。关系消费与规模验证分别属于
 T7-E 和 T7-F。
 
 `mvn -B clean test` 在 PostgreSQL、Redis 和内嵌 Tomcat 环境通过 105 项，含 ArchUnit。失败、错误、跳过均为

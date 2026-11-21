@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 import sk.workingset.application.port.TrackerItemSourceLock;
 import sk.workingset.domain.LocalId;
 
+import java.util.Optional;
+
 /**
  * Requirement 来源行锁租约：与 ALM 的永久删除路径使用同一行锁。
  *
@@ -18,7 +20,7 @@ public class RequirementSourceLockAdapter implements TrackerItemSourceLock {
     private final RequirementMutationStore requirements;
 
     @Override
-    public boolean lock(LocalId sourceLocalId) {
-        return requirements.lockById(sourceLocalId).isPresent();
+    public Optional<State> lock(LocalId sourceLocalId) {
+        return requirements.lockSourceState(sourceLocalId);
     }
 }

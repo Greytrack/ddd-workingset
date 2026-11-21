@@ -1,16 +1,17 @@
 # lib-deps
 
-**三方库版本清单**（`packaging=pom`，**独立 BOM**）。只维护 **引入的第三方依赖** 的版本；新旧空间（`backend` / `airedge-v4`）各模块声明三方依赖时 **不写 `<version>`**。
+**三方库版本清单**（`packaging=pom`，**独立 BOM**）。只维护 **引入的第三方依赖** 的版本；新旧空间（`backend` / `airedge-v4`
+）各模块声明三方依赖时 **不写 `<version>`**。
 
 ## 规则
 
-| 项 | 约定 |
-|----|------|
-| 职责 | 三方库（及三方 BOM）的版本号 SSOT，**新旧空间共用** |
-| 版本号出现位置 | **只在本模块**（`properties` / `dependencyManagement`） |
-| 消费方式 | `backend/pom.xml` 与 `airedge-v4/pom.xml` 的 `dependencyManagement` **import** 本模块；子模块只写 `groupId` + `artifactId` |
-| 新增 / 升级三方库 | **必须**在本模块定义（或覆盖）版本号后再被引用 |
-| 不放什么 | 业务代码；本仓库一等模块的坐标清单（见根 `pom.xml` / 根 README） |
+| 项                | 约定                                                                                                                       |
+|-------------------|----------------------------------------------------------------------------------------------------------------------------|
+| 职责              | 三方库（及三方 BOM）的版本号 SSOT，**新旧空间共用**                                                                        |
+| 版本号出现位置    | **只在本模块**（`properties` / `dependencyManagement`）                                                                    |
+| 消费方式          | `backend/pom.xml` 与 `airedge-v4/pom.xml` 的 `dependencyManagement` **import** 本模块；子模块只写 `groupId` + `artifactId` |
+| 新增 / 升级三方库 | **必须**在本模块定义（或覆盖）版本号后再被引用                                                                             |
+| 不放什么          | 业务代码；本仓库一等模块的坐标清单（见根 `pom.xml` / 根 README）                                                           |
 
 ## 独立 BOM（无 parent）
 

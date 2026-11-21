@@ -292,7 +292,7 @@ public class MergeExecutionService {
             round = round.finishApplied(entry.id(), operation(entry), receipt);
             MergeTargetEvent mergeTarget = new MergeTargetEvent(event.businessRef(), entry.evidence().family(),
                     entry.evidence().trackers().target(), round.target(), event.targetRevision(),
-                    event.inherited(), event.created() && !WorkingSet.DEFAULT_ID.equals(round.target()));
+                    event.inherited(), event.created());
             if (event.inherited() || event.created()) {
                 events.publishEvent(new MergeAppliedEvent(mergeTarget, System.currentTimeMillis()));
             }

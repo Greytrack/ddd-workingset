@@ -260,7 +260,7 @@ function Invoke-Psql([string]$DbName, [string[]]$PsqlArgs)
 }
 function Invoke-PsqlText([string]$DbName, [string]$Sql)
 {
-# 返回文本输出, 不抛错
+    # 返回文本输出, 不抛错
     docker run --rm @DockerNetArgs -e PGPASSWORD="$PgPass" $PgImage `
         psql -h $ContainerHost -p $PgPort -U $PgUser -d $DbName -t -A -c $Sql
 }

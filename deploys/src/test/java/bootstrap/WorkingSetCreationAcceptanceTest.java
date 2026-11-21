@@ -86,6 +86,7 @@ class WorkingSetCreationAcceptanceTest {
         indexEvents.clear(child);
         jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", child);
         jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", parent);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE work_space_id IN (?, ?)", space, otherSpace);
         jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id IN (?, ?))",
                 space, otherSpace);
         jdbc.update("""
@@ -370,16 +371,18 @@ class WorkingSetCreationAcceptanceTest {
         String later = fixtureId("later-" + child);
         String head = fixtureId("head-" + child);
         String afterHead = fixtureId("after-head-" + child);
+        String unregistered = fixtureId("unregistered-" + child);
         long cutoff = 1738368000000L;
         seedItem(unshared, earlier, earlier, false);
         seedItem(unshared, later, later, false);
         seedItem(second, head, head, false);
         seedItem(second, afterHead, afterHead, false);
-        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
-                cutoff, earlier);
-        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+        seedItem(second, unregistered, unregistered, false);
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", unregistered);
+        jdbc.update("UPDATE air_ws_items_index SET created_time = ? WHERE local_id = ?", cutoff, earlier);
+        jdbc.update("UPDATE air_ws_items_index SET created_time = ? WHERE local_id = ?",
                 cutoff + 1000L, later);
-        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+        jdbc.update("UPDATE air_ws_items_index SET created_time = ? WHERE local_id = ?",
                 System.currentTimeMillis() + 3_600_000L, afterHead);
         String requestId = "baseline-" + child;
         Map<String, Object> request = Map.of("parentWorkingSetId", "1", "requestId", requestId, "mode", "CREATE",
@@ -414,7 +417,7 @@ class WorkingSetCreationAcceptanceTest {
         long cutoff = 1738368000000L;
         seedItem(unshared, included, included, false);
         seedItem(unshared, excluded, excluded, false);
-        jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
+        jdbc.update("UPDATE air_ws_items_index SET created_time = ? WHERE local_id = ?",
                 cutoff, included);
         String endpoint = "/api/worksets/" + child + "/extensions";
         String requestId = "extension-baseline-" + child;
@@ -484,13 +487,13 @@ class WorkingSetCreationAcceptanceTest {
         String parentTracker = derive.trackerId();
         String overlap = fixtureId("overlap-" + child);
         seedItem(parentTracker, overlap, overlap, false);
-        seedParentLti(parentTracker, overlap, overlap, overlap, true);
         String deleted = fixtureId("deleted-" + child);
         seedItem(unshared, deleted, deleted, true);
         seedParentLti(parentTracker, fixtureId("virtual-deleted-" + child), deleted, deleted, false);
         String localDeleted = fixtureId("local-deleted-" + child);
         seedItem(parentTracker, localDeleted, localDeleted, true);
-        seedParentLti(parentTracker, localDeleted, localDeleted, localDeleted, true);
+        // Simulate the window before the soft-delete event has updated the parent LTI.
+        jdbc.update("UPDATE air_ws_items_index SET flags = 0 WHERE local_id = ?", localDeleted);
         String broken = fixtureId("broken-" + child);
         seedParentLti(parentTracker, broken, broken, fixtureId("missing-" + child), false);
         String stale = fixtureId("stale-" + child);
@@ -709,6 +712,11 @@ class WorkingSetCreationAcceptanceTest {
                 VALUES (?, ?, ?, 'source', 'description', 3, 0, ?,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, localId, commonId, tracker, deleted, tracker, System.currentTimeMillis());
+        String owner = jdbc.queryForObject("SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?", String.class, tracker);
+        ItemIndexFixture.insert(jdbc, localId, commonId, tracker, owner, 3, localId, 3, true);
+        if (deleted) {
+            jdbc.update("UPDATE air_ws_items_index SET flags = 1 WHERE local_id = ?", localId);
+        }
     }
 
     private void seedParentLti(String tracker, String localId, String commonId, String sourceId, boolean materialized) {

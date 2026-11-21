@@ -65,5 +65,7 @@
 - D-019、ProductSpace/Classification、Diff/Merge
   衔接：[阶段 4 评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md)。
 -
+
 不变量证据与接受范围：[不变量审查](../reviews/2026-11-10-invariant-evidence-review.md)、[事实与政策基线](facts-policy-baseline-v1.md)。
+
 - GateFlow/DQA/Part 的接入范围：[Shared Kernel 边界](shared-kernel-boundary.md)。

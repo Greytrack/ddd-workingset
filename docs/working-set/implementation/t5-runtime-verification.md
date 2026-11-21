@@ -5,7 +5,9 @@
 - 范围：把首切片从纯内存单元验证推进到可启动的 Web 运行时：Spring Boot 内嵌 Tomcat、PostgreSQL/Spring JDBC 持久化、Redis
   缓存、Spring Modulith 事件发布注册表、yml 配置与最小 REST API
 -
+
 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[S2 验证结果](t5-s2-verification-result.md)、[S3 验证结果](t5-s3-verification-result.md)
+
 - 本记录保留运行时骨架的原始证据。首次 COW 的实施与新增证据见 [S3 验证](t5-s3-verification-result.md)。
 
 ## 1. 启动与测试
@@ -41,14 +43,50 @@ Started WorkingsetApplication
 实测结果（2026-11-12）：
 
 ```json
-HEALTH: {"database":"UP","status":"UP","redis":"UP"}
-CREATE: {"localId":"443628133134624","title":"A","revision":3,"version":null,"lockVersion":0}
-CHANGE: {"localId":"443628133134624","title":"B","revision":3,"version":null,"lockVersion":1}
-DERIVE: {"trackerId":"443628133265696","item":{"localId":"443628133265697","sourceLocalId":"443628133134624","sourceRevision":3,"materialized":false}}
-READ:   {"fields":{"title":"B","description":"demo"},"contentRevision":3,"contentLocalId":"443628133134624","materialized":false}
-CONFLICT: HTTP 409 {"reason":"LOCK_VERSION_CONFLICT","expectedLockVersion":0,"actualLockVersion":1}
+HEALTH: {
+  "database": "UP",
+  "status": "UP",
+  "redis": "UP"
+}
+CREATE: {
+  "localId": "443628133134624",
+  "title": "A",
+  "revision": 3,
+  "version": null,
+  "lockVersion": 0
+}
+CHANGE: {
+  "localId": "443628133134624",
+  "title": "B",
+  "revision": 3,
+  "version": null,
+  "lockVersion": 1
+}
+DERIVE: {
+  "trackerId": "443628133265696",
+  "item": {
+    "localId": "443628133265697",
+    "sourceLocalId": "443628133134624",
+    "sourceRevision": 3,
+    "materialized": false
+  }
+}
+READ:   {
+  "fields": {
+    "title": "B",
+    "description": "demo"
+  },
+  "contentRevision": 3,
+  "contentLocalId": "443628133134624",
+  "materialized": false
+}
+CONFLICT: HTTP 409 {
+  "reason": "LOCK_VERSION_CONFLICT",
+  "expectedLockVersion": 0,
+  "actualLockVersion": 1
+}
 EVENT:    listener_id=bootstrap.RequirementChangedListener.on(sk.workingset.application.event.RequirementChanged)
-          publication_date=2026-11-12 11:09:53.332481+08, completion_date=2026-11-12 11:09:53.33948+08
+publication_date=2026-11-12 11:09:53.332481+08, completion_date=2026-11-12 11:09:53.33948+08
 ```
 
 ## 3. PostgreSQL 持久化证据

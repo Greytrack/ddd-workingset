@@ -29,16 +29,6 @@ public class RequirementTrackerItemCatalogQueryProvider implements TrackerItemCa
     }
 
     @Override
-    public List<Identity> page(TrackerId trackerId, long baselineAt, String afterLocalId, int limit) {
-        return jdbc.query("""
-                        SELECT local_id, common_id, revision FROM requirements
-                        WHERE tracker_id = ? AND NOT delete_flag AND created_time <= ? AND local_id > ?
-                        ORDER BY local_id LIMIT ?
-                        """, IDENTITY, trackerId.numericValue(), baselineAt,
-                afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
-    }
-
-    @Override
     public List<Identity> identities(TrackerId trackerId) {
         return jdbc.query("""
                 SELECT local_id, common_id, revision FROM requirements
@@ -56,18 +46,4 @@ public class RequirementTrackerItemCatalogQueryProvider implements TrackerItemCa
                 """, IDENTITY, trackerId.numericValue());
     }
 
-    @Override
-    public boolean hasActiveFamily(TrackerId trackerId, CommonId commonId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag)
-                """, Boolean.class, trackerId.numericValue(), commonId.numericValue()));
-    }
-
-    @Override
-    public boolean hasActiveFamily(TrackerId trackerId, CommonId commonId, long baselineAt) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM requirements
-                    WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag AND created_time <= ?)
-                """, Boolean.class, trackerId.numericValue(), commonId.numericValue(), baselineAt));
-    }
 }

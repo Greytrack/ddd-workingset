@@ -241,7 +241,10 @@ Q1～Q4 的原始方案、理由与接受范围见 [ADR-0005](../adr/0005-merge-
 ## 12. 追溯与验收
 
 -
+
 追溯：D-019、FACT-027、INV-061～063、SCN-055/056/059/060；FACT-007/008、INV-006～010、POL-004、R08～R11、B06/B08/B09/B10；[ADR-0005](../adr/0005-merge-execution-model.md)。
+
 - 图：[MergeEntry 生命周期与协作时序](../diagrams/merge-entry-lifecycle.md)（含 MergeRound 终态图）。
 -
+
 实施证据：[T6-E 轮次接口](../implementation/t6-e-merge-round-verification.md)、[T6-B 中断恢复](../implementation/t6-b-merge-recovery-verification.md)、[T6-D 回并](../implementation/t6-d-merge-back-verification.md)。

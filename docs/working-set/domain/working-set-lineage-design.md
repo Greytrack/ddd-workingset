@@ -5,7 +5,9 @@
 > 同槽多 Tracker、Shared 默认资格、组织父级与派生约束见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 -
+
 依据：[FACT-026 / FACT-028](facts.md)、[POL-004](facts.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[WorkingSet/Tracker 聚合](aggregate-model.md)
+
 - 范围：多级 WorkingSet 谱系、子工作集创建、Tracker 来源约束、相邻父子 Merge 准入、删除边界
 - 不包含：Merge 执行契约本身（T1）、Privilege 授权、ProductSpace/Classification 完整生命周期
 

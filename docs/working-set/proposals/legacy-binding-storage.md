@@ -24,7 +24,8 @@ flowchart LR
 ```
 
 新库仅创建一张绑定实表 air_ws_workingset_branch_relation；`tracker_bindings` / `space_bindings`
-仅为查询视图。基线字段不参与域内唯一性和范围重建。本提案为 **Historical**；旧核对脚本已移除，存量迁移需单独的一次性方案，不得与当前空库 schema 混用。
+仅为查询视图。基线字段不参与域内唯一性和范围重建。本提案为 **Historical**；旧核对脚本已移除，存量迁移需单独的一次性方案，不得与当前空库
+schema 混用。
 
 验收以 [TrackerDefaultAcceptanceTest](../../../deploys/src/test/java/bootstrap/TrackerDefaultAcceptanceTest.java)
 的公共挂载、隐藏恢复及卸载入口为准。有效范围、跨聚合 ID

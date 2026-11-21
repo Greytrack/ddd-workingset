@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.FailureReason;
+import sk.workingset.application.port.TrackerItemSourceLock;
 import sk.workingset.domain.*;
 import sk.workingset.error.WorkingsetResultCode;
 
@@ -98,6 +99,14 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     public Optional<Requirement> lockById(LocalId id) {
         return jdbc.query("SELECT * FROM requirements WHERE local_id = ? FOR UPDATE",
                 MAPPER, id.numericValue()).stream().findFirst();
+    }
+
+    @Override
+    public Optional<TrackerItemSourceLock.State> lockSourceState(LocalId id) {
+        return jdbc.query("SELECT revision, delete_flag FROM requirements WHERE local_id = ? FOR UPDATE",
+                (row, rowNumber) -> new TrackerItemSourceLock.State(
+                        Revision.of(row.getInt("revision")), row.getBoolean("delete_flag")),
+                id.numericValue()).stream().findFirst();
     }
 
     @Override

@@ -6,14 +6,14 @@
 
 ## 当前阅读图
 
-| 主题 | 图 | 状态 |
-| --- | --- | --- |
-| 全景与边界 | [领域主线](domain-mainline.md) | Candidate |
-| 企业外框 | [Shared Kernel 与四个 BC](shared-kernel-context-map.md) | Reviewed |
+| 主题             | 图                                                                                                                                                             | 状态                 |
+|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|
+| 全景与边界       | [领域主线](domain-mainline.md)                                                                                                                                 | Candidate            |
+| 企业外框         | [Shared Kernel 与四个 BC](shared-kernel-context-map.md)                                                                                                        | Reviewed             |
 | 工作集与 Tracker | [ProductSpace/Tracker/WorkingSet](productspace-tracker-workingset.md)、[WorkingSet 谱系](working-set-lineage.md)、[创建/扩展 LRO](working-set-creation-lro.md) | Candidate / Reviewed |
-| Tracker 与绑定 | [Tracker 双维关系](tracker-dual-relations.md)、[绑定与删除](binding-lifecycle.md) | Candidate |
-| 业务协作 | [TrackerItem 契约](trackeritem-contract.md)、[跨 BC 契约](cross-bc-contract.md)、[MergeEntry 生命周期](merge-entry-lifecycle.md) | Candidate |
-| 派生与物化 | [多级有效来源](lighttrackeritem-lifecycle.md)、[双态与首次物化](lighttrackeritem-materialization.md) | Candidate |
+| Tracker 与绑定   | [Tracker 双维关系](tracker-dual-relations.md)、[绑定与删除](binding-lifecycle.md)                                                                              | Candidate            |
+| 业务协作         | [TrackerItem 契约](trackeritem-contract.md)、[跨 BC 契约](cross-bc-contract.md)、[MergeEntry 生命周期](merge-entry-lifecycle.md)                               | Candidate            |
+| 派生与物化       | [多级有效来源](lighttrackeritem-lifecycle.md)、[双态与首次物化](lighttrackeritem-materialization.md)                                                           | Candidate            |
 
 ## 历史与探索
 

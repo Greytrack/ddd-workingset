@@ -29,7 +29,8 @@ judgment call (see Ambiguity Signals), flag it — present options/reasoning rat
 If loaded doc have no Validation Checklist section, surface warning:
 
 > "Your architecture document is missing a Validation Checklist section. Without it, the architecture atom cannot run
-> style-specific post-generation verification. Consider re-running `/architecture-refiner` to add a Validation Checklist."
+> style-specific post-generation verification. Consider re-running `/architecture-refiner` to add a Validation
+> Checklist."
 
 Then apply these baseline structural checks as fallback — partial enforcement better than no enforcement:
 

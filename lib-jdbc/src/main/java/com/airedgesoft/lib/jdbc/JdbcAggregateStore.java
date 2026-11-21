@@ -40,6 +40,7 @@ public final class JdbcAggregateStore {
     private final TransactionTemplate existingTransaction;
     private final JdbcWriteExecutor executor;
     private final NamedParameterJdbcTemplate reader;
+
     /**
      * 装配查询和执行组件，只参与调用方已开启的事务。
      *

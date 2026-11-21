@@ -181,19 +181,19 @@ public final class Tracker {
                 isDefault, true, createdBy, createdBy);
     }
 
-    /**
-     * 记录本次业务操作者；写侧仓储直接使用该审计事实，不再读取请求线程上下文。
-     */
-    public void touch(Long actor) {
-        this.updatedBy = Objects.requireNonNull(actor, "actor");
-    }
-
     private static String normalizeName(String name) {
         String normalized = name == null ? "" : name.strip();
         if (normalized.isEmpty() || normalized.codePointCount(0, normalized.length()) > 255) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name must contain 1 to 255 characters");
         }
         return normalized;
+    }
+
+    /**
+     * 记录本次业务操作者；写侧仓储直接使用该审计事实，不再读取请求线程上下文。
+     */
+    public void touch(Long actor) {
+        this.updatedBy = Objects.requireNonNull(actor, "actor");
     }
 
     public boolean isNew() {

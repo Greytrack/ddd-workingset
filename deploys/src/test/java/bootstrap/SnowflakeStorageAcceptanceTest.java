@@ -39,10 +39,12 @@ class SnowflakeStorageAcceptanceTest {
         long spaceId = Long.parseLong(space.getBody().productSpaceId());
         Long targetId = null;
         try {
-            TrackerView root = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
-                    .filter(tracker -> space.getBody().productSpaceId().equals(tracker.productSpaceId()))
-                    .filter(tracker -> "14010101".equals(tracker.classificationId()))
-                    .filter(tracker -> "UNSHARED".equals(tracker.sharingMode())).findFirst().orElseThrow();
+            TrackerView root = await().atMost(Duration.ofSeconds(8)).until(() ->
+                            Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
+                                    .filter(tracker -> space.getBody().productSpaceId().equals(tracker.productSpaceId()))
+                                    .filter(tracker -> "14010101".equals(tracker.classificationId()))
+                                    .filter(tracker -> "UNSHARED".equals(tracker.sharingMode())).findFirst().orElse(null),
+                    tracker -> tracker != null);
             ResponseEntity<RequirementView> created = rest.postForEntity("/api/requirements", Map.of("trackerId", root.trackerId(),
                             "workingSetId", "1", "title", "编号初稿", "description", "编号验收", "revision", 1),
                     RequirementView.class);
@@ -53,9 +55,11 @@ class SnowflakeStorageAcceptanceTest {
             assertTrue(requirement.number().startsWith("REQ-"));
             assertEquals(requirement.number(),
                     jdbc.queryForObject("SELECT number FROM requirements WHERE local_id = ?", String.class, rootId));
+            await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1,
+                    jdbc.queryForObject("SELECT count(*) FROM air_ws_items_index WHERE local_id = ?", Integer.class, rootId)));
 
             Map<String, Object> request = Map.of("parentWorkingSetId", "1", "requestId", UUID.randomUUID().toString(),
-                    "name", "编号子工作集", "productSpaceIds", List.of(Long.toString(spaceId)),
+                    "name", "编号子工作集", "mode", "CREATE", "productSpaceIds", List.of(Long.toString(spaceId)),
                     "unsharedParentTrackerIds", List.of(root.trackerId()));
             ResponseEntity<CreationView> accepted = rest.postForEntity("/api/working-set-creations", request, CreationView.class);
             assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
@@ -80,18 +84,20 @@ class SnowflakeStorageAcceptanceTest {
                     Long.valueOf(root.trackerId())));
             Map<String, Object> item = jdbc.queryForMap("""
                     SELECT local_id, common_id FROM air_ws_items_index
-                    WHERE tracker_id = ? ORDER BY local_id LIMIT 1
+                    WHERE branch_id = ? ORDER BY local_id LIMIT 1
                     """, Long.valueOf(tracker.trackerId()));
             String itemLocalId = String.valueOf(item.get("local_id"));
             assertNotEquals(requirement.localId(), itemLocalId);
             assertEquals(requirement.commonId(), String.valueOf(item.get("common_id")));
             long childLocalId = Long.parseLong(itemLocalId);
-            assertEquals(requirement.number(), jdbc.queryForObject("""
-                    SELECT number FROM air_inst_common WHERE id = ? AND workingset_id = ? AND tracker = ?
-                    """, String.class, childLocalId, targetId, Long.valueOf(tracker.trackerId())));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
                     Integer.class, childLocalId));
-            ResponseEntity<RequirementView> edited = rest.exchange("/api/requirements/" + itemLocalId + "/title", HttpMethod.PUT,
+            String itemPath = "/api/requirements/" + itemLocalId;
+            ResponseEntity<RequirementView> inherited = rest.getForEntity(itemPath, RequirementView.class);
+            assertEquals(HttpStatus.OK, inherited.getStatusCode());
+            assertEquals(requirement.number(), inherited.getBody().number());
+            assertEquals(tracker.trackerId(), inherited.getBody().trackerId());
+            ResponseEntity<RequirementView> edited = rest.exchange(itemPath + "/title", HttpMethod.PUT,
                     new HttpEntity<>(Map.of("title", "编号修订", "expectedLockVersion", 0)), RequirementView.class);
             assertEquals(HttpStatus.OK, edited.getStatusCode());
             assertEquals(requirement.number(), edited.getBody().number());

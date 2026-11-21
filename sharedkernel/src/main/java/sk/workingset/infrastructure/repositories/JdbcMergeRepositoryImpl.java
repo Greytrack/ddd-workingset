@@ -69,12 +69,12 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     public void save(MergeRound round) {
         Long[] trackers = trackerPair(round);
         int affected = jdbc.update("""
-                        UPDATE merge_rounds
-                        SET state = CAST(? AS jsonb),
-                            tracker_a_id = ?,
-                            tracker_b_id = ?
-                        WHERE id = ?
-                        """, encode(round), trackers[0], trackers[1], round.numericId());
+                UPDATE merge_rounds
+                SET state = CAST(? AS jsonb),
+                    tracker_a_id = ?,
+                    tracker_b_id = ?
+                WHERE id = ?
+                """, encode(round), trackers[0], trackers[1], round.numericId());
         if (affected != 1) {
             throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
                     "Could not update merge round " + round.id());

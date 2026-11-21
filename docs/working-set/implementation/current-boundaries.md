@@ -75,8 +75,10 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 
 ## 6. 未验证与阻塞
 
-- `RequestThreadHolder` 已在写侧仓储中移除：审计事实由 WorkingSet/`LightTrackerItem`/Requirement/Tracker 聚合携带，应用层在构造或修改时注入；`sk.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
-- 2026-11-22 全量测试：sharedkernel 33、alm 16、ArchitectureTest 14 通过；deploys 154 项中 21 failures + 10 errors，集中在 Merge、Binding、Tracker、Requirement 与 Snowflake 的既有语义/夹具问题。时间类型统一为 epoch 毫秒、仓储审计解耦相关的测试均通过。
+- `RequestThreadHolder` 已在写侧仓储中移除：审计事实由 WorkingSet/`LightTrackerItem`/Requirement/Tracker
+  聚合携带，应用层在构造或修改时注入；`sk.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
+- 2026-11-22 全量测试：sharedkernel 33、alm 16、ArchitectureTest 14 通过；deploys 154 项中 21 failures + 10 errors，集中在
+  Merge、Binding、Tracker、Requirement 与 Snowflake 的既有语义/夹具问题。时间类型统一为 epoch 毫秒、仓储审计解耦相关的测试均通过。
 - 本页不把代码现状反向确认为业务政策；产品空间、Tracker、LTI 和 Merge 的业务语义仍以 BASELINE、ADR 和 T1～T4 契约为准。
 
 ## 7. 追溯
