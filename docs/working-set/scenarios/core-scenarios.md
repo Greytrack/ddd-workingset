@@ -737,26 +737,32 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 <a id="scn-063"></a>
 ## SCN-063 子 WorkingSet 删除的成员关系约束
 
-**业务规则：用户确认（2026-11-11，K3；FACT-026、INV-059/067）。验收表述 Draft。**
+**业务规则：用户确认（2026-11-21 更新，K3；FACT-026、INV-059/067）。验收表述 Draft。**
 
-- Given 子 WorkingSet WS1 含多个绑定：Shared S（可解除，即使有 Item）、非共享叶子 N（可删除并解除）、非共享 N2（有 Item 或子级，不可解除）。
+- Given 子 WorkingSet WS1 仍存在绑定。
 - When 尝试删除 WS1。
-- Then 拒绝（`MemberCannotBeUnbound`），提示不可解除的成员及原因；WS1 及其绑定保持不变；**不允许通过隐式级联绕过**。
-- When 用户使全部成员可合法解除后再次删除。
-- Then 按顺序执行：显式解除全部 TrackerBinding → 显式解除 SpaceBinding → 删除 WS1。
-- 边界：默认 WorkingSet（Id=1）始终不可删除（`DefaultWorkingSetUndeletable`）；上述为业务准入与行为顺序，不预设跨聚合数据库大事务。
+- Then 拒绝（`WorkingSetStillBound`），保留 WS1 和绑定。
+- Given WS1 已无绑定，但仍拥有 Tracker。
+- When 再次删除 WS1。
+- Then 拒绝（`WorkingSetHasTrackers`）。
+- Given WS1 无子级、无绑定且无归属 Tracker。
+- When 再次删除 WS1。
+- Then 只删除 WS1。默认 WorkingSet 始终不可删除（`DefaultWorkingSetUndeletable`）。
 
 <a id="scn-064"></a>
-## SCN-064 删除空 ProductSpace 并清理绑定
+## SCN-064 删除无绑定的空 ProductSpace
 
-**业务规则：用户于 2026-11-20 裁定，见[绑定与删除契约 §4.3](../domain/binding-deletion-contract-v1.md#43-聚合删除)。验收表述 Draft。**
+**业务规则：用户于 2026-11-21 裁定，见[绑定与删除契约 §4.3](../domain/binding-deletion-contract-v1.md#43-聚合删除)。验收表述 Draft。**
 
 - Given 根与子工作集绑定了 P，P 内只有空 Tracker。
 - When 在默认工作集删除 P。
-- Then 请求受理，最终 P、其空 Tracker 和各工作集下对 P 的绑定均不可见，工作集保留。
-- Given P 仍被业务对象引用，即使对象已软删除。
+- Then 返回 `409 SpaceStillBound`，P、Tracker 及各工作集的绑定保留。
+- Given P 无绑定，仍被业务对象引用，即使对象已软删除。
 - When 在默认工作集删除 P。
-- Then 返回 `SpaceHasBusinessReferences`，P 与原绑定保留。
+- Then 返回 `SpaceHasBusinessReferences`，P 保留。
+- Given P 无绑定或业务引用，且只有无外部引用的空 Tracker。
+- When 在默认工作集删除 P。
+- Then 请求受理，逐个删除空 Tracker，最后删除 P。
 
 <a id="scn-065"></a>
 ## SCN-065 删除不可恢复（K1）

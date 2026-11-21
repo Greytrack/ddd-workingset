@@ -94,7 +94,7 @@
 | `INV-064` | 删除子工作集时，Shared TrackerItem 不阻止解除其 Shared 绑定。 | Confirmed；T2 K1/K3 | SCN-061/063 |
 | `INV-065` | 非共享 Tracker 解绑/删除必须同时满足：无 TrackerItem、无组织子级、无派生子级。 | Confirmed；T2 K2 | SCN-061/062 |
 | `INV-066` | 产品空间最终删除时无绑定、Tracker 或业务引用。受理准入及清理顺序见[绑定与删除契约 §4.3](binding-deletion-contract-v1.md#43-聚合删除)。 | Confirmed；2026-11-20 澄清 | SCN-064 |
-| `INV-067` | 删除 WorkingSet 前全部 TrackerBinding/SpaceBinding 可合法解除；默认 WS 始终不可删。 | Confirmed；T2 K3 | SCN-063 |
+| `INV-067` | 删除 WorkingSet 前须无子级、无绑定且无归属 Tracker；默认 WS 始终不可删。 | Confirmed；T2 K3 | SCN-063 |
 | `INV-068` | 删除后不可恢复；软删/归档/恢复不属于 T2 本版；彻底删除不强制物理 DELETE。 | Confirmed；`POL-016` | SCN-061/065 |
 
 ## Merge 与物化（INV-069～071）

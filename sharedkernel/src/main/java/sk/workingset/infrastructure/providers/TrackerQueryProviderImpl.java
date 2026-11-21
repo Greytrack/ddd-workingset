@@ -3,7 +3,6 @@ package sk.workingset.infrastructure.providers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import sk.RequestThreadHolder;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.domain.workingset.WorkingSetId;
@@ -19,9 +18,10 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     private final JdbcTemplate jdbc;
 
     @Override
-    public boolean isVisible(TrackerId trackerId) {
-        return exists("id = ? AND visible = 1 AND work_space = COALESCE(CAST(? AS bigint), work_space)",
-                trackerId.numericValue(), RequestThreadHolder.getWorkspace());
+    public boolean hasOwnedTrackers(WorkingSetId workingSetId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM air_inst_tracker_rev WHERE workingset_id = ?)
+                """, Boolean.class, workingSetId.numericValue()));
     }
 
     @Override
@@ -64,7 +64,7 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
                                                               long classificationId) {
         return jdbc.queryForList("""
                         SELECT id FROM air_inst_tracker_rev
-                        WHERE delete_flag = 0 AND visible = 1 AND workingset_id = ? AND work_space = ?
+                        WHERE delete_flag = 0 AND workingset_id = ? AND work_space = ?
                             AND tracker_class = ? AND is_default = 1
                         ORDER BY id
                         """, Long.class, workingSetId.numericValue(), spaceId, classificationId).stream()

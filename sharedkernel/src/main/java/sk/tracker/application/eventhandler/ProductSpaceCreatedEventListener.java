@@ -11,7 +11,7 @@ import sk.tracker.domain.TrackerId;
 import java.util.List;
 
 /**
- * ProductSpace 创建后，在监听器事务内批量创建默认 Tracker 并写入绑定事件。
+ * ProductSpace 创建后逐个提交默认 Tracker，再登记绑定事件。
  */
 @Slf4j
 @Component

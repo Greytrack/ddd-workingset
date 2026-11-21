@@ -4,70 +4,41 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
-import sk.tracker.domain.Tracker;
-import sk.tracker.domain.TrackerId;
-import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
-import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.workingset.WorkingSet;
-import sk.workingset.domain.workingset.WorkingSet.TrackerBinding;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 工作集绑定解除与聚合删除：默认根保护、子工作集保护、成员可解除性预检与解除顺序。
- *
- * <p>删除顺序为 TrackerBinding → SpaceBinding → WorkingSet；能力范围只到 Working Set，
- * 业务对象生命周期由各 BC 负责（D7/D16）。
+ * 删除无子级、无绑定且不再拥有 Tracker 的工作集。
  */
 @Service
 @RequiredArgsConstructor
 public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
-    private final TrackerRepository trackers;
-    private final LightTrackerItemQueryProvider itemQueries;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
-    private final BusinessObjectTypeRegistry registry;
 
     /**
-     * 删除工作集；预检全部绑定可解除后按 TrackerBinding → SpaceBinding → WorkingSet 顺序解除并删除。
+     * 校验引用后仅删除 WorkingSet 聚合。
      */
     @Transactional
     public void deleteWorkingSet(WorkingSetId id) {
         WorkingSet.requireDeletable(id);
-        WorkingSet workingSet = lockWorkingSet(id);
+        WorkingSet workingSet = workingSets.findById(id)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
         assertNoChildren(id);
-        List<TrackerBinding> bindings = workingSet.trackers().stream()
-                .sorted(Comparator.comparing(binding -> binding.trackerId().value()))
-                .toList();
-        Map<String, String> blockers = new LinkedHashMap<>();
-        for (TrackerBinding binding : bindings) {
-            try {
-                checkUnbind(binding);
-            } catch (DomainException failure) {
-                if (!(failure.getResCode() instanceof BindingResCode code)) {
-                    throw failure;
-                }
-                blockers.put(binding.trackerId().value(), code.reason());
-            }
+        if (queries.hasBindings(id.numericValue())) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_STILL_BOUND, id.value());
         }
-        if (!blockers.isEmpty()) {
-            throw DomainException.withMessage(BindingResCode.MEMBER_CANNOT_BE_UNBOUND, id.value(), Map.of("members", blockers));
+        if (trackerQueries.hasOwnedTrackers(id)) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_TRACKERS, id.value());
         }
-        bindings.forEach(binding -> workingSet.unbindTracker(binding.trackerId()));
-        workingSet.spaces().forEach(binding -> workingSet.removeSpace(binding.productSpaceId()));
-        workingSets.save(workingSet);
-        bindings.forEach(this::deleteOwnedTracker);
         workingSets.delete(workingSet);
     }
 
@@ -76,34 +47,5 @@ public class WorkingSetDeletionService {
         if (!children.isEmpty()) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN, id.value(), Map.of("childWorkingSetIds", children));
         }
-    }
-
-    private void checkUnbind(TrackerBinding binding) {
-        Tracker tracker = lockTracker(binding.trackerId());
-        if (binding.sharingMode() == SharingMode.UNSHARED) {
-            requireDeletable(tracker);
-        }
-    }
-
-    private void deleteOwnedTracker(TrackerBinding binding) {
-        if (binding.sharingMode() == SharingMode.UNSHARED) {
-            trackers.deleteTracker(binding.trackerId());
-        }
-    }
-
-    private void requireDeletable(Tracker tracker) {
-        TrackerId id = tracker.trackerId();
-        tracker.requireDeletable(itemQueries.existsInTracker(id) || registry.hasBusinessItems(id),
-                trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
-    }
-
-    private WorkingSet lockWorkingSet(WorkingSetId id) {
-        return workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
-    }
-
-    private Tracker lockTracker(TrackerId id) {
-        return trackers.lockTracker(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
     }
 }

@@ -6,6 +6,8 @@
 
 Java 生产代码和测试代码均须显式声明变量类型，禁止使用 `var`，包括局部变量、增强 `for`、资源声明及显式声明的 Lambda 参数。
 
+`RequestThreadHolder` 仅用于读取 UserId（`getUserId()` 或 `getLongUserId()`）。WorkingSet 和 ProductSpace 的范围从显式输入、绑定或对象归属确定，跨空间操作须逐项使用其实际范围。
+
 本仓库是面向企业级 PLM／ALM Working Set 的**可持续演进的领域设计仓库**，不是一次性生成 DDD 文档、类图或代码的项目。仓库用于长期保存并关联：
 
 - 领域发现、统一领域语言和业务场景；

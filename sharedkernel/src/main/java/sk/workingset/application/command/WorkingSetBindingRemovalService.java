@@ -31,14 +31,4 @@ public class WorkingSetBindingRemovalService {
         workingSet.unbindTracker(trackerId);
         workingSets.save(workingSet);
     }
-
-    /**
-     * Removes one space and its tracker bindings from a single Working Set.
-     */
-    @Transactional
-    public void removeSpaceForDeletion(WorkingSetId workingSetId, String spaceId) {
-        workingSets.findByIdForCreation(workingSetId)
-                .filter(workingSet -> workingSet.detachSpaceForDeletion(spaceId))
-                .ifPresent(workingSets::save);
-    }
 }

@@ -63,18 +63,7 @@ class BusinessObjectTypeRegistryTest {
         DefaultBusinessObjectTypeRegistry registry = registry(adapter, tracker(10070101L, 1007L, 100701L),
                 mock(LightTrackerItemQueryProvider.class));
 
-        assertFalse(registry.hasBusinessItems(TRACKER));
         DomainException failure = assertThrows(DomainException.class, () -> registry.forTracker(TRACKER));
-        assertEquals(FailureReason.CAPABILITY_NOT_SUPPORTED, FailureReason.of(failure));
-    }
-
-    @Test
-    void unknownBusinessTypeIsNotSilentlyTreatedAsEmpty() {
-        BusinessObjectTypeAdapter adapter = requirementAdapter();
-        DefaultBusinessObjectTypeRegistry registry = registry(adapter, tracker(140201L, 1402L, 140201L),
-                mock(LightTrackerItemQueryProvider.class));
-
-        DomainException failure = assertThrows(DomainException.class, () -> registry.hasBusinessItems(TRACKER));
         assertEquals(FailureReason.CAPABILITY_NOT_SUPPORTED, FailureReason.of(failure));
     }
 

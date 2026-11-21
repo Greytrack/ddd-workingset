@@ -66,8 +66,7 @@ public interface WorkingSetQueryMapper {
                    CASE t.share WHEN 1 THEN 'SHARED' ELSE 'UNSHARED' END AS sharing_mode,
                    t.is_default = 1 AS is_default
             FROM air_inst_tracker_rev t
-            WHERE t.delete_flag = 0 AND t.visible = 1
-              AND t.work_space = COALESCE(#{workspace,jdbcType=BIGINT}, t.work_space)
+            WHERE t.delete_flag = 0
               AND (t.workingset_id = #{id} OR EXISTS (
                 SELECT 1 FROM tracker_bindings b
                 WHERE b.working_set_id = #{id} AND b.tracker_id = t.id))
@@ -75,7 +74,7 @@ public interface WorkingSetQueryMapper {
                 WHERE b.working_set_id = #{id} AND b.tracker_id = t.id AND NOT b.shown)
             ORDER BY t.id
             """)
-    List<TrackerSummary> findTrackers(@Param("id") long id, @Param("workspace") Long workspace);
+    List<TrackerSummary> findTrackers(@Param("id") long id);
 
     @Select("""
             SELECT classification_id, sharing_mode, name, base_class_id, class_id
@@ -88,23 +87,27 @@ public interface WorkingSetQueryMapper {
             FROM space_bindings sb
             LEFT JOIN product_spaces ps ON ps.product_space_id = sb.product_space_id
             WHERE sb.working_set_id = #{id}
-              AND sb.product_space_id = COALESCE(#{workspace,jdbcType=BIGINT}, sb.product_space_id)
             ORDER BY sb.product_space_id
             """)
-    List<SpaceBindingSummary> findSpaceBindings(@Param("id") long id, @Param("workspace") Long workspace);
+    List<SpaceBindingSummary> findSpaceBindings(@Param("id") long id);
 
     @Select("""
             SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode, b.origin, b.shown
             FROM tracker_bindings b
             JOIN air_inst_tracker_rev t ON t.id = b.tracker_id AND t.work_space = b.product_space_id
-            WHERE b.working_set_id = #{id} AND t.delete_flag = 0 AND t.visible = 1
-              AND t.work_space = COALESCE(#{workspace,jdbcType=BIGINT}, t.work_space)
+            WHERE b.working_set_id = #{id} AND t.delete_flag = 0
             ORDER BY b.product_space_id, b.classification_id
             """)
-    List<TrackerBindingSummary> findTrackerBindings(@Param("id") long id, @Param("workspace") Long workspace);
+    List<TrackerBindingSummary> findTrackerBindings(@Param("id") long id);
 
-    @Select("SELECT working_set_id FROM space_bindings WHERE product_space_id = #{spaceId} ORDER BY working_set_id")
-    List<Long> findWorkingSetsBoundToSpace(@Param("spaceId") long spaceId);
+    @Select("""
+            SELECT EXISTS (SELECT 1 FROM air_ws_workingset_branch_relation
+                WHERE work_space = #{spaceId} AND workingset_id IS NOT NULL)
+            """)
+    boolean hasWorkingSetBinding(@Param("spaceId") long spaceId);
+
+    @Select("SELECT EXISTS (SELECT 1 FROM air_ws_workingset_branch_relation WHERE workingset_id = #{id})")
+    boolean hasBindings(@Param("id") long id);
 
     @Select("SELECT DISTINCT working_set_id FROM tracker_bindings WHERE tracker_id = #{trackerId} ORDER BY working_set_id")
     List<Long> findWorkingSetIdsBoundToTracker(@Param("trackerId") long trackerId);

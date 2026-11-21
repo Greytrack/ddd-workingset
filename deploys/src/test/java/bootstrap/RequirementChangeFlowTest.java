@@ -10,11 +10,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import sk.common.error.DomainException;
+import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
+import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.application.FailureReason;
 import sk.workingset.domain.*;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.util.Optional;
@@ -34,10 +39,11 @@ class RequirementChangeFlowTest {
     private final RequirementRepository requirements = mock(RequirementRepository.class);
     private final RequirementSnapshotStore snapshots = mock(RequirementSnapshotStore.class);
     private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
+    private final TrackerRepository trackers = mock(TrackerRepository.class);
+    private final WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
     private final RequirementCommandService service = new RequirementCommandService(
             requirements, snapshots, new SnowflakeIdGenerator(1, 1), publisher,
-            mock(sk.tracker.domain.repository.TrackerRepository.class),
-            mock(WorkingSetRepository.class),
+            trackers, workingSets,
             mock(LightTrackerItemRepository.class));
     private final Requirement before = Requirement.create(
             L0, CommonId.of("265506033508288"), TrackerId.of("264905365135296"), "A", "source description", R3, Version.of("1.2"));
@@ -45,6 +51,21 @@ class RequirementChangeFlowTest {
     @BeforeEach
     void setUp() {
         when(requirements.findById(L0)).thenReturn(Optional.of(before));
+        Tracker tracker = mock(Tracker.class);
+        when(tracker.workingSetId()).thenReturn(WorkingSet.DEFAULT_ID);
+        when(trackers.findById(before.trackerId())).thenReturn(Optional.of(tracker));
+        when(workingSets.findById(WorkingSet.DEFAULT_ID)).thenReturn(Optional.of(mock(WorkingSet.class)));
+    }
+
+    @Test
+    void rejectsBusinessEditingBeforeOwningWorkingSetIsReady() {
+        when(workingSets.findById(WorkingSet.DEFAULT_ID))
+                .thenThrow(DomainException.withMessage(FailureReason.PREPARING, "1"));
+        DomainException rejected = assertThrows(DomainException.class,
+                () -> service.changeTitle(L0, "B", LockVersion.of(0)));
+        assertEquals(FailureReason.PREPARING, rejected.getResCode());
+        verify(requirements, never()).save(any());
+        verifyNoInteractions(snapshots, publisher);
     }
 
     @Test

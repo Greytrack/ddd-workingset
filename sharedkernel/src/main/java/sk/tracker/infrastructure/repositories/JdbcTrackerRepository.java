@@ -105,8 +105,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
     private Optional<Tracker> load(TrackerId id, boolean lock) {
         return jdbc.query("SELECT " + COLUMNS + FROM_TRACKER + """
                         WHERE t.id = ? AND t.delete_flag = 0
-                        AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
-                        """ + (lock ? " FOR UPDATE OF t" : ""), MAPPER, id.numericValue(), RequestThreadHolder.getWorkspace())
+                        """ + (lock ? " FOR UPDATE OF t" : ""), MAPPER, id.numericValue())
                 .stream().findFirst();
     }
 
@@ -114,8 +113,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
     public Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source) {
         return jdbc.query("SELECT " + COLUMNS + FROM_TRACKER + """
                         WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0
-                          AND t.work_space = COALESCE(CAST(? AS bigint), t.work_space)
-                        """, MAPPER, target.numericValue(), source.numericValue(), RequestThreadHolder.getWorkspace())
+                        """, MAPPER, target.numericValue(), source.numericValue())
                 .stream().findFirst();
     }
 
@@ -132,13 +130,13 @@ public class JdbcTrackerRepository implements TrackerRepository {
     public void save(Tracker tracker) {
         long writeActor = tracker.createdBy() == null ? currentActor() : tracker.createdBy();
         if (tracker.isNew()) {
-            insert(tracker, tracker.isInitiallyVisible() ? 1 : 0, writeActor);
+            insert(tracker, writeActor);
         } else {
             update(tracker, currentActor());
         }
     }
 
-    private void insert(Tracker tracker, int visible, long actor) {
+    private void insert(Tracker tracker, long actor) {
         long id = tracker.trackerId().numericValue();
         String number = numbers.generate(tracker.trackerId());
         String auditActor = Long.toString(actor);
@@ -159,14 +157,14 @@ public class JdbcTrackerRepository implements TrackerRepository {
                         """, id, id, tracker.commonId().numericValue(), workset, tracker.numericProductSpaceId(),
                 tracker.baseClassId(), tracker.classId(), tracker.numericClassificationId(), tracker.numericClassificationId(),
                 tracker.name(), number, actor, shared,
-                parent, source, defaultFlag, visible, auditActor, now, auditActor, now);
+                parent, source, defaultFlag, 1, auditActor, now, auditActor, now);
         jdbc.update("""
                         INSERT INTO air_ws_tracker (id, workingset_id, sub_class_id, name, number,
                             parent_id, source_branch_id, shared, is_default, visible, locked, delete_flag, lock_version,
                             created_by, created_time, updated_by, updated_time)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
                         """, id, workset, tracker.numericClassificationId(), tracker.name(), number,
-                parent, source, shared, defaultFlag, visible, auditActor, now, auditActor, now);
+                parent, source, shared, defaultFlag, 1, auditActor, now, auditActor, now);
         saveCommonInstance(id);
     }
 
@@ -175,7 +173,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
         requireOne(jdbc.update("""
                         UPDATE air_inst_tracker_rev
                         SET name = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
-                        WHERE id = ? AND work_space = ? AND visible = 1 AND delete_flag = 0
+                        WHERE id = ? AND work_space = ? AND delete_flag = 0
                         """, tracker.name(), Long.toString(actor), System.currentTimeMillis(),
                 id, tracker.numericProductSpaceId()), id);
         requireOne(jdbc.update("""
@@ -196,31 +194,6 @@ public class JdbcTrackerRepository implements TrackerRepository {
                        584578917040480 AS tracker, 1::BIGINT AS max_revision
                 FROM air_inst_tracker_rev WHERE id = ?
                 """, JdbcCommonInstanceStore.ROW_MAPPER, id));
-    }
-
-    @Override
-    public void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
-        for (TrackerId parent : parentTrackerIds) {
-            List<Long> ids = jdbc.queryForList("""
-                            UPDATE air_inst_tracker_rev t
-                            SET visible = 1, lock_version = lock_version + 1, updated_by = ?, updated_time = ?
-                            WHERE t.workingset_id = ? AND t.source_branch_id = ? AND t.delete_flag = 0 AND t.visible = 0
-                              AND EXISTS (SELECT 1 FROM tracker_bindings b
-                                          WHERE b.working_set_id = t.workingset_id AND b.tracker_id = t.id)
-                            RETURNING t.id
-                            """, Long.class, Long.toString(currentActor()), System.currentTimeMillis(),
-                    target.numericValue(), parent.numericValue());
-            for (long id : ids) {
-                requireOne(jdbc.update("""
-                        UPDATE air_ws_tracker c
-                        SET visible = t.visible, lock_version = t.lock_version,
-                            updated_by = t.updated_by, updated_time = t.updated_time
-                        FROM air_inst_tracker_rev t
-                        WHERE t.id = ? AND c.id = t.id AND c.lock_version = t.lock_version - 1
-                        """, id), id);
-                saveCommonInstance(id);
-            }
-        }
     }
 
     private boolean exists(String predicate, Object... args) {

@@ -15,11 +15,6 @@ public class RequestThreadHolder {
      */
     private static final TransmittableThreadLocal<Long> WORKINGSET = new TransmittableThreadLocal<>();
 
-    /**
-     * 缓存working_set_id
-     */
-    private static final TransmittableThreadLocal<Long> WORKSPACE = new TransmittableThreadLocal<>();
-
 
     private RequestThreadHolder() {
     }
@@ -43,20 +38,6 @@ public class RequestThreadHolder {
      */
     public static String getUserId() {
         return "419436436619264";
-    }
-
-    /**
-     * 获取工作空间ID
-     */
-    public static Long getWorkspace() {
-        return WORKSPACE.get();
-    }
-
-    /**
-     * 设置工作空间ID
-     */
-    public static void setWorkspace(Long workspaceId) {
-        WORKSPACE.set(workspaceId);
     }
 
     /**

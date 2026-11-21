@@ -157,7 +157,7 @@
 - 目标：对已有子工作集扩展范围。约定保留已有范围的可见性；当前查询门禁偏差见 [开放问题](open-questions.md)。
 - 选择：按直接父工作集的 Tracker 选择一批 Tracker；只允许直属父级来源。
 - 重复过滤：共享 Tracker 按目标的绑定 ID 判断；非共享 Tracker 按已绑定副本的 `sourceId` 匹配父 TrackerId。同一分类下其他 Tracker 有不同身份，可继续纳入。界面保留这些已纳入项并禁用勾选。提交过滤后为空返回 `NoDerivableTracker`，不创建任务。
-- 扩展范围：共享 Tracker 复用原 ID 并建立绑定。非共享 Tracker 创建副本、绑定并索引父 Item；副本创建时 `visible=false`，任务终态后揭示已成功绑定的副本。
+- 扩展范围：共享 Tracker 复用原 ID 并建立绑定。非共享 Tracker 创建可显示的副本、绑定并索引父 Item。Tracker 创建时即可显示；正在创建的目标 WorkingSet 由工作集就绪校验挡住普通查询与业务命令。已有 WorkingSet 在扩展期间继续可用。
 - 已有 Tracker 的 Item：不在扩展任务内直接覆盖；由普通 Merge 合并加入（扩展只负责新 Tracker）。
 - 原子性：创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO。
 - 并发：同一目标工作集同时只允许一个未终态扩展任务（`uq_active_extension_target`）；不同请求返回 `Preparing`。

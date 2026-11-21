@@ -15,12 +15,4 @@ public interface BusinessObjectTypeRegistry {
     BusinessObjectTypeAdapter forTracker(TrackerId trackerId);
 
     BusinessObjectTypeAdapter forItem(LocalId localId);
-
-    /**
-     * 删除守卫：Tracker 是否仍有业务 Item。
-     *
-     * <p>SK 自己的组织型 Tracker（ProductSpace、Folder、WorkingSet、Tracker）返回 false；
-     * 未注册的业务类型抛 {@code CapabilityNotSupported}，不得默认放行。
-     */
-    boolean hasBusinessItems(TrackerId trackerId);
 }

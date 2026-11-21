@@ -28,12 +28,14 @@ public class RequirementLifecycleService {
     private final RequirementMutationStore requirements;
     private final LightTrackerItemQueryProvider items;
     private final ApplicationEventPublisher eventPublisher;
+    private final RequirementCommandService commands;
 
 
     /** 永久删除：先通过 guard（须已软删），无来源依赖时清除对象并发布彻底删除事件。 */
     @Transactional
     public void delete2(LocalId id) {
         Requirement current = requirements.lockById(id).orElseThrow(() -> missing(id));
+        commands.requireTrackerWorkingSet(current.trackerId());
         LifecycleResult decision = current.delete2(LifecycleCommand.locked("permanent delete"));
         if (!decision.succeeded()) {
             throw DomainException.withMessage(RequirementResultCode.SOFT_DELETE_REQUIRED, id.value());

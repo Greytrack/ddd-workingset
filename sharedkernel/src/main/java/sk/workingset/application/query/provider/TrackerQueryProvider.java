@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Tracker 的只读存在性/可见性查询；命令侧聚合重建仍走 TrackerRepository。
+ * Tracker 的只读查询；命令侧聚合重建仍走 TrackerRepository。
  */
 public interface TrackerQueryProvider {
-    boolean isVisible(TrackerId trackerId);
+    boolean hasOwnedTrackers(WorkingSetId workingSetId);
 
     boolean hasOrgChildren(TrackerId id);
 

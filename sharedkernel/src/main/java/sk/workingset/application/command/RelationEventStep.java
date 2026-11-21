@@ -9,6 +9,8 @@ import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.LightTrackerItemSummary;
 import sk.workingset.application.query.provider.RelationSourceQueryProvider;
+import sk.workingset.domain.event.AssociationEndpointEvent;
+import sk.workingset.domain.event.ReferenceEndpointEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
@@ -53,9 +55,9 @@ public final class RelationEventStep {
         int failed = 0;
         for (LightTrackerItemSummary item : indexed) {
             try {
-                sk.workingset.domain.event.ReferenceEndpointEvent referenceSource = new sk.workingset.domain.event.ReferenceEndpointEvent(target,
+                ReferenceEndpointEvent referenceSource = new ReferenceEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId(), item.revision());
-                sk.workingset.domain.event.AssociationEndpointEvent associationSource = new sk.workingset.domain.event.AssociationEndpointEvent(target,
+                AssociationEndpointEvent associationSource = new AssociationEndpointEvent(target,
                         item.localId(), item.commonId(), child.trackerId());
                 published += publisher.publishReferenceCreations(originId, originType,
                         source.upstreamReferences(referenceSource)).size();

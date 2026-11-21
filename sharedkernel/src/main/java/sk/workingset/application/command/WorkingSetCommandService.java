@@ -226,7 +226,7 @@ public class WorkingSetCommandService {
     }
 
     boolean deriveUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId,
-                                         List<String> selectedSpaces, boolean visible, long actor) {
+                                         List<String> selectedSpaces, long actor) {
         WorkingSet target = lockTaskTarget(id);
         Tracker source = directParentTracker(target, parentTrackerId);
         requireUnshared(source);
@@ -236,13 +236,9 @@ public class WorkingSetCommandService {
         if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
             return false;
         }
-        Tracker copy = derivedTracker(target, source, visible, actor);
+        Tracker copy = derivedTracker(target, source, actor);
         trackers.save(copy);
         return true;
-    }
-
-    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds) {
-        trackers.revealExtensionTrackers(target, parentTrackerIds);
     }
 
     String trackerSpaceForTask(TrackerId id) {
@@ -269,11 +265,11 @@ public class WorkingSetCommandService {
         return source;
     }
 
-    private Tracker derivedTracker(WorkingSet target, Tracker source, boolean visible, long actor) {
+    private Tracker derivedTracker(WorkingSet target, Tracker source, long actor) {
         boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId(),
                 source.classificationId());
         return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
-                isDefault, visible, actor);
+                isDefault, actor);
     }
 
     record BindingResult(boolean changed, List<Failure> failures) {

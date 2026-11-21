@@ -27,7 +27,9 @@ public interface WorkingSetQueryProvider {
 
     BindingsView findBindings(long workingSetId);
 
-    List<Long> findWorkingSetsBoundToSpace(String spaceId);
+    boolean hasWorkingSetBinding(String spaceId);
+
+    boolean hasBindings(long workingSetId);
 
     List<Long> findWorkingSetIdsBoundToTracker(long trackerId);
 }

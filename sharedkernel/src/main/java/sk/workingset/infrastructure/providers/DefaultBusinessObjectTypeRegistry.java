@@ -81,21 +81,6 @@ public class DefaultBusinessObjectTypeRegistry implements BusinessObjectTypeRegi
                         "item index not found: " + localId.value()));
     }
 
-    @Override
-    public boolean hasBusinessItems(TrackerId trackerId) {
-        Tracker tracker = tracker(trackerId);
-        if (ORGANIZATIONAL_CLASSIFICATIONS.contains(tracker.numericClassificationId())) {
-            return false;
-        }
-        BusinessObjectTypeAdapter adapter = byType.get(tracker.numericClassificationId());
-        if (adapter == null) {
-            throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED,
-                    "No business object adapter for tracker classification "
-                            + tracker.numericClassificationId() + " (tracker " + trackerId.value() + ")");
-        }
-        return adapter.catalog().hasAnyItem(trackerId);
-    }
-
     private Tracker tracker(TrackerId trackerId) {
         return trackers.findById(trackerId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, trackerId.value()));

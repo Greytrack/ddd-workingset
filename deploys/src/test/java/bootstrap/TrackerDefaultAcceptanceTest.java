@@ -117,6 +117,10 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void creatingProductSpacePublishesDefaultTrackerBindingsAndItemReadAccess() {
         String spaceId = createSpace("1");
+        assertTrue(jdbc.queryForObject("""
+                SELECT count(*) > 1 AND count(*) = count(DISTINCT xmin::text)
+                FROM air_inst_tracker_rev WHERE work_space = ? AND is_default = 1
+                """, Boolean.class, Long.parseLong(spaceId)));
         LiteBusinessObject product = instanceSummaries.findById(Long.valueOf(spaceId)).orElseThrow();
         assertEquals(10030101L, product.type());
         assertEquals(584189545406816L, product.tracker());
@@ -183,33 +187,28 @@ class TrackerDefaultAcceptanceTest {
     void keepsSpaceMountedWithOnlyItsLocalFolderEvenWhenHidden() {
         String space = createSpace("1");
         FixtureIds.insertWorkingSet(jdbc, "1", child);
-        FixtureIds.extendWithRootFolder(rest, jdbc, child, space);
-        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            long folderId = jdbc.queryForObject("""
-                    SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
-                    JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
-                    WHERE r.workingset_id = ? AND r.work_space = ? AND t.tracker_class = 10070101
-                      AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NOT NULL AND t.share = 0
-                      AND NULLIF(t.parent_id, 0) IS NULL AND t.name = '文件夹'
-                    """, Long.class, Long.valueOf(child), Long.valueOf(space));
-            assertTrue(folderId > 0);
-        });
         long folder = jdbc.queryForObject("""
-                SELECT r.tracker_id FROM air_ws_workingset_branch_relation r
-                JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
-                WHERE r.workingset_id = ? AND r.work_space = ? AND t.tracker_class = 10070101
-                  AND t.workingset_id = r.workingset_id AND t.source_branch_id IS NOT NULL AND t.share = 0
-                  AND NULLIF(t.parent_id, 0) IS NULL AND t.name = '文件夹'
-                """, Long.class, Long.valueOf(child), Long.valueOf(space));
+                SELECT tracker_id FROM trackers
+                WHERE working_set_id = 1 AND product_space_id = ? AND classification_id = 10070101 AND is_default
+                """, Long.class, Long.valueOf(space));
         RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
                 .requestFactory(new JdkClientHttpRequestFactory()).build();
+        long childFolder = Long.parseLong(fixtureId("folder-" + child));
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode)
+                VALUES (?, ?, ?, ?, 10070101, 'UNSHARED')
+                """, childFolder, folder, child, space);
+        jdbc.update("""
+                INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
+                VALUES (?, ?, ?, 10070101, 'UNSHARED', 'UNSHARED_DERIVATION')
+                """, child, childFolder, space);
         String path = "/api/worksets/" + child;
-        String visibility = path + "/product-spaces/" + space + "/trackers/" + folder + "/visibility";
+        String visibility = path + "/product-spaces/" + space + "/trackers/" + childFolder + "/visibility";
         HttpStatusCode wrongSpace = client.patch().uri(path + "/product-spaces/" + fixtureId("other-" + space)
-                        + "/trackers/" + folder + "/visibility")
+                        + "/trackers/" + childFolder + "/visibility")
                 .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, wrongSpace);
-        HttpStatusCode oldRoute = client.patch().uri(path + "/trackers/" + folder + "/visibility")
+        HttpStatusCode oldRoute = client.patch().uri(path + "/trackers/" + childFolder + "/visibility")
                 .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, oldRoute);
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
@@ -225,12 +224,10 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
         HttpStatusCode deletion = client.delete().uri("/api/worksets/1/product-spaces/" + space)
                 .exchange((request, response) -> response.getStatusCode());
-        assertEquals(HttpStatus.ACCEPTED, deletion);
-        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            assertTrue(rest.getForObject(path + "/bindings", BindingsView.class).spaces().isEmpty());
-            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
-                    Integer.class, folder));
-        });
+        assertEquals(HttpStatus.CONFLICT, deletion);
+        assertEquals(1, rest.getForObject(path + "/bindings", BindingsView.class).spaces().size());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
+                Integer.class, childFolder));
     }
 
     @Test
@@ -462,10 +459,23 @@ class TrackerDefaultAcceptanceTest {
                     INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)
                     VALUES (?, ?, '1', ?, ?, 'UNSHARED')
                     """, fixtureId("T-NAME-" + spaceId), name, spaceId, classification);
+            jdbc.update("""
+                    INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id, classification_id, sharing_mode, origin)
+                    VALUES (1, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
+                    """, fixtureId("T-NAME-" + spaceId), spaceId, classification);
         }
         assertEquals(2, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE name = ? AND working_set_id = '1'",
                 Integer.class, name));
+        BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+        List<TrackerView> trackers = Arrays.asList(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class));
+        for (String spaceId : List.of(firstSpace, secondSpace)) {
+            String trackerId = fixtureId("T-NAME-" + spaceId);
+            assertEquals(spaceId, trackerRepository.findById(TrackerId.of(trackerId)).orElseThrow().productSpaceId());
+            assertTrue(bindings.spaces().stream().anyMatch(binding -> spaceId.equals(binding.productSpaceId())));
+            assertTrue(bindings.trackers().stream().anyMatch(binding -> trackerId.equals(binding.trackerId())));
+            assertTrue(trackers.stream().anyMatch(tracker -> trackerId.equals(tracker.trackerId())));
+        }
     }
 
     private String createSpace(String workingSet) {

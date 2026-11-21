@@ -22,13 +22,13 @@ flowchart TD
     G -->|"是"| G1["删除 Tracker 聚合<br/>并解除其 TrackerBinding"]
     G -->|"否"| G2["拒绝：TrackerHasItems<br/>TrackerHasOrgChildren<br/>TrackerHasDerivedChildren"]
 
-    B -->|"ProductSpace 聚合"| D{"默认工作集<br/>无业务引用且无外部 Tracker 引用"}
-    D -->|"是"| D1["逐工作集解除空间和 Tracker 绑定<br/>逐个删除空 Tracker<br/>删除 ProductSpace 聚合"]
+    B -->|"ProductSpace 聚合"| D{"默认工作集<br/>无 WorkingSet 绑定、业务引用及外部 Tracker 引用"}
+    D -->|"是"| D1["逐个删除空 Tracker<br/>删除 ProductSpace 聚合"]
     D -->|"否"| D2["拒绝"]
 
-    B -->|"WorkingSet"| E{"非默认 WS 且<br/>全部绑定可合法解除"}
-    E -->|"是"| E1["显式解除全部 TrackerBinding<br/>再解除 SpaceBinding<br/>最后删除 WorkingSet"]
-    E -->|"否"| E2["拒绝：DefaultWorkingSetUndeletable<br/>MemberCannotBeUnbound"]
+    B -->|"WorkingSet"| E{"非默认 WS 且<br/>无子级、绑定及归属 Tracker"}
+    E -->|"是"| E1["删除 WorkingSet"]
+    E -->|"否"| E2["拒绝删除"]
 ```
 
 ## 2. 删除时序
@@ -40,28 +40,12 @@ sequenceDiagram
     autonumber
     actor U as 用户
     participant WS as 子 WorkingSet
-    participant TB as TrackerBinding
-    participant TR as Tracker 聚合
 
     U->>WS: deleteWorkingSet
-    WS->>WS: 校验非默认 WorkingSet
-    alt 默认 WorkingSet Id=1
-        WS-->>U: 拒绝 DefaultWorkingSetUndeletable
-    else 子 WorkingSet
-        loop 每个 TrackerBinding
-            alt Shared 绑定
-                WS->>TB: 解除 TrackerBinding（不删除聚合，不受 Item 限制）
-            else 非共享绑定
-                WS->>TR: 检查 Item / 组织子级 / 派生子级
-                alt 任一存在
-                    WS-->>U: 拒绝 MemberCannotBeUnbound 并列出成员
-                else 三项皆无
-                    WS->>TR: 删除 Tracker 聚合
-                    WS->>TB: 解除 TrackerBinding
-                end
-            end
-        end
-        WS->>WS: 显式解除 SpaceBinding
+    WS->>WS: 校验非默认且无子级、绑定及归属 Tracker
+    alt 预检拒绝
+        WS-->>U: 返回对应冲突
+    else 允许删除
         WS->>WS: 删除 WorkingSet
         WS-->>U: 完成
     end
@@ -96,12 +80,12 @@ sequenceDiagram
 ## 3. 规则索引
 
 1. **删除子工作集**时，Shared Tracker 的 Item 不阻塞解除其关联。
-2. **空产品空间删除**通过可靠事件清理空间绑定与空 Tracker。具体准入见[绑定与删除契约](../domain/binding-deletion-contract-v1.md#43-聚合删除)。
+2. **空产品空间删除**先校验绑定，通过可靠事件逐个删除空 Tracker。具体准入见[绑定与删除契约](../domain/binding-deletion-contract-v1.md#43-聚合删除)。
 3. **删除 WorkingSet 是受成员关系约束的业务操作**：任一成员不可合法解除即整体阻止，不引入无条件级联解除；解除顺序为 TrackerBinding → SpaceBinding → WorkingSet。
 
 ## 4. 裁定与图表状态
 
-K1～K3 的冻结范围与 2026-11-20 对产品空间删除的裁定见[契约 v1](../domain/binding-deletion-contract-v1.md)。
+K1～K3 的冻结范围与 2026-11-21 对产品空间删除的裁定见[契约 v1](../domain/binding-deletion-contract-v1.md)。
 
 图本身仍为 `Draft / Candidate`：Mermaid 实际渲染未验证（环境无 `mmdc`），纳入正式基线与发布前须在可渲染环境复核。
 

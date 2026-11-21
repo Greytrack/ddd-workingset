@@ -13,12 +13,9 @@ import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.command.WorkingSetBindingRemovalService;
-import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import sk.workingset.application.query.provider.TrackerQueryProvider;
 import sk.workingset.application.query.provider.WorkingSetQueryProvider;
-import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.BindingResCode;
 
 import java.util.List;
@@ -36,8 +33,6 @@ public class ProductSpaceCommandService {
     private final TrackerQueryProvider trackerQueries;
     private final TrackerRepository trackers;
     private final LightTrackerItemQueryProvider itemQueries;
-    private final BusinessObjectTypeRegistry registry;
-    private final WorkingSetBindingRemovalService bindingRemovals;
     private final IdentifierGenerator ids;
 
     /**
@@ -52,7 +47,7 @@ public class ProductSpaceCommandService {
     }
 
     /**
-     * 校验业务引用并可靠登记删除请求。
+     * 校验绑定和业务引用并可靠登记删除请求。
      */
     @Transactional
     public void delete(String id) {
@@ -63,7 +58,7 @@ public class ProductSpaceCommandService {
     }
 
     /**
-     * 每次事件只处理一个工作集、一个 Tracker 或产品空间本身。
+     * 每次事件只删除一个空 Tracker 或产品空间本身。
      */
     @Transactional
     public void advanceDeletion(ProductSpaceDeletionRequested event) {
@@ -75,10 +70,7 @@ public class ProductSpaceCommandService {
         List<TrackerId> inSpace = trackerQueries.findTrackerIdsInSpace(id);
         requireEmpty(space, inSpace);
 
-        List<Long> bound = queries.findWorkingSetsBoundToSpace(id);
-        if (!bound.isEmpty()) {
-            bindingRemovals.removeSpaceForDeletion(WorkingSetId.of(bound.getFirst()), id);
-        } else if (!inSpace.isEmpty()) {
+        if (!inSpace.isEmpty()) {
             deleteLeafTracker(inSpace, id);
         } else {
             spaces.delete(space);
@@ -88,6 +80,9 @@ public class ProductSpaceCommandService {
     }
 
     private void requireEmpty(ProductSpace space, List<TrackerId> inSpace) {
+        if (queries.hasWorkingSetBinding(space.id())) {
+            throw DomainException.withMessage(BindingResCode.SPACE_STILL_BOUND, space.id());
+        }
         if (spaces.hasBusinessReferences(space) || inSpace.stream().anyMatch(this::hasItems)) {
             throw DomainException.withMessage(BindingResCode.SPACE_HAS_BUSINESS_REFERENCES, space.id());
         }
@@ -97,7 +92,7 @@ public class ProductSpaceCommandService {
     }
 
     private boolean hasItems(TrackerId id) {
-        return itemQueries.existsInTracker(id) || registry.hasBusinessItems(id);
+        return itemQueries.existsInTracker(id);
     }
 
     private void deleteLeafTracker(List<TrackerId> inSpace, String spaceId) {

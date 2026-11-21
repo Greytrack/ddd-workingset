@@ -83,19 +83,19 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 
 ### 4.2 绑定移除
 
-TrackerBinding 和 SpaceBinding 的解除由第 4.3 节的聚合删除流程触发。2026-11-20 用户裁定移除两个独立解绑 REST 入口。工作集删除时仍按 K3 处理 Shared 与非共享成员。
+独立解绑 REST 入口已移除。Tracker 删除可以触发 TrackerBinding 解除；WorkingSet 和 ProductSpace 删除均要求不存在绑定，见第 4.3 节。
 
 ### 4.3 聚合删除
 
 | 操作 | 入参 | 前置 | 后置 / 结果 | 失败语义 |
 | --- | --- | --- | --- | --- |
 | `deleteTracker` | trackerId | 无 TrackerItem、无组织子级、无派生子级（POL-014、SCN-053） | 删除 Tracker 聚合 + 解除其 TrackerBinding | `TrackerHasItems`、`TrackerHasOrgChildren`、`TrackerHasDerivedChildren` |
-| `deleteProductSpace` | productSpaceId | 仅默认工作集；空间无业务对象引用（含软删后仍保留的对象）、无 TrackerItem，也无外部 Tracker 引用空间内 Tracker | 受理后逐工作集清理该空间的绑定，再从叶子逐个删除空 Tracker，最终删除 ProductSpace | `SpaceHasBusinessReferences`、`SpaceStillHasTrackers` |
-| `deleteWorkingSet` | workingSetId | ① 非默认 WorkingSet（Id=1 始终不可删）；② 全部 TrackerBinding 均可合法解除——Shared 直接解除（不受 Item 限制）、非共享须通过 Item/组织子级/派生子级三项检查；③ 全部 TrackerBinding 解除后，才显式解除该 WorkingSet 的 SpaceBinding；④ 任一关系不能合法解除即拒绝删除 | 显式解除全部 TrackerBinding → 显式解除 SpaceBinding → 删除 WorkingSet；**不允许通过隐式级联绕过规则** | `DefaultWorkingSetUndeletable`、`MemberCannotBeUnbound`（列出成员与原因） |
+| `deleteProductSpace` | productSpaceId | 仅默认工作集；空间没有 WorkingSet 绑定、业务对象引用（含软删后仍保留的对象）、TrackerItem 或外部 Tracker 引用 | 从叶子逐个删除空 Tracker，最终删除 ProductSpace | `SpaceStillBound`（1229）、`SpaceHasBusinessReferences`、`SpaceStillHasTrackers` |
+| `deleteWorkingSet` | workingSetId | 非默认 WorkingSet，无子工作集、绑定或归属 Tracker | 只删除 WorkingSet 聚合 | `DefaultWorkingSetUndeletable`、`WorkingSetHasChildren`、`WorkingSetStillBound`（1230）、`WorkingSetHasTrackers`（1231） |
 
-**业务准入与行为顺序**：`deleteWorkingSet` 定义的是准入条件与解除顺序，不预设跨聚合数据库大事务。
+**WorkingSet 删除边界（2026-11-21 用户确认）**：存在绑定时拒绝。未绑定的归属 Tracker 仍引用 WorkingSet，须先独立删除。
 
-**产品空间删除入口**为 `DELETE /api/worksets/1/product-spaces/{spaceId}`。`202 Accepted` 表示预检通过并已可靠登记。每次消费最多修改一个聚合，绑定与空容器清理完成后才物理删除空间。流程不删除任何工作集或业务对象。
+**产品空间删除入口**为 `DELETE /api/worksets/1/product-spaces/{spaceId}`。`202 Accepted` 表示预检通过并已可靠登记。存在 WorkingSet 绑定时返回 `409 SpaceStillBound`。每次消费复核准入，只删除一个空 Tracker 或 ProductSpace，不自动解除绑定、删除工作集或业务对象。
 
 ### 4.4 新建原生跟踪分类（Tracker）
 
@@ -126,7 +126,7 @@ TrackerBinding 和 SpaceBinding 的解除由第 4.3 节的聚合删除流程触�
 
 - **删 Tracker（K2）**：存在组织子级（其他 Tracker 的 `parentId` 指向它）、存在派生子级（其他 Tracker 的 `sourceId` 指向它）、或存在 TrackerItem 时，**禁止删除**；**不自动级联删除子 Tracker、不自动断开或重挂 `parentId`/`sourceId`**。
 - **删 ProductSpace**：引用审查与清理顺序见第 4.3 节。
-- **删 WorkingSet（K3）**：默认 WorkingSet（Id=1）始终不可删除；删除前须能合法解除全部 TrackerBinding 与 SpaceBinding（Shared 解绑不受 Item 限制，非共享须三项检查）；解除顺序为 TrackerBinding → SpaceBinding → WorkingSet；存在任何不能合法解除的关系即拒绝，不允许隐式级联绕过。
+- **删 WorkingSet（K3）**：仅删除无子级、无绑定且无归属 Tracker 的非默认工作集，见 §4.3。
 - **不存在“停用”生命周期**：WorkingSet 与 Tracker 都没有停用状态或停用命令（用户 2026-11-12 裁定）；删除契约中不引入任何停用状态及其行为。
 
 ## 7. K1～K3 最终裁定（用户确认，2026-11-11）
@@ -135,7 +135,7 @@ TrackerBinding 和 SpaceBinding 的解除由第 4.3 节的聚合删除流程触�
 | --- | --- | --- |
 | K1 | 仅支持不可恢复的领域删除；软删、归档、恢复不纳入本版契约；不将领域彻底删除强制映射为数据库物理 DELETE；区分绑定移除、聚合删除与业务 TrackerItem 删除 | **用户已确认** |
 | K2 | Tracker 有组织子级、派生子级或 TrackerItem 时禁止删除；不自动级联删除子 Tracker、不断开或重挂 `parentId`/`sourceId` | **用户已确认** |
-| K3 | 默认 WorkingSet 始终不可删除；子 WorkingSet 删除前须能合法解除全部 TrackerBinding 与 SpaceBinding（Shared 解绑不受 Item 限制，非共享须三项检查）；解除顺序 TrackerBinding → SpaceBinding → WorkingSet；任一不可解除即拒绝 | **用户已确认** |
+| K3 | 默认 WorkingSet 始终不可删除；子工作集存在绑定时拒绝，成功时只删除 WorkingSet | **用户已确认**（2026-11-21 更新） |
 
 以上为已批准的业务裁定，不再作为候选方案反复讨论。
 
@@ -146,8 +146,8 @@ TrackerBinding 和 SpaceBinding 的解除由第 4.3 节的聚合删除流程触�
 | 两 Entity 归属、空间绑定前置、两处唯一性、productSpaceId 一致、Shared/非共享纳入方式、POL-014 八条删除/移除语义、默认 WS 约束 | **已确认**（FACT-024～026、POL-012～015、INV-053～060） |
 | K1 删除语义（不可恢复、软删不纳入、不强制物理 DELETE） | **用户确认**（2026-11-11，POL-016、INV-068） |
 | K2 Tracker 删除三条件与不级联/不断链 | **用户确认**（2026-11-11，INV-065） |
-| K3 子 WorkingSet 删除的成员关系约束与解除顺序 | **用户确认**（2026-11-11，INV-067） |
-| `deleteProductSpace` 的引用完整性 | **用户确认**（2026-11-20，替换 2026-11-11 要求用户先清理绑定的操作方式，见第 4.3 节） |
+| K3 子 WorkingSet 删除的引用准入 | **用户确认**（2026-11-21，INV-067） |
+| `deleteProductSpace` 的引用完整性 | **用户确认**（2026-11-21，存在绑定时拒绝删除，替代 2026-11-20 的自动解绑，见第 4.3 节） |
 | 绑定 Entity 属性集、身份键命名、操作签名与失败分类 | **契约 v1（本文件冻结）**；实现细节留后续 |
 | 数据库表、唯一约束实现、并发锁、物理清理策略、软删字段 | **不在本契约** |
 

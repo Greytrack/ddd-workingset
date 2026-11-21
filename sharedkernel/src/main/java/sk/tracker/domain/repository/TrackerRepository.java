@@ -5,7 +5,6 @@ import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -22,14 +21,9 @@ public interface TrackerRepository {
     Optional<Tracker> findDefaultTracker(WorkingSetId owner, String spaceId, long classificationId);
 
     /**
-     * 保存聚合及其兼容数据；初始可见性与创建人由聚合自身携带。
+     * 保存聚合及其兼容数据。
      */
     void save(Tracker tracker);
-
-    /**
-     * 终态后只揭示已成功建立绑定的新 Tracker。
-     */
-    void revealExtensionTrackers(WorkingSetId target, List<TrackerId> parentTrackerIds);
 
     void deleteTracker(TrackerId id);
 }

@@ -9,8 +9,6 @@ import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.BusinessObjectTypeAdapter;
-import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.MergeTargetEvent;
@@ -24,7 +22,6 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
  *
  * <p>业务 BC 不再通过同步端口请求 LTI 切换；继承编辑完成与合并目标物化都由事件驱动。
  * 永久删除后的 LTI 清理由业务对象删除事件驱动。所有业务状态读取都按 Tracker 路由到
- * {@link BusinessObjectTypeRegistry}。
  */
 @Slf4j
 @Service
@@ -33,7 +30,6 @@ public class TrackerItemLifecycleService {
 
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
-    private final BusinessObjectTypeRegistry registry;
 
     /**
      * 继承编辑完成：把未物化的目标变体切换为 Local-backed。
@@ -66,10 +62,6 @@ public class TrackerItemLifecycleService {
     public void synchronizeDeletion(LocalId id) {
         LightTrackerItem current = items.findById(id).orElse(null);
         if (current == null) {
-            return;
-        }
-        BusinessObjectTypeAdapter adapter = registry.forTracker(current.trackerId());
-        if (!adapter.sourceLock().lock(id)) {
             return;
         }
         items.findByIdForUpdate(id).ifPresent(items::save);

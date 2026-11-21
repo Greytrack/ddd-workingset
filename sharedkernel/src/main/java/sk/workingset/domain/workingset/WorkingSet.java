@@ -214,15 +214,6 @@ public final class WorkingSet {
         trackers.remove(trackerId);
     }
 
-    public boolean detachSpaceForDeletion(String spaceId) {
-        if (!hasSpaceBinding(spaceId)) {
-            return false;
-        }
-        trackers.values().removeIf(binding -> binding.productSpaceId().equals(spaceId));
-        removeSpace(spaceId);
-        return true;
-    }
-
     public void removeSpace(String spaceId) {
         if (trackers.values().stream().anyMatch(binding -> binding.productSpaceId().equals(spaceId))) {
             throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);

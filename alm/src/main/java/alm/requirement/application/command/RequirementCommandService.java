@@ -131,7 +131,7 @@ public class RequirementCommandService {
         Requirement current = inherited.map(target -> {
             requireWorkingSet(target.workingSetId());
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
-        }).orElseGet(() -> load(localId));
+        }).orElseGet(() -> loadWritable(localId));
         requireActive(current);
         return saveChange(current, change.apply(current));
     }
@@ -139,6 +139,12 @@ public class RequirementCommandService {
     private void requireWorkingSet(WorkingSetId id) {
         workingSets.findById(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+    }
+
+    void requireTrackerWorkingSet(TrackerId trackerId) {
+        Tracker tracker = trackers.findById(trackerId)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, trackerId.value()));
+        requireWorkingSet(tracker.workingSetId());
     }
 
     private Requirement createEditBase(LightTrackerItem target, LockVersion expectedLockVersion) {
@@ -163,7 +169,7 @@ public class RequirementCommandService {
     /** 显式升级业务版次，触发依赖变体的 COW。 */
     @Transactional
     public Requirement upgradeRevision(LocalId localId, LockVersion expectedLockVersion) {
-        Requirement current = load(localId);
+        Requirement current = loadWritable(localId);
         requireActive(current);
         return saveChange(current, current.upgradeRevision(expectedLockVersion));
     }
@@ -171,7 +177,7 @@ public class RequirementCommandService {
     /** 软删除需求。 */
     @Transactional
     public void delete(LocalId id) {
-        Requirement current = load(id);
+        Requirement current = loadWritable(id);
         requireActive(current);
         saveChange(current, current.delete(current.lockVersion()));
     }
@@ -179,7 +185,7 @@ public class RequirementCommandService {
     /** 恢复软删除的需求。 */
     @Transactional
     public void undelete(LocalId id) {
-        Requirement current = load(id);
+        Requirement current = loadWritable(id);
         saveChange(current, current.undelete(current.lockVersion()));
     }
 
@@ -187,6 +193,12 @@ public class RequirementCommandService {
         Objects.requireNonNull(localId, "localId");
         return repository.findById(localId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
+    }
+
+    private Requirement loadWritable(LocalId localId) {
+        Requirement requirement = load(localId);
+        requireTrackerWorkingSet(requirement.trackerId());
+        return requirement;
     }
 
     private static void requireActive(Requirement requirement) {

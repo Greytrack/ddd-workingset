@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class WorkingSetCreationService {
     private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(10070101L);
 
-    private final WorkingSetCreationRepository store;
+    private final WorkingSetCreationRepository workingSetCreationRepository;
     private final IdentifierGenerator ids;
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
@@ -65,7 +65,7 @@ public class WorkingSetCreationService {
      */
     @Transactional
     public WorkingSetCreation submitNew(String requestId, Function<String, WorkingSetCreation.Request> request) {
-        Optional<WorkingSetCreation> existing = store.findByRequest(requestId);
+        Optional<WorkingSetCreation> existing = workingSetCreationRepository.findByRequest(requestId);
         if (existing.isPresent()) {
             WorkingSetCreation task = existing.get();
             return replay(task, withDefaultTrackers(request.apply(task.request().newWorkingSetId()), null));
@@ -86,7 +86,7 @@ public class WorkingSetCreationService {
         if (WorkingSet.DEFAULT_ID.equals(target)) {
             throw new IllegalArgumentException("The default working set cannot be a creation target");
         }
-        Optional<WorkingSetCreation> previous = store.findByTarget(target);
+        Optional<WorkingSetCreation> previous = workingSetCreationRepository.findByTarget(target);
         if (previous.isPresent()) {
             return replay(previous.orElseThrow(), request);
         }
@@ -97,13 +97,13 @@ public class WorkingSetCreationService {
         workingSets.findById(WorkingSetId.of(request.parentWorkingSetId()));
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
                 request, RequestThreadHolder.getUserId(), Instant.now());
-        if (store.save(creation)) {
+        if (workingSetCreationRepository.save(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
-        WorkingSetCreation winner = store.findByRequest(request.requestId())
-                .or(() -> store.findByTarget(target)).orElseThrow();
+        WorkingSetCreation winner = workingSetCreationRepository.findByRequest(request.requestId())
+                .or(() -> workingSetCreationRepository.findByTarget(target)).orElseThrow();
         WorkingSetCreation.Request normalized = new WorkingSetCreation.Request(request.parentWorkingSetId(), winner.request().newWorkingSetId(),
                 request.requestId(), request.productSpaceIds(), request.sharedTrackerIds(),
                 request.unsharedParentTrackerIds(), request.name(), request.mode(), request.color());
@@ -116,7 +116,7 @@ public class WorkingSetCreationService {
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
                                               List<String> parentTrackerIds) {
-        Optional<WorkingSetCreation> active = store.findActiveExtension(target);
+        Optional<WorkingSetCreation> active = workingSetCreationRepository.findActiveExtension(target);
         if (active.isPresent()) {
             if (active.get().request().requestId().equals(requestId)) {
                 return active.get();
@@ -142,8 +142,7 @@ public class WorkingSetCreationService {
                 shared.add(trackerId);
             } else {
                 boolean alreadyDerived = trackers.findDerivedTracker(target, id)
-                        .filter(copy -> targetSet.hasTrackerBinding(copy.trackerId())
-                                && trackerQueries.isVisible(copy.trackerId())).isPresent();
+                        .filter(copy -> targetSet.hasTrackerBinding(copy.trackerId())).isPresent();
                 if (alreadyDerived) continue;
                 // Unknown sources reach the task so its failure is reported alongside valid selections.
                 unshared.add(trackerId);
@@ -158,19 +157,19 @@ public class WorkingSetCreationService {
         request = withDefaultTrackers(request, targetSet);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
                 request, RequestThreadHolder.getUserId(), Instant.now());
-        if (store.save(creation)) {
+        if (workingSetCreationRepository.save(creation)) {
             indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
-        Optional<WorkingSetCreation> concurrent = store.findActiveExtension(target);
+        Optional<WorkingSetCreation> concurrent = workingSetCreationRepository.findActiveExtension(target);
         if (concurrent.isPresent()) {
             if (concurrent.get().request().requestId().equals(requestId)) {
                 return concurrent.get();
             }
             throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
-        return replay(store.findByRequest(requestId)
+        return replay(workingSetCreationRepository.findByRequest(requestId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, target.value())), request);
     }
 
@@ -210,7 +209,7 @@ public class WorkingSetCreationService {
      * 按任务 id 读取创建任务。
      */
     public WorkingSetCreation find(String id) {
-        return store.find(id).orElseThrow(() -> notFound(id));
+        return workingSetCreationRepository.find(id).orElseThrow(() -> notFound(id));
     }
 
     /**
@@ -239,7 +238,7 @@ public class WorkingSetCreationService {
         transaction.executeWithoutResult(tx -> {
             WorkingSetCreation creation = lock(id);
             if (creation.status() == Status.Pending) {
-                store.save(creation.start(Instant.now()));
+                workingSetCreationRepository.save(creation.start(Instant.now()));
             }
         });
     }
@@ -253,21 +252,11 @@ public class WorkingSetCreationService {
             }
 
             WorkingSetCreation updated = executeStageStep(current, tx);
-            store.save(updated);
+            workingSetCreationRepository.save(updated);
 
-            revealTrackersWhenExtensionFinishes(updated);
             publishEventWhenLeavingIndexStage(current, updated);
             return updated.status() == Status.Running;
         }));
-    }
-
-    private void revealTrackersWhenExtensionFinishes(WorkingSetCreation updated) {
-        if (updated.status() == Status.Running || updated.request().mode() != Mode.EXTEND) {
-            return;
-        }
-        Request request = updated.request();
-        workingSetService.revealExtensionTrackers(WorkingSetId.of(request.numericTargetWorkingSetId()),
-                request.numericUnsharedTrackerIds().stream().map(TrackerId::of).toList());
     }
 
     private void publishEventWhenLeavingIndexStage(WorkingSetCreation current, WorkingSetCreation updated) {
@@ -299,7 +288,7 @@ public class WorkingSetCreationService {
             });
             case COPY_UNSHARED_TRACKERS -> executeScopeWrite(creation, item, () -> {
                 boolean copied = workingSetService.deriveUnsharedTrackerForTask(target, TrackerId.of(item),
-                        request.productSpaceIds(), request.mode() == Mode.CREATE,
+                        request.productSpaceIds(),
                         Long.parseLong(creation.requestedBy()));
                 return creation.advance(copied ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
             });
@@ -360,6 +349,6 @@ public class WorkingSetCreationService {
     }
 
     private WorkingSetCreation lock(String id) {
-        return store.findForUpdate(id).orElseThrow(() -> notFound(id));
+        return workingSetCreationRepository.findForUpdate(id).orElseThrow(() -> notFound(id));
     }
 }

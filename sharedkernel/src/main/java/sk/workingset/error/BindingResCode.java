@@ -34,7 +34,10 @@ public enum BindingResCode implements DomainResCode {
     TRACKER_HAS_DERIVED_CHILDREN(DomainErrorType.CONFLICT, 1225, "Tracker has derived children", "TrackerHasDerivedChildren"),
     DEFAULT_WORKING_SET_UNDELETABLE(DomainErrorType.CONFLICT, 1226, "Default working set undeletable", "DefaultWorkingSetUndeletable"),
     MEMBER_CANNOT_BE_UNBOUND(DomainErrorType.CONFLICT, 1227, "Member cannot be unbound", "MemberCannotBeUnbound"),
-    NO_DERIVABLE_TRACKER(DomainErrorType.CONFLICT, 1228, "No derivable tracker", "NoDerivableTracker");
+    NO_DERIVABLE_TRACKER(DomainErrorType.CONFLICT, 1228, "No derivable tracker", "NoDerivableTracker"),
+    SPACE_STILL_BOUND(DomainErrorType.CONFLICT, 1229, "Space is still bound to a working set", "SpaceStillBound"),
+    WORKING_SET_STILL_BOUND(DomainErrorType.CONFLICT, 1230, "Working set still has bindings", "WorkingSetStillBound"),
+    WORKING_SET_HAS_TRACKERS(DomainErrorType.CONFLICT, 1231, "Working set still owns trackers", "WorkingSetHasTrackers");
 
     private final DomainErrorType type;
     private final int code;

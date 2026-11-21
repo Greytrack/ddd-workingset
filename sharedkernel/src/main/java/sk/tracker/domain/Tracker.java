@@ -35,7 +35,6 @@ public final class Tracker {
     private final boolean isDefault;
     private final TrackerCompatibility compatibility;
     private final boolean newAggregate;
-    private final boolean initiallyVisible;
     private final Long createdBy;
     private String name;
 
@@ -58,14 +57,14 @@ public final class Tracker {
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate) {
         this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
                 classification.numericId(), classification.baseClassId(), classification.classId(),
-                sharingMode, parentId, isDefault, newAggregate, true, null);
+                sharingMode, parentId, isDefault, newAggregate, null);
     }
 
     private Tracker(TrackerId trackerId, TrackerId commonId, String name, TrackerId sourceId,
                     WorkingSetId workingSetId, Long numericProductSpaceId, long classificationId,
                     long baseClassId, long classId,
                     SharingMode sharingMode, TrackerId parentId, boolean isDefault, boolean newAggregate,
-                    boolean initiallyVisible, Long createdBy) {
+                    Long createdBy) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.name = name;
@@ -80,7 +79,6 @@ public final class Tracker {
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
         this.compatibility = new TrackerCompatibility(trackerId, classificationId);
         this.newAggregate = newAggregate;
-        this.initiallyVisible = initiallyVisible;
         this.createdBy = createdBy;
         if (sourceId == null && !trackerId.equals(commonId)) {
             throw new IllegalArgumentException("An original Tracker must use its own ID as common ID");
@@ -101,7 +99,7 @@ public final class Tracker {
                                        long baseClassId, long classId,
                                        SharingMode sharing, TrackerId parent, boolean isDefault) {
         return new Tracker(id, commonId, name, source, owner, productSpace, classificationId,
-                baseClassId, classId, sharing, parent, isDefault, false, true, null);
+                baseClassId, classId, sharing, parent, isDefault, false, null);
     }
 
     /**
@@ -135,15 +133,15 @@ public final class Tracker {
     }
 
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault) {
-        return derived(id, source, target, isDefault, true, null);
+        return derived(id, source, target, isDefault, null);
     }
 
     public static Tracker derived(TrackerId id, Tracker source, WorkingSetId target, boolean isDefault,
-                                  boolean initiallyVisible, Long createdBy) {
+                                  Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
                 source.numericProductSpaceId(), source.classificationId, source.baseClassId, source.classId,
                 source.sharingMode(), null,
-                isDefault, true, initiallyVisible, createdBy);
+                isDefault, true, createdBy);
     }
 
     private static String normalizeName(String name) {
@@ -156,10 +154,6 @@ public final class Tracker {
 
     public boolean isNew() {
         return newAggregate;
-    }
-
-    public boolean isInitiallyVisible() {
-        return initiallyVisible;
     }
 
     public Long createdBy() {
