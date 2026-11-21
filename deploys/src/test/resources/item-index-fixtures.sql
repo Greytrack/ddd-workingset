@@ -19,9 +19,12 @@ BEGIN
         RETURN NEW;
     END IF;
     INSERT INTO air_ws_items_index
-        (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied)
-    VALUES (NEW.local_id, NEW.local_id, NEW.common_id, NEW.tracker_id, NEW.working_set_id, NEW.revision,
-        NEW.source_local_id, NEW.source_revision, CASE WHEN NEW.materialized THEN 1 ELSE 0 END);
+        (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied,
+         work_space_id, sub_class_id)
+    SELECT NEW.local_id, NEW.local_id, NEW.common_id, NEW.tracker_id, NEW.working_set_id, NEW.revision,
+           NEW.source_local_id, NEW.source_revision, CASE WHEN NEW.materialized THEN 1 ELSE 0 END,
+           t.work_space, t.tracker_class
+    FROM air_inst_tracker_rev t WHERE t.id = NEW.tracker_id;
     INSERT INTO air_ws_items_revision_index (id, local_id, common_id, branch_id, workingset_id, revision)
     VALUES (NEW.local_id, NEW.local_id, NEW.common_id, NEW.tracker_id, NEW.working_set_id, NEW.revision);
     RETURN NEW;

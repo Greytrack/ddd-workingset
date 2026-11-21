@@ -228,26 +228,13 @@ CREATE TABLE IF NOT EXISTS classifications (
     UNIQUE (classification_id, sharing_mode)
 );
 
-ALTER TABLE classifications ADD COLUMN IF NOT EXISTS base_class_id BIGINT;
-ALTER TABLE classifications ADD COLUMN IF NOT EXISTS class_id BIGINT;
-DO '
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ''classifications''::regclass
-               AND attname = ''base_class'' AND NOT attisdropped) THEN
-        UPDATE classifications SET base_class_id = base_class WHERE base_class_id IS NULL;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ''classifications''::regclass
-               AND attname = ''class'' AND NOT attisdropped) THEN
-        UPDATE classifications SET class_id = class WHERE class_id IS NULL;
-    END IF;
-END';
-
 INSERT INTO classifications (classification_id, sharing_mode, name, base_class_id, class_id)
 VALUES (10030101, 'UNSHARED', '产品空间', 1003, 100301),
        (10070101, 'UNSHARED', '文件夹', 1007, 100701),
        (10080101, 'UNSHARED', '工作集', 1008, 100801),
        (10090101, 'UNSHARED', 'Tracker', 1009, 100901),
-       (14010101, 'UNSHARED', '需求', 1401, 140101)
+       (14010101, 'UNSHARED', '需求', 1401, 140101),
+       (14010102, 'SHARED', '需求（共享）', 1401, 140101)
 ON CONFLICT (classification_id) DO UPDATE SET
     base_class_id = EXCLUDED.base_class_id, class_id = EXCLUDED.class_id;
 
@@ -548,20 +535,6 @@ DO 'BEGIN
 END';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tracker_rev_space_id ON air_inst_tracker_rev (id, work_space);
-DROP INDEX IF EXISTS uq_tracker_rev_local_root_folder;
-DO '
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = ''air_inst_tracker_rev''::regclass
-               AND conname = ''tracker_v4_lineage'' AND pg_get_constraintdef(oid) LIKE ''%tracker_class%'') THEN
-        ALTER TABLE air_inst_tracker_rev DROP CONSTRAINT tracker_v4_lineage;
-        ALTER TABLE air_inst_tracker_rev ADD CONSTRAINT tracker_v4_lineage CHECK (
-            (source_branch_id IS NULL AND workingset_id = 1)
-            OR (source_branch_id IS NOT NULL AND workingset_id <> 1 AND share = 0)
-        ) NOT VALID;
-    END IF;
-END
-';
-
 CREATE TABLE IF NOT EXISTS air_ws_workingset_branch_relation (
     id BIGINT PRIMARY KEY,
     workingset_id BIGINT REFERENCES air_inst_workingset (id),
@@ -631,6 +604,7 @@ BEGIN
 END;
 ' LANGUAGE plpgsql;
 
+
 DROP TRIGGER IF EXISTS trg_requirements_working_set ON requirements;
 CREATE TRIGGER trg_requirements_working_set
     BEFORE INSERT OR UPDATE OF tracker_id ON requirements
@@ -652,11 +626,11 @@ END';
 
 CREATE TABLE IF NOT EXISTS air_ws_items_index (
     id BIGINT PRIMARY KEY,
-    work_space_id BIGINT, workingset_id BIGINT, master_id BIGINT, parent_branch_id BIGINT, branch_id BIGINT,
+    work_space_id BIGINT NOT NULL CHECK (work_space_id > 0), workingset_id BIGINT, master_id BIGINT, parent_branch_id BIGINT, branch_id BIGINT,
     common_id BIGINT, local_id BIGINT, parent_local_id BIGINT, source_local_id BIGINT,
     revision INTEGER, has_copied SMALLINT, flags INTEGER, lock_version BIGINT,
     created_by VARCHAR(255), created_time BIGINT, updated_by VARCHAR(255), updated_time BIGINT,
-    source_revision INTEGER, sub_class_id BIGINT, effective_revision INTEGER, effective_flags VARCHAR(256),
+    source_revision INTEGER, sub_class_id BIGINT NOT NULL CHECK (sub_class_id > 0), effective_revision INTEGER, effective_flags VARCHAR(256),
     flag1 BOOLEAN, flag2 BOOLEAN, flag3 BOOLEAN, flag4 BOOLEAN, flag5 BOOLEAN, effective_checked_out SMALLINT,
     CHECK (local_id IS NOT NULL AND common_id IS NOT NULL AND branch_id IS NOT NULL AND workingset_id IS NOT NULL
         AND revision > 0 AND revision IS NOT NULL AND source_revision > 0 AND source_revision IS NOT NULL
@@ -818,11 +792,11 @@ CREATE TABLE IF NOT EXISTS working_set_creations (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_target
     ON working_set_creations (new_working_set_id)
-    WHERE (COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE');
+    WHERE result->'request'->>'mode' = 'CREATE';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_request_id
     ON working_set_creations (request_id)
-    WHERE (COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE');
+    WHERE result->'request'->>'mode' = 'CREATE';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_extension_target
     ON working_set_creations (new_working_set_id)
@@ -885,63 +859,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_air_inst_common_workingset_family
     ON air_inst_common (workingset_id, common_id);
 CREATE INDEX IF NOT EXISTS idx_air_inst_common_tracker_workingset
     ON air_inst_common (tracker, workingset_id);
-
--- Prefer the existing Tracker projection when legacy catalog metadata is incomplete.
-WITH tracker_hierarchy AS (
-    SELECT t.tracker_class,
-           CASE WHEN count(DISTINCT t.base_class) = 1 THEN min(t.base_class) END AS base_class_id,
-           CASE WHEN count(DISTINCT t.class) = 1 THEN min(t.class) END AS class_id
-    FROM air_inst_tracker_rev t
-    JOIN classifications c ON c.classification_id = t.tracker_class
-    WHERE c.base_class_id IS NULL OR c.class_id IS NULL
-    GROUP BY t.tracker_class
-)
-UPDATE classifications c
-SET base_class_id = COALESCE(c.base_class_id, t.base_class_id),
-    class_id = COALESCE(c.class_id, t.class_id)
-FROM tracker_hierarchy t
-WHERE c.classification_id = t.tracker_class;
-
--- Older catalogs defaulted to the Tracker hierarchy when no hierarchy was supplied.
-UPDATE classifications
-SET base_class_id = COALESCE(base_class_id, 1009),
-    class_id = COALESCE(class_id, 100901)
-WHERE base_class_id IS NULL OR class_id IS NULL;
-ALTER TABLE classifications ALTER COLUMN base_class_id SET NOT NULL;
-ALTER TABLE classifications ALTER COLUMN class_id SET NOT NULL;
-
--- Upgrade the previous catalog and its Tracker projections together, retaining instance identities.
-DO '
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ''classifications''::regclass
-               AND attname IN (''base_class'', ''class'', ''type'', ''folder_tracker'') AND NOT attisdropped)
-        OR EXISTS (SELECT 1 FROM classifications WHERE classification_id = 258519859202016) THEN
-        UPDATE air_inst_tracker_rev t
-        SET base_class = c.base_class_id, class = c.class_id, type = c.classification_id,
-            tracker_class = c.classification_id
-        FROM classifications c
-        WHERE c.classification_id =
-            CASE WHEN t.tracker_class = 258519859202016 THEN 14010101 ELSE t.tracker_class END
-          AND (t.base_class, t.class, t.type, t.tracker_class)
-              IS DISTINCT FROM (c.base_class_id, c.class_id, c.classification_id, c.classification_id);
-
-        UPDATE air_ws_tracker mirror SET sub_class_id = t.tracker_class
-        FROM air_inst_tracker_rev t
-        WHERE mirror.id = t.id AND mirror.sub_class_id IS DISTINCT FROM t.tracker_class;
-
-        UPDATE air_inst_common summary SET base_class = t.base_class, class = t.class, type = t.type
-        FROM air_inst_tracker_rev t
-        WHERE summary.id = t.id AND (summary.base_class, summary.class, summary.type)
-                                 IS DISTINCT FROM (t.base_class, t.class, t.type);
-
-        DELETE FROM classifications WHERE classification_id = 258519859202016;
-        ALTER TABLE classifications DROP COLUMN IF EXISTS base_class;
-        ALTER TABLE classifications DROP COLUMN IF EXISTS class;
-        ALTER TABLE classifications DROP COLUMN IF EXISTS type;
-        ALTER TABLE classifications DROP COLUMN IF EXISTS folder_tracker;
-        ALTER TABLE classifications ALTER COLUMN name DROP DEFAULT;
-    END IF;
-END';
 
 -- Bootstrap only the missing default root summary.
 INSERT INTO air_inst_common (
