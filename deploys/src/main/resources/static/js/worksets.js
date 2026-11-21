@@ -76,6 +76,7 @@ function setTrackerPanelCollapsed(collapsed) {
     button.setAttribute('aria-expanded', String(!collapsed));
     button.setAttribute('aria-label', label);
     button.title = label;
+    try { localStorage.setItem('ws-sidebar-collapsed', String(collapsed)); } catch { /* Storage may be unavailable. */ }
 }
 
 async function loadWorksetTree() {
@@ -355,7 +356,7 @@ function renderTrackerTree(trackers, boundIds) {
         const trackerName = tracker.name || shortId(tracker.trackerId);
         return `
       <button type="button" class="tracker-node${selected}" data-tracker-id="${escapeHtml(tracker.trackerId)}"
-           aria-current="${Boolean(selected)}"
+           aria-current="${Boolean(selected)}" data-depth="${depth}"
            style="padding-left:${8 + Math.min(depth, 8) * 14}px" title="${escapeHtml(tracker.trackerId)}">
         <span class="tracker-label">${escapeHtml(trackerName)}</span>
         <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${tracker.sharingMode === 'SHARED' ? '共享' : '非共享'}</span>
@@ -467,7 +468,7 @@ function renderItems() {
         return;
     }
     if (state.itemsError) {
-        area.innerHTML = `<div class="empty error-text">${escapeHtml(state.itemsError)}</div>`;
+        area.innerHTML = `<div class="empty item-empty"><strong>Item 加载失败</strong><span class="error-text" role="alert">${escapeHtml(state.itemsError)}</span><button type="button" class="btn small" data-retry-items>重新加载</button></div>`;
         $('#itemCount').textContent = '';
         return;
     }
@@ -489,8 +490,8 @@ function renderItems() {
         const selected = state.selectedItem?.localId === item.localId ? ' selected' : '';
         return `
       <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
-        <td class="item-number mono" title="${escapeHtml(item.number || item.localId)}">${escapeHtml(item.number || shortId(item.localId))}</td>
-        <td class="item-name"><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || shortId(item.commonId))}</button></td>
+        <td class="item-number mono" title="${escapeHtml(item.number || '')}">${escapeHtml(item.number || '未编号')}</td>
+        <td class="item-name"><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || '未命名条目')}</button></td>
         <td class="item-revision">${escapeHtml(item.revision)}</td>
         <td>${item.materialized ? '<span class="badge shared">本地物化</span>' : '<span class="badge source">来源继承</span>'}</td>
         <td><div class="row-actions">
@@ -510,7 +511,7 @@ function renderItems() {
     </table>`;
 }
 
-/** 详情抽屉覆盖列表底部时，把选中行滚到抽屉上方，避免打开后看不见。 */
+/** 详情占用独立空间后，保持选中行位于列表可视区域内。 */
 function revealActiveItemRow() {
     const area = $('#itemArea');
     const row = area?.querySelector('[data-local-id].selected');
@@ -518,7 +519,7 @@ function revealActiveItemRow() {
     if (!area || !row || !detail) return;
     const areaRect = area.getBoundingClientRect();
     const rowRect = row.getBoundingClientRect();
-    const limit = areaRect.bottom - detail.offsetHeight - 8;
+    const limit = areaRect.bottom - 8;
     const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
     if (rowRect.bottom > limit) {
         area.scrollTo({top: area.scrollTop + (rowRect.bottom - limit), behavior});
@@ -556,13 +557,12 @@ function renderItemDetail() {
     <button type="button" class="modal-close" data-close-detail aria-label="关闭 Item 详情">×</button>
   </header>`;
     const body = state.contentLoading ? '<div class="empty small" role="status">正在加载内容…</div>'
-        : state.contentError ? `<div class="empty small error-text">${escapeHtml(state.contentError)}</div>`
+        : state.contentError ? `<div class="empty item-empty small"><span class="error-text" role="alert">${escapeHtml(state.contentError)}</span><button type="button" class="btn small" data-retry-content>重新加载内容</button></div>`
             : `<div class="detail-meta">
       ${item.number ? `<span>编号 <span class="mono">${escapeHtml(item.number)}</span></span>` : ''}
-      <span>Local ID <span class="mono">${escapeHtml(item.localId)}</span></span>
-      <span>Common ID <span class="mono">${escapeHtml(item.commonId)}</span></span>
+      ${infoDisclosure('技术信息', [['对象 ID', item.localId], ['家族 ID', item.commonId], ['内容来源 ID', content?.contentLocalId]])}
       <span>版次 ${escapeHtml(item.revision ?? '—')}</span>
-      <span>内容来源 <span class="mono">${escapeHtml(content?.contentLocalId || '—')}</span> · 版次 ${escapeHtml(content?.contentRevision ?? '—')}</span>
+      <span>内容来源 ${content?.materialized ? '本地内容' : '继承内容'} · 版次 ${escapeHtml(content?.contentRevision ?? '—')}</span>
       </div><dl class="fields">${rows || '<dt>内容</dt><dd>—</dd>'}</dl>`;
     const focused = detail.contains(document.activeElement);
     detail.innerHTML = header + body;

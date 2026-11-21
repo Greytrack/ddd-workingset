@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>Working Set Explorer</title>
-    <link href="/app.css?v=10" rel="stylesheet">
-    <link href="/merge.css?v=3" rel="stylesheet">
+    <link href="/app.css?v=18" rel="stylesheet">
+    <link href="/merge.css?v=24" rel="stylesheet">
 </head>
 <body>
 <header class="topbar">
@@ -77,6 +77,12 @@
                     type="button"><span aria-hidden="true"></span></button>
         </div>
         <div class="tracker-pane-content" id="trackerPaneContent">
+            <div class="tracker-tools">
+                <input id="trackerFilter" type="search" placeholder="搜索分类名称或 ID" aria-label="搜索跟踪分类">
+                <div><button class="btn small" id="expandTrackers" type="button">展开全部</button>
+                <button class="btn small" id="collapseTrackers" type="button">收起全部</button></div>
+                <span id="trackerFilterStatus" class="muted" role="status"></span>
+            </div>
             <div class="selected-workset hidden" id="selectedSpace"></div>
             <div class="tree" id="trackerList"></div>
         </div>
@@ -123,9 +129,10 @@
     </section>
 </div>
 
-<script defer src="/js/core.js?v=8"></script>
-<script defer src="/js/worksets.js?v=14"></script>
-<script defer src="/js/features.js?v=15"></script>
-<script defer src="/js/merge.js?v=8"></script>
+<script defer src="/js/core.js?v=10"></script>
+<script defer src="/js/worksets.js?v=17"></script>
+<script defer src="/js/features.js?v=19"></script>
+<script defer src="/js/merge.js?v=26"></script>
+<script defer src="/js/layout.js?v=1"></script>
 </body>
 </html>

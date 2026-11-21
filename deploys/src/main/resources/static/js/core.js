@@ -1,5 +1,29 @@
 const $ = (selector) => document.querySelector(selector);
 
+let infoCardSequence = 0;
+
+function infoDisclosure(label, entries) {
+    const id = 'info-card-' + (++infoCardSequence);
+    const fields = entries.filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([name, value]) => `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(String(value))}</dd>`).join('');
+    return `<span class="info-disclosure"><button type="button" class="info-trigger" popovertarget="${id}" aria-label="查看${escapeHtml(label)}详情" onclick="infoPositionCard(this)">${escapeHtml(label)}</button><div id="${id}" popover="auto" class="info-card"><dl>${fields}</dl></div></span>`;
+}
+
+function infoPositionCard(button) {
+    const card = document.getElementById(button.getAttribute('popovertarget'));
+    if (card.matches(':popover-open')) return;
+    card.showPopover();
+    const anchor = button.getBoundingClientRect();
+    const rect = card.getBoundingClientRect();
+    const left = Math.max(12, Math.min(anchor.left, window.innerWidth - rect.width - 12));
+    const top = anchor.bottom + 8 + rect.height <= window.innerHeight - 12
+        ? anchor.bottom + 8 : Math.max(12, anchor.top - rect.height - 8);
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    // The native popovertarget action owns toggling and focus restoration.
+    card.hidePopover();
+}
+
 const state = {
     worksets: [],
     selectedWs: null,

@@ -1,6 +1,13 @@
 /* ---------- modal shell ---------- */
 let modalTrigger = null;
 
+function syncModalBackground() {
+    const modalOpen = Boolean(document.querySelector('.modal-overlay:not(.hidden)'));
+    document.querySelectorAll('body > header, body > nav, body > main').forEach((element) => {
+        element.inert = modalOpen;
+    });
+}
+
 function modalHeader(title, subtitle = '') {
     return `<div class="modal-head">
     <div><h3 id="modalTitle">${escapeHtml(title)}</h3>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div>
@@ -16,17 +23,22 @@ function openModal(html, wide = false) {
     $('#modalContent').innerHTML = html;
     $('#modalPanel').classList.toggle('wide', wide);
     overlay.classList.remove('hidden');
+    syncModalBackground();
     if (opening || restoreCloseFocus) {
-        (overlay.querySelector('input:not([type="checkbox"]):not([readonly]), select:enabled') || overlay.querySelector('[data-close-modal]')).focus();
+        const input = [...overlay.querySelectorAll('input:not([type="checkbox"]):not([readonly]), select')]
+            .find((element) => !element.disabled && element.getClientRects().length);
+        (input || overlay.querySelector('[data-close-modal]'))?.focus();
     }
 }
 
 function closeModal() {
+    if ($('#modalPanel').getAttribute('aria-busy') === 'true') return;
     if ($('#modalOverlay').classList.contains('hidden')) return;
     $('#modalOverlay').classList.add('hidden');
     $('#modalContent').innerHTML = '';
     taskCenterOpen = false;
     requirementContext = null;
+    syncModalBackground();
     modalTrigger?.focus();
     modalTrigger = null;
 }
@@ -262,7 +274,7 @@ async function openCreateWorkset() {
     const selected = state.selectedWs || '1';
     const options = flat.map(({node, depth}) => {
         const label = node.ws?.name || (node.id === '1' ? '默认工作集' : shortId(node.id));
-        return `<option value="${escapeHtml(node.id)}"${node.id === selected ? ' selected' : ''}>${'　'.repeat(Math.min(depth, 6))}${escapeHtml(label)} (${escapeHtml(shortId(node.id))})</option>`;
+        return `<option value="${escapeHtml(node.id)}"${node.id === selected ? ' selected' : ''}>${'　'.repeat(Math.min(depth, 6))}${escapeHtml(label)}</option>`;
     }).join('');
     openModal(`${modalHeader('创建工作集', '选择父工作集范围，提交后进入 LRO 任务中心')}
     <form id="createWorksetForm">
@@ -717,7 +729,7 @@ function openRequirementCreate() {
     }
     requirementContext = {mode: 'create'};
     const tracker = state.selectedTracker;
-    openModal(`${modalHeader('新建需求', `工作集 ${shortId(state.selectedWs)} · 跟踪分类 ${tracker.name || shortId(tracker.trackerId)}`)}
+    openModal(`${modalHeader('新建需求', `工作集 ${worksetLabel(state.selectedWs, '未命名工作集')} · 跟踪分类 ${tracker.name || '未命名分类'}`)}
     <form id="requirementForm">
       <div class="modal-body">
         <div class="field"><label for="reqTitle">标题</label><input id="reqTitle" name="title" required></div>
@@ -790,26 +802,76 @@ async function submitRequirement(form) {
     }
 }
 
-async function deleteRequirement(item) {
+function deleteRequirement(item) {
     const localId = item.sourceLocalId || item.localId;
-    if (!window.confirm('确定删除需求 ' + (item.name || localId) + '？')) return;
+    openModal(`${modalHeader('删除需求')}
+        <form id="deleteRequirementForm">
+          <div class="modal-body delete-confirm-body">
+            <span class="delete-confirm-icon" aria-hidden="true">!</span>
+            <div><h4>确定删除这条需求？</h4>
+              <p class="delete-object-name">${escapeHtml(item.name || '未命名需求')}</p>
+              <p class="muted">请核对需求名称，确认后将提交删除操作。</p></div>
+            <p class="form-error" role="alert" id="deleteRequirementError"></p>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn" data-close-modal id="cancelDeleteRequirement">取消</button>
+            <button type="submit" class="btn delete-confirm-submit">确认删除</button>
+          </div>
+        </form>`);
+    $('#cancelDeleteRequirement').focus();
+    $('#deleteRequirementForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        submitRequirementDelete(event.currentTarget, localId);
+    });
+}
+
+async function submitRequirementDelete(form, localId) {
+    const submit = form.querySelector('[type="submit"]');
+    if (submit.disabled) return;
+    const panel = $('#modalPanel');
+    const trackerId = state.selectedTracker?.trackerId;
+    const workingSetId = state.selectedWs;
+    submit.disabled = true;
+    submit.textContent = '正在删除…';
+    panel.setAttribute('aria-busy', 'true');
+    panel.querySelectorAll('[data-close-modal]').forEach((button) => { button.disabled = true; });
+    $('#deleteRequirementError').textContent = '';
     try {
         await api('/api/requirements/' + encodeURIComponent(localId), {method: 'DELETE'});
+        panel.removeAttribute('aria-busy');
+        closeModal();
         setStatus('需求已删除', 'ok');
-        if (state.selectedTracker) await selectTracker(state.selectedTracker.trackerId);
+        if (state.selectedTracker?.trackerId === trackerId && state.selectedWs === workingSetId) {
+            await selectTracker(trackerId, {keepFilter: true});
+            $('#itemFilter').focus({preventScroll: true});
+        }
     } catch (error) {
-        setStatus(reasonText(error.body) || error.message, 'error');
+        const message = reasonText(error.body) || error.message;
+        if (form.isConnected) $('#deleteRequirementError').textContent = message;
+        else setStatus(message, 'error');
+    } finally {
+        panel.removeAttribute('aria-busy');
+        if (form.isConnected) {
+            submit.disabled = false;
+            submit.textContent = '确认删除';
+            panel.querySelectorAll('[data-close-modal]').forEach((button) => { button.disabled = false; });
+        }
     }
 }
 
 async function refresh() {
     const button = $('#refresh');
+    if (button.disabled) return;
     button.disabled = true;
+    button.textContent = '刷新中…';
+    button.setAttribute('aria-busy', 'true');
     try {
         await loadWorksetTree();
         await refreshSelectedRange();
     } finally {
         button.disabled = false;
+        button.textContent = '刷新';
+        button.setAttribute('aria-busy', 'false');
     }
 }
 
@@ -889,6 +951,11 @@ function bindEvents() {
 
     $('#itemFilter').addEventListener('input', renderItems);
     $('#itemDetail').addEventListener('click', (event) => {
+        if (event.target.closest('[data-retry-content]')) {
+            const item = state.selectedItem;
+            if (item) loadContent(item.localId, item.workingSetId);
+            return;
+        }
         if (!event.target.closest('[data-close-detail]')) return;
         const item = state.selectedItem;
         ++contentRequest;
@@ -899,6 +966,10 @@ function bindEvents() {
     });
 
     $('#itemArea').addEventListener('click', (event) => {
+        if (event.target.closest('[data-retry-items]')) {
+            if (state.selectedTracker) selectTracker(state.selectedTracker.trackerId, {keepFilter: true});
+            return;
+        }
         if (event.target.closest('[data-clear-item-filter]')) {
             const filter = $('#itemFilter');
             filter.value = '';
@@ -1006,13 +1077,14 @@ function bindEvents() {
         const overlay = document.querySelector('.modal-overlay:not(.hidden)');
         if (!overlay) return;
         if (event.key === 'Escape') {
+            event.preventDefault();
             if (overlay.id === 'mergeOverlay') closeMerge();
             else closeModal();
             return;
         }
         if (event.key !== 'Tab') return;
-        const focusable = [...overlay.querySelectorAll('button, input, select, textarea, a[href]')]
-            .filter((element) => !element.disabled && element.getClientRects().length);
+        const focusable = [...overlay.querySelectorAll('button, input, select, textarea, a[href], summary')]
+            .filter((element) => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length);
         const first = focusable[0];
         const last = focusable.at(-1);
         const edge = event.shiftKey ? first : last;

@@ -28,6 +28,7 @@ function mergeOverlay() {
 let mergeTrigger = null;
 
 function closeMerge() {
+    const wasOpen = mergeView.open;
     if (mergeView.poller) clearInterval(mergeView.poller);
     mergeView.poller = null;
     mergeView.open = false;
@@ -36,8 +37,12 @@ function closeMerge() {
     mergeView.rows = [];
     mergeOverlay().classList.add('hidden');
     $('#mergeContent').innerHTML = '';
+    syncModalBackground();
     mergeTrigger?.focus();
     mergeTrigger = null;
+    if (wasOpen) {
+        refreshSelectedRange().catch((error) => setStatus('刷新失败：' + error.message, 'error'));
+    }
 }
 
 async function openMerge() {
@@ -71,6 +76,7 @@ async function openMerge() {
     mergeView.anchor = anchor;
     mergeView.peers = ranges.flat();
     mergeOverlay().classList.remove('hidden');
+    syncModalBackground();
     renderMergeShell();
     $('#mergeTrackerSelect').focus();
 }
@@ -78,27 +84,31 @@ async function openMerge() {
 function renderMergeShell() {
     const peers = mergeView.peers;
     const options = peers.map((peer, index) => `<option value="${index}">${escapeHtml(
-        (peer.name || peer.trackerId) + ' · ' + peer.trackerId + '（' + peer.workingSetId + '）'
+        peer.name || '未命名分类'
     )}</option>`).join('');
     $('#mergeContent').innerHTML = `
     <div class="modal-head">
       <div>
-        <h3 id="mergeTitle">比较 / 合并</h3>
+        <h3 id="mergeTitle">比较/合并跟踪分类 <span class="merge-title-name">${escapeHtml(mergeView.anchor.name || '未命名分类')}</span></h3>
+        <label class="merge-tracker-selector"><span class="visually-hidden">比较跟踪分类</span><select id="mergeTrackerSelect" onchange="mergeResetComparison()" aria-label="比较跟踪分类">
+          <option value="" selected disabled>请选择跟踪分类</option>${options}
+        </select></label>
         <p id="mergeSubtitle"></p>
+      <div class="merge-picker">
+        <div class="merge-workset-path" aria-label="工作集合并方向">
+          <div class="merge-endpoint"><span class="merge-endpoint-role">来源</span><strong id="mergeSourceWorkset"></strong><span id="mergeSourceTracker" class="merge-endpoint-tracker"></span></div>
+        <button type="button" id="mergeDirection" class="merge-direction-toggle" value="source"
+          aria-label="切换比对方向" aria-pressed="false" onclick="mergeFlipDirection()">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16m-4-4 4 4-4 4M20 16H4m4-4-4 4 4 4"/></svg>
+        </button>
+          <div class="merge-endpoint"><span class="merge-endpoint-role">接收方</span><strong id="mergeTargetWorkset"></strong><span id="mergeTargetTracker" class="merge-endpoint-tracker"></span></div>
+        </div>
+        <button type="button" class="btn" id="mergeCompare" onclick="mergeStartComparison()" disabled>开始比较</button>
+      </div>
       </div>
       <button type="button" class="modal-close" aria-label="关闭" onclick="closeMerge()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="merge-picker">
-        <label>比较对象 <select id="mergeTrackerSelect" onchange="mergeResetComparison()">
-          <option value="" selected disabled>选择 跟踪分类</option>${options}
-        </select></label>
-        <label>方向 <select id="mergeDirection" onchange="mergeResetComparison()">
-          <option value="source">当前 跟踪分类 → 比较对象</option>
-          <option value="target">比较对象 → 当前 跟踪分类</option>
-        </select></label>
-        <button type="button" class="btn" id="mergeCompare" onclick="mergeStartComparison()" disabled>开始比较</button>
-      </div>
       <div id="mergeBody"><div class="empty">${peers.length ? '请选择比较对象和方向' : '没有可比较的直属派生 跟踪分类'}</div></div>
     </div>
     <div class="modal-foot">
@@ -107,7 +117,34 @@ function renderMergeShell() {
       <button type="button" class="btn" onclick="closeMerge()">关闭</button>
       <button type="button" class="btn primary" id="mergeSubmit" onclick="submitMerge()" disabled>提交本页决策</button>
     </div>`;
-    $('#mergeSubtitle').textContent = '当前 跟踪分类 ' + (mergeView.anchor.name || mergeView.anchor.trackerId);
+    mergeUpdateDirectionLabel();
+}
+
+function mergeUpdateDirectionLabel() {
+    const button = $('#mergeDirection');
+    const selection = $('#mergeTrackerSelect').value;
+    const peer = selection === '' ? null : mergeView.peers[Number(selection)];
+    const current = worksetLabel(mergeView.anchor.workingSetId, '当前工作集');
+    const other = peer ? worksetLabel(peer.workingSetId, '比较对象') : '比较对象';
+    const direction = button.value === 'source' ? `${current} → ${other}` : `${other} → ${current}`;
+    $('#mergeSourceWorkset').textContent = button.value === 'source' ? current : other;
+    $('#mergeTargetWorkset').textContent = button.value === 'source' ? other : current;
+    const source = button.value === 'source' ? mergeView.anchor : peer;
+    const target = button.value === 'source' ? peer : mergeView.anchor;
+    $('#mergeSourceTracker').textContent = source?.name || '请选择跟踪分类';
+    $('#mergeTargetTracker').textContent = target?.name || '请选择跟踪分类';
+    button.title = direction + '；点击切换方向，再开始比较';
+    button.setAttribute('aria-label', direction + '，点击切换方向');
+    $('#mergeSubtitle').textContent = '';
+}
+
+function mergeFlipDirection() {
+    const button = $('#mergeDirection');
+    if (button.disabled) return;
+    button.value = button.value === 'source' ? 'target' : 'source';
+    button.setAttribute('aria-pressed', String(button.value === 'target'));
+    mergeResetComparison();
+    $('#mergeBody').innerHTML = '<div class="empty" role="status">方向已切换，点击“开始比较”查看此方向的差异</div>';
 }
 
 function mergeResetComparison() {
@@ -116,7 +153,7 @@ function mergeResetComparison() {
     $('#mergeSubmit').disabled = true;
     $('#mergeCompare').disabled = !$('#mergeTrackerSelect').value;
     $('#mergeHint').textContent = '';
-    $('#mergeSubtitle').textContent = '当前 跟踪分类 ' + (mergeView.anchor.name || mergeView.anchor.trackerId);
+    mergeUpdateDirectionLabel();
     $('#mergeBody').innerHTML = '<div class="empty">请选择比较对象和方向</div>';
 }
 
@@ -162,10 +199,10 @@ async function loadMergePage() {
         if (body !== $('#mergeBody')) return;
         mergeView.page = page;
         mergeView.rows = page.differences.map((difference) => ({
-            difference, action: 'ACCEPT', mark: true,
-            fields: Object.fromEntries((difference.fields || []).map((field) => [field, 'ACCEPT']))
+            difference, action: 'IGNORED', mark: true,
+            fields: Object.fromEntries((difference.fields || []).map((field) => [field, 'IGNORED']))
         }));
-        $('#mergeSubtitle').textContent = `${mergeView.sourceTracker}（${mergeView.source}） → ${mergeView.targetTracker}（${mergeView.target}） · 本页 ${page.differences.length} 条差异`;
+        $('#mergeSubtitle').textContent = `本页 ${page.differences.length} 条差异`;
         renderMergeRows();
     } catch (error) {
         body.innerHTML = `<div class="empty">比较失败：${escapeHtml(error.message)}</div>`;
@@ -189,13 +226,13 @@ function renderMergeRows() {
     const next = mergeView.page && mergeView.page.nextOffset !== null
         ? `<button type="button" class="btn" onclick="nextMergePage()">下一页</button>` : '';
     body.innerHTML = `
-    <table class="merge-table">
-      <thead><tr><th>家族</th><th>差异</th><th>源</th><th>目标</th><th>决策</th><th>标记已处理</th></tr></thead>
+    <table class="merge-table merge-comparison-table">
+      <thead><tr><th>条目</th><th>差异</th><th>来源内容</th><th>接收方内容</th><th>接收决策</th><th>标记已处理</th></tr></thead>
       <tbody>${rows.map((row, index) => mergeRowHtml(row, index)).join('')}</tbody>
     </table>
     <div class="merge-foot">${next}</div>`;
     submit.disabled = !rows.some(isMergeRowDecidable);
-    $('#mergeHint').textContent = '更新行逐字段选择；标记已处理会隐藏当前版次的整行差异。';
+    $('#mergeHint').textContent = '默认忽略变更，打开开关接收源变更；标记已处理独立生效，会隐藏当前版次的整行差异。';
 }
 
 function isMergeRowDecidable(row) {
@@ -203,9 +240,41 @@ function isMergeRowDecidable(row) {
         && row.difference.target.presence !== 'UNREADABLE';
 }
 
-function mergeActionOptions(action) {
-    return Object.entries(MERGE_ACTIONS).map(([value, label]) =>
-        `<option value="${value}"${action === value ? ' selected' : ''}>${label}</option>`).join('');
+function mergeDecisionSwitch(index, fieldIndex, action, label) {
+    return `<button type="button" class="merge-decision-switch" role="switch"
+        aria-checked="${action === 'ACCEPT'}" aria-label="${escapeHtml(label)}：接收源变更"
+        onclick="mergeToggleDecision(this, ${index}, ${fieldIndex})">
+        <span class="decision-ignore">忽略变更</span>
+        <span class="decision-motion" aria-hidden="true"><span>→</span></span>
+        <span class="decision-accept">接收变更</span>
+    </button>`;
+}
+
+function mergeToggleDecision(button, index, fieldIndex) {
+    const accept = button.getAttribute('aria-checked') !== 'true';
+    const action = accept ? 'ACCEPT' : 'IGNORED';
+    if (fieldIndex < 0) setMergeAction(index, action);
+    else setMergeFieldAction(index, fieldIndex, action);
+    button.setAttribute('aria-checked', String(accept));
+}
+
+function mergePresenceInfo(evidence, role) {
+    if (evidence.presence === 'ABSENT' || evidence.presence === 'DELETED') return '';
+    const labels = {PRESENT: '查看条目', ABSENT: '无对应条目', UNREADABLE: '内容不可读', DELETED: '条目已删除'};
+    return infoDisclosure(labels[evidence.presence] || evidence.presence || '状态未知',
+        [['角色', role], ['所属工作集', worksetLabel(role === '源' ? mergeView.source : mergeView.target, '未命名工作集')],
+            ['对象 ID', evidence.localId?.value], ['状态', labels[evidence.presence] || evidence.presence]]);
+}
+
+function mergeItemName(difference) {
+    for (const side of [difference.source, difference.target]) {
+        if (side?.presence !== 'PRESENT') continue;
+        const title = side.fields?.title;
+        if (typeof title === 'string' && title.trim()) return title;
+        const item = state.items.find((candidate) => candidate.localId === side.localId?.value);
+        if (item?.name) return item.name;
+    }
+    return '名称不可用';
 }
 
 function mergeRowHtml(row, index) {
@@ -216,20 +285,20 @@ function mergeRowHtml(row, index) {
     const decidable = isMergeRowDecidable(row);
     const decisions = !decidable ? '证据不可读' : updated
         ? (difference.fields || []).map((field, fieldIndex) => `
-        <div><label>${escapeHtml(field)}：
-          <select onchange="setMergeFieldAction(${index}, ${fieldIndex}, this.value)">${mergeActionOptions(row.fields[field])}</select>
-        </label></div>`).join('')
-        : `<select onchange="setMergeAction(${index}, this.value)">${mergeActionOptions(row.action)}</select>`;
+        <div class="merge-field-decision"><div class="merge-decision-line"><span title="${escapeHtml(field)}">${escapeHtml(({title: '标题', description: '描述'})[field] || field)}：</span>
+          ${mergeDecisionSwitch(index, fieldIndex, row.fields[field], ({title: '标题', description: '描述'})[field] || field)}
+        </div></div>`).join('')
+        : `<div class="merge-field-decision"><div class="merge-decision-line"><span>${difference.kind === 'DELETED' ? '删除' : '新增'}：</span>${mergeDecisionSwitch(index, -1, row.action, difference.kind === 'DELETED' ? '删除对象' : '新增对象')}</div></div>`;
     const mark = !decidable ? '—' : updated
         ? `<input type="checkbox" aria-label="标记整条差异已处理" ${row.mark ? 'checked' : ''} onchange="setMergeMark(${index}, this.checked)">`
         : difference.kind === 'ADDED' ? '接收成功后自动标记' : '不标记';
     const kind = {ADDED: '新增', MODIFIED: '更新', DELETED: '删除'}[difference.kind] || difference.kind;
     return `
     <tr>
-      <td class="mono">${escapeHtml(shortId(difference.family && difference.family.value))}</td>
-      <td>${escapeHtml(kind)}</td>
-      <td>${escapeHtml(source.presence || '—')}<div class="muted mono">${escapeHtml(shortId(source.localId && source.localId.value))}</div></td>
-      <td>${escapeHtml(target.presence || '—')}<div class="muted mono">${escapeHtml(shortId(target.localId && target.localId.value))}</div></td>
+      <td>${infoDisclosure(mergeItemName(difference), [['家族 ID', difference.family?.value]])}</td>
+      <td><span class="merge-kind merge-kind-${difference.kind === 'MODIFIED' ? 'updated' : difference.kind === 'ADDED' ? 'added' : difference.kind === 'DELETED' ? 'deleted' : 'other'}">${escapeHtml(kind)}</span></td>
+      <td>${mergePresenceInfo(source, '源')}</td>
+      <td>${mergePresenceInfo(target, '目标')}</td>
       <td>${decisions}</td>
       <td>${mark}</td>
     </tr>`;
@@ -282,7 +351,7 @@ async function submitMerge() {
         });
         if (body !== $('#mergeBody')) return;
         mergeView.round = round;
-        $('#mergeHint').textContent = `已受理轮次 ${shortId(round.id)}，等待执行…`;
+        $('#mergeHint').textContent = '决策已受理，正在执行…';
         renderMergeRound(round);
         pollMergeRound(round.id);
     } catch (error) {
@@ -329,29 +398,39 @@ function pollMergeRound(roundId) {
 function renderMergeRound(round) {
     const body = $('#mergeBody');
     const result = round.result;
-    const summary = result
-        ? `<div class="merge-summary">
-         <span>轮次 ${escapeHtml(shortId(round.id))}</span>
-         <span>终态 <strong>${escapeHtml(result.state)}</strong></span>
-         <span>写入 ${result.summary.applied}</span>
-         <span>确认 ${result.summary.confirmed}</span>
-         <span>拒绝 ${result.summary.rejected}</span>
-         <span>冲突 ${result.summary.conflict}</span>
-         <span>证据过期 ${result.summary.staleEvidence}</span>
-       </div>`
-        : `<div class="merge-summary"><span>轮次 ${escapeHtml(shortId(round.id))}</span><span>状态 ${escapeHtml(round.state)}</span><span>执行中…</span></div>`;
-    const entries = round.entries.map((entry) => `
+    const state = result?.state || round.state;
+    const states = {Preparing: '正在准备合并', Running: '正在执行合并', Succeeded: '本轮合并已完成', PartiallySucceeded: '本轮合并部分完成', Failed: '本轮合并未成功'};
+    const tone = !result ? 'running' : state === 'Succeeded' ? 'success' : state === 'Failed' ? 'error' : 'warning';
+    const stats = result ? [['已执行', result.summary.applied], ['已确认', result.summary.confirmed], ['已拒绝', result.summary.rejected], ['有冲突', result.summary.conflict], ['证据过期', result.summary.staleEvidence]] : [];
+    const summary = `<section class="merge-result-banner ${tone}" role="status">
+      <span class="merge-result-icon" aria-hidden="true">${!result ? '⋯' : state === 'Succeeded' ? '✓' : '!'}</span>
+      <div><h4>${escapeHtml(states[state] || '合并状态待确认')}</h4><p>${result ? '请查看下方逐项执行结果。' : '决策已受理，结果将自动更新。'}</p></div>
+      ${infoDisclosure('执行详情', [['轮次 ID', round.id], ['状态代码', state]])}
+    </section>
+    ${stats.length ? `<div class="merge-result-stats">${stats.map(([label, count]) => `<div><strong>${escapeHtml(String(count ?? 0))}</strong><span>${label}</span></div>`).join('')}</div>` : ''}`;
+    const outcomes = {Applied: ['已执行', 'success'], Confirmed: ['已确认', 'success'], Rejected: ['已拒绝', 'error'], Conflict: ['有冲突', 'warning'], StaleEvidence: ['证据过期', 'warning'], Unknown: ['结果待核实', 'warning']};
+    const entries = round.entries.map((entry) => {
+        const evidence = entry.evidence || {};
+        const decision = entry.decision || {};
+        const outcome = entry.result ? outcomes[entry.result.outcome] || ['结果待核实', 'warning'] : ['等待执行', 'running'];
+        const operation = decision.existence ? ({ACCEPT: '接收变更', IGNORED: '忽略变更'})[decision.existence] || '存在性决策'
+            : Object.entries(decision.fields || {}).map(([field, action]) => `${({title: '标题', description: '描述'})[field] || field}：${action === 'ACCEPT' ? '接收' : action === 'IGNORED' ? '忽略' : action}`).join(' · ') || '字段决策';
+        return `
     <tr>
-      <td class="mono">${escapeHtml(shortId(entry.evidence && entry.evidence.family && entry.evidence.family.value))}</td>
-      <td>${escapeHtml(entry.decision && entry.decision.existence ? entry.decision.existence : 'fields')}</td>
-      <td>${entry.result ? escapeHtml(entry.result.outcome) : '<span class="muted">等待</span>'}</td>
-      <td>${entry.result && entry.result.failure ? escapeHtml(entry.result.failure) : ''}</td>
-    </tr>`).join('');
+      <td>${infoDisclosure(mergeItemName(evidence), [['家族 ID', evidence.family?.value]])}</td>
+      <td><div>${escapeHtml(operation)}</div>${decision.markAsMerged ? '<span class="muted">标记已处理</span>' : ''}</td>
+      <td><span class="merge-outcome ${outcome[1]}">${outcome[0]}</span></td>
+      <td>${entry.result?.failure ? escapeHtml(reasonText(entry.result.failure) || String(entry.result.failure)) : ''}</td>
+    </tr>`;
+    }).join('');
     body.innerHTML = `${summary}
-    <table class="merge-table">
-      <thead><tr><th>家族</th><th>操作</th><th>结果</th><th>失败</th></tr></thead>
+    <div class="merge-result-heading"><h4>条目执行明细</h4><span class="muted">${round.entries.length} 个条目</span></div>
+    <table class="merge-table merge-result-table">
+      <thead><tr><th>条目</th><th>提交的决策</th><th>执行结果</th><th>原因说明</th></tr></thead>
       <tbody>${entries}</tbody>
     </table>`;
+    $('#mergeSubtitle').textContent = result ? '合并结果' : '执行中';
+    $('#mergeHint').textContent = result ? '本轮执行已结束；可重新比较，查看接收方的最新差异。' : '正在执行，本页结果会自动更新。';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
