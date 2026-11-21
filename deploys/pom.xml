@@ -76,6 +76,13 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- p6spy 代理驱动：数据源 URL 走 jdbc:p6spy:... 时在控制台打印实时 SQL；
+             spy.properties 使用 Slf4J 输出（logger: p6spy）。 -->
+        <dependency>
+            <groupId>p6spy</groupId>
+            <artifactId>p6spy</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- 测试 -->
         <dependency>

@@ -28,6 +28,11 @@ mybatis-plus:
   global-config:
     banner: false
 
+logging:
+  level:
+    # p6spy（代理驱动）通过 Slf4J 输出控制台实时 SQL；设为 OFF 可静默
+    p6spy: ${P6SPY_LOG_LEVEL:INFO}
+
 spring:
   application:
     name: ddd-workingset
@@ -37,10 +42,12 @@ spring:
       schema-locations: classpath:schema.sql
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/ddd-test?reWriteBatchedInserts=true}
+    # p6spy 代理驱动：driver-class-name 固定为 P6SpyDriver，url 需带 jdbc:p6spy: 前缀，
+    # 真实 PostgreSQL 驱动由 p6spy 转交；SQL 输出到控制台（见 spy.properties、logging.level.p6spy）。
+    url: ${DB_URL:jdbc:p6spy:postgresql://127.0.0.1:5432/ddd-test?reWriteBatchedInserts=true}
     username: postgres
     password: 123QWEASD
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: com.p6spy.engine.spy.P6SpyDriver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 3

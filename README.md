@@ -27,6 +27,10 @@ java -jar deploys/target/deploys-0.1.0-SNAPSHOT.jar
 `bootstrap.WorkingsetApplication`。应用需连接 PostgreSQL 和
 Redis，默认端口及连接配置见 [application.yml](deploys/src/main/resources/application.yml)。
 
+数据源使用 p6spy 代理驱动（`com.p6spy.engine.spy.P6SpyDriver` + `jdbc:p6spy:` 前缀），执行 SQL 时会在控制台输出
+实时语句、耗时与连接号；输出格式与类别过滤见 [spy.properties](deploys/src/main/resources/spy.properties)
+，用 `P6SPY_LOG_LEVEL=OFF` 可静默。测试直连 PostgreSQL，不走代理驱动。
+
 雪花 ID 版本使用 BIGINT schema。Demo 默认连接专用数据库 `ddd-demo`，也可由 `DEMO_DB_URL` 指定。Demo
 启动依次运行 [schema.sql](deploys/src/main/resources/schema.sql)
 和 [demo-data.sql](deploys/src/main/resources/demo-data.sql)，首次写入演示数据，重启沿用现有数据。旧版开发或 Demo

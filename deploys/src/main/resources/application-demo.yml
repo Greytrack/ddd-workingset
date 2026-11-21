@@ -1,6 +1,7 @@
 spring:
   datasource:
-    url: ${DEMO_DB_URL:jdbc:postgresql://127.0.0.1:5432/ddd-demo?reWriteBatchedInserts=true}
+    # demo 环境沿用 p6spy 代理驱动（与 application.yml 的 driver-class-name 配套）
+    url: ${DEMO_DB_URL:jdbc:p6spy:postgresql://127.0.0.1:5432/ddd-demo?reWriteBatchedInserts=true}
   sql:
     init:
       mode: never

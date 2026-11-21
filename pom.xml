@@ -31,6 +31,8 @@
         <mybatis-plus.version>3.5.9</mybatis-plus.version>
         <transmittable-thread-local.version>2.14.4</transmittable-thread-local.version>
         <guava.version>32.0.0-jre</guava.version>
+        <!-- p6spy：JDBC 代理驱动，用于开发期控制台实时 SQL 日志 -->
+        <p6spy.version>3.9.1</p6spy.version>
     </properties>
 
     <dependencyManagement>
@@ -84,6 +86,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>p6spy</groupId>
+                <artifactId>p6spy</artifactId>
+                <version>${p6spy.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
