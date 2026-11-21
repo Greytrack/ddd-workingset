@@ -640,7 +640,7 @@ class MergeAcceptanceTest {
         String parentLocal = jdbc.queryForObject("SELECT local_id FROM air_ws_items_index WHERE branch_id = ?",
                 String.class, parentItem);
         MergeAcceptanceTest.Derived grand = derive(grandchild, childTracker, parentLocal, anchor);
-        jdbc.update("UPDATE air_ws_items_index SET revision = 1 WHERE local_id = ?", grand.item().localId().value());
+        ItemIndexFixture.updateRevision(jdbc, grand.item().localId().value(), 1);
 
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,

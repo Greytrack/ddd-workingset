@@ -12,7 +12,6 @@ import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
-import java.time.Instant;
 
 /**
  * 消费 ALM 的实例化结果：成功则切换 LTI，失败则落失败终态。
@@ -66,7 +65,7 @@ public final class CowMaterializationCompletionService {
             failureLog.record(new CowFailureLogQueryProvider.Failure(event.eventId(), event.targetLocalId(),
                     receipt.sourceLocalId(), receipt.sourceRevision(), receipt.sourceRevision(),
                     event.beforeLockVersion(), event.afterLockVersion(), receipt.attempts(), "MATERIALIZE", "MATERIALIZATION_FAILED",
-                    event.failure(), Instant.now()));
+                    event.failure(), System.currentTimeMillis()));
         }
     }
 }

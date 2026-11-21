@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
@@ -20,6 +21,7 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.Version;
 import sk.workingset.domain.event.BusinessObjectDeleteEvent;
 import sk.workingset.domain.event.BusinessObjectUpdateEvent;
 import sk.workingset.domain.event.SnapshotRefEvent;
@@ -31,7 +33,6 @@ import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -96,7 +97,7 @@ public class RequirementCommandService {
         long common = defaultWorkingSet ? local : nextDistinct(local);
         Requirement requirement = Requirement.create(
                 LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
-                trackerId, title, description, revision);
+                trackerId, title, description, revision, Version.none(), RequestThreadHolder.getUserId());
         repository.save(requirement);
         tracker.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
                 requirement.localId(), requirement.commonId(), trackerId,
@@ -171,7 +172,7 @@ public class RequirementCommandService {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
         }
         return Requirement.create(target.localId(), target.commonId(), target.trackerId(),
-                source.title(), source.description(), target.revision(), source.version());
+                source.title(), source.description(), target.revision(), source.version(), RequestThreadHolder.getUserId());
     }
 
     /**
@@ -233,7 +234,7 @@ public class RequirementCommandService {
                 current.lockVersion(),
                 changed.lockVersion(),
                 snapshotRef,
-                Instant.now());
+                System.currentTimeMillis());
 
         // 发布记录随来源事务提交，监听器在提交后异步处理。
         eventPublisher.publishEvent(event);

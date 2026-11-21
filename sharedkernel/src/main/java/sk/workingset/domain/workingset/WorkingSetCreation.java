@@ -6,7 +6,6 @@ import org.jmolecules.ddd.annotation.AggregateRoot;
 import sk.common.error.DomainException;
 import sk.workingset.error.WorkingsetResultCode;
 
-import java.time.Instant;
 import java.util.*;
 
 /**
@@ -16,7 +15,7 @@ import java.util.*;
 public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING)
                                  Long numericId, Request request, String requestedBy, Status status,
                                  Stage stage, Progress progress, List<Failure> failures,
-                                 Instant createdAt, Instant startedAt, Instant completedAt,
+                                 long createdAt, Long startedAt, Long completedAt,
                                  Map<Stage, Progress> stageProgress, Map<String, IndexProgress> indexProgress) {
     public WorkingSetCreation {
         failures = List.copyOf(failures);
@@ -24,7 +23,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         indexProgress = Map.copyOf(indexProgress);
     }
 
-    public static WorkingSetCreation submit(String id, Request request, String caller, Instant now) {
+    public static WorkingSetCreation submit(String id, Request request, String caller, long now) {
         WorkingSetCreation.Stage initial = firstStage(request);
         if (initial == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "working set request has no work");
@@ -55,20 +54,20 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         return numericId.toString();
     }
 
-    public Instant baselineAt(String trackerId) {
+    public long baselineAt(String trackerId) {
         return request.baselineOverrides().getOrDefault(Long.valueOf(trackerId), createdAt);
     }
 
     @JsonProperty(value = "baselineAtByTracker", access = JsonProperty.Access.READ_ONLY)
-    public Map<Long, Instant> baselineAtByTracker() {
-        Map<Long, Instant> resolved = new TreeMap<>();
+    public Map<Long, Long> baselineAtByTracker() {
+        Map<Long, Long> resolved = new TreeMap<>();
         for (Long trackerId : request.selectedTrackerIds()) {
             resolved.put(trackerId, request.baselineOverrides().getOrDefault(trackerId, createdAt));
         }
         return resolved;
     }
 
-    public WorkingSetCreation start(Instant now) {
+    public WorkingSetCreation start(long now) {
         if (status != Status.Pending) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Only a pending creation can start");
         }
@@ -81,7 +80,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         return request.items(stage).get(stageProgress.get(stage).processed());
     }
 
-    public WorkingSetCreation advance(ItemOutcome outcome, Failure failure, Instant now) {
+    public WorkingSetCreation advance(ItemOutcome outcome, Failure failure, long now) {
         requireRunning();
         if ((outcome == ItemOutcome.Failed) == (failure == null) || failure != null && failure.stage() != stage) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Failure detail must match the current step and outcome");
@@ -89,7 +88,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         return advance(outcome, failure == null ? List.of() : List.of(failure), now);
     }
 
-    public WorkingSetCreation recordBindingResult(boolean changed, List<Failure> bindingFailures, Instant now) {
+    public WorkingSetCreation recordBindingResult(boolean changed, List<Failure> bindingFailures, long now) {
         requireRunning();
         if (stage != Stage.BIND_PRODUCT_AND_TRACKER
                 || bindingFailures.stream().anyMatch(failure -> failure.stage() != stage)) {
@@ -101,7 +100,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
     }
 
     public WorkingSetCreation recordIndexBatch(IndexProgress batch, List<Failure> batchFailures,
-                                               boolean finished, Instant now) {
+                                               boolean finished, long now) {
         if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Not indexing");
         }
@@ -117,11 +116,11 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                 createdAt, startedAt, completedAt, stageProgress, updatedIndex);
     }
 
-    private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, Instant now) {
+    private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, long now) {
         return advance(outcome, newFailures, now, indexProgress);
     }
 
-    private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, Instant now,
+    private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, long now,
                                        Map<String, IndexProgress> updatedIndex) {
         EnumMap<WorkingSetCreation.Stage, WorkingSetCreation.Progress> updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
         updatedProgress.putAll(stageProgress);
@@ -187,12 +186,12 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                           @JsonProperty("productSpaceIds") List<Long> numericProductSpaceIds,
                           @JsonProperty("sharedTrackerIds") List<Long> numericSharedTrackerIds,
                           @JsonProperty("unsharedParentTrackerIds") List<Long> numericUnsharedTrackerIds,
-                          String name, Mode mode, String color, Map<Long, Instant> baselineOverrides,
+                          String name, Mode mode, String color, Map<Long, Long> baselineOverrides,
                           List<Long> automaticTrackerIds, List<Long> submittedExtensionTrackerIds) {
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds, String name, Mode mode, String color,
-                       Map<Long, Instant> baselineOverrides) {
+                       Map<Long, Long> baselineOverrides) {
             this(WorkingSetId.of(parentWorkingSetId).numericValue(), WorkingSetId.of(newWorkingSetId).numericValue(),
                     requestId, parseIds(productSpaceIds), parseIds(sharedTrackerIds),
                     parseIds(unsharedParentTrackerIds), name, mode, color, baselineOverrides, List.of(), List.of());
@@ -315,7 +314,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
     }
 
     public record Failure(Stage stage, String productSpaceId, String trackerId, String localId,
-                          String reason, Instant occurredAt) {
+                          String reason, long occurredAt) {
     }
 
     public record IndexProgress(String afterLocalId, int succeeded, int failed, int skipped,

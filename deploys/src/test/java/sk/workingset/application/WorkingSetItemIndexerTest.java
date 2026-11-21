@@ -23,7 +23,6 @@ import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -102,9 +101,9 @@ class WorkingSetItemIndexerTest {
         LocalId contender = LocalId.of(fixtureId("contender-" + suffix));
         ItemClassification classification = new ItemClassification(Long.parseLong(space), 14010101L);
         LightTrackerItem existing = LightTrackerItem.local(winner, CommonId.of(family), TrackerId.of(childTracker),
-                WorkingSetId.of(child), Revision.of(3), classification);
+                WorkingSetId.of(child), Revision.of(3), classification, "test");
         LightTrackerItem duplicate = LightTrackerItem.local(contender, CommonId.of(family), TrackerId.of(childTracker),
-                WorkingSetId.of(child), Revision.of(3), classification);
+                WorkingSetId.of(child), Revision.of(3), classification, "test");
         transaction.executeWithoutResult(status -> {
             assertTrue(items.claimFamily(existing));
             assertFalse(items.claimFamily(duplicate));
@@ -114,7 +113,7 @@ class WorkingSetItemIndexerTest {
 
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parent, child, "request",
                 List.of(space), List.of(), List.of(parentTracker));
-        Instant acceptedAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
+        long acceptedAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).getTime();
         WorkingSetCreation creation = new WorkingSetCreation(Long.valueOf(fixtureId("creation-" + suffix)), request, "test", Status.Running,
                 Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1), List.of(),
                 acceptedAt, acceptedAt, null,

@@ -6,6 +6,7 @@ import alm.requirement.domain.RequirementSnapshotStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.workingset.application.command.dto.MaterializeRequest;
 import sk.workingset.application.common.TargetIdentity;
@@ -70,7 +71,7 @@ public final class RequirementMaterializationService {
         } else {
             repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
                     request.targetTrackerId(), snapshot.title(), snapshot.description(),
-                    request.targetRevision(), snapshot.version()));
+                    request.targetRevision(), snapshot.version(), RequestThreadHolder.getUserId()));
         }
     }
 

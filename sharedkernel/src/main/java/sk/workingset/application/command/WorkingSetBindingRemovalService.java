@@ -3,6 +3,7 @@ package sk.workingset.application.command;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.workingset.WorkingSet;
@@ -29,6 +30,7 @@ public class WorkingSetBindingRemovalService {
             return;
         }
         workingSet.unbindTracker(trackerId);
+        workingSet.audit(RequestThreadHolder.getUserId());
         workingSets.save(workingSet);
     }
 }

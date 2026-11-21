@@ -21,7 +21,6 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +45,7 @@ class CowEventHandlerTest {
         when(items.findSourceBackedTargets(source, before)).thenReturn(List.of(target));
 
         BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(42, source, source, before, after,
-                LockVersion.of(5), LockVersion.of(6), SnapshotRefEvent.of("258782756974528"), Instant.EPOCH);
+                LockVersion.of(5), LockVersion.of(6), SnapshotRefEvent.of("258782756974528"), 0L);
 
         CowMaterializationStore store = mock(CowMaterializationStore.class);
         CowMaterializationStore.Entry pending = new CowMaterializationStore.Entry(42, target.localId(),

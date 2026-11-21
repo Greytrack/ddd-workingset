@@ -15,9 +15,9 @@ import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+import sk.workingset.domain.Version;
 
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -107,7 +107,7 @@ class RequirementFamilyScopeTest {
         TrackerItemCatalogQueryProvider.Identity identity =
                 new TrackerItemCatalogQueryProvider.Identity(saved.localId(), saved.commonId(), saved.revision());
         save(saved);
-        Instant baselineAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
+        long baselineAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).getTime();
         assertEquals(List.of(identity), catalog.identities(trackerId));
         assertEquals(List.of(identity), catalog.page(trackerId, baselineAt, "", 1));
         assertTrue(catalog.page(trackerId, baselineAt, saved.localId().value(), 1).isEmpty());
@@ -138,6 +138,6 @@ class RequirementFamilyScopeTest {
 
     private Requirement requirement(String prefix, String tracker) {
         return Requirement.create(LocalId.of(fixtureId(prefix + suffix)), CommonId.of(family), TrackerId.of(tracker),
-                "A", "description", Revision.of(3));
+                "A", "description", Revision.of(3), Version.none(), "test");
     }
 }

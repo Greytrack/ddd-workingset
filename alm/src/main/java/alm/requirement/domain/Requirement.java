@@ -23,9 +23,11 @@ public final class Requirement implements TrackerItem {
     private final LockVersion lockVersion;
     private final boolean materialized;
     private final boolean deleteFlag;
+    private final String createdBy;
 
     private Requirement(LocalId localId, CommonId commonId, TrackerId trackerId, String title, String description,
-                        Revision revision, Version version, LockVersion lockVersion, boolean materialized, boolean deleteFlag) {
+                        Revision revision, Version version, LockVersion lockVersion, boolean materialized,
+                        boolean deleteFlag, String createdBy) {
         this.localId = Objects.requireNonNull(localId, "localId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
@@ -37,6 +39,7 @@ public final class Requirement implements TrackerItem {
         this.lockVersion = Objects.requireNonNull(lockVersion, "lockVersion");
         this.materialized = materialized;
         this.deleteFlag = deleteFlag;
+        this.createdBy = createdBy;
     }
 
     public static Requirement create(LocalId id, CommonId commonId, TrackerId trackerId, String title,
@@ -46,9 +49,14 @@ public final class Requirement implements TrackerItem {
 
     public static Requirement create(LocalId id, CommonId commonId, TrackerId trackerId, String title,
                                      String description, Revision revision, Version version) {
+        return create(id, commonId, trackerId, title, description, revision, version, null);
+    }
+
+    public static Requirement create(LocalId id, CommonId commonId, TrackerId trackerId, String title,
+                                     String description, Revision revision, Version version, String createdBy) {
         validateTitle(title);
         return new Requirement(id, commonId, trackerId, title, description, revision, version,
-                LockVersion.initial(), true, false);
+                LockVersion.initial(), true, false, createdBy);
     }
 
     public static Requirement restore(LocalId id, CommonId commonId, TrackerId trackerId, String title,
@@ -65,8 +73,16 @@ public final class Requirement implements TrackerItem {
     public static Requirement restore(LocalId id, CommonId commonId, TrackerId trackerId, String title,
                                       String description, Revision revision, Version version,
                                       LockVersion lockVersion, boolean materialized, boolean deleteFlag) {
+        return restore(id, commonId, trackerId, title, description, revision, version, lockVersion,
+                materialized, deleteFlag, null);
+    }
+
+    public static Requirement restore(LocalId id, CommonId commonId, TrackerId trackerId, String title,
+                                      String description, Revision revision, Version version,
+                                      LockVersion lockVersion, boolean materialized, boolean deleteFlag,
+                                      String createdBy) {
         return new Requirement(id, commonId, trackerId, title, description, revision, version,
-                lockVersion, materialized, deleteFlag);
+                lockVersion, materialized, deleteFlag, createdBy);
     }
 
     /**
@@ -75,7 +91,7 @@ public final class Requirement implements TrackerItem {
     public static Requirement inherited(LocalId id, CommonId commonId, TrackerId trackerId, String title,
                                         String description, Revision revision, Version version) {
         return new Requirement(id, commonId, trackerId, title, description, revision, version,
-                LockVersion.initial(), false, false);
+                LockVersion.initial(), false, false, null);
     }
 
     private static LockVersion requireExpectedLockVersion(LifecycleCommand command) {
@@ -139,6 +155,10 @@ public final class Requirement implements TrackerItem {
         return deleteFlag;
     }
 
+    public String createdBy() {
+        return createdBy;
+    }
+
     public Requirement changeTitle(String title, LockVersion expectedLockVersion) {
         return changeContent(title, description, expectedLockVersion);
     }
@@ -148,21 +168,21 @@ public final class Requirement implements TrackerItem {
         verifyLockVersion(expectedLockVersion);
         validateTitle(title);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                lockVersion.next(), materialized, false);
+                lockVersion.next(), materialized, false, createdBy);
     }
 
     public Requirement upgradeRevision(LockVersion expectedLockVersion) {
         requireActive();
         verifyLockVersion(expectedLockVersion);
         return new Requirement(localId, commonId, trackerId, title, description,
-                Revision.of(Math.incrementExact(revision.value())), version, lockVersion.next(), materialized, false);
+                Revision.of(Math.incrementExact(revision.value())), version, lockVersion.next(), materialized, false, createdBy);
     }
 
     public Requirement delete(LockVersion expectedLockVersion) {
         requireActive();
         verifyLockVersion(expectedLockVersion);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                lockVersion.next(), materialized, true);
+                lockVersion.next(), materialized, true, createdBy);
     }
 
     public Requirement undelete(LockVersion expectedLockVersion) {
@@ -176,7 +196,7 @@ public final class Requirement implements TrackerItem {
         }
         validateTitle(title);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                lockVersion.next(), materialized, false);
+                lockVersion.next(), materialized, false, createdBy);
     }
 
     @Override

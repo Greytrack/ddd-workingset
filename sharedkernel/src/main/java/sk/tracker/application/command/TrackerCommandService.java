@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
@@ -54,7 +55,7 @@ public class TrackerCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
         workingSet.requireSpaceBinding(spaceId);
         Tracker tracker = Tracker.original(TrackerId.of(ids.nextId(null).longValue()), name, space,
-                classification, sharingMode);
+                classification, sharingMode, RequestThreadHolder.getLongUserId());
         workingSet.bindTracker(tracker, classification, sharingMode);
         trackers.save(tracker);
         events.publishEvent(new TrackerCreatedEvent(
@@ -71,6 +72,7 @@ public class TrackerCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
         requireOwningWorkingSet(tracker.workingSetId());
         if (tracker.rename(name)) {
+            tracker.touch(RequestThreadHolder.getLongUserId());
             trackers.save(tracker);
         }
         return tracker;

@@ -16,7 +16,6 @@ import sk.workingset.domain.LifecycleResult;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.event.CompleteDeleteEvent;
 
-import java.time.Instant;
 
 /**
  * Requirement 生命周期服务：永久删除 guard 与编排（先软删、无来源依赖后方可清除，D14/D7）。
@@ -50,6 +49,6 @@ public class RequirementLifecycleService {
             throw DomainException.withMessage(FailureReason.PREPARING, "Derived items still depend on source " + id.value());
         }
         requirements.purge(current);
-        eventPublisher.publishEvent(new CompleteDeleteEvent(id, current.trackerId(), Instant.now()));
+        eventPublisher.publishEvent(new CompleteDeleteEvent(id, current.trackerId(), System.currentTimeMillis()));
     }
 }

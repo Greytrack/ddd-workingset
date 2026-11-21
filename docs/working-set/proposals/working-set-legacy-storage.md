@@ -15,7 +15,7 @@
 | 删除         | 确认 V4 删除在旧表应硬删还是标删。标删时，普通读取和谱系必须过滤已删；入境引用仍须检查活动状态，外键只能保证物理行存在。父级、绑定和默认根的现有禁止条件保持不变。                                                                 |
 
 **推荐方案：直接切换聚合根表。** 对账完成后，JDBC 命令仓储和 MyBatis 读侧都改读写旧表，绑定仍在 `space_bindings` /
-`tracker_bindings`，创建任务和快照照旧。已有 Tracker、空间绑定、Requirement 等引用同步迁移。取数保留普通视图与任务内部视图区分，尤其是
+`tracker_bindings`，创建任务按各 Tracker 的基线时间派生，不再保存受理时冻结清单（[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md)）。已有 Tracker、空间绑定、Requirement 等引用同步迁移。取数保留普通视图与任务内部视图区分，尤其是
 Pending/Running 期间的隐藏、重放及祖先防环。
 
 **备选方案：过渡期增加只读兼容视图。** 若依赖方必须暂时保留旧 V4

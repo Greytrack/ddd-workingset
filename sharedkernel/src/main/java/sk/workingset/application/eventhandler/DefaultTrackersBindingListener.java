@@ -3,6 +3,7 @@ package sk.workingset.application.eventhandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
+import sk.RequestThreadHolder;
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
@@ -47,6 +48,7 @@ public class DefaultTrackersBindingListener {
                             "tracker disappeared: " + trackerId.value()));
             workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.sharingMode());
         }
+        workingSet.audit(RequestThreadHolder.getUserId());
         workingSets.save(workingSet);
     }
 }

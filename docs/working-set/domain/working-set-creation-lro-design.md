@@ -143,7 +143,7 @@ Requirement 是业务 BC 参考实现。
 
 - `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`requestId`、`name`、`productSpaceIds`、`sharedTrackerIds`、
   `unsharedParentTrackerIds`。范围按集合比较，空范围合法；服务端分配目标 ID，返回 HTTP 202、任务视图和轮询 `Location`。
-- 创建和扩展均接收可选 `baselineAtByTracker`，形如 `{"123":"2025-02-01T00:00:00Z"}`。未指定的 Tracker 使用
+- 创建和扩展均接收可选 `baselineAtByTracker`，形如 `{"123":1738368000000}`，值为 epoch 毫秒。未指定的 Tracker 使用
   HEAD，即首次受理时间。只允许所选 Tracker，拒绝未来时间。任务视图返回各 Tracker 的解析结果。
 - `GET /api/working-set-creations/{id}` 返回 `creationId`、`targetWorkingSetId`、`mode`、状态、步骤、进度、明细和时间；不存在返回
   HTTP 404。

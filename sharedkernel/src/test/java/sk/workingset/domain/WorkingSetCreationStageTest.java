@@ -3,7 +3,6 @@ package sk.workingset.domain;
 import org.junit.jupiter.api.Test;
 import sk.workingset.domain.workingset.WorkingSetCreation;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,7 +12,7 @@ import static sk.workingset.domain.workingset.WorkingSetCreation.Stage.*;
 class WorkingSetCreationStageTest {
     @Test
     void createsChildAndCopiesEverySelectedTrackerBeforeBindingAnySpace() {
-        Instant now = Instant.EPOCH;
+        long now = 0L;
         WorkingSetCreation.Request request = new WorkingSetCreation.Request("1", "2", "range", List.of("10", "11"),
                 List.of("30"), List.of("20", "21"));
         WorkingSetCreation task = WorkingSetCreation.submit("3", request, "4", now).start(now);

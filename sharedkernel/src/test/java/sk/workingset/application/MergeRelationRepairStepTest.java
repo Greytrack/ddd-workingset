@@ -23,7 +23,6 @@ import sk.workingset.domain.merge.MergeRound.Outcome;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,7 @@ class MergeRelationRepairStepTest {
                         default -> Outcome.Rejected;
                     }, "IGNORED", null, null, null));
         }
-        round = round.complete(Instant.now());
+        round = round.complete(System.currentTimeMillis());
 
         MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourceQueryProvider.class),
                 new RelationEventPublisher(event -> {
@@ -86,7 +85,7 @@ class MergeRelationRepairStepTest {
                 .register(new Entry("263525235173312", difference, decision, null)).start();
         MergeRound.Entry entry = round.entries().getFirst();
         round = round.finishEntry(entry, new ItemResult("263525235173312", Outcome.Applied, "ACCEPT", "265864557082560", null, null))
-                .complete(Instant.now());
+                .complete(System.currentTimeMillis());
 
         RelationSourceQueryProvider source = mock(RelationSourceQueryProvider.class);
         ReferenceEndpointEvent changedTarget = new ReferenceEndpointEvent(targetWorkingSet, LocalId.of("265864557082560"), CommonId.of("265506033508288"),

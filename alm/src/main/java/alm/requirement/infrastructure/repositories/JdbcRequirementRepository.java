@@ -10,11 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.FailureReason;
 import sk.workingset.domain.*;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Optional;
 
@@ -52,7 +52,8 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             rs.getString("description"),
             Revision.of(rs.getInt("revision")),
             rs.getString("version") == null ? Version.none() : Version.of(rs.getString("version")),
-            LockVersion.of(rs.getLong("lock_version")), rs.getBoolean("delete_flag"));
+            LockVersion.of(rs.getLong("lock_version")), true, rs.getBoolean("delete_flag"),
+            rs.getString("created_by"));
 
     private final JdbcTemplate jdbc;
     private final JdbcCommonInstanceStore commonInstances;
@@ -62,10 +63,14 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     public void save(Requirement requirement) {
         long lockVersion = requirement.lockVersion().value();
         if (lockVersion == 0) {
+            String actor = requirement.createdBy();
+            if (actor == null || actor.isBlank()) {
+                throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
+            }
             jdbc.update(INSERT, requirement.localId().numericValue(), requirement.commonId().numericValue(),
                     requirement.trackerId().numericValue(), requirement.title(), requirement.title(), requirement.description(),
                     requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted(),
-                    RequestThreadHolder.getUserId(), System.currentTimeMillis(),
+                    actor, System.currentTimeMillis(),
                     requirement.trackerId().numericValue());
             saveCommonInstance(requirement.localId().numericValue());
             return;
@@ -83,7 +88,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     @Override
     public Optional<Requirement> findById(LocalId localId) {
         return jdbc.query(
-                "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag "
+                "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag, created_by "
                         + "FROM requirements WHERE local_id = ?",
                 MAPPER,
                 localId.numericValue()).stream().findFirst();

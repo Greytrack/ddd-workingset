@@ -6,7 +6,6 @@ import sk.workingset.application.command.WorkingSetCreationService;
 import sk.workingset.domain.workingset.WorkingSetCreation;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -53,8 +52,8 @@ public class WorkingSetCreationController {
                                WorkingSetCreation.Status status,
                                WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
-                               Instant createdAt, Instant startedAt, Instant completedAt,
-                               Map<Long, Instant> baselineAtByTracker,
+                               long createdAt, Long startedAt, Long completedAt,
+                               Map<Long, Long> baselineAtByTracker,
                                Map<WorkingSetCreation.Stage, WorkingSetCreation.Progress> stageProgress,
                                Map<String, IndexCounts> indexProgress) {
         static CreationView from(WorkingSetCreation creation) {

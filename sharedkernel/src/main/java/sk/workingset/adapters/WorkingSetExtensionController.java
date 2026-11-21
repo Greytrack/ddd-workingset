@@ -7,7 +7,6 @@ import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +42,6 @@ public class WorkingSetExtensionController {
                 .body(WorkingSetCreationController.CreationView.from(creation));
     }
 
-    public record ExtensionRequest(String requestId, List<String> trackerIds, Map<Long, Instant> baselineAtByTracker) {
+    public record ExtensionRequest(String requestId, List<String> trackerIds, Map<Long, Long> baselineAtByTracker) {
     }
 }

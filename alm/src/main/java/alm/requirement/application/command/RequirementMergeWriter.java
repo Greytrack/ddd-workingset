@@ -6,6 +6,7 @@ import alm.requirement.domain.Requirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Version;
@@ -41,7 +42,8 @@ public final class RequirementMergeWriter {
         return Requirement.create(command.localId(), command.commonId(), command.trackerId(),
                 text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),
                 text(command.acceptedFields(), "description", text(command.baseFields(), "description", null)),
-                command.targetRevision(), command.version() == null ? Version.none() : Version.of(command.version()));
+                command.targetRevision(), command.version() == null ? Version.none() : Version.of(command.version()),
+                RequestThreadHolder.getUserId());
     }
 
     private static String text(Map<String, Object> values, String field, String fallback) {

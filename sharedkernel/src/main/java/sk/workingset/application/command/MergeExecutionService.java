@@ -31,7 +31,6 @@ import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.MergeResCode;
 
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -295,7 +294,7 @@ public class MergeExecutionService {
                     entry.evidence().trackers().target(), round.target(), event.targetRevision(),
                     event.inherited(), event.created() && !WorkingSet.DEFAULT_ID.equals(round.target()));
             if (event.inherited() || event.created()) {
-                events.publishEvent(new MergeAppliedEvent(mergeTarget, Instant.now()));
+                events.publishEvent(new MergeAppliedEvent(mergeTarget, System.currentTimeMillis()));
             }
         } else {
             round = finish(round, entry, result(entry, outcome(event.outcome()), operation(entry), null,
@@ -309,7 +308,7 @@ public class MergeExecutionService {
             mergeRepository.save(round);
             return null;
         }
-        MergeRound finished = round.complete(Instant.now());
+        MergeRound finished = round.complete(System.currentTimeMillis());
         mergeRepository.save(finished);
         try {
             MergeRelationRepairStep.StepResult repair = relationRepair.repair(finished);

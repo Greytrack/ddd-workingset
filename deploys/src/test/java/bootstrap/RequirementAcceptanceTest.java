@@ -181,7 +181,7 @@ class RequirementAcceptanceTest {
         LocalId id = LocalId.of(fixtureId("revision-item-" + UUID.randomUUID()));
         items.save(LightTrackerItem.local(id, CommonId.of(id.value()),
                 TrackerId.of(trackerId), WorkingSet.DEFAULT_ID, Revision.of(3),
-                new ItemClassification(Long.parseLong(fixtureId(trackerId + "-s")), 14010101L)));
+                new ItemClassification(Long.parseLong(fixtureId(trackerId + "-s")), 14010101L), "test"));
 
         indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));
         indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));

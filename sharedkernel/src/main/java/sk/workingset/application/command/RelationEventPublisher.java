@@ -13,7 +13,6 @@ import sk.workingset.domain.event.ReferenceCreationRequestedEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent;
 import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -61,6 +60,6 @@ public final class RelationEventPublisher {
 
     private RelationEventMetadataEvent metadata(String originalRelationId, String originId, OriginType originType) {
         return new RelationEventMetadataEvent(Long.toString(ids.nextId(null).longValue()), originalRelationId, originId, originType,
-                Instant.now());
+                System.currentTimeMillis());
     }
 }

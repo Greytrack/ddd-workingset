@@ -4,7 +4,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 
-import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -31,7 +30,7 @@ public record BusinessObjectUpdateEvent(long eventId,
                                         LockVersion beforeLockVersion,
                                         LockVersion afterLockVersion,
                                         SnapshotRefEvent snapshotRef,
-                                        Instant occurredAt) {
+                                        long occurredAt) {
 
     public BusinessObjectUpdateEvent {
         Objects.requireNonNull(requirementId, "requirementId");

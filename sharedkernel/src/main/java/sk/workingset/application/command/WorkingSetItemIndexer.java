@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.SavepointManager;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
@@ -26,7 +27,6 @@ import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -74,7 +74,7 @@ public final class WorkingSetItemIndexer {
 
     private static Failure failure(TrackerId parent, Tracker child, LocalId localId, FailureReason reason) {
         return new Failure(Stage.INDEX_UNSHARED_TRACKERS, child.productSpaceId(), parent.value(),
-                localId == null ? null : localId.value(), reason.name(), Instant.now());
+                localId == null ? null : localId.value(), reason.name(), System.currentTimeMillis());
     }
 
     private static FailureReason reason(RuntimeException failure) {
@@ -98,14 +98,14 @@ public final class WorkingSetItemIndexer {
         WorkingSetId target = WorkingSetId.of(creation.request().newWorkingSetId());
         if (creation.failures().stream().anyMatch(failure -> parent.value().equals(failure.trackerId())
                 && (failure.stage() == Stage.COPY_UNSHARED_TRACKERS || failure.stage() == Stage.BIND_PRODUCT_AND_TRACKER))) {
-            return creation.advance(ItemOutcome.Skipped, null, Instant.now());
+            return creation.advance(ItemOutcome.Skipped, null, System.currentTimeMillis());
         }
         Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
         WorkingSet targetSet = workingSets.findByIdForCreation(target).orElseThrow();
         if (child == null || !targetSet.hasTrackerBinding(child.trackerId())) {
-            return creation.advance(ItemOutcome.Skipped, null, Instant.now());
+            return creation.advance(ItemOutcome.Skipped, null, System.currentTimeMillis());
         }
-        Instant baselineAt = creation.baselineAt(parent.value());
+        long baselineAt = creation.baselineAt(parent.value());
         WorkingSetCreation.IndexProgress progress = creation.indexProgress().getOrDefault(parent.value(), IndexProgress.initial());
         Object savepoint = transaction.createSavepoint();
         BusinessObjectTypeAdapter adapter = null;
@@ -123,9 +123,9 @@ public final class WorkingSetItemIndexer {
             if (adapter == null && reason == FailureReason.CAPABILITY_NOT_SUPPORTED
                     && child.numericClassificationId() == FOLDER_CLASSIFICATION_ID && !itemQueries.existsInTracker(parent)) {
                 return creation.recordIndexBatch(new IndexProgress(progress.afterLocalId(), progress.succeeded(),
-                        progress.failed(), progress.skipped(), child.trackerId().value()), List.of(), true, Instant.now());
+                        progress.failed(), progress.skipped(), child.trackerId().value()), List.of(), true, System.currentTimeMillis());
             }
-            return creation.advance(ItemOutcome.Failed, failure(parent, child, null, reason), Instant.now());
+            return creation.advance(ItemOutcome.Failed, failure(parent, child, null, reason), System.currentTimeMillis());
         } finally {
             transaction.releaseSavepoint(savepoint);
         }
@@ -159,10 +159,10 @@ public final class WorkingSetItemIndexer {
         boolean finished = page.size() < batchSize;
         String cursor = page.isEmpty() ? progress.afterLocalId() : page.getLast().localId().value();
         return creation.recordIndexBatch(new IndexProgress(cursor, succeeded, failed, skipped,
-                finished ? child.trackerId().value() : null), failures, finished, Instant.now());
+                finished ? child.trackerId().value() : null), failures, finished, System.currentTimeMillis());
     }
 
-    private List<Candidate> livePage(TrackerId parent, Instant baselineAt, String cursor, BusinessObjectTypeAdapter adapter) {
+    private List<Candidate> livePage(TrackerId parent, long baselineAt, String cursor, BusinessObjectTypeAdapter adapter) {
         TreeMap<String, WorkingSetItemIndexer.Candidate> candidates = new TreeMap<String, Candidate>(LOCAL_ID_ORDER);
         itemQueries.pageInTracker(parent, baselineAt, cursor, batchSize).forEach(item ->
                 candidates.put(item.localId().value(), Candidate.from(item)));
@@ -171,7 +171,7 @@ public final class WorkingSetItemIndexer {
         return candidates.values().stream().limit(batchSize).toList();
     }
 
-    private Outcome index(TrackerId parent, Tracker child, Candidate candidate, BusinessObjectTypeAdapter adapter, Instant baselineAt) {
+    private Outcome index(TrackerId parent, Tracker child, Candidate candidate, BusinessObjectTypeAdapter adapter, long baselineAt) {
         // 重入/重复执行时先认已提交的同族，避免来源后来软删或不可读被误记为失败。
         if (itemQueries.hasFamily(child.workingSetId(), candidate.commonId())) {
             return new Outcome(IndexResult.Existing, null);
@@ -197,7 +197,8 @@ public final class WorkingSetItemIndexer {
             id = LocalId.of(Long.toString(ids.nextId(null).longValue()));
         } while (id.value().equals(candidate.commonId().value()) || id.equals(candidate.sourceId()));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
-                candidate.revision(), candidate.sourceId(), candidate.sourceRevision(), classificationOf(child));
+                candidate.revision(), candidate.sourceId(), candidate.sourceRevision(), classificationOf(child),
+                RequestThreadHolder.getUserId());
         if (!items.claimFamily(item)) {
             return new Outcome(IndexResult.Existing, null);
         }

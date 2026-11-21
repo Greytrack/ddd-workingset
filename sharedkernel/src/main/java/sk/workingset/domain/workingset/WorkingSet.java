@@ -31,8 +31,10 @@ public final class WorkingSet {
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
     private final Map<TrackerId, TrackerBinding> originalTrackers;
+    private final Long owner;
     private String name;
     private String color;
+    private String actor;
 
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
@@ -46,11 +48,18 @@ public final class WorkingSet {
 
     public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
-        this(id, parentWorkingSetId, name, color, spaces, trackers, false);
+        this(id, parentWorkingSetId, name, color, spaces, trackers, null, null);
+    }
+
+    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
+                      Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers,
+                      Long owner, String actor) {
+        this(id, parentWorkingSetId, name, color, spaces, trackers, false, owner, actor);
     }
 
     private WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
-                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers, boolean newAggregate) {
+                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers,
+                       boolean newAggregate, Long owner, String actor) {
         this.id = Objects.requireNonNull(id, "id");
         if (id.equals(parentWorkingSetId)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, id.value());
@@ -62,6 +71,8 @@ public final class WorkingSet {
         this.name = name;
         this.color = color;
         this.newAggregate = newAggregate;
+        this.owner = owner;
+        this.actor = actor;
         spaces.forEach(binding -> this.spaces.put(binding.productSpaceId(), binding));
         trackers.forEach(binding -> this.trackers.put(binding.trackerId(), binding));
         originalTrackers = Map.copyOf(this.trackers);
@@ -76,8 +87,13 @@ public final class WorkingSet {
     }
 
     public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name, String color) {
+        return child(id, parentId, name, color, null, null);
+    }
+
+    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name, String color,
+                                   Long owner, String actor) {
         return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name,
-                normalizeColor(color), List.of(), List.of(), true);
+                normalizeColor(color), List.of(), List.of(), true, owner, actor);
     }
 
     public static String normalizeColor(String color) {
@@ -137,6 +153,21 @@ public final class WorkingSet {
 
     public boolean isNew() {
         return newAggregate;
+    }
+
+    /**
+     * 记录本次业务操作者；写侧仓储直接使用该审计事实，不再读取请求线程上下文。
+     */
+    public void audit(String actor) {
+        this.actor = Objects.requireNonNull(actor, "actor");
+    }
+
+    public Long owner() {
+        return owner;
+    }
+
+    public String actor() {
+        return actor;
     }
 
     public WorkingSetId parentWorkingSetId() {

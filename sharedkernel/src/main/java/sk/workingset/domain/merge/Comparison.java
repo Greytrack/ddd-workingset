@@ -7,7 +7,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,7 +15,7 @@ import java.util.Objects;
  * 瞬时比较结果：双侧工作集、候选 Tracker 对与差异清单；不作为持久化事实。
  */
 @ValueObject
-public record Comparison(WorkingSetId source, WorkingSetId target, Instant comparedAt,
+public record Comparison(WorkingSetId source, WorkingSetId target, long comparedAt,
                          List<TrackerPair> candidates, List<Difference> differences) {
     public Comparison {
         candidates = List.copyOf(candidates);

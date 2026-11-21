@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
+import sk.RequestThreadHolder;
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
@@ -36,6 +37,7 @@ public class TrackerCreatedBindingListener {
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "tracker disappeared: " + event.trackerId().value()));
         workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), event.sharingMode());
+        workingSet.audit(RequestThreadHolder.getUserId());
         workingSets.save(workingSet);
     }
 }

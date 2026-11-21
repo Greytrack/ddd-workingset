@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sk.common.error.DomainException;
+import sk.RequestThreadHolder;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
@@ -26,7 +27,6 @@ import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
-import java.time.Instant;
 import java.util.*;
 
 /**
@@ -64,13 +64,13 @@ public class WorkingSetCommandService {
 
     private static Failure bindingFailure(String spaceId, String trackerId, DomainException failure) {
         if (failure.getResCode() instanceof BindingResCode code) {
-            return new Failure(Stage.BIND_PRODUCT_AND_TRACKER, spaceId, trackerId, null, code.reason(), Instant.now());
+            return new Failure(Stage.BIND_PRODUCT_AND_TRACKER, spaceId, trackerId, null, code.reason(), System.currentTimeMillis());
         }
         FailureReason reason = FailureReason.of(failure);
         if (reason == FailureReason.PREPARING) {
             throw failure;
         }
-        return new Failure(Stage.BIND_PRODUCT_AND_TRACKER, spaceId, trackerId, null, reason.name(), Instant.now());
+        return new Failure(Stage.BIND_PRODUCT_AND_TRACKER, spaceId, trackerId, null, reason.name(), System.currentTimeMillis());
     }
 
     /**
@@ -88,7 +88,8 @@ public class WorkingSetCommandService {
      */
     @Transactional
     public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name, String color) {
-        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId(null).longValue()), name, color, null);
+        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId(null).longValue()), name, color,
+                RequestThreadHolder.getLongUserId());
     }
 
     // Called by the creation runner with the user-supplied display name.
@@ -100,7 +101,8 @@ public class WorkingSetCommandService {
         if (queries.findAncestors(parentId.numericValue()).contains(newId.numericValue())) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, newId.value());
         }
-        WorkingSet child = WorkingSet.child(newId, parentId, name, color);
+        Long owner = actor == null ? RequestThreadHolder.getLongUserId() : actor;
+        WorkingSet child = WorkingSet.child(newId, parentId, name, color, owner, String.valueOf(owner));
         try {
             workingSets.save(child);
         } catch (DomainException conflict) {
@@ -130,6 +132,7 @@ public class WorkingSetCommandService {
         if (color != null) {
             target.recolor(color);
         }
+        target.audit(RequestThreadHolder.getUserId());
         workingSets.save(target);
         return target;
     }
@@ -150,6 +153,7 @@ public class WorkingSetCommandService {
     public void setTrackerShown(WorkingSetId workingSet, long spaceId, TrackerId tracker, boolean shown) {
         WorkingSet target = writable(workingSet);
         target.setTrackerShown(spaceId, tracker, shown);
+        target.audit(RequestThreadHolder.getUserId());
         workingSets.save(target);
     }
 
@@ -197,6 +201,7 @@ public class WorkingSetCommandService {
         }
 
         if (changed) {
+            target.audit(RequestThreadHolder.getUserId());
             workingSets.save(target);
         }
         return new BindingResult(changed, failures);

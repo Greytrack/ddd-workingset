@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import sk.RequestThreadHolder;
 import sk.SharedKernelResultCode;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
@@ -48,7 +47,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     private static final String COLUMNS = """
             i.local_id, i.common_id, i.branch_id, i.workingset_id, i.revision, i.source_local_id,
             i.source_revision, (i.has_copied = 1) AS materialized, (i.flags = 1) AS deleted,
-            i.work_space_id, i.sub_class_id,
+            i.work_space_id, i.sub_class_id, i.created_by,
             ARRAY(SELECT r.revision FROM air_ws_items_revision_index r
                 WHERE r.local_id = i.local_id ORDER BY r.revision) AS indexed_revisions
             """;
@@ -63,7 +62,8 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             Revision.of(rs.getInt("source_revision")),
             rs.getBoolean("materialized"), rs.getBoolean("deleted"),
             Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).map(Revision::of).toList(),
-            new ItemClassification(rs.getLong("work_space_id"), rs.getLong("sub_class_id")));
+            new ItemClassification(rs.getLong("work_space_id"), rs.getLong("sub_class_id")),
+            rs.getString("created_by"));
 
     private final JdbcTemplate jdbc;
     private final IdentifierGenerator ids;
@@ -105,7 +105,11 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
 
     private int insert(LightTrackerItem item, String onConflict) {
         long now = System.currentTimeMillis();
-        String actor = RequestThreadHolder.getUserId();
+        String actor = item.createdBy();
+        if (actor == null || actor.isBlank()) {
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+                    "LightTrackerItem write requires an actor: " + item.localId());
+        }
         return jdbc.update(INSERT + onConflict,
                 ids.nextId(null).longValue(), item.localId().numericValue(), item.commonId().numericValue(),
                 item.revision().value(), item.sourceLocalId().numericValue(), item.sourceRevision().value(),

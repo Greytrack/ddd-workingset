@@ -13,7 +13,6 @@ import sk.workingset.domain.workingset.WorkingSetCreationRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -28,8 +27,8 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     private final ObjectMapper mapper;
 
     @Override
-    public Instant acceptanceTime() {
-        return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class)).toInstant();
+    public long acceptanceTime() {
+        return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class)).getTime();
     }
 
     @Override
@@ -45,7 +44,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
                         VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
                         ON CONFLICT DO NOTHING
                         """, creation.numericId(), request.numericParentWorkingSetId(), request.numericTargetWorkingSetId(), request.requestId(),
-                creation.status().name(), encode(creation), Timestamp.from(creation.createdAt())) == 1;
+                creation.status().name(), encode(creation), new Timestamp(creation.createdAt())) == 1;
     }
 
     @Override
@@ -95,8 +94,8 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
                         SET status = ?, result = CAST(? AS jsonb), started_at = ?, completed_at = ?
                         WHERE id = ?
                         """, creation.status().name(), encode(creation),
-                Timestamp.from(creation.startedAt()),
-                creation.completedAt() == null ? null : Timestamp.from(creation.completedAt()), creation.numericId()) == 1;
+                creation.startedAt() == null ? null : new Timestamp(creation.startedAt()),
+                creation.completedAt() == null ? null : new Timestamp(creation.completedAt()), creation.numericId()) == 1;
     }
 
     private Optional<WorkingSetCreation> load(String sql, Object id) {

@@ -12,7 +12,6 @@ import sk.workingset.domain.merge.Comparison.Side;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +47,7 @@ class MergeRoundConfirmationTest {
         assertThrows(DomainException.class, () -> running.finishEntry(entry,
                 new MergeRound.ItemResult(entry.id(), MergeRound.Outcome.Applied, "UPDATE", null, null, null)));
 
-        MergeRound finished = running.finishApplied(entry.id(), "UPDATE", receipt()).complete(Instant.now());
+        MergeRound finished = running.finishApplied(entry.id(), "UPDATE", receipt()).complete(System.currentTimeMillis());
         assertEquals(MergeRound.State.Succeeded, finished.state());
         assertEquals(new MergeRound.Confirmation(BEFORE, COMMITTED), finished.entries().getFirst().confirmation());
         assertEquals(MergeRound.Outcome.Confirmed, finished.result().itemResults().getFirst().outcome());
@@ -60,7 +59,7 @@ class MergeRoundConfirmationTest {
         MergeRound running = round(false);
         MergeRound outcome = running.finishApplied(running.entries().getFirst().id(), "UPDATE", receipt());
         assertNull(outcome.entries().getFirst().confirmation());
-        assertEquals(MergeRound.Outcome.Applied, outcome.complete(Instant.now()).result().itemResults().getFirst().outcome());
+        assertEquals(MergeRound.Outcome.Applied, outcome.complete(System.currentTimeMillis()).result().itemResults().getFirst().outcome());
     }
 
     @Test

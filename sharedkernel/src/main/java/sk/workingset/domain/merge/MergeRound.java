@@ -11,7 +11,6 @@ import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.MergeResCode;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -98,7 +97,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         return entries.stream().anyMatch(entry -> entry.result() == null);
     }
 
-    public MergeRound complete(Instant completedAt) {
+    public MergeRound complete(long completedAt) {
         if (state != State.Running || awaitingResults()) {
             throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
         }
@@ -171,7 +170,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
     }
 
     @ValueObject
-    public record ApplyResult(State state, Summary summary, List<ItemResult> itemResults, Instant completedAt) {
+    public record ApplyResult(State state, Summary summary, List<ItemResult> itemResults, long completedAt) {
         public ApplyResult {
             itemResults = List.copyOf(itemResults);
         }

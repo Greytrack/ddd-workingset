@@ -7,14 +7,13 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.workingset.WorkingSetId;
 
-import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class RelationEventContractTest {
 
     private final RelationEventMetadataEvent metadata = new RelationEventMetadataEvent("event-1", "reference-1",
-            "creation-1", RelationEventMetadataEvent.OriginType.CREATION, Instant.parse("2026-11-17T00:00:00Z"));
+            "creation-1", RelationEventMetadataEvent.OriginType.CREATION, 1794873600000L);
 
     @Test
     void referenceEventCarriesBothEndpointsAndAllowsDanglingTarget() {
@@ -64,6 +63,6 @@ class RelationEventContractTest {
     @Test
     void metadataRejectsBlankIdentity() {
         assertThrows(IllegalArgumentException.class, () -> new RelationEventMetadataEvent("", "reference-1",
-                "creation-1", RelationEventMetadataEvent.OriginType.CREATION, Instant.now()));
+                "creation-1", RelationEventMetadataEvent.OriginType.CREATION, System.currentTimeMillis()));
     }
 }

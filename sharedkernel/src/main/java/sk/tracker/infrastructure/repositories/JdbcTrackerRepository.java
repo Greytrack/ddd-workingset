@@ -7,7 +7,6 @@ import org.springframework.dao.IncorrectUpdateSemanticsDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import sk.RequestThreadHolder;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
@@ -29,24 +28,40 @@ public class JdbcTrackerRepository implements TrackerRepository {
     private static final String COLUMNS = """
             t.id, t.common_id, t.name, t.source_branch_id, t.workingset_id, t.work_space,
             t.tracker_class, t.share, NULLIF(t.parent_id, 0) AS parent_id, t.is_default,
-            t.base_class, t.class
+            t.base_class, t.class, t.created_by, t.updated_by
             """;
     private static final String FROM_TRACKER = " FROM air_inst_tracker_rev t ";
-    private static final RowMapper<Tracker> MAPPER = (rs, row) ->
-            Tracker.reconstitute(
-                    TrackerId.of(rs.getLong("id")),
-                    TrackerId.of(rs.getLong("common_id")),
-                    rs.getString("name"),
-                    optionalId(rs, "source_branch_id"),
-                    WorkingSetId.of(rs.getLong("workingset_id")),
-                    rs.getLong("work_space"),
-                    rs.getLong("tracker_class"),
-                    rs.getLong("base_class"),
-                    rs.getLong("class"),
-                    rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
-                    optionalId(rs, "parent_id"),
-                    rs.getInt("is_default") == 1
-            );
+    private static final RowMapper<Tracker> MAPPER = (rs, row) -> {
+        Long createdBy = optionalLong(rs.getString("created_by"));
+        Long updatedBy = optionalLong(rs.getString("updated_by"));
+        return Tracker.reconstitute(
+                TrackerId.of(rs.getLong("id")),
+                TrackerId.of(rs.getLong("common_id")),
+                rs.getString("name"),
+                optionalId(rs, "source_branch_id"),
+                WorkingSetId.of(rs.getLong("workingset_id")),
+                rs.getLong("work_space"),
+                rs.getLong("tracker_class"),
+                rs.getLong("base_class"),
+                rs.getLong("class"),
+                rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
+                optionalId(rs, "parent_id"),
+                rs.getInt("is_default") == 1,
+                createdBy,
+                updatedBy
+        );
+    };
+
+    private static Long optionalLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException notNumeric) {
+            return null;
+        }
+    }
 
     private final JdbcTemplate jdbc;
     private final TrackerNumberGenerator numbers;
@@ -67,8 +82,11 @@ public class JdbcTrackerRepository implements TrackerRepository {
         return id == null ? null : id.numericValue();
     }
 
-    private static long currentActor() {
-        return Objects.requireNonNull(RequestThreadHolder.getLongUserId(), "Tracker write requires a current user");
+    private static long requireActor(Long actor, Tracker tracker) {
+        if (actor == null) {
+            throw new IllegalStateException("Tracker write requires an actor: " + tracker.trackerId().value());
+        }
+        return actor;
     }
 
     /**
@@ -127,11 +145,11 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     @Override
     public void save(Tracker tracker) {
-        long writeActor = tracker.createdBy() == null ? currentActor() : tracker.createdBy();
         if (tracker.isNew()) {
-            insert(tracker, writeActor);
+            insert(tracker, requireActor(tracker.createdBy(), tracker));
         } else {
-            update(tracker, currentActor());
+            Long actor = tracker.updatedBy() == null ? tracker.createdBy() : tracker.updatedBy();
+            update(tracker, requireActor(actor, tracker));
         }
     }
 

@@ -25,7 +25,6 @@ import sk.workingset.domain.workingset.WorkingSetCreation.*;
 import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -60,8 +59,8 @@ public class WorkingSetCreationService {
                 && binding.numericClassificationId() == classificationId);
     }
 
-    private static void validateBaselines(Collection<Long> trackerIds, Map<Long, Instant> overrides, Instant acceptedAt) {
-        if (!trackerIds.containsAll(overrides.keySet()) || overrides.values().stream().anyMatch(time -> time.isAfter(acceptedAt))) {
+    private static void validateBaselines(Collection<Long> trackerIds, Map<Long, Long> overrides, long acceptedAt) {
+        if (!trackerIds.containsAll(overrides.keySet()) || overrides.values().stream().anyMatch(time -> time > acceptedAt)) {
             throw DomainException.withMessage(WorkingsetResultCode.BAD_REQUEST,
                     "Baseline time must reference a selected Tracker and cannot be in the future");
         }
@@ -105,7 +104,7 @@ public class WorkingSetCreationService {
         }
         // 准备中的父工作集拒绝受理；不存在的父工作集由创建阶段记录为任务失败。
         workingSets.findById(WorkingSetId.of(request.parentWorkingSetId()));
-        Instant acceptedAt = workingSetCreationRepository.acceptanceTime();
+        long acceptedAt = workingSetCreationRepository.acceptanceTime();
         validateBaselines(request.selectedTrackerIds(), request.baselineOverrides(), acceptedAt);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
                 withDefaultTrackers(request, null), RequestThreadHolder.getUserId(), acceptedAt);
@@ -123,8 +122,8 @@ public class WorkingSetCreationService {
      */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
-                                              List<String> parentTrackerIds, Map<Long, Instant> overrides) {
-        Map<Long, Instant> baselineOverrides = overrides == null ? Map.of() : Map.copyOf(overrides);
+                                              List<String> parentTrackerIds, Map<Long, Long> overrides) {
+        Map<Long, Long> baselineOverrides = overrides == null ? Map.of() : Map.copyOf(overrides);
         List<Long> submittedIds = parentTrackerIds == null ? List.of()
                 : parentTrackerIds.stream().map(TrackerId::of).map(TrackerId::numericValue).distinct().sorted().toList();
         Optional<WorkingSetCreation> existing = workingSetCreationRepository.findByRequest(requestId);
@@ -141,7 +140,7 @@ public class WorkingSetCreationService {
         WorkingSet targetSet = workingSets.findById(target)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, target.value()));
         WorkingSetId parentId = targetSet.requireParentId();
-        Instant acceptedAt = workingSetCreationRepository.acceptanceTime();
+        long acceptedAt = workingSetCreationRepository.acceptanceTime();
         validateBaselines(submittedIds, baselineOverrides, acceptedAt);
         TreeSet<String> spaces = new TreeSet<>();
         ArrayList<Long> shared = new ArrayList<>();
@@ -234,7 +233,7 @@ public class WorkingSetCreationService {
     }
 
     private WorkingSetCreation replayExtension(WorkingSetCreation existing, WorkingSetId target,
-                                               List<Long> submittedIds, Map<Long, Instant> overrides) {
+                                               List<Long> submittedIds, Map<Long, Long> overrides) {
         Request saved = existing.request();
         if (saved.mode() != Mode.EXTEND || !saved.numericTargetWorkingSetId().equals(target.numericValue())
                 || !saved.submittedExtensionTrackerIds().equals(submittedIds) || !saved.baselineOverrides().equals(overrides)) {
@@ -276,7 +275,7 @@ public class WorkingSetCreationService {
         transaction.executeWithoutResult(tx -> {
             WorkingSetCreation creation = lock(id);
             if (creation.status() == Status.Pending) {
-                workingSetCreationRepository.save(creation.start(Instant.now()));
+                workingSetCreationRepository.save(creation.start(System.currentTimeMillis()));
             }
         });
     }
@@ -307,7 +306,7 @@ public class WorkingSetCreationService {
                 .sorted()
                 .toList();
         events.publishEvent(new TrackerItemsIndexedEvent(updated.id(), updated.request().newWorkingSetId(),
-                scannedTrackers, Instant.now()));
+                scannedTrackers, System.currentTimeMillis()));
     }
 
     /**
@@ -322,13 +321,13 @@ public class WorkingSetCreationService {
                 workingSetService.createChildForTask(
                         WorkingSetId.of(request.numericParentWorkingSetId()), target,
                         request.name(), request.color(), Long.valueOf(creation.requestedBy()));
-                return creation.advance(ItemOutcome.Succeeded, null, Instant.now());
+                return creation.advance(ItemOutcome.Succeeded, null, System.currentTimeMillis());
             });
             case COPY_UNSHARED_TRACKERS -> executeScopeWrite(creation, item, () -> {
                 boolean copied = workingSetService.deriveUnsharedTrackerForTask(target, TrackerId.of(item),
                         request.productSpaceIds(),
                         Long.parseLong(creation.requestedBy()));
-                return creation.advance(copied ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, Instant.now());
+                return creation.advance(copied ? ItemOutcome.Succeeded : ItemOutcome.Skipped, null, System.currentTimeMillis());
             });
             case BIND_PRODUCT_AND_TRACKER ->
                     executeScopeWrite(creation, item, () -> bindProductAndTrackers(creation, target));
@@ -362,7 +361,7 @@ public class WorkingSetCreationService {
         if (result.failed() > 0) {
             return recordFailure(creation, item, "RELATION_EVENT_FAILED");
         }
-        return creation.advance(result.skipped() ? ItemOutcome.Skipped : ItemOutcome.Succeeded, null, Instant.now());
+        return creation.advance(result.skipped() ? ItemOutcome.Skipped : ItemOutcome.Succeeded, null, System.currentTimeMillis());
     }
 
     private WorkingSetCreation bindProductAndTrackers(WorkingSetCreation creation, WorkingSetId target) {
@@ -372,7 +371,7 @@ public class WorkingSetCreationService {
                 .collect(Collectors.toSet());
         WorkingSetCommandService.BindingResult binding = workingSetService.bindProductAndTrackersForTask(target, creation.request(), failedCopies,
                 REQUIRED_TRACKER_CLASSIFICATIONS);
-        return creation.recordBindingResult(binding.changed(), binding.failures(), Instant.now());
+        return creation.recordBindingResult(binding.changed(), binding.failures(), System.currentTimeMillis());
     }
 
     private WorkingSetCreation recordFailure(WorkingSetCreation creation, String item, String reason) {
@@ -382,7 +381,7 @@ public class WorkingSetCreationService {
             default -> null;
         };
         String spaceId = trackerId == null ? null : workingSetService.trackerSpaceForTask(TrackerId.of(trackerId));
-        Instant now = Instant.now();
+        long now = System.currentTimeMillis();
         return creation.advance(ItemOutcome.Failed, new Failure(stage, spaceId, trackerId, null, reason, now), now);
     }
 

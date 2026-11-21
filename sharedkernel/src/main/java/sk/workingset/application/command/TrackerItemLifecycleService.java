@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.repository.TrackerRepository;
@@ -90,7 +91,7 @@ public class TrackerItemLifecycleService {
             return;
         }
         saveNewIndex(LightTrackerItem.local(event.localId(), event.commonId(), event.trackerId(),
-                event.workingSetId(), event.revision(), classificationOf(tracker)));
+                event.workingSetId(), event.revision(), classificationOf(tracker), RequestThreadHolder.getUserId()));
     }
 
     /**
@@ -106,7 +107,7 @@ public class TrackerItemLifecycleService {
             Tracker tracker = trackers.findById(target.trackerId())
                     .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, target.trackerId().value()));
             saveNewIndex(LightTrackerItem.local(target.localId(), target.commonId(), target.trackerId(),
-                    target.workingSetId(), target.revision(), classificationOf(tracker)));
+                    target.workingSetId(), target.revision(), classificationOf(tracker), RequestThreadHolder.getUserId()));
         }
     }
 

@@ -1,6 +1,5 @@
 package sk.workingset.domain.event;
 
-import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -8,7 +7,7 @@ import java.util.Objects;
  * {@code originalRelationId} 用于消费方回查原始关系的传播怀疑、类型、方向等信息。
  */
 public record RelationEventMetadataEvent(String eventId, String originalRelationId, String originId,
-                                         OriginType originType, Instant occurredAt) {
+                                         OriginType originType, long occurredAt) {
 
     public RelationEventMetadataEvent {
         requireText(eventId, "eventId");

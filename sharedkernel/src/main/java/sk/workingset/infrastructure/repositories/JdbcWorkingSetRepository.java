@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.application.FailureReason;
@@ -52,10 +51,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     private Optional<WorkingSet> loadWorkingSet(WorkingSetId id) {
-        String sql = "SELECT NULLIF(parent_id, 0), name, COALESCE(color, '#FFFF')"
+        String sql = "SELECT NULLIF(parent_id, 0), name, COALESCE(color, '#FFFF'), owner, updated_by"
                 + " FROM air_inst_workingset WHERE id = ? AND delete_flag = 0";
-        List<String[]> rows = jdbc.query(sql,
-                (rs, row) -> new String[]{rs.getString(1), rs.getString(2), rs.getString(3)},
+        List<Object[]> rows = jdbc.query(sql,
+                (rs, row) -> new Object[]{rs.getString(1), rs.getString(2), rs.getString(3),
+                        rs.getObject(4, Long.class), rs.getString(5)},
                 id.numericValue());
         if (rows.isEmpty()) {
             return Optional.empty();
@@ -76,10 +76,10 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                 rs.getLong("product_space_id"), rs.getLong("classification_id"),
                 SharingMode.valueOf(rs.getString("sharing_mode")),
                 WorkingSet.TrackerOrigin.valueOf(rs.getString("origin")), rs.getBoolean("shown")), id.numericValue());
-        String parent = rows.getFirst()[0];
-        String name = rows.getFirst()[1];
+        String parent = (String) rows.getFirst()[0];
+        String name = (String) rows.getFirst()[1];
         return Optional.of(new WorkingSet(id, parent == null ? null : WorkingSetId.of(parent), name,
-                rows.getFirst()[2], spaces, trackers));
+                (String) rows.getFirst()[2], spaces, trackers, (Long) rows.getFirst()[3], (String) rows.getFirst()[4]));
     }
 
     private void requireReady(WorkingSetId id) {
@@ -105,7 +105,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
 
     private void updateHeader(WorkingSet workingSet) {
         WorkingSetId id = workingSet.id();
-        String actor = RequestThreadHolder.getUserId();
+        String actor = requireActor(workingSet.actor());
         long now = System.currentTimeMillis();
         int updated = jdbc.update("""
                 UPDATE air_inst_workingset
@@ -125,11 +125,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
 
     private void insert(WorkingSet workingSet) {
         long id = workingSet.id().numericValue();
-        Long owner = RequestThreadHolder.getLongUserId();
+        Long owner = workingSet.owner();
         if (owner == null || owner <= 0) {
             throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
         }
-        String auditActor = owner.toString();
+        String auditActor = requireActor(workingSet.actor());
         long now = System.currentTimeMillis();
         boolean inserted = jdbc.update("""
                         INSERT INTO air_inst_workingset (id, instance_id, common_id, workingset_id, parent_id,
@@ -148,13 +148,13 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     private void updateMembership(WorkingSet workingSet) {
+        String actor = requireActor(workingSet.actor());
         workingSet.removedTrackerBindings().forEach(trackerId -> deleteTrackerBinding(workingSet.id(), trackerId));
-        workingSet.addedTrackerBindings().forEach(this::insertTrackerBinding);
-        workingSet.changedTrackerVisibility().forEach(this::updateTrackerBinding);
+        workingSet.addedTrackerBindings().forEach(binding -> insertTrackerBinding(actor, binding));
+        workingSet.changedTrackerVisibility().forEach(binding -> updateTrackerBinding(actor, binding));
     }
 
-    private void insertTrackerBinding(WorkingSet.TrackerBinding binding) {
-        String actor = RequestThreadHolder.getUserId();
+    private void insertTrackerBinding(String actor, WorkingSet.TrackerBinding binding) {
         long now = System.currentTimeMillis();
         jdbc.update("""
                         INSERT INTO air_ws_workingset_branch_relation (id, workingset_id, work_space, tracker_id,
@@ -165,15 +165,22 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                 binding.shown() ? 1 : 0);
     }
 
-    private void updateTrackerBinding(WorkingSet.TrackerBinding binding) {
+    private void updateTrackerBinding(String actor, WorkingSet.TrackerBinding binding) {
         int shown = binding.shown() ? 1 : 0;
         jdbc.update("""
                         UPDATE air_ws_workingset_branch_relation
                         SET is_show = ?, lock_version = COALESCE(lock_version, 0) + 1, updated_by = ?, updated_time = ?
                         WHERE workingset_id = ? AND tracker_id = ? AND work_space IS NOT NULL
                           AND COALESCE(is_show, 1) <> ?
-                        """, shown, RequestThreadHolder.getUserId(), System.currentTimeMillis(),
+                        """, shown, actor, System.currentTimeMillis(),
                 binding.workingSetId().numericValue(), binding.trackerId().numericValue(), shown);
+    }
+
+    private static String requireActor(String actor) {
+        if (actor == null || actor.isBlank()) {
+            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
+        }
+        return actor;
     }
 
     private void deleteTrackerBinding(WorkingSetId id, TrackerId trackerId) {

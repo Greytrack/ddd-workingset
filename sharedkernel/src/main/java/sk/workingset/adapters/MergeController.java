@@ -12,7 +12,6 @@ import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.WorkingsetResultCode;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -116,7 +115,7 @@ public class MergeController {
     public record SubmitRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {
     }
 
-    public record ComparisonPage(WorkingSetId source, WorkingSetId target, Instant comparedAt,
+    public record ComparisonPage(WorkingSetId source, WorkingSetId target, long comparedAt,
                                  List<Comparison.TrackerPair> candidates, List<Comparison.Difference> differences,
                                  Integer nextOffset) {
     }

@@ -281,7 +281,7 @@ class TrackerDefaultAcceptanceTest {
         try {
             Tracker tracker = new Tracker(id, "projection collision", null, WorkingSetId.of(1L),
                     space, classifications.findClassification("14010101").orElseThrow(),
-                    Classification.SharingMode.UNSHARED, null, false);
+                    Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
             assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                     Integer.class, id.numericValue()));
@@ -299,7 +299,7 @@ class TrackerDefaultAcceptanceTest {
         TrackerId id = TrackerId.of(fixtureId("TRACKER-ROLLBACK-" + suffix));
         Tracker tracker = new Tracker(id, "x".repeat(501), null, WorkingSetId.of(1L),
                 space, classifications.findClassification("14010101").orElseThrow(),
-                Classification.SharingMode.UNSHARED, null, false);
+                Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
 
         assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",

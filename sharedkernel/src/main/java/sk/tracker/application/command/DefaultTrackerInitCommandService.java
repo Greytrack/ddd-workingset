@@ -8,6 +8,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import sk.RequestThreadHolder;
 import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
@@ -74,7 +75,7 @@ public class DefaultTrackerInitCommandService {
 
     private TrackerId saveDefault(ProductSpace space, Classification classification) {
         Tracker tracker = Tracker.original(TrackerId.of(ids.nextId(null).longValue()),
-                space, classification, null, true);
+                space, classification, null, true, RequestThreadHolder.getLongUserId());
         trackers.save(tracker);
         return tracker.trackerId();
     }

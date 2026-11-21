@@ -4,7 +4,6 @@ import sk.workingset.domain.LocalId;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Revision;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -19,6 +18,6 @@ public interface CowFailureLogQueryProvider {
                    Revision beforeRevision, Revision afterRevision,
                    LockVersion beforeLockVersion, LockVersion afterLockVersion,
                    int attempts,
-                   String stage, String errorType, String message, Instant occurredAt) {
+                   String stage, String errorType, String message, long occurredAt) {
     }
 }

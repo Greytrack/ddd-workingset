@@ -3,7 +3,6 @@ package sk.workingset.domain.event;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.domain.LocalId;
 
-import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -16,7 +15,7 @@ import java.util.Objects;
  * @param trackerId     删除时所属 Tracker
  * @param occurredAt    事件发生时间
  */
-public record CompleteDeleteEvent(LocalId requirementId, TrackerId trackerId, Instant occurredAt) {
+public record CompleteDeleteEvent(LocalId requirementId, TrackerId trackerId, long occurredAt) {
 
     public CompleteDeleteEvent {
         Objects.requireNonNull(requirementId, "requirementId");

@@ -39,7 +39,6 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -345,7 +344,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, ?)", leaf, mid);
         String taskId = fixtureId("task-" + child);
         Request request = new Request("1", mid, "running", List.of(), List.of(), List.of(), null, Mode.CREATE);
-        Instant now = Instant.now();
+        long now = System.currentTimeMillis();
         WorkingSetCreation running = WorkingSetCreation.submit(taskId, request, "test", now).start(now);
         jdbc.update("""
                 INSERT INTO working_set_creations
@@ -371,21 +370,21 @@ class WorkingSetCreationAcceptanceTest {
         String later = fixtureId("later-" + child);
         String head = fixtureId("head-" + child);
         String afterHead = fixtureId("after-head-" + child);
-        Instant cutoff = Instant.parse("2025-02-01T00:00:00Z");
+        long cutoff = 1738368000000L;
         seedItem(unshared, earlier, earlier, false);
         seedItem(unshared, later, later, false);
         seedItem(second, head, head, false);
         seedItem(second, afterHead, afterHead, false);
         jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
-                cutoff.toEpochMilli(), earlier);
+                cutoff, earlier);
         jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
-                cutoff.plusSeconds(1).toEpochMilli(), later);
+                cutoff + 1000L, later);
         jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
                 System.currentTimeMillis() + 3_600_000L, afterHead);
         String requestId = "baseline-" + child;
         Map<String, Object> request = Map.of("parentWorkingSetId", "1", "requestId", requestId, "mode", "CREATE",
                 "productSpaceIds", List.of(space, otherSpace), "unsharedParentTrackerIds", List.of(unshared, second),
-                "baselineAtByTracker", Map.of(unshared, cutoff.toString()));
+                "baselineAtByTracker", Map.of(unshared, cutoff));
 
         ResponseEntity<CreationView> response = rest.postForEntity(CREATIONS, request, CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
@@ -412,15 +411,15 @@ class WorkingSetCreationAcceptanceTest {
         createTarget();
         String included = fixtureId("extension-before-" + child);
         String excluded = fixtureId("extension-after-" + child);
-        Instant cutoff = Instant.parse("2025-02-01T00:00:00Z");
+        long cutoff = 1738368000000L;
         seedItem(unshared, included, included, false);
         seedItem(unshared, excluded, excluded, false);
         jdbc.update("UPDATE requirements SET created_time = ? WHERE local_id = ?",
-                cutoff.toEpochMilli(), included);
+                cutoff, included);
         String endpoint = "/api/worksets/" + child + "/extensions";
         String requestId = "extension-baseline-" + child;
         Map<String, Object> request = Map.of("requestId", requestId, "trackerIds", List.of(unshared),
-                "baselineAtByTracker", Map.of(unshared, cutoff.toString()));
+                "baselineAtByTracker", Map.of(unshared, cutoff));
 
         ResponseEntity<CreationView> response = rest.postForEntity(endpoint, request, CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
@@ -435,7 +434,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(cutoff, replay.baselineAtByTracker().get(Long.valueOf(unshared)));
         assertEquals(HttpStatus.CONFLICT, rest.postForEntity(endpoint,
                         Map.of("requestId", requestId, "trackerIds", List.of(unshared),
-                                "baselineAtByTracker", Map.of(unshared, cutoff.minusSeconds(1).toString())), Map.class)
+                                "baselineAtByTracker", Map.of(unshared, cutoff - 1000L)), Map.class)
                 .getStatusCode());
     }
 
@@ -679,7 +678,7 @@ class WorkingSetCreationAcceptanceTest {
         String activeId = fixtureId("active-" + child);
         Request request = new Request("1", child, fixtureId("active-request-" + child), List.of(), List.of(),
                 List.of(unshared), null, Mode.EXTEND);
-        WorkingSetCreation active = WorkingSetCreation.submit(activeId, request, "test", Instant.now()).start(Instant.now());
+        WorkingSetCreation active = WorkingSetCreation.submit(activeId, request, "test", System.currentTimeMillis()).start(System.currentTimeMillis());
         jdbc.update("""
                 INSERT INTO working_set_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)

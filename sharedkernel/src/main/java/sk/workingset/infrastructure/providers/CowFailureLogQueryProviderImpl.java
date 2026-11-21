@@ -36,7 +36,7 @@ public class CowFailureLogQueryProviderImpl implements CowFailureLogQueryProvide
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, ids.nextId(null).longValue(), failure.eventId(), failure.targetLocalId().numericValue(), failure.sourceLocalId().numericValue(),
                 failure.beforeRevision().value(), failure.afterRevision().value(), failure.stage(),
-                failure.errorType(), failure.message(), Timestamp.from(failure.occurredAt()),
+                failure.errorType(), failure.message(), new Timestamp(failure.occurredAt()),
                 failure.beforeLockVersion().value(), failure.afterLockVersion().value(), failure.attempts()));
     }
 
@@ -51,6 +51,6 @@ public class CowFailureLogQueryProviderImpl implements CowFailureLogQueryProvide
                 lockVersion(row.getObject("after_lock_version", Long.class)),
                 row.getInt("attempts"),
                 row.getString("stage"), row.getString("error_type"), row.getString("message"),
-                row.getTimestamp("occurred_at").toInstant()), sourceLocalId.numericValue());
+                row.getTimestamp("occurred_at").getTime()), sourceLocalId.numericValue());
     }
 }

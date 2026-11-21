@@ -14,7 +14,6 @@ import sk.workingset.domain.merge.Comparison.*;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.MergeResCode;
 
-import java.time.Instant;
 import java.util.*;
 
 /**
@@ -70,7 +69,7 @@ public class MergeComparisonService {
             }
             differences.add(new Difference(kind, family, pair, left, right, fields));
         }
-        return new Comparison(source, target, Instant.now(), List.of(pair), differences);
+        return new Comparison(source, target, System.currentTimeMillis(), List.of(pair), differences);
     }
 
     private boolean handled(TrackerPair trackers, CommonId family, Side left, Side right) {

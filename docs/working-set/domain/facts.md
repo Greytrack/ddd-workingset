@@ -99,3 +99,6 @@
 | `TC-006` | 客户 V3 库表以 `created_by VARCHAR + created_time BIGINT` 记录创建审计，没有 `created_at`。              | 用户 2026-11-21 裁定：`requirements`/`air_ws_items_index` 只保留该审计对，写入由 Java `System.currentTimeMillis()` 赋值；基线时间比较用 `created_time <= epochMillis`。 |
 | `TC-007` | `light_tracker_items` 是 V4 初版物理表，已由 `air_ws_items_index` + `air_ws_items_revision_index` 取代。 | 生产与测试主路径都不再引用；仅保留文档历史说明。                                                            |
 | `TC-008` | Checkpoint 的物理承载表是 V3 旧表 `air_ws_items_merge_index`，`MergeCheckpoint` 只是 V4 领域模型。       | 不存在当前的 `merge_checkpoints` 表；列不足走增量 DDL，不新建第二张表。                                      |
+| `TC-009` | 团队时间类型统一为 epoch 毫秒；Java 侧使用 `long`（可空字段用 `Long`），不引入 `java.time.Instant`。       | 用户 2026-11-22 修正：领域、事件、REST 与持久化均以毫秒表达；`baselineAtByTracker` 接收毫秒数字，不再使用 ISO 字符串。 |
+| `TC-010` | 写侧仓储不读取 `RequestThreadHolder`；审计事实由聚合携带，并由应用层在构造或修改聚合时注入。              | WorkingSet 持 `owner`/`actor`，LightTrackerItem 与 Requirement 持 `createdBy`，Tracker 持 `createdBy`/`updatedBy`；仓储只使用聚合字段。 |
+| `TC-011` | `working_set_creation_snapshots` / `working_set_creation_items` 已从代码与 schema 移除。                   | 创建/扩展按各 Tracker 的基线时间与 LocalId 游标尽力派生（ADR-0010）；旧冻结清单仅保留历史说明。             |
