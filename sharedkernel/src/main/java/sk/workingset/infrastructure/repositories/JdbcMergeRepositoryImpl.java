@@ -54,29 +54,31 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     }
 
     @Override
-    public void save(MergeRound round) {
-        // Serialize duplicate requestId submissions before touching the unique indexes.
-        // The advisory lock is transaction scoped: the first committer owns the requestId,
-        // later submissions leave the winning round untouched and re-read it by requestId.
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", round.requestId());
-        Long owner = jdbc.query("SELECT id FROM merge_rounds WHERE request_id = ?",
-                (rs, row) -> rs.getLong(1), round.requestId()).stream().findFirst().orElse(null);
-        if (owner != null && !owner.equals(round.numericId())) {
-            return;
-        }
+    public boolean claim(MergeRound round) {
         Long[] trackers = trackerPair(round);
-        // One statement serves both insert (new round) and update (state transition on an existing round).
-        // A tracker pair conflict on the active partial unique index still surfaces as
-        // DataIntegrityViolationException for the application layer to translate.
-        jdbc.update("""
+        int inserted = jdbc.update("""
                         INSERT INTO merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
                         VALUES (?, ?, ?, CAST(? AS jsonb), ?, ?)
-                        ON CONFLICT (id) DO UPDATE
-                        SET state = EXCLUDED.state,
-                            tracker_a_id = EXCLUDED.tracker_a_id,
-                            tracker_b_id = EXCLUDED.tracker_b_id
+                        ON CONFLICT (request_id) DO NOTHING
                         """, round.numericId(), round.token(), round.requestId(), encode(round),
                 trackers[0], trackers[1]);
+        return inserted == 1;
+    }
+
+    @Override
+    public void save(MergeRound round) {
+        Long[] trackers = trackerPair(round);
+        int affected = jdbc.update("""
+                        UPDATE merge_rounds
+                        SET state = CAST(? AS jsonb),
+                            tracker_a_id = ?,
+                            tracker_b_id = ?
+                        WHERE id = ?
+                        """, encode(round), trackers[0], trackers[1], round.numericId());
+        if (affected != 1) {
+            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+                    "Could not update merge round " + round.id());
+        }
         saveConfirmations(round);
     }
 

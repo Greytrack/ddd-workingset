@@ -15,7 +15,15 @@ import java.util.Optional;
 @Repository
 public interface MergeRepository {
     /**
-     * 保存轮次：新轮次插入，已有轮次更新；轮次条目及其确认记录随聚合根一次保存。
+     * 原子认领 requestId：不存在则插入新轮次，已存在则不改变。
+     *
+     * @return 当前轮次是否成为该 requestId 的 winner
+     */
+    boolean claim(MergeRound round);
+
+    /**
+     * 更新已有轮次的状态；不插入新轮次，也不改变 requestId/token。
+     * 调用方必须先通过 {@link #claim(MergeRound)} 认领或按 requestId 读到 winner。
      */
     void save(MergeRound round);
 

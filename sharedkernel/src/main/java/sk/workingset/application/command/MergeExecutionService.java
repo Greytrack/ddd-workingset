@@ -131,9 +131,10 @@ public class MergeExecutionService {
         }
         TrackerPair pair = trackerPair(decisions);
         MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
-        // 先占幂等键：并发提交同一 requestId 时，save 保留先到轮次，后到请求直接返回该轮次。
-        mergeRepository.save(prepared);
-        MergeRound winner = mergeRepository.findByRequestId(requestId)
+        // 原子认领幂等键：同一 requestId 的并发提交中只有一个插入成功，其余读取 winner。
+        MergeRound winner = mergeRepository.claim(prepared)
+                ? prepared
+                : mergeRepository.findByRequestId(requestId)
                 .orElseThrow(() -> DomainException.withMessage(MergeResCode.CONFLICT, requestId));
         if (!winner.id().equals(prepared.id())) {
             return matching(winner, source, target);
