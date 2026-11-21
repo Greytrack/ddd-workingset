@@ -62,7 +62,7 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
 
     @Override
     public Optional<TrackerId> findDefaultTrackerId(WorkingSetId workingSetId, long spaceId,
-                                                              long classificationId) {
+                                                    long classificationId) {
         return jdbc.queryForList("""
                         SELECT id FROM air_inst_tracker_rev
                         WHERE delete_flag = 0 AND workingset_id = ? AND work_space = ?

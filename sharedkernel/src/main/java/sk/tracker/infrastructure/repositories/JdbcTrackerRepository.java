@@ -16,7 +16,6 @@ import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -35,18 +34,18 @@ public class JdbcTrackerRepository implements TrackerRepository {
     private static final String FROM_TRACKER = " FROM air_inst_tracker_rev t ";
     private static final RowMapper<Tracker> MAPPER = (rs, row) ->
             Tracker.reconstitute(
-                TrackerId.of(rs.getLong("id")),
-                TrackerId.of(rs.getLong("common_id")),
-                rs.getString("name"),
-                optionalId(rs, "source_branch_id"),
-                WorkingSetId.of(rs.getLong("workingset_id")),
-                rs.getLong("work_space"),
-                rs.getLong("tracker_class"),
-                rs.getLong("base_class"),
-                rs.getLong("class"),
-                rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
-                optionalId(rs, "parent_id"),
-                rs.getInt("is_default") == 1
+                    TrackerId.of(rs.getLong("id")),
+                    TrackerId.of(rs.getLong("common_id")),
+                    rs.getString("name"),
+                    optionalId(rs, "source_branch_id"),
+                    WorkingSetId.of(rs.getLong("workingset_id")),
+                    rs.getLong("work_space"),
+                    rs.getLong("tracker_class"),
+                    rs.getLong("base_class"),
+                    rs.getLong("class"),
+                    rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
+                    optionalId(rs, "parent_id"),
+                    rs.getInt("is_default") == 1
             );
 
     private final JdbcTemplate jdbc;

@@ -1,6 +1,5 @@
 package sk.workingset.application.command;
 
-import java.util.Set;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

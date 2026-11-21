@@ -6,6 +6,7 @@ package sk.workingset.application.port;
  * <p>能力不支持不等于空结果；调用方必须按 {@link sk.workingset.application.FailureReason#CAPABILITY_NOT_SUPPORTED}
  * 处理，而不是静默跳过。
  */
+
 /**
  * 业务对象类型参与 Working Set 协作的能力声明（T4 §3.4 的当前实现子集）。
  *

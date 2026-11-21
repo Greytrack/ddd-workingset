@@ -6,8 +6,8 @@ import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.domain.Classification;
+import sk.workingset.domain.Classification.SharingMode;
 import sk.workingset.error.BindingResCode;
 import sk.workingset.error.WorkingsetResultCode;
 

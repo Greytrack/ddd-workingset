@@ -1,6 +1,5 @@
 package sk.workingset.application.eventhandler;
 
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -10,6 +9,8 @@ import sk.workingset.domain.event.TrackerBindingRemovalRequestedEvent;
 import sk.workingset.domain.event.TrackerDeletedEvent;
 import sk.workingset.domain.event.TrackerDeletionRequestedEvent;
 import sk.workingset.domain.workingset.WorkingSetId;
+
+import java.util.List;
 
 /**
  * Tracker 删除后，把解绑工作拆成每个 Working Set 一个独立事件。

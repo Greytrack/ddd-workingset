@@ -1,6 +1,5 @@
 package sk.workingset.application.eventhandler;
 
-import sk.tracker.domain.TrackerId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -9,6 +8,7 @@ import sk.common.error.DomainException;
 import sk.productspace.domain.ProductSpace;
 import sk.productspace.domain.repository.ProductSpaceRepository;
 import sk.tracker.domain.Tracker;
+import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.query.provider.ClassificationCatalog;

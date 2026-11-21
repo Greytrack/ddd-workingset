@@ -1,6 +1,5 @@
 package sk.workingset.application.command;
 
-import java.util.Optional;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +35,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Merge 轮次执行：登记决定、发布逐条应用事件、消费业务结果并收敛轮次。

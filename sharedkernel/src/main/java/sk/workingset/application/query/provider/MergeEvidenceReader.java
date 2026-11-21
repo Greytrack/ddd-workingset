@@ -15,18 +15,13 @@ import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.Side;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
-import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.workingset.WorkingSet;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.MergeResCode;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Compare/Merge 共用的只读证据读取：按 Tracker 路由到业务对象类型，不触达任何写仓储。

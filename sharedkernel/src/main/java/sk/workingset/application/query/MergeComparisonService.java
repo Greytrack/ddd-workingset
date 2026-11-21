@@ -9,22 +9,13 @@ import sk.workingset.application.query.provider.MergeEvidenceReader;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
-import sk.workingset.domain.merge.Comparison.ChangeKind;
-import sk.workingset.domain.merge.Comparison.Difference;
-import sk.workingset.domain.merge.Comparison.Presence;
-import sk.workingset.domain.merge.Comparison.Side;
-import sk.workingset.domain.merge.Comparison.TrackerPair;
 import sk.workingset.domain.merge.Comparison;
+import sk.workingset.domain.merge.Comparison.*;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.error.MergeResCode;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * 有向比较：按直属父子与 Tracker 来源选择候选，读取双侧证据并生成瞬时差异。

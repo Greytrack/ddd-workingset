@@ -1,6 +1,5 @@
 package sk.workingset.infrastructure.repositories;
 
-import java.util.Set;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +19,7 @@ import sk.workingset.error.MergeResCode;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Merge 存储的 JDBC 实现：轮次状态按 JSONB 保存，比较结果不持久化。

@@ -10,17 +10,13 @@ import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.FailureReason;
 import sk.workingset.application.port.BusinessObjectTypeAdapter;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
-import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import sk.workingset.application.query.provider.LightTrackerItemSummary;
-import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import sk.workingset.application.query.provider.TrackerItemQueryProvider;
+import sk.workingset.application.query.provider.*;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.*;
 import sk.workingset.domain.workingset.WorkingSetCreation.Failure;
 import sk.workingset.domain.workingset.WorkingSetCreation.IndexProgress;
@@ -92,6 +88,10 @@ public final class WorkingSetItemIndexer {
 
     private static FailureReason unsupportedEvidence() {
         return FailureReason.CAPABILITY_NOT_SUPPORTED;
+    }
+
+    private static ItemClassification classificationOf(Tracker tracker) {
+        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
     }
 
     /**
@@ -246,10 +246,6 @@ public final class WorkingSetItemIndexer {
             return new Outcome(IndexResult.Existing, null);
         }
         return new Outcome(IndexResult.Indexed, null);
-    }
-
-    private static ItemClassification classificationOf(Tracker tracker) {
-        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
     }
 
     private boolean isDeleted(BusinessObjectTypeAdapter adapter, LocalId sourceId) {

@@ -31,6 +31,10 @@ public class TrackerItemLifecycleService {
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
 
+    private static ItemClassification classificationOf(Tracker tracker) {
+        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
+    }
+
     /**
      * 继承编辑完成：把未物化的目标变体切换为 Local-backed。
      */
@@ -108,10 +112,6 @@ public class TrackerItemLifecycleService {
 
     private void saveNewIndex(LightTrackerItem item) {
         items.save(item);
-    }
-
-    private static ItemClassification classificationOf(Tracker tracker) {
-        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
     }
 
     private void switchToLocalContent(LocalId localId, Revision revision) {
