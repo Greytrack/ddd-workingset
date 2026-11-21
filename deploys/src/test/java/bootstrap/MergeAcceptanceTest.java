@@ -26,8 +26,8 @@ import sk.common.error.DomainException;
 import sk.tracker.domain.TrackerId;
 import sk.workingset.adapters.MergeController.ComparisonPage;
 import sk.workingset.adapters.WorkingSetController;
-import sk.workingset.application.command.MergeExecutionService.EntryRequest;
 import sk.workingset.application.command.MergeExecutionService;
+import sk.workingset.application.command.MergeExecutionService.EntryRequest;
 import sk.workingset.application.query.MergeCheckpoint;
 import sk.workingset.application.query.MergeCheckpointQuery;
 import sk.workingset.domain.CommonId;
@@ -37,17 +37,17 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.merge.Comparison;
 import sk.workingset.domain.merge.Comparison.ChangeKind;
 import sk.workingset.domain.merge.Comparison.Difference;
 import sk.workingset.domain.merge.Comparison.Presence;
 import sk.workingset.domain.merge.Comparison.TrackerPair;
-import sk.workingset.domain.merge.Comparison;
-import sk.workingset.domain.merge.MergeDecision.FieldAction;
 import sk.workingset.domain.merge.MergeDecision;
+import sk.workingset.domain.merge.MergeDecision.FieldAction;
+import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.merge.MergeRound.ApplyResult;
 import sk.workingset.domain.merge.MergeRound.Outcome;
 import sk.workingset.domain.merge.MergeRound.State;
-import sk.workingset.domain.merge.MergeRound;
 import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
@@ -56,11 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -71,17 +67,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class MergeAcceptanceTest {
-    @Autowired private TestRestTemplate rest;
-    @Autowired private LightTrackerItemRepository items;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private MergeCheckpointQuery checkpoints;
-    @Autowired private IncompleteEventPublications publications;
-    @Autowired private MergeExecutionService mergeExecution;
-    @Autowired private RequirementCommandService requirements;
-    @Autowired private JdbcRequirementRepository repository;
-    @Autowired private ApplicationEventPublisher events;
-    @Autowired private TransactionTemplate transactions;
-
     private final String suffix = UUID.randomUUID().toString();
     private final String child = id("child");
     private final String space = id("space");
@@ -92,8 +77,56 @@ class MergeAcceptanceTest {
     private final List<String> tokens = new ArrayList<>();
     private final List<String> rounds = new ArrayList<>();
     private final List<String> worksets = new ArrayList<>();
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private LightTrackerItemRepository items;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private MergeCheckpointQuery checkpoints;
+    @Autowired
+    private IncompleteEventPublications publications;
+    @Autowired
+    private MergeExecutionService mergeExecution;
+    @Autowired
+    private RequirementCommandService requirements;
+    @Autowired
+    private JdbcRequirementRepository repository;
+    @Autowired
+    private ApplicationEventPublisher events;
+    @Autowired
+    private TransactionTemplate transactions;
     private String childTracker;
     private String childAnchor;
+
+    private static Map<String, Object> existence(Difference diff, String action) {
+        return Map.of("evidence", diff,
+                "decision", Map.of("existence", action));
+    }
+
+    private static Map<String, Object> field(Difference diff, String action, boolean mark) {
+        Map<String, String> fields = diff.fields().stream().collect(
+                Collectors.toMap(Function.identity(), key -> action));
+        return Map.of("evidence", diff,
+                "decision", Map.of("fields", fields, "markAsMerged", mark));
+    }
+
+    private static Difference diff(ComparisonPage page, String family) {
+        return page.differences().stream().filter(item -> family.equals(item.family().value())).findFirst().orElseThrow();
+    }
+
+    private static String ws(String id) {
+        return "/api/worksets/" + id;
+    }
+
+    private static String roundPath(String id) {
+        return "/api/merge-rounds/" + id;
+    }
+
+    private static void assertStatus(HttpStatus status, ResponseEntity<?> response) {
+        assertEquals(status, response.getStatusCode(), () -> String.valueOf(response.getBody()));
+    }
 
     @BeforeEach
     void setup() {
@@ -273,7 +306,7 @@ class MergeAcceptanceTest {
         String target = seed(childTracker, family, "target");
         Difference difference = diff(compare("1", child), family);
         String requestId = id("request");
-        Map<String,Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
+        Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(field(difference, "ACCEPT", false)));
         ResponseEntity<MergeRound> first = rest.postForEntity(ws(child) + "/merge-rounds", body, MergeRound.class);
         assertStatus(HttpStatus.CREATED, first);
@@ -302,7 +335,7 @@ class MergeAcceptanceTest {
                 Map.of("sourceWorkingSetId", "1", "requestId", id("empty")), Map.class));
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
                 Map.of("sourceWorkingSetId", "1", "decisions", List.of(field(difference, "ACCEPT", false))), Map.class));
-        List<Map<String,Object>> oversized = IntStream.range(0, 51)
+        List<Map<String, Object>> oversized = IntStream.range(0, 51)
                 .mapToObj(index -> field(difference, "ACCEPT", false)).toList();
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", id("oversized"), "decisions", oversized), Map.class));
@@ -314,7 +347,7 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "concurrent submit probe");
         Difference difference = diff(compare("1", child), family);
         String requestId = id("concurrent-request");
-        Map<String,Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
+        Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(existence(difference, "ACCEPT")));
         CountDownLatch start = new CountDownLatch(1);
         try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
@@ -346,7 +379,7 @@ class MergeAcceptanceTest {
         ComparisonPage frozen = compare("1", child);
         change(source, "changed before submit", 0);
         String requestId = id("failed-submit-request");
-        Map<String,Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
+        Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(field(diff(frozen, family), "ACCEPT", false)));
         assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM merge_rounds WHERE request_id = ?",
@@ -456,7 +489,7 @@ class MergeAcceptanceTest {
 
     private RequirementView createRequirement(String workset, String tracker, String title) {
         ResponseEntity<RequirementView> response = rest.postForEntity("/api/requirements", Map.of("workingSetId", workset,
-                "trackerId", tracker, "title", title, "description", "description", "revision", 3),
+                        "trackerId", tracker, "title", title, "description", "description", "revision", 3),
                 RequirementView.class);
         assertStatus(HttpStatus.CREATED, response);
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
@@ -853,9 +886,9 @@ class MergeAcceptanceTest {
                 """, Integer.class, Long.valueOf(family)));
         // A V3 revocation row hides the current confirmation, rather than revealing the previous one.
         jdbc.update("""
-                INSERT INTO air_ws_items_merge_index (id, batch_id, branch_a_id, branch_b_id, common_id, merge_status)
-                VALUES (?, ?, ?, ?, ?, 'REVOKED')
-                """, Long.valueOf(id("legacy-revoked")), Long.valueOf(secondRound), key.a().numericValue(),
+                        INSERT INTO air_ws_items_merge_index (id, batch_id, branch_a_id, branch_b_id, common_id, merge_status)
+                        VALUES (?, ?, ?, ?, ?, 'REVOKED')
+                        """, Long.valueOf(id("legacy-revoked")), Long.valueOf(secondRound), key.a().numericValue(),
                 key.b().numericValue(), key.family().numericValue());
         assertTrue(checkpoints.findLatest(key).orElseThrow().revoked());
         assertNotNull(diff(compare("1", child), family));
@@ -894,8 +927,6 @@ class MergeAcceptanceTest {
         DeriveFixture.Result result = DeriveFixture.derive(jdbc, target, tracker, source, Revision.of(3), CommonId.of(family));
         return new Derived(result.trackerId(), result.sourceTrackerId(), result.item());
     }
-
-    private record Derived(String trackerId, String sourceTrackerId, LightTrackerItem item) {}
 
     private void createChild(String parent, String next) {
         FixtureIds.insertWorkingSet(jdbc, parent, next);
@@ -998,27 +1029,10 @@ class MergeAcceptanceTest {
         return awaitResult(round);
     }
 
-    private static Map<String, Object> existence(Difference diff, String action) {
-        return Map.of("evidence", diff,
-                "decision", Map.of("existence", action));
+    private String id(String prefix) {
+        return fixtureId(prefix + "-" + suffix);
     }
 
-    private static Map<String, Object> field(Difference diff, String action, boolean mark) {
-        Map<String, String> fields = diff.fields().stream().collect(
-                Collectors.toMap(Function.identity(), key -> action));
-        return Map.of("evidence", diff,
-                "decision", Map.of("fields", fields, "markAsMerged", mark));
-    }
-
-    private static Difference diff(ComparisonPage page, String family) {
-        return page.differences().stream().filter(item -> family.equals(item.family().value())).findFirst().orElseThrow();
-    }
-
-    private String id(String prefix) { return fixtureId(prefix + "-" + suffix); }
-    private static String ws(String id) { return "/api/worksets/" + id; }
-    private static String roundPath(String id) { return "/api/merge-rounds/" + id; }
-
-    private static void assertStatus(HttpStatus status, ResponseEntity<?> response) {
-        assertEquals(status, response.getStatusCode(), () -> String.valueOf(response.getBody()));
+    private record Derived(String trackerId, String sourceTrackerId, LightTrackerItem item) {
     }
 }

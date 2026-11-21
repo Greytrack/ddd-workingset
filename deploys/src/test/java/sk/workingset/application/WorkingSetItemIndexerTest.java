@@ -15,23 +15,24 @@ import sk.workingset.domain.Revision;
 import sk.workingset.domain.lighttrackeritem.ItemClassification;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetCreation.Progress;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
-import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static bootstrap.FixtureIds.fixtureId;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-/** H1 回归：目标已有同族 LTI 时，来源后来软删也只能计为跳过，不得转成排除/失败。 */
+/**
+ * H1 回归：目标已有同族 LTI 时，来源后来软删也只能计为跳过，不得转成排除/失败。
+ */
 @SpringBootTest(classes = WorkingsetApplication.class)
 class WorkingSetItemIndexerTest {
     private final String suffix = UUID.randomUUID().toString();
@@ -44,10 +45,14 @@ class WorkingSetItemIndexerTest {
     private final String source = fixtureId("source-item-" + suffix);
     private final String family = fixtureId("family-" + suffix);
 
-    @Autowired private WorkingSetItemIndexer indexer;
-    @Autowired private LightTrackerItemRepository items;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private TransactionTemplate transaction;
+    @Autowired
+    private WorkingSetItemIndexer indexer;
+    @Autowired
+    private LightTrackerItemRepository items;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private TransactionTemplate transaction;
 
     @AfterEach
     void cleanUp() {
@@ -111,9 +116,10 @@ class WorkingSetItemIndexerTest {
 
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parent, child, "request",
                 List.of(space), List.of(), List.of(parentTracker));
+        Instant acceptedAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
         WorkingSetCreation creation = new WorkingSetCreation(Long.valueOf(fixtureId("creation-" + suffix)), request, "test", Status.Running,
                 Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1), List.of(),
-                Instant.now(), Instant.now(), null,
+                acceptedAt, acceptedAt, null,
                 Map.of(Stage.INDEX_UNSHARED_TRACKERS, new Progress(0, 0, 0, 1)), Map.of());
         WorkingSetCreation result = transaction.execute(status -> indexer.indexBatch(creation, status));
 

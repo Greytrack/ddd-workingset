@@ -24,29 +24,34 @@ import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 import sk.workingset.error.BindingResCode;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import javax.sql.DataSource;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WorkingSetLineageAcceptanceTest {
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private DataSource dataSource;
-    @Autowired private WorkingSetCommandService commands;
-    @Autowired private WorkingSetRepository workingSets;
-    @Autowired private ProductSpaceRepository productSpaces;
-
     private final String suffix = UUID.randomUUID().toString();
     private final List<String> created = new ArrayList<>();
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private DataSource dataSource;
+    @Autowired
+    private WorkingSetCommandService commands;
+    @Autowired
+    private WorkingSetRepository workingSets;
+    @Autowired
+    private ProductSpaceRepository productSpaces;
+
+    private static String path(String id) {
+        return "/api/worksets/" + id;
+    }
 
     @AfterEach
     void removeWorkingSets() {
@@ -241,9 +246,5 @@ class WorkingSetLineageAcceptanceTest {
         DomainException failure = Assertions.assertThrows(DomainException.class,
                 () -> commands.createChildWorkingSet(WorkingSetId.of(parent), WorkingSetId.of(child)));
         assertEquals(reason, ((BindingResCode) failure.getResCode()).reason());
-    }
-
-    private static String path(String id) {
-        return "/api/worksets/" + id;
     }
 }

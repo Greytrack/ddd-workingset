@@ -1,6 +1,7 @@
 # Test Quality: Default Principles
 
-These defaults synthesize Gerard Meszaros's xUnit Test Patterns, Kent Beck's TDD, Martin Fowler's testing guidance into one actionable set.
+These defaults synthesize Gerard Meszaros's xUnit Test Patterns, Kent Beck's TDD, Martin Fowler's testing guidance into
+one actionable set.
 
 If project has custom `.lattice/test-quality.md` (referenced through `.lattice/config.yaml`), that doc wins.
 
@@ -476,18 +477,21 @@ function should_not_apply_discount_when_below_threshold():
 ### When to Write Each Type
 
 **Unit test** when:
+
 - Testing pure function/method with clear inputs/outputs
 - Testing business logic without I/O
 - Testing edge cases/boundaries
 - Testing error paths
 
 **Integration test** when:
+
 - Verifying DB queries return correct results
 - Verifying API client parses external responses correctly
 - Verifying message handler processes events correctly
 - Verifying file I/O works with real filesystem
 
 **E2E test** when:
+
 - Verifying critical user journey (login, checkout, registration)
 - Verifying independently deployed services work together
 - Smoke testing deployment

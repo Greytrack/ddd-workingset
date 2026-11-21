@@ -5,12 +5,12 @@ public record FieldViolation(String field, ResCode code, Object[] args) {
         args = args == null ? new Object[0] : args.clone();
     }
 
+    public static FieldViolation of(String field, ResCode code, Object... args) {
+        return new FieldViolation(field, code, args);
+    }
+
     @Override
     public Object[] args() {
         return args.clone();
-    }
-
-    public static FieldViolation of(String field, ResCode code, Object... args) {
-        return new FieldViolation(field, code, args);
     }
 }

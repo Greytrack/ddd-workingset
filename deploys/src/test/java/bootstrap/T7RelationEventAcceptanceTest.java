@@ -45,9 +45,12 @@ class T7RelationEventAcceptanceTest {
     private final String child = fixtureId("child-" + suffix);
     private final String parentItem = fixtureId("item-" + suffix);
 
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private RelationEvents relationEvents;
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private RelationEvents relationEvents;
 
     @AfterEach
     void cleanup() {
@@ -60,7 +63,7 @@ class T7RelationEventAcceptanceTest {
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM requirements WHERE tracker_id = ?", parentTracker);
-        jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", parentTracker);
+        jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
     }
 
@@ -72,9 +75,10 @@ class T7RelationEventAcceptanceTest {
                 Map.of("requestId", "extension-" + suffix, "trackerIds", List.of(parentTracker)), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
 
-        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                assertEquals(WorkingSetCreation.Status.Succeeded,
-                        creation(accepted.getBody().creationId()).status()));
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            CreationView task = creation(accepted.getBody().creationId());
+            assertEquals(WorkingSetCreation.Status.Succeeded, task.status(), () -> task.failures().toString());
+        });
 
         assertEquals(1, relationEvents.references().size());
         assertEquals(1, relationEvents.associations().size());
@@ -92,6 +96,10 @@ class T7RelationEventAcceptanceTest {
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
                 """, parentTracker, space, classification);
+        jdbc.update("""
+                INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode, is_default)
+                VALUES (?, '1', ?, 10070101, 'UNSHARED', TRUE)
+                """, fixtureId("folder-" + suffix), space);
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version)
                 VALUES (?, ?, ?, 'source', 'description', 3, 0)

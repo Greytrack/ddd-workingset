@@ -7,15 +7,18 @@
 ## 读取证据
 
 - ChatGPT conversation `6af08f18-2ef8-83e9-a973-b5927d073c64` 最后一轮完整消息；
-- 附件 `image.png`：GateFlow、ALM、DQA、PLM 四个 Bounded Context 围绕 Shared Kernel，内列 Class Hierarchy、Privilege、Workflow、WorkingSet；
+- 附件 `image.png`：GateFlow、ALM、DQA、PLM 四个 Bounded Context 围绕 Shared Kernel，内列 Class
+  Hierarchy、Privilege、Workflow、WorkingSet；
 - 附件 `image(1).png`：业务侧调用 Working Set 对外 API 面 `create / extend / resolve / diff / merge` 的示意；
 - 仓库现有 `facts.md`、`glossary.md`、`context-map.md`、候选 Context Map 和 `BASELINE.md`。
 
 ## 已确认结论
 
-`AC-001`：Working Set 是企业 Shared Kernel 的组成能力，为 GateFlow、ALM、DQA、PLM 四个业务 BC 提供公共工作集能力；当前项目不讨论把 Working Set 移出 Shared Kernel。
+`AC-001`：Working Set 是企业 Shared Kernel 的组成能力，为 GateFlow、ALM、DQA、PLM 四个业务 BC 提供公共工作集能力；当前项目不讨论把
+Working Set 移出 Shared Kernel。
 
-确认依据是用户明确说明该定位由外部集体确定、无法动摇。这里的 Confirmed 只适用于组织架构约束，不表示 Working Set 内部领域模型或 ADR 已 Accepted。
+确认依据是用户明确说明该定位由外部集体确定、无法动摇。这里的 Confirmed 只适用于组织架构约束，不表示 Working Set 内部领域模型或
+ADR 已 Accepted。
 
 ## 对现有设计的修正
 
@@ -35,4 +38,5 @@
 
 ## 阶段门建议
 
-先完成 `QUESTION-013`：选一个具体 BC 的具体对象，用 `resolve` 与 `merge` 各走一次成功和拒绝场景，明确共享机制与专有规则的交界。完成后再恢复 `QUESTION-001/002` 的 Working Set 与 Tracker 身份讨论。
+先完成 `QUESTION-013`：选一个具体 BC 的具体对象，用 `resolve` 与 `merge` 各走一次成功和拒绝场景，明确共享机制与专有规则的交界。完成后再恢复
+`QUESTION-001/002` 的 Working Set 与 Tracker 身份讨论。

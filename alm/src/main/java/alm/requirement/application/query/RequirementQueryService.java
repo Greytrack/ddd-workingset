@@ -22,7 +22,9 @@ import sk.workingset.error.BindingResCode;
 import java.util.List;
 import java.util.Optional;
 
-/** Requirement 查询侧应用服务：读模型优先，继承目标回退。 */
+/**
+ * Requirement 查询侧应用服务：读模型优先，继承目标回退。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,9 @@ public class RequirementQueryService {
     private final LightTrackerItemRepository items;
     private final WorkingSetRepository workingSets;
 
+    private static DomainException notFound(LocalId localId) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value());
+    }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public RequirementDetail find(LocalId localId) {
@@ -73,9 +78,5 @@ public class RequirementQueryService {
                 requirement.trackerId().numericValue(), requirement.number(), requirement.title(),
                 requirement.description(), requirement.revision().value(), requirement.version().value(),
                 requirement.lockVersion().value(), requirement.deleted(), requirement.hasMaterialized());
-    }
-
-    private static DomainException notFound(LocalId localId) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value());
     }
 }

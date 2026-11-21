@@ -1,93 +1,103 @@
 /* Compare / Merge 面板样式（复用 app.css 的 modal / btn 基础类）。 */
 .merge-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
 }
 
 .merge-table th,
 .merge-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--line, #e2e8f0);
-  text-align: left;
-  vertical-align: top;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line, #e2e8f0);
+    text-align: left;
+    vertical-align: top;
 }
 
 .merge-table th {
-  font-weight: 600;
-  color: var(--muted);
+    font-weight: 600;
+    color: var(--muted);
 }
 
 #mergeBody {
-  overflow-x: auto;
+    overflow-x: auto;
 }
 
 .merge-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-  background: #f8fafc;
-  border-radius: 6px;
-  font-size: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    background: #f8fafc;
+    border-radius: 6px;
+    font-size: 12px;
 }
 
 .merge-foot {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
 }
 
 .spacer {
-  flex: 1;
+    flex: 1;
 }
 
 .merge-table select {
-  font-size: 11px;
-  padding: 2px 4px;
+    font-size: 11px;
+    padding: 2px 4px;
 }
 
 .merge-picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: 9px;
-  background: #f8fafc;
-  font-size: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 9px;
+    background: #f8fafc;
+    font-size: 12px;
 }
 
 .merge-picker select {
-  font: inherit;
-  padding: 6px 8px;
-  max-width: min(320px, 100%);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #fff;
-  color: var(--text);
+    font: inherit;
+    padding: 6px 8px;
+    max-width: min(320px, 100%);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--text);
 }
 
 .merge-picker label {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  color: var(--muted);
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    color: var(--muted);
 }
 
 .merge-picker .btn {
-  align-self: flex-end;
+    align-self: flex-end;
 }
 
 @media (max-width: 600px) {
-  .merge-picker {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .merge-picker select { max-width: 100%; width: 100%; }
-  #mergeHint { flex-basis: 100%; }
-  #mergeContent .modal-foot { flex-wrap: wrap; }
+    .merge-picker {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .merge-picker select {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    #mergeHint {
+        flex-basis: 100%;
+    }
+
+    #mergeContent .modal-foot {
+        flex-wrap: wrap;
+    }
 }

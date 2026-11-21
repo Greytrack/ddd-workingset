@@ -10,7 +10,9 @@ import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent.Outcome;
 import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 
-/** ALM 监听 SK 的实例化请求，在自己的事务中保存 Requirement 并返回完成事件。 */
+/**
+ * ALM 监听 SK 的实例化请求，在自己的事务中保存 Requirement 并返回完成事件。
+ */
 @Component
 public class RequirementMaterializationRequestedListener {
     private final RequirementMaterializationService materialization;
@@ -20,6 +22,18 @@ public class RequirementMaterializationRequestedListener {
                                                        ApplicationEventPublisher events) {
         this.materialization = materialization;
         this.events = events;
+    }
+
+    private static MaterializeRequest request(TrackerItemMaterializationRequestedEvent event) {
+        return new MaterializeRequest(event.targetLocalId(), event.targetTrackerId(), event.commonId(),
+                event.sourceLocalId(), event.beforeRevision(), event.afterRevision(),
+                event.beforeLockVersion(), event.afterLockVersion(), event.targetRevision(),
+                event.eventId(), event.snapshotRef());
+    }
+
+    private static TargetIdentity target(TrackerItemMaterializationRequestedEvent event) {
+        return new TargetIdentity(event.targetLocalId(), event.targetTrackerId(), event.commonId(),
+                event.targetRevision(), false);
     }
 
     @ApplicationModuleListener(id = "bootstrap.RequirementMaterializationRequestedListener.on(sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent)")
@@ -33,17 +47,5 @@ public class RequirementMaterializationRequestedListener {
             events.publishEvent(new TrackerItemMaterializationCompletedEvent(event.eventId(),
                     event.targetLocalId(), Outcome.FAILED, null, null, event.beforeLockVersion(), event.afterLockVersion(), failure.getMessage()));
         }
-    }
-
-    private static MaterializeRequest request(TrackerItemMaterializationRequestedEvent event) {
-        return new MaterializeRequest(event.targetLocalId(), event.targetTrackerId(), event.commonId(),
-                event.sourceLocalId(), event.beforeRevision(), event.afterRevision(),
-                event.beforeLockVersion(), event.afterLockVersion(), event.targetRevision(),
-                event.eventId(), event.snapshotRef());
-    }
-
-    private static TargetIdentity target(TrackerItemMaterializationRequestedEvent event) {
-        return new TargetIdentity(event.targetLocalId(), event.targetTrackerId(), event.commonId(),
-                event.targetRevision(), false);
     }
 }

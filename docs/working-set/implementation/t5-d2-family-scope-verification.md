@@ -4,11 +4,13 @@
 
 依据：[POL-005 / FACT-005](../domain/facts.md)、[T2 绑定与删除](../domain/binding-deletion-contract-v1.md)、[S7 验证](t5-s7-verification-result.md)。
 
-用户裁定（2026-11-12）：CommonId 的唯一性按 **WorkingSet** 作用域，不按 Tracker 作用域。本记录只覆盖这一修正；D1 的 `BusinessObject` 设计见 [business-object-lifecycle-design.md](../domain/business-object-lifecycle-design.md)。
+用户裁定（2026-11-12）：CommonId 的唯一性按 **WorkingSet** 作用域，不按 Tracker 作用域。本记录只覆盖这一修正；D1 的
+`BusinessObject` 设计见 [business-object-lifecycle-design.md](../domain/business-object-lifecycle-design.md)。
 
 ## 1. 数据库变更
 
-- `requirements` 增加 `working_set_id`，由 `trackers.working_set_id` 派生；写入时由 `trg_requirements_working_set` 触发器填充，不改变 `Requirement` 领域聚合。
+- `requirements` 增加 `working_set_id`，由 `trackers.working_set_id` 派生；写入时由 `trg_requirements_working_set`
+  触发器填充，不改变 `Requirement` 领域聚合。
 - 删除旧索引 `uq_requirements_tracker_family`，新增：
   ```sql
   CREATE UNIQUE INDEX uq_requirements_working_set_family
@@ -21,15 +23,18 @@
 
 ## 2. 应用行为
 
-- 同一 WorkingSet、不同 Tracker 的相同 CommonId → `DataIntegrityViolationException`；REST 映射为 409 `DATA_INTEGRITY_CONFLICT`。
+- 同一 WorkingSet、不同 Tracker 的相同 CommonId → `DataIntegrityViolationException`；REST 映射为 409
+  `DATA_INTEGRITY_CONFLICT`。
 - 不同 WorkingSet 的相同 CommonId → 允许。
 - Requirement 创建必须能解析 Tracker；未登记 Tracker 的写入被数据库拒绝。
 - Repository/聚合仍不持有 `working_set_id`；它是实现映射，不反向定义领域所有权。
 
 ## 3. 测试
 
-- 新增 [RequirementFamilyScopeTest](../../../deploys/src/test/java/bootstrap/RequirementFamilyScopeTest.java)：同 WS 跨 Tracker 重复被拒；跨 WS 允许；清理时先删派生子 Tracker 再删父 Tracker。
-- 更新 [BindingAcceptanceTest](../../../deploys/src/test/java/bootstrap/BindingAcceptanceTest.java) 的测试夹具：每个业务 Item 使用独立 CommonId，避免同一 WS 内多人造 Item 共享家族；这是测试数据修正，不是放宽领域约束。
+- 新增 [RequirementFamilyScopeTest](../../../deploys/src/test/java/bootstrap/RequirementFamilyScopeTest.java)：同 WS 跨
+  Tracker 重复被拒；跨 WS 允许；清理时先删派生子 Tracker 再删父 Tracker。
+- 更新 [BindingAcceptanceTest](../../../deploys/src/test/java/bootstrap/BindingAcceptanceTest.java) 的测试夹具：每个业务
+  Item 使用独立 CommonId，避免同一 WS 内多人造 Item 共享家族；这是测试数据修正，不是放宽领域约束。
 - `mvn -B test`：**77 项通过，0 失败、0 错误、0 跳过**（含真实 PostgreSQL、Redis、Tomcat、ArchUnit）。
 
 ## 4. 迁移注意

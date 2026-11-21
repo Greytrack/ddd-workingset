@@ -10,9 +10,13 @@ import java.util.Optional;
  */
 public interface RequirementSnapshotStore {
 
-    /** 保存快照并返回不可变引用。 */
+    /**
+     * 保存快照并返回不可变引用。
+     */
     SnapshotRefEvent save(RequirementSnapshot snapshot);
 
-    /** 按引用回读快照；不存在时返回空，不以当前值冒充。 */
+    /**
+     * 按引用回读快照；不存在时返回空，不以当前值冒充。
+     */
     Optional<RequirementSnapshot> find(SnapshotRefEvent ref);
 }

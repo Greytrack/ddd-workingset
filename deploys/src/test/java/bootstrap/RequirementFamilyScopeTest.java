@@ -16,6 +16,8 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,18 +30,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class RequirementFamilyScopeTest {
 
-    @Autowired
-    private JdbcTemplate jdbc;
-
-    @Autowired
-    private JdbcRequirementRepository repository;
-
-    @Autowired
-    private TransactionTemplate transactions;
-
-    @Autowired
-    private TrackerItemCatalogQueryProvider catalog;
-
     private final String suffix = UUID.randomUUID().toString();
     private final String ws2 = fixtureId("WS2-" + suffix);
     private final String t1 = fixtureId("T1-" + suffix);
@@ -47,11 +37,19 @@ class RequirementFamilyScopeTest {
     private final String t3 = fixtureId("T3-" + suffix);
     private final String t4 = fixtureId("T4-" + suffix);
     private final String family = fixtureId("FAMILY-" + suffix);
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private JdbcRequirementRepository repository;
+    @Autowired
+    private TransactionTemplate transactions;
+    @Autowired
+    private TrackerItemCatalogQueryProvider catalog;
 
     @BeforeEach
     void provision() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", ws2);
-        for (String tracker : new String[] {t1, t2, t3, t4}) {
+        for (String tracker : new String[]{t1, t2, t3, t4}) {
             jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", fixtureId(tracker + "-space"));
         }
         jdbc.update("""
@@ -80,7 +78,7 @@ class RequirementFamilyScopeTest {
         jdbc.update("DELETE FROM light_tracker_items WHERE common_id = ?", family);
         jdbc.update("DELETE FROM requirements WHERE common_id = ?", family);
         // Child trackers reference parents through source_id; remove them first.
-        for (String tracker : new String[] {t3, t4, t2, t1}) {
+        for (String tracker : new String[]{t3, t4, t2, t1}) {
             jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
             jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", fixtureId(tracker + "-space"));
         }
@@ -109,15 +107,16 @@ class RequirementFamilyScopeTest {
         TrackerItemCatalogQueryProvider.Identity identity =
                 new TrackerItemCatalogQueryProvider.Identity(saved.localId(), saved.commonId(), saved.revision());
         save(saved);
+        Instant baselineAt = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
         assertEquals(List.of(identity), catalog.identities(trackerId));
-        assertEquals(List.of(identity), catalog.page(trackerId, "", 1));
-        assertTrue(catalog.page(trackerId, saved.localId().value(), 1).isEmpty());
+        assertEquals(List.of(identity), catalog.page(trackerId, baselineAt, "", 1));
+        assertTrue(catalog.page(trackerId, baselineAt, saved.localId().value(), 1).isEmpty());
         assertTrue(catalog.hasActiveFamily(trackerId, saved.commonId()));
 
         save(saved.delete(saved.lockVersion()));
         assertTrue(catalog.identities(trackerId).isEmpty());
         assertEquals(List.of(identity), catalog.identitiesForMerge(trackerId));
-        assertTrue(catalog.page(trackerId, "", 1).isEmpty());
+        assertTrue(catalog.page(trackerId, baselineAt, "", 1).isEmpty());
         assertFalse(catalog.hasActiveFamily(trackerId, saved.commonId()));
     }
 

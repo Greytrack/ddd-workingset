@@ -15,14 +15,6 @@ public class APIException extends RuntimeException {
         this.args = args == null ? null : args.clone();
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public Object[] getArgs() {
-        return args == null ? null : args.clone();
-    }
-
     protected static String formatMessage(String template, Object[] args) {
         if (args == null || args.length == 0) {
             return template;
@@ -32,5 +24,13 @@ public class APIException extends RuntimeException {
         } catch (IllegalFormatException invalidTemplate) {
             return template;
         }
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public Object[] getArgs() {
+        return args == null ? null : args.clone();
     }
 }

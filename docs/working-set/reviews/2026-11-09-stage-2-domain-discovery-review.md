@@ -12,8 +12,11 @@
 
 1. 仓库治理：`AGENTS.md`、根 `README.md`、`docs/working-set/README.md`、`BASELINE.md`、domain/adr/proposals 现有说明与模板。
 2. 外部报告：`working-set-ddd-domain-architecture-analysis.md`，完整分段读取并校验 SHA-256，作为 `EXT-ARCH` 候选来源。
-3. `pre-design/`：建立全部 28 个 Markdown 文件清单；重点审阅 V4 overview、domain、consistency、creation LRT、instantiation、review outline、UL，Merge 专项的术语/决定/不变量/风险/验收，以及 Reference 专项的范围、模型、协作、修复和术语。其余 V3/V4 文件通过标题与相关声明检索纳入来源定位，未声称逐字接受。
-4. 方法资料：实际读取 `domain-modeling`、`ubiquitous-language`、`domain-driven-design`、`ddd-refiner`、`design-first`、`tdd` 的 `SKILL.md`，并读取适用的 CONTEXT/ADR format、DDD defaults、design methodology detail、TDD tests/mocking。
+3. `pre-design/`：建立全部 28 个 Markdown 文件清单；重点审阅 V4 overview、domain、consistency、creation
+   LRT、instantiation、review outline、UL，Merge 专项的术语/决定/不变量/风险/验收，以及 Reference 专项的范围、模型、协作、修复和术语。其余
+   V3/V4 文件通过标题与相关声明检索纳入来源定位，未声称逐字接受。
+4. 方法资料：实际读取 `domain-modeling`、`ubiquitous-language`、`domain-driven-design`、`ddd-refiner`、`design-first`、`tdd` 的
+   `SKILL.md`，并读取适用的 CONTEXT/ADR format、DDD defaults、design methodology detail、TDD tests/mocking。
 5. 本地 DDD 资料库仅检查了文件目录；本轮没有引用其章节作为业务证据，避免用理论替代业务确认。
 
 ## 提取结果
@@ -31,21 +34,22 @@
 
 1. **默认根 ID=1**：V4 写成强规则；更合理分类是部署／引导约定 `TC-001`。业务问题是是否存在不可由普通用例删除的默认治理根。
 2. **单聚合事务**：V4 写成普遍规约；它是 `TC-002` 架构选择，必须由可见性、恢复和补偿需求证明。
-3. **LightTrackerItem**：名称像技术索引，但又承载逻辑存在、稳定身份、固定来源和物化状态。若这些是业务事实，它可能是 Item Variant 根；否则不应提升为聚合。
+3. **LightTrackerItem**：名称像技术索引，但又承载逻辑存在、稳定身份、固定来源和物化状态。若这些是业务事实，它可能是 Item
+   Variant 根；否则不应提升为聚合。
 4. **Tracker 是分类投影还是业务谱系节点**：两种定义混在一起，直接影响 `CTX-002` 是否成立。
 5. **全 Working Set CommonId 唯一**：V4 当作规则，但缺少跨类型、产品空间和 namespace 的业务证据。
 
 ## 主要冲突
 
-| 冲突 | 历史主张 | 挑战证据 | 当前处理 |
-| --- | --- | --- | --- |
-| 默认根身份 | 物理 ID 固定 1 | 报告认为只是编码约定 | `POL-001` 与 `TC-001` 分离 |
-| Tracker 创建 | 仅默认根可创建 | 子工作集新建 Item/Tracker 的业务能力未裁定 | `POL-002`、`QUESTION-002/005` |
-| Sharing Mode | 永久不可变 | 可通过新 Tracker + 迁移表达变更 | `POL-003` 待裁定 |
-| Item 唯一性 | 工作集内裸 CommonId 全局唯一 | 跨类型／空间可能合法重号 | `POL-005`、`HYP-004` |
-| Merge 范围 | 仅相邻父子 | 未来兄弟／跨代需共同基线 | `POL-004`、`QUESTION-007` |
-| 事务边界 | 每次只改一个聚合 | 业务只规定原子可见结果，不规定技术事务数 | `TC-002`，不作为不变量 |
-| SHARED 即时性 | 容易被理解为所有读取零延迟 | 权威点查与投影 SLA 可不同 | `POL-008` |
+| 冲突          | 历史主张                     | 挑战证据                                   | 当前处理                      |
+|---------------|------------------------------|--------------------------------------------|-------------------------------|
+| 默认根身份    | 物理 ID 固定 1               | 报告认为只是编码约定                       | `POL-001` 与 `TC-001` 分离    |
+| Tracker 创建  | 仅默认根可创建               | 子工作集新建 Item/Tracker 的业务能力未裁定 | `POL-002`、`QUESTION-002/005` |
+| Sharing Mode  | 永久不可变                   | 可通过新 Tracker + 迁移表达变更            | `POL-003` 待裁定              |
+| Item 唯一性   | 工作集内裸 CommonId 全局唯一 | 跨类型／空间可能合法重号                   | `POL-005`、`HYP-004`          |
+| Merge 范围    | 仅相邻父子                   | 未来兄弟／跨代需共同基线                   | `POL-004`、`QUESTION-007`     |
+| 事务边界      | 每次只改一个聚合             | 业务只规定原子可见结果，不规定技术事务数   | `TC-002`，不作为不变量        |
+| SHARED 即时性 | 容易被理解为所有读取零延迟   | 权威点查与投影 SLA 可不同                  | `POL-008`                     |
 
 ## 当前不适合直接接受的设计
 

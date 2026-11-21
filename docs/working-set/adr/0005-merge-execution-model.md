@@ -3,43 +3,59 @@
 - **状态**：Accepted
 - **部分替代**：执行期证据复核由 [ADR-0009](0009-merge-dispatch-frozen-evidence.md) 替代。
 - **日期**：2026-11-10
-- **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem 的协作顺序、双侧比较证据要求（早期载体为 ComparisonToken，现行载体见文末补充裁定）、Checkpoint 确认的发起方
+- **决策范围**：MergeEntry 的归属与生命周期、MergeRound／MergeCheckpoint／Diff 能力／业务 BC／LightTrackerItem
+  的协作顺序、双侧比较证据要求（早期载体为 ComparisonToken，现行载体见文末补充裁定）、Checkpoint 确认的发起方
 - **确认人／决策权威**：用户已确认 Q1～Q3 三项裁定，并于 2026-11-10 明确批准本 ADR 为 Accepted
 - **替代**：无
 - **被部分替代于**：[ADR-0006](0006-merge-confirmation-ownership.md) 替换 Checkpoint 聚合归属及对应确认交互；下文保留当期裁定。
 
 ## 背景
 
-D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint 独立、合并决策作为 VO 归属 MergeRound）与四条业务规则（未物化可参与 Diff、未物化目标被修改时构建业务聚合并 save、共享 Tracker 不参与、非共享只允许直接父子准入）。执行协议仍为空白（`QUESTION-015`）。
+D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint 独立、合并决策作为 VO 归属 MergeRound）与四条业务规则（未物化可参与
+Diff、未物化目标被修改时构建业务聚合并 save、共享 Tracker 不参与、非共享只允许直接父子准入）。执行协议仍为空白（
+`QUESTION-015`）。
 
-若不作出本决策，实施者会各自选择条目归属、确认发起方与比较凭据的证据强度，导致：同一「已处理」事实有两个写入口、过期审阅无法识别、MergeRound 与 Checkpoint 责任重叠。契约草案见 [Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)，图见 [MergeEntry 生命周期](../diagrams/merge-entry-lifecycle.md)。
+若不作出本决策，实施者会各自选择条目归属、确认发起方与比较凭据的证据强度，导致：同一「已处理」事实有两个写入口、过期审阅无法识别、MergeRound
+与 Checkpoint 责任重叠。契约草案见 [Merge 执行行为契约 v1](../domain/merge-execution-contract-v1.md)
+，图见 [MergeEntry 生命周期](../diagrams/merge-entry-lifecycle.md)。
 
 ### 已确认依据
 
-- **Business Fact**：FACT-027（Diff/Merge 衔接六条裁定）、FACT-007（直接父子双向、source/target 为角色）、FACT-008（决定、Apply Result 与处理确认是不同事实）。
-- **Business Invariant**：INV-061～063（未物化参与 Diff、修改即物化、MergeRound 记录与 Checkpoint 独立）；INV-006～010（有向冻结证据、存在性显式裁决、KEEP_TARGET 与 DEFER 的已处理语义、幂等与乱序）；INV-009（不得绕过目标 BC 整体校验）；INV-040（COW 不改 LocalId/CommonId）。
-- **Business Policy**：POL-004（仅直接父子）；R08～R11（ACCEPT 读源最新值、决策优先、部分成功与重试、KEEP_TARGET 的 Checkpoint 语义）。
+- **Business Fact**：FACT-027（Diff/Merge 衔接六条裁定）、FACT-007（直接父子双向、source/target 为角色）、FACT-008（决定、Apply
+  Result 与处理确认是不同事实）。
+- **Business Invariant**：INV-061～063（未物化参与 Diff、修改即物化、MergeRound 记录与 Checkpoint
+  独立）；INV-006～010（有向冻结证据、存在性显式裁决、KEEP_TARGET 与 DEFER 的已处理语义、幂等与乱序）；INV-009（不得绕过目标 BC
+  整体校验）；INV-040（COW 不改 LocalId/CommonId）。
+- **Business Policy**：POL-004（仅直接父子）；R08～R11（ACCEPT 读源最新值、决策优先、部分成功与重试、KEEP_TARGET 的 Checkpoint
+  语义）。
 - **Technical Constraint**：无。本 ADR 不决定 Token 编码、幂等键实现、事件中间件与表结构。
 
 ### 假设与开放问题
 
-- **Hypothesis**：业务 BC 能提供「整体校验 + 提交 + 返回真实结果与业务 Revision」的公开写能力（职责已由 D-007/INV-009 确认，具体 seam 待 T4）。
+- **Hypothesis**：业务 BC 能提供「整体校验 + 提交 + 返回真实结果与业务 Revision」的公开写能力（职责已由 D-007/INV-009 确认，具体
+  seam 待 T4）。
 - **Open Question**：`QUESTION-015`（差异冻结/令牌、幂等键、乱序确认、Checkpoint 字段映射的细节）；本 ADR 只裁定结构与发起方，不裁定实现形式。
 
 ## 决定
 
 （用户 2026-11-10 确认 Q1～Q3 并批准为 Accepted）
 
-1. **MergeEntry 作为 MergeRound 聚合内的 Entity**，表达一条合并事项的完整生命周期：`Compared → Decided → Applying → Applied / Rejected / StaleEvidence / Deferred → Confirmed`。不独立成聚合，不跨轮次复用。
-2. **协作顺序固定**：Diff 产生 `TrackerItemDiff` + `ComparisonToken` → MergeRound 登记决策并建立条目 → 执行时复核证据 → 依 `ItemMergeDecision` 确定目标操作 → 业务 BC 构建目标聚合并整体校验提交 → LightTrackerItem 按既有 COW 机制维护有效来源与 Revision → 依 `markAsMerged` 更新 Checkpoint → MergeRound 记录单项结果、进度与 `ApplyResult`。
-3. **`ComparisonToken` 必须绑定双侧内容证据引用**；业务 Revision 只可作为其中一项，不得单独构成 Token（同一 Revision 内内容仍可变）。编码与存储形式留实现。
-4. **Checkpoint 确认由 MergeRound 发起**：仅当 `markAsMerged=true` 且条目终态为 `Applied` 时调用 `MergeCheckpoint.confirm`；Checkpoint 保持独立聚合，只做因果校验，不反向查询 MergeRound。
+1. **MergeEntry 作为 MergeRound 聚合内的 Entity**，表达一条合并事项的完整生命周期：
+   `Compared → Decided → Applying → Applied / Rejected / StaleEvidence / Deferred → Confirmed`。不独立成聚合，不跨轮次复用。
+2. **协作顺序固定**：Diff 产生 `TrackerItemDiff` + `ComparisonToken` → MergeRound 登记决策并建立条目 → 执行时复核证据 → 依
+   `ItemMergeDecision` 确定目标操作 → 业务 BC 构建目标聚合并整体校验提交 → LightTrackerItem 按既有 COW 机制维护有效来源与
+   Revision → 依 `markAsMerged` 更新 Checkpoint → MergeRound 记录单项结果、进度与 `ApplyResult`。
+3. **`ComparisonToken` 必须绑定双侧内容证据引用**；业务 Revision 只可作为其中一项，不得单独构成 Token（同一 Revision
+   内内容仍可变）。编码与存储形式留实现。
+4. **Checkpoint 确认由 MergeRound 发起**：仅当 `markAsMerged=true` 且条目终态为 `Applied` 时调用
+   `MergeCheckpoint.confirm`；Checkpoint 保持独立聚合，只做因果校验，不反向查询 MergeRound。
 
 ## 备选方案与权衡
 
 ### 方案 A（采纳）
 
-- 保护的不变量与适用场景：与 D-019 的「MergeRound 是载体」一致；条目状态与轮次进度同源；确认只有一条写入路径。适用于直接父子、非共享 Tracker 的常规合并。
+- 保护的不变量与适用场景：与 D-019 的「MergeRound 是载体」一致；条目状态与轮次进度同源；确认只有一条写入路径。适用于直接父子、非共享
+  Tracker 的常规合并。
 - 收益与成本：责任清晰、实现 seam 明确、避免第二身份；代价是 MergeRound 承担编排复杂度，条目不能跨轮次复用。
 - 失败模式与放弃条件：若出现「同一事项跨多轮复用」或「条目需要独立查询/审计入口」的真实业务需求，应重新评估。
 
@@ -57,14 +73,19 @@ D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint �
 
 ## 后果
 
-- 正面后果：三对象责任边界明确；过期审阅（Token 失效）与非法组合（`DEFER + markAsMerged`）在执行前即可拒绝；部分成功与轮次终态已有明确表达（Q4：一次执行即终态）。
-- 负面后果与风险：MergeRound 聚合承担编排并可能成为轮次级热点（大规模条目需分批执行）；确认时机绑定执行结果，若 BC 提交成功但 Checkpoint 写入失败，需由恢复/重试协议补齐（属 `QUESTION-015`）。
+- 正面后果：三对象责任边界明确；过期审阅（Token 失效）与非法组合（`DEFER + markAsMerged`
+  ）在执行前即可拒绝；部分成功与轮次终态已有明确表达（Q4：一次执行即终态）。
+- 负面后果与风险：MergeRound 聚合承担编排并可能成为轮次级热点（大规模条目需分批执行）；确认时机绑定执行结果，若 BC 提交成功但
+  Checkpoint 写入失败，需由恢复/重试协议补齐（属 `QUESTION-015`）。
 - 迁移与兼容影响：无既有实现；不影响 ADR-0001～0004。共享 Tracker 与兄弟/跨代合并仍在准入层拒绝，不因本 ADR 放宽。
 
 ## 验证与追溯
 
-- 业务场景／反例：SCN-055（未物化参与 Diff 与修改）、SCN-056（MergeRound/Checkpoint 定位）、SCN-057（过期审阅）、SCN-058（确认回执与旧轮次重放）、SCN-059（`DEFER` 残留与轮次终态）、SCN-060（部分成功后以新轮次重做）。B06（BC 拒绝不部分写入）、B08（部分成功）、B09（ACCEPT 读源最新值）、B10（丢回执与乱序）。
-- 验收条件或测试：§7 行为矩阵八行、§5 状态机迁移、§8 轮次终态与 `ApplyResult` 表达；测试 seam 与实现入口待 `implementation/`。
+- 业务场景／反例：SCN-055（未物化参与 Diff 与修改）、SCN-056（MergeRound/Checkpoint
+  定位）、SCN-057（过期审阅）、SCN-058（确认回执与旧轮次重放）、SCN-059（`DEFER` 残留与轮次终态）、SCN-060（部分成功后以新轮次重做）。B06（BC
+  拒绝不部分写入）、B08（部分成功）、B09（ACCEPT 读源最新值）、B10（丢回执与乱序）。
+- 验收条件或测试：§7 行为矩阵八行、§5 状态机迁移、§8 轮次终态与 `ApplyResult` 表达；测试 seam 与实现入口待
+  `implementation/`。
 - 实现入口：待办（当前无实现证据）。
 - 重新评估条件：出现跨轮次条目复用需求；Checkpoint 需要独立确认入口；Token 证据形式无法兑现「过期审阅」防护；BC 写能力与整体校验职责变化。
 
@@ -76,14 +97,20 @@ D-019 已确认 Merge 的聚合定位（MergeRound 为载体、MergeCheckpoint �
 2. 终态轮次不可重开、不可继续登记新决定或重新执行条目。
 3. 每个 MergeRound 只有一个最终 `ApplyResult`（本轮 `summary` + `itemResults` 的不可变快照）。
 4. 本轮部分成功不回滚已成功的业务修改与 MergeCheckpoint。
-5. 未完成条目（`Rejected` / `StaleEvidence` / `Deferred`）重做须重新比较并新建 MergeRound（新 `mergeRoundId`、有效 `ComparisonToken`）。
+5. 未完成条目（`Rejected` / `StaleEvidence` / `Deferred`）重做须重新比较并新建 MergeRound（新 `mergeRoundId`、有效
+   `ComparisonToken`）。
 6. 新轮次可仅选未完成条目，不自动重复上一轮已成功条目；新旧轮次的用户决定、执行状态与结果相互独立，旧结果保留可追溯。
 7. 消息重复投递的幂等处理不属于业务重试，仍遵循原幂等规则。
 
-终态判定：`Succeeded` ＝本轮全部条目成功处理；`PartiallySucceeded` ＝至少一项成功且存在未完成或失败项；`Failed` ＝无成功项且存在失败或未完成项。`KEEP_TARGET + markAsMerged=true` 属成功处理项；纯 `DEFER` 轮次归入 `Failed`，本轮不新增专用状态枚举。
+终态判定：`Succeeded` ＝本轮全部条目成功处理；`PartiallySucceeded` ＝至少一项成功且存在未完成或失败项；`Failed`
+＝无成功项且存在失败或未完成项。`KEEP_TARGET + markAsMerged=true` 属成功处理项；纯 `DEFER` 轮次归入 `Failed`，本轮不新增专用状态枚举。
 
-影响：早期「同一 MergeRound 内重试」候选设计作废；契约 §1/§4/§5/§7/§8 与 [MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md) 已同步。
+影响：早期「同一 MergeRound 内重试」候选设计作废；契约 §1/§4/§5/§7/§8
+与 [MergeEntry 生命周期图](../diagrams/merge-entry-lifecycle.md) 已同步。
 
 ## 2026-11-15 补充裁定：compare 不持久化
 
-业务团队确认 compare 是高频只读展示，不持久化比较结果或 `merge_comparisons` JSONB。原「ComparisonToken 必须持久化并用于回读冻结清单」的执行方式被取代：compare 返回瞬时比较证据；用户决策连同所选差异证据随 MergeRound 持久化；apply 只执行轮次内决策范围，并在登记/执行时校验证据未过期。ADR 原有「比较证据必须绑定双侧内容证据」的决定继续适用，但不再要求持久化 token；ADR 状态保持 `Accepted`。详见 [Compare 不持久化裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)。
+业务团队确认 compare 是高频只读展示，不持久化比较结果或 `merge_comparisons` JSONB。原「ComparisonToken
+必须持久化并用于回读冻结清单」的执行方式被取代：compare 返回瞬时比较证据；用户决策连同所选差异证据随 MergeRound 持久化；apply
+只执行轮次内决策范围，并在登记/执行时校验证据未过期。ADR 原有「比较证据必须绑定双侧内容证据」的决定继续适用，但不再要求持久化
+token；ADR 状态保持 `Accepted`。详见 [Compare 不持久化裁定](../reviews/2026-11-15-compare-not-persisted-decision.md)。

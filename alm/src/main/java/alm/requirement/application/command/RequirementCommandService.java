@@ -52,6 +52,11 @@ public class RequirementCommandService {
     private final WorkingSetRepository workingSets;
     private final LightTrackerItemRepository items;
 
+    private static void requireActive(Requirement requirement) {
+        if (requirement.deleted()) {
+            throw DomainException.withMessage(FailureReason.DELETED, requirement.localId().value());
+        }
+    }
 
     /**
      * 创建并提交一个 Requirement；服务端按工作集分配身份。
@@ -118,7 +123,9 @@ public class RequirementCommandService {
         return edit(localId, expectedLockVersion, current -> current.changeTitle(newTitle, expectedLockVersion));
     }
 
-    /** 普通修改标题和描述；业务 revision 不升级，仍按乐观锁写入并发布来源事件。 */
+    /**
+     * 普通修改标题和描述；业务 revision 不升级，仍按乐观锁写入并发布来源事件。
+     */
     @Transactional
     public Requirement changeContent(LocalId localId, String newTitle, String newDescription,
                                      LockVersion expectedLockVersion) {
@@ -167,7 +174,9 @@ public class RequirementCommandService {
                 source.title(), source.description(), target.revision(), source.version());
     }
 
-    /** 显式升级业务版次，触发依赖变体的 COW。 */
+    /**
+     * 显式升级业务版次，触发依赖变体的 COW。
+     */
     @Transactional
     public Requirement upgradeRevision(LocalId localId, LockVersion expectedLockVersion) {
         Requirement current = loadWritable(localId);
@@ -175,7 +184,9 @@ public class RequirementCommandService {
         return saveChange(current, current.upgradeRevision(expectedLockVersion));
     }
 
-    /** 软删除需求。 */
+    /**
+     * 软删除需求。
+     */
     @Transactional
     public void delete(LocalId id) {
         Requirement current = loadWritable(id);
@@ -183,7 +194,9 @@ public class RequirementCommandService {
         saveChange(current, current.delete(current.lockVersion()));
     }
 
-    /** 恢复软删除的需求。 */
+    /**
+     * 恢复软删除的需求。
+     */
     @Transactional
     public void undelete(LocalId id) {
         Requirement current = loadWritable(id);
@@ -202,13 +215,9 @@ public class RequirementCommandService {
         return requirement;
     }
 
-    private static void requireActive(Requirement requirement) {
-        if (requirement.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, requirement.localId().value());
-        }
-    }
-
-    /** 保存变更：先保存修改前快照，再保存对象并发布来源变更事件（及软删事件）。 */
+    /**
+     * 保存变更：先保存修改前快照，再保存对象并发布来源变更事件（及软删事件）。
+     */
     public Requirement saveChange(Requirement current, Requirement changed) {
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
         SnapshotRefEvent snapshotRef = snapshotStore.save(snapshot);

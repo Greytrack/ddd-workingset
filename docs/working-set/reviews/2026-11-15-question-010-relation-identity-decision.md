@@ -6,22 +6,26 @@
 
 跨 Working Set 的 Reference / Association 按关系类型拆分目标身份：
 
-- **Reference**：使用逻辑 Family 作为目标身份，保存 `targetCommonId` 与 `targetTrackerId`；可选 `targetRevision` 表示钉版，可选 `targetLocalId` 表示当前工作集内的物理定位。右侧为空时，引用行仍有效，保持悬空；后续纳入目标时补齐同一行右侧，不新建引用。
+- **Reference**：使用逻辑 Family 作为目标身份，保存 `targetCommonId` 与 `targetTrackerId`；可选 `targetRevision` 表示钉版，可选
+  `targetLocalId` 表示当前工作集内的物理定位。右侧为空时，引用行仍有效，保持悬空；后续纳入目标时补齐同一行右侧，不新建引用。
 - **Association**：使用具体 Variant 端点，保存 `sourceLocalId` / `targetLocalId`；缺端点时不落库，保留恢复意图，后续按原意图建立合法关联；下游关联丢弃，不恢复。
-- **边界**：沿用已确认 D6，附件/关系不参与 Compare/Merge；T7-E 本轮只负责在创建/扩展/ Merge 完成后发布关系事件，**不创建或修改 Reference/Association 聚合**；关系 Compare/Merge 不在本轮范围。常规业务 BC 修改/删除导致的关系变化由业务 BC 维护。
-- **权限**：2026-11-17 补充明确：工作集场景**跳过权限**，不产生 `Denied` 状态；关系构建按数据可读性处理，权限由业务 BC/后续接入负责。此前的 D11 占位不落地。
+- **边界**：沿用已确认 D6，附件/关系不参与 Compare/Merge；T7-E 本轮只负责在创建/扩展/ Merge 完成后发布关系事件，**不创建或修改
+  Reference/Association 聚合**；关系 Compare/Merge 不在本轮范围。常规业务 BC 修改/删除导致的关系变化由业务 BC 维护。
+- **权限**：2026-11-17 补充明确：工作集场景**跳过权限**，不产生 `Denied` 状态；关系构建按数据可读性处理，权限由业务
+  BC/后续接入负责。此前的 D11 占位不落地。
 
 本裁定采用 pre-design 关系设计的身份拆分方向，**不自动接受**其全部字段、聚合行为、传播规则或 Merge 接入方案。
 
 ## 备选与理由
 
-| 选项 | 目标身份 | 主要问题 |
-| --- | --- | --- |
-| A 逻辑 Family | 两类关系都按 CommonId/Tracker 族解析 | Association 目标可能随上下文漂移；两类关系语义被强行统一 |
-| B 具体 Variant | 两类关系都钉具体 LocalId | 变体替换、合并和跨工作集后纳入造成大量修复；Reference 的逻辑目标稳定性丢失 |
-| **C 按关系类型（选择）** | Reference 逻辑 Family；Association 具体 Variant | 两套解析/修复路径，但符合两类关系的不同生命周期 |
+| 选项                     | 目标身份                                        | 主要问题                                                                   |
+|--------------------------|-------------------------------------------------|----------------------------------------------------------------------------|
+| A 逻辑 Family            | 两类关系都按 CommonId/Tracker 族解析            | Association 目标可能随上下文漂移；两类关系语义被强行统一                   |
+| B 具体 Variant           | 两类关系都钉具体 LocalId                        | 变体替换、合并和跨工作集后纳入造成大量修复；Reference 的逻辑目标稳定性丢失 |
+| **C 按关系类型（选择）** | Reference 逻辑 Family；Association 具体 Variant | 两套解析/修复路径，但符合两类关系的不同生命周期                            |
 
-选择 C 的原因：`HYP-007` 指出 Reference 与 Association 可能需要不同生命周期和缺端点语义；`FACT-009` 的悬空描述主要适用于 Reference；pre-design 已按该方向设计，落地成本最低；同时避免把 Association 强行建模为可悬空关系。
+选择 C 的原因：`HYP-007` 指出 Reference 与 Association 可能需要不同生命周期和缺端点语义；`FACT-009` 的悬空描述主要适用于
+Reference；pre-design 已按该方向设计，落地成本最低；同时避免把 Association 强行建模为可悬空关系。
 
 ## 仍然开放
 

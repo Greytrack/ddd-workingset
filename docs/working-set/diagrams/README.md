@@ -6,12 +6,12 @@
 
 ## 当前图表
 
-| 主题 | 图 |
-| --- | --- |
-| 全景与边界 | [领域主线](domain-mainline.md)、[企业 Shared Kernel](shared-kernel-context-map.md) |
+| 主题             | 图                                                                                                                                                                                                                                           |
+|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 全景与边界       | [领域主线](domain-mainline.md)、[企业 Shared Kernel](shared-kernel-context-map.md)                                                                                                                                                           |
 | 工作集与 Tracker | [ProductSpace 与绑定](productspace-tracker-workingset.md)、[WorkingSet 谱系](working-set-lineage.md)、[工作集创建任务](working-set-creation-lro.md)、[Tracker 双维关系与裁剪](tracker-dual-relations.md)、[绑定与删除](binding-lifecycle.md) |
-| 业务协作 | [TrackerItem 契约与聚合](trackeritem-contract.md)、[跨 BC 契约](cross-bc-contract.md)、[Merge 生命周期](merge-entry-lifecycle.md)、[合并确认与 GateFlow 切换](collaboration-behavior.md) |
-| 派生与物化 | [多级有效来源](lighttrackeritem-lifecycle.md)、[T3 物化](lighttrackeritem-materialization.md) |
+| 业务协作         | [TrackerItem 契约与聚合](trackeritem-contract.md)、[跨 BC 契约](cross-bc-contract.md)、[Merge 生命周期](merge-entry-lifecycle.md)、[合并确认与 GateFlow 切换](collaboration-behavior.md)                                                     |
+| 派生与物化       | [多级有效来源](lighttrackeritem-lifecycle.md)、[T3 物化](lighttrackeritem-materialization.md)                                                                                                                                                |
 
 ## 历史与探索
 

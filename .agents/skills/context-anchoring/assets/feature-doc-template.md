@@ -14,7 +14,7 @@ status: draft
 <!-- Add new at bottom. Never remove. -->
 
 | Date | Decision | Reasoning | Alternatives Considered |
-|------|----------|-----------|------------------------|
+|------|----------|-----------|-------------------------|
 
 ## Open Questions
 
@@ -27,4 +27,4 @@ None.
 ## Key Files
 
 | Path | Role |
-|---|---|
+|------|------|

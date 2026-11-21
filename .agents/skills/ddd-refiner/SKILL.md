@@ -7,17 +7,24 @@ description: "Facilitate a structured conversation to define DDD guardrails for 
 
 ## What This Produces
 
-- **Output**: `.lattice/standards/ddd-principles.md` (or custom path from `.lattice/config.yaml` → `paths.ddd_principles`)
+- **Output**: `.lattice/standards/ddd-principles.md` (or custom path from `.lattice/config.yaml` →
+  `paths.ddd_principles`)
 - **Two modes**:
-  - **Overlay** (`mode: overlay`): A slim document containing only sections that differ from the defaults. The domain-driven-design atom reads its embedded defaults first, then applies this document's sections on top. This is the expected common case.
-  - **Override** (`mode: override`): A comprehensive standalone document that fully replaces the atom's embedded defaults. For teams with fundamentally different domain modeling principles.
+    - **Overlay** (`mode: overlay`): A slim document containing only sections that differ from the defaults. The
+      domain-driven-design atom reads its embedded defaults first, then applies this document's sections on top. This is
+      the expected common case.
+    - **Override** (`mode: override`): A comprehensive standalone document that fully replaces the atom's embedded
+      defaults. For teams with fundamentally different domain modeling principles.
 - **Default mode**: Overlay -- produces only what the user wants to change
 - **Config key**: `paths.ddd_principles` in `.lattice/config.yaml`
-- **Template**: Read `./assets/template.md` for the full document structure, default content, and interview guidance comments
+- **Template**: Read `./assets/template.md` for the full document structure, default content, and interview guidance
+  comments
 
 ## Scope Clarification
 
-This skill defines the *rules of domain crafting*, not the domain model itself. The domain model evolves through features; this document defines the guardrails. It covers DDD tactical patterns only -- not strategic DDD (no context mapping, no microservice topology, no bounded context integration).
+This skill defines the *rules of domain crafting*, not the domain model itself. The domain model evolves through
+features; this document defines the guardrails. It covers DDD tactical patterns only -- not strategic DDD (no context
+mapping, no microservice topology, no bounded context integration).
 
 ## Before You Begin
 
@@ -27,10 +34,11 @@ Before starting the interview, check whether a custom document already exists:
 
 1. Read `.lattice/config.yaml` -- does `paths.ddd_principles` point to a file?
 2. If yes, read that file. Ask the user:
-   - "You already have a custom DDD principles document. Would you like to **revise** it (update specific sections), **start fresh** (new interview), or **add to it** (add new sections)?"
-   - Revise: Load the existing document, walk through only the sections the user wants to change, and update in place.
-   - Start fresh: Proceed with the full interview flow below.
-   - Add to it: Skip to the "New Sections" part of the interview.
+    - "You already have a custom DDD principles document. Would you like to **revise** it (update specific sections),
+      **start fresh** (new interview), or **add to it** (add new sections)?"
+    - Revise: Load the existing document, walk through only the sections the user wants to change, and update in place.
+    - Start fresh: Proceed with the full interview flow below.
+    - Add to it: Skip to the "New Sections" part of the interview.
 3. If no config or no existing document, proceed with the full interview flow.
 
 ### Scan the repository
@@ -44,7 +52,8 @@ Look for signals that inform the conversation:
 - **Event patterns**: Are domain events used? What naming convention?
 - **Architecture docs**: Any existing DDD documentation, ADRs, domain glossaries?
 
-Share relevant findings with the user at the start: "I noticed your project already has [X patterns]. I'll use that as context."
+Share relevant findings with the user at the start: "I noticed your project already has [X patterns]. I'll use that as
+context."
 
 If the project is new with no code, proceed with pure defaults as the starting point.
 
@@ -54,13 +63,18 @@ The first decision in the conversation. Present the three options:
 
 "How would you like to define your DDD principles?
 
-1. **Customize specific sections** (overlay) -- Keep the defaults and change only what differs for your project. This produces a slim document. Most teams choose this.
-2. **Define everything from scratch** (override) -- Walk through all sections and produce a comprehensive standalone document.
-3. **Add project-specific sections only** (overlay with additions) -- Keep all defaults as-is and add new sections for your team's specific rules (e.g., ubiquitous language glossary, bounded context boundaries).
+1. **Customize specific sections** (overlay) -- Keep the defaults and change only what differs for your project. This
+   produces a slim document. Most teams choose this.
+2. **Define everything from scratch** (override) -- Walk through all sections and produce a comprehensive standalone
+   document.
+3. **Add project-specific sections only** (overlay with additions) -- Keep all defaults as-is and add new sections for
+   your team's specific rules (e.g., ubiquitous language glossary, bounded context boundaries).
 
-The defaults cover standard DDD tactical patterns well. Option 1 is recommended unless your domain modeling approach is fundamentally different."
+The defaults cover standard DDD tactical patterns well. Option 1 is recommended unless your domain modeling approach is
+fundamentally different."
 
 Map the choice:
+
 - Options 1 and 3 → `mode: overlay`
 - Option 2 → `mode: override`
 
@@ -69,9 +83,12 @@ Map the choice:
 ### Conversation style
 
 - **One section at a time.** Do not dump all questions at once. Walk through the template sequentially.
-- **Defaults-first.** For each section, briefly summarize the default, then ask if it matches. Do not read the entire default verbatim -- summarize the key points and ask.
-- **Record decisions, not discussion.** The output document reads as a specification, not meeting notes. "We discussed X and decided Y" is wrong. "Y" is right.
-- **Probe, don't interrogate.** Use the probing questions in the template guidance comments as follow-ups when the user's answer is ambiguous, not as a checklist.
+- **Defaults-first.** For each section, briefly summarize the default, then ask if it matches. Do not read the entire
+  default verbatim -- summarize the key points and ask.
+- **Record decisions, not discussion.** The output document reads as a specification, not meeting notes. "We discussed X
+  and decided Y" is wrong. "Y" is right.
+- **Probe, don't interrogate.** Use the probing questions in the template guidance comments as follow-ups when the
+  user's answer is ambiguous, not as a checklist.
 
 ### For overlay mode
 
@@ -81,7 +98,8 @@ This should be fast. Many sections will be "keep as-is."
 2. Ask: "Does this match your project, or would you like to change it?"
 3. If the user says it matches → skip it (section will NOT appear in the output).
 4. If the user wants changes → dive into that section, discuss the specifics, record the changes.
-5. At the end, ask: "Any sections you'd like to add that aren't in the defaults?" (e.g., ubiquitous language glossary, bounded context scope).
+5. At the end, ask: "Any sections you'd like to add that aren't in the defaults?" (e.g., ubiquitous language glossary,
+   bounded context scope).
 6. Only sections the user changed or added appear in the output document.
 
 ### For override mode
@@ -94,31 +112,38 @@ This is thorough. Every section gets attention and appears in the output.
 
 ### Common scenarios
 
-- **"I agree with everything"** → No custom document needed. Tell the user: "The embedded defaults are already active and match your preferences. No custom document is needed -- the domain-driven-design atom will use the defaults automatically."
+- **"I agree with everything"** → No custom document needed. Tell the user: "The embedded defaults are already active
+  and match your preferences. No custom document is needed -- the domain-driven-design atom will use the defaults
+  automatically."
 - **"I agree except one section"** → Overlay mode, interview that one section only.
-- **"We have anemic entities and want to fix that"** → Overlay §2 (entity patterns, anemic anti-pattern is inline) + §9 (entity checks).
-- **"We don't use domain events yet"** → Overlay §5 (domain events) with simplified approach or removal note. Also check §1 (cross-aggregate coordination, anti-pattern is inline).
-- **"Our aggregates are too big"** → Overlay §1 (aggregate design, god aggregate anti-pattern is inline) + §8 (decomposition guide).
+- **"We have anemic entities and want to fix that"** → Overlay §2 (entity patterns, anemic anti-pattern is inline) + §9
+  (entity checks).
+- **"We don't use domain events yet"** → Overlay §5 (domain events) with simplified approach or removal note. Also check
+  §1 (cross-aggregate coordination, anti-pattern is inline).
+- **"Our aggregates are too big"** → Overlay §1 (aggregate design, god aggregate anti-pattern is inline) + §8
+  (decomposition guide).
 - **"We want to add a ubiquitous language glossary"** → Overlay with new §10 only.
 
 ## Section-by-Section Interview Guide
 
-Read `./assets/template.md` and follow the `<!-- INTERVIEW GUIDANCE: -->` comments for each section. Those comments contain the specific questions to ask, probing questions, and what is customizable vs fixed.
+Read `./assets/template.md` and follow the `<!-- INTERVIEW GUIDANCE: -->` comments for each section. Those comments
+contain the specific questions to ask, probing questions, and what is customizable vs fixed.
 
 ### Cross-section dependency table
 
 Decisions in early sections affect later sections. When a user changes an early section, flag the dependent sections:
 
-| Decision in | Affects | How |
-|-------------|---------|-----|
-| §1 — Aggregate boundaries | §6 (repositories), §5 (events), §8 (decomposition) | One repo per aggregate root; events for cross-aggregate coordination |
-| §1 — Sizing thresholds | §8 (decomposition triggers) | Custom thresholds change decomposition warning signals |
-| §2 — Entity identity strategy | §3 (typed ID value objects), §6 (repository signatures) | Typed IDs must be value objects; repository findById uses typed IDs |
-| §3 — Value object catalog | §2 (entity fields) | New value objects appear in entity definitions |
-| §5 — Event patterns | §1 (cross-aggregate coordination) | Events are the mechanism for cross-aggregate consistency |
-| §6 — Repository patterns | §1 (aggregate root identification) | Only roots get repositories |
+| Decision in                   | Affects                                                 | How                                                                  |
+|-------------------------------|---------------------------------------------------------|----------------------------------------------------------------------|
+| §1 — Aggregate boundaries     | §6 (repositories), §5 (events), §8 (decomposition)      | One repo per aggregate root; events for cross-aggregate coordination |
+| §1 — Sizing thresholds        | §8 (decomposition triggers)                             | Custom thresholds change decomposition warning signals               |
+| §2 — Entity identity strategy | §3 (typed ID value objects), §6 (repository signatures) | Typed IDs must be value objects; repository findById uses typed IDs  |
+| §3 — Value object catalog     | §2 (entity fields)                                      | New value objects appear in entity definitions                       |
+| §5 — Event patterns           | §1 (cross-aggregate coordination)                       | Events are the mechanism for cross-aggregate consistency             |
+| §6 — Repository patterns      | §1 (aggregate root identification)                      | Only roots get repositories                                          |
 
-When a dependency is triggered, inform the user: "Since you changed [X], we should also review [Y] -- it's affected by that decision."
+When a dependency is triggered, inform the user: "Since you changed [X], we should also review [Y] -- it's affected by
+that decision."
 
 ### Overlay-specific section flow
 
@@ -149,7 +174,8 @@ For each of the 9 sections:
 2. Overlay preamble text (from template)
 3. Table of contents listing only the included sections
 4. Only the sections the user changed or added
-5. Each section must be self-contained -- it is a complete replacement of that section in defaults. Do not write diffs or partial sections.
+5. Each section must be self-contained -- it is a complete replacement of that section in defaults. Do not write diffs
+   or partial sections.
 6. Section headings must match `defaults.md` exactly (the atom matches sections by heading)
 7. New sections (§10+) are included after the default sections
 8. Footer with project name, date, mode
@@ -167,14 +193,17 @@ For each of the 9 sections:
 Strip all `<!-- INTERVIEW GUIDANCE: -->` comments from the output. The final document is a clean specification.
 
 **Determine output path:**
+
 1. If `.lattice/config.yaml` exists and has `paths.ddd_principles`, use that path.
 2. Otherwise, default to `.lattice/standards/ddd-principles.md`.
 
 **Write the document:**
+
 1. Create `.lattice/standards/` directory (and `.lattice/` parent) if it does not exist.
 2. Write the document to the determined path.
 
 **Update config:**
+
 1. If `.lattice/config.yaml` does not exist, create it with:
    ```yaml
    paths:
@@ -184,7 +213,8 @@ Strip all `<!-- INTERVIEW GUIDANCE: -->` comments from the output. The final doc
 3. If `.lattice/config.yaml` exists and already has the key, no config change needed.
 
 **Confirm to user:**
-"Your DDD principles document has been written to `[PATH]` in **[overlay|override]** mode. The domain-driven-design atom will now use it [on top of the defaults | instead of the defaults]."
+"Your DDD principles document has been written to `[PATH]` in **[overlay|override]** mode. The domain-driven-design atom
+will now use it [on top of the defaults | instead of the defaults]."
 
 ## Document Quality Checks
 

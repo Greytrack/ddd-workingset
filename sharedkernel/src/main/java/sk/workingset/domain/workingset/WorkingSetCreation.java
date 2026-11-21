@@ -55,6 +55,19 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         return numericId.toString();
     }
 
+    public Instant baselineAt(String trackerId) {
+        return request.baselineOverrides().getOrDefault(Long.valueOf(trackerId), createdAt);
+    }
+
+    @JsonProperty(value = "baselineAtByTracker", access = JsonProperty.Access.READ_ONLY)
+    public Map<Long, Instant> baselineAtByTracker() {
+        Map<Long, Instant> resolved = new TreeMap<>();
+        for (Long trackerId : request.selectedTrackerIds()) {
+            resolved.put(trackerId, request.baselineOverrides().getOrDefault(trackerId, createdAt));
+        }
+        return resolved;
+    }
+
     public WorkingSetCreation start(Instant now) {
         if (status != Status.Pending) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Only a pending creation can start");
@@ -174,7 +187,17 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                           @JsonProperty("productSpaceIds") List<Long> numericProductSpaceIds,
                           @JsonProperty("sharedTrackerIds") List<Long> numericSharedTrackerIds,
                           @JsonProperty("unsharedParentTrackerIds") List<Long> numericUnsharedTrackerIds,
-                          String name, Mode mode, String color) {
+                          String name, Mode mode, String color, Map<Long, Instant> baselineOverrides,
+                          List<Long> automaticTrackerIds, List<Long> submittedExtensionTrackerIds) {
+        public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
+                       List<String> productSpaceIds, List<String> sharedTrackerIds,
+                       List<String> unsharedParentTrackerIds, String name, Mode mode, String color,
+                       Map<Long, Instant> baselineOverrides) {
+            this(WorkingSetId.of(parentWorkingSetId).numericValue(), WorkingSetId.of(newWorkingSetId).numericValue(),
+                    requestId, parseIds(productSpaceIds), parseIds(sharedTrackerIds),
+                    parseIds(unsharedParentTrackerIds), name, mode, color, baselineOverrides, List.of(), List.of());
+        }
+
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds, String name, Mode mode) {
@@ -185,9 +208,8 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds, String name, Mode mode, String color) {
-            this(WorkingSetId.of(parentWorkingSetId).numericValue(), WorkingSetId.of(newWorkingSetId).numericValue(),
-                    requestId, parseIds(productSpaceIds), parseIds(sharedTrackerIds),
-                    parseIds(unsharedParentTrackerIds), name, mode, color);
+            this(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds, sharedTrackerIds,
+                    unsharedParentTrackerIds, name, mode, color, Map.of());
         }
 
         public Request(String parentWorkingSetId, String newWorkingSetId, String requestId,
@@ -211,6 +233,9 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
             numericProductSpaceIds = normalize(numericProductSpaceIds);
             numericSharedTrackerIds = normalize(numericSharedTrackerIds);
             numericUnsharedTrackerIds = normalize(numericUnsharedTrackerIds);
+            automaticTrackerIds = normalize(automaticTrackerIds);
+            submittedExtensionTrackerIds = normalize(submittedExtensionTrackerIds);
+            baselineOverrides = baselineOverrides == null ? Map.of() : Map.copyOf(baselineOverrides);
             name = WorkingSet.normalizeName(name);
             Objects.requireNonNull(mode, "mode");
             color = mode == Mode.CREATE ? WorkingSet.normalizeColor(color) : null;
@@ -236,6 +261,12 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
             if (id == null || id.isBlank() || id.length() > 128 || id.indexOf(0) >= 0) {
                 throw new DomainException(WorkingsetResultCode.BAD_REQUEST, field + " must contain 1 to 128 characters");
             }
+        }
+
+        public Set<Long> selectedTrackerIds() {
+            Set<Long> selected = new TreeSet<>(numericSharedTrackerIds);
+            selected.addAll(numericUnsharedTrackerIds);
+            return selected;
         }
 
         public String parentWorkingSetId() {

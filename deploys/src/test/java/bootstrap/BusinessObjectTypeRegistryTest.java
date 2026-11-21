@@ -24,18 +24,40 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** 业务对象类型路由：tracker_class/classificationId 精确匹配、组织类型与未知类型失败语义。 */
+/**
+ * 业务对象类型路由：tracker_class/classificationId 精确匹配、组织类型与未知类型失败语义。
+ */
 class BusinessObjectTypeRegistryTest {
 
     private static final TrackerId TRACKER = TrackerId.of(1L);
+
+    private static DefaultBusinessObjectTypeRegistry registry(BusinessObjectTypeAdapter adapter, Tracker tracker,
+                                                              LightTrackerItemQueryProvider items) {
+        TrackerRepository trackers = mock(TrackerRepository.class);
+        when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
+        return new DefaultBusinessObjectTypeRegistry(List.of(adapter), trackers, items);
+    }
+
+    private static Tracker tracker(long classificationId, long baseClassId, long classId) {
+        return Tracker.reconstitute(TRACKER, TRACKER, "tracker", null, WorkingSetId.of("1"), 10L,
+                classificationId, baseClassId, classId, SharingMode.UNSHARED, null, false);
+    }
+
+    private static BusinessObjectTypeAdapter requirementAdapter() {
+        BusinessObjectTypeAdapter adapter = mock(BusinessObjectTypeAdapter.class);
+        when(adapter.types()).thenReturn(Set.of(new BusinessObjectType(14010101L)));
+        when(adapter.capabilities()).thenReturn(new Capabilities(true, true));
+        when(adapter.sourceLock()).thenReturn(mock(TrackerItemSourceLock.class));
+        TrackerItemCatalogQueryProvider catalog = mock(TrackerItemCatalogQueryProvider.class);
+        when(catalog.hasAnyItem(any())).thenReturn(true);
+        when(adapter.catalog()).thenReturn(catalog);
+        return adapter;
+    }
 
     @Test
     void routesByTrackerClassification() {
@@ -76,28 +98,5 @@ class BusinessObjectTypeRegistryTest {
         assertThrows(IllegalStateException.class,
                 () -> new DefaultBusinessObjectTypeRegistry(List.of(first, second), mock(TrackerRepository.class),
                         mock(LightTrackerItemQueryProvider.class)));
-    }
-
-    private static DefaultBusinessObjectTypeRegistry registry(BusinessObjectTypeAdapter adapter, Tracker tracker,
-                                                              LightTrackerItemQueryProvider items) {
-        TrackerRepository trackers = mock(TrackerRepository.class);
-        when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
-        return new DefaultBusinessObjectTypeRegistry(List.of(adapter), trackers, items);
-    }
-
-    private static Tracker tracker(long classificationId, long baseClassId, long classId) {
-        return Tracker.reconstitute(TRACKER, TRACKER, "tracker", null, WorkingSetId.of("1"), 10L,
-                classificationId, baseClassId, classId, SharingMode.UNSHARED, null, false);
-    }
-
-    private static BusinessObjectTypeAdapter requirementAdapter() {
-        BusinessObjectTypeAdapter adapter = mock(BusinessObjectTypeAdapter.class);
-        when(adapter.types()).thenReturn(Set.of(new BusinessObjectType(14010101L)));
-        when(adapter.capabilities()).thenReturn(new Capabilities(true, true));
-        when(adapter.sourceLock()).thenReturn(mock(TrackerItemSourceLock.class));
-        TrackerItemCatalogQueryProvider catalog = mock(TrackerItemCatalogQueryProvider.class);
-        when(catalog.hasAnyItem(any())).thenReturn(true);
-        when(adapter.catalog()).thenReturn(catalog);
-        return adapter;
     }
 }

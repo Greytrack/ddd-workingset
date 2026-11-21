@@ -2,6 +2,7 @@ package sk.workingset.domain.workingset;
 
 import org.jmolecules.ddd.annotation.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -9,6 +10,11 @@ import java.util.Optional;
  */
 @Repository
 public interface WorkingSetCreationRepository {
+    /**
+     * Time used for HEAD, on the same clock as Item creation timestamps.
+     */
+    Instant acceptanceTime();
+
     /**
      * 保存整个任务；新任务若未取得幂等或活跃任务席位则返回 false。
      */

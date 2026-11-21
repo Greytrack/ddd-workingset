@@ -54,6 +54,7 @@ public class WorkingSetCreationController {
                                WorkingSetCreation.Stage stage,
                                WorkingSetCreation.Progress progress, List<WorkingSetCreation.Failure> failures,
                                Instant createdAt, Instant startedAt, Instant completedAt,
+                               Map<Long, Instant> baselineAtByTracker,
                                Map<WorkingSetCreation.Stage, WorkingSetCreation.Progress> stageProgress,
                                Map<String, IndexCounts> indexProgress) {
         static CreationView from(WorkingSetCreation creation) {
@@ -61,6 +62,7 @@ public class WorkingSetCreationController {
                     creation.request().mode().name(), creation.status(), creation.stage(),
                     creation.progress(),
                     creation.failures(), creation.createdAt(), creation.startedAt(), creation.completedAt(),
+                    creation.baselineAtByTracker(),
                     creation.stageProgress(), creation.indexProgress().entrySet().stream().collect(
                     Collectors.toUnmodifiableMap(Map.Entry::getKey,
                             entry -> IndexCounts.from(entry.getValue()))));

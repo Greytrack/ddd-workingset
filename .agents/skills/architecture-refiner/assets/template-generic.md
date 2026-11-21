@@ -1,8 +1,11 @@
 # Architecture Refiner Template (Generic)
 
-This template defines the structure of the `.lattice/standards/architecture.md` output document for non-clean-architecture styles (hexagonal, modular monolith, custom, etc.). Used when `architecture_mode: custom` is set. It contains interview guidance comments that are stripped from the final output.
+This template defines the structure of the `.lattice/standards/architecture.md` output document for
+non-clean-architecture styles (hexagonal, modular monolith, custom, etc.). Used when `architecture_mode: custom` is set.
+It contains interview guidance comments that are stripped from the final output.
 
-When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not a conversation log.
+When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not
+a conversation log.
 
 ---
 
@@ -27,7 +30,8 @@ mode: override
 Include the preamble with the selected architecture style name.
 -->
 
-> These are the architecture principles for [PROJECT NAME], following a [STYLE NAME] architecture. This document is the sole reference for the `architecture` atom — there are no embedded defaults.
+> These are the architecture principles for [PROJECT NAME], following a [STYLE NAME] architecture. This document is the
+> sole reference for the `architecture` atom — there are no embedded defaults.
 
 **Table of contents:**
 
@@ -70,9 +74,9 @@ Probing questions:
 Record: a table with Layer Name, Responsibility, and typical directory mapping.
 -->
 
-| Layer | Responsibility | Typical Directory |
-|-------|---------------|-------------------|
-| (fill per interview) | | |
+| Layer                | Responsibility | Typical Directory |
+|----------------------|----------------|-------------------|
+| (fill per interview) |                |                   |
 
 ### Directory Mapping
 
@@ -158,23 +162,29 @@ This section is critical — it provides the enforcement detail the atom needs.
 ### (Layer 1 Name)
 
 **What belongs here:**
+
 - (fill per interview)
 
 **What does not belong here:**
+
 - (fill per interview)
 
 **Common violations:**
+
 - (fill per interview)
 
 ### (Layer 2 Name)
 
 **What belongs here:**
+
 - (fill per interview)
 
 **What does not belong here:**
+
 - (fill per interview)
 
 **Common violations:**
+
 - (fill per interview)
 
 <!-- INTERVIEW GUIDANCE:

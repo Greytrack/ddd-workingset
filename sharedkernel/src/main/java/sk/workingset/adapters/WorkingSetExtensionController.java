@@ -7,7 +7,9 @@ import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * T7-G：对已有子工作集批量纳入直接父 Tracker；任务复用 working-set-creations 轮询。
@@ -35,12 +37,12 @@ public class WorkingSetExtensionController {
             throw new IllegalArgumentException("requestId must be at most " + MAX_REQUEST_ID + " characters");
         }
         WorkingSetCreation creation = creations.submitExtension(WorkingSetId.of(target), request.requestId(),
-                request.trackerIds() == null ? List.of() : request.trackerIds());
+                request.trackerIds(), request.baselineAtByTracker());
         return ResponseEntity.accepted()
                 .location(URI.create("/api/working-set-creations/" + creation.id()))
                 .body(WorkingSetCreationController.CreationView.from(creation));
     }
 
-    public record ExtensionRequest(String requestId, List<String> trackerIds) {
+    public record ExtensionRequest(String requestId, List<String> trackerIds, Map<Long, Instant> baselineAtByTracker) {
     }
 }

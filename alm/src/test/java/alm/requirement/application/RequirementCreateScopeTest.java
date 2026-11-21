@@ -28,7 +28,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** T6-C：创建时的身份分配与工作集归属。 */
+/**
+ * T6-C：创建时的身份分配与工作集归属。
+ */
 class RequirementCreateScopeTest {
 
     private static final TrackerId TRACKER = TrackerId.of("265625955250112");

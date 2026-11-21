@@ -12,12 +12,6 @@ import java.util.*;
 
 @Component
 public class JdbcCommonInstanceStore {
-    private static final String COLUMNS = """
-            id, base_class, class, type, work_space, number, name, status, version, revision, delete_flag, lock_version,
-            created_by, created_time, updated_by, updated_time, checked_out, owner, common_id, workingset_id, parent_id,
-            tracker, max_revision
-            """;
-
     public static final RowMapper<AirInstCommonPo> ROW_MAPPER = (rs, row) -> new AirInstCommonPo(
             rs.getObject("id", Long.class), rs.getObject("base_class", Long.class),
             rs.getObject("class", Long.class), rs.getObject("type", Long.class),
@@ -30,7 +24,11 @@ public class JdbcCommonInstanceStore {
             rs.getObject("common_id", Long.class), rs.getObject("workingset_id", Long.class),
             rs.getObject("parent_id", Long.class), rs.getObject("tracker", Long.class),
             rs.getObject("max_revision", Long.class));
-
+    private static final String COLUMNS = """
+            id, base_class, class, type, work_space, number, name, status, version, revision, delete_flag, lock_version,
+            created_by, created_time, updated_by, updated_time, checked_out, owner, common_id, workingset_id, parent_id,
+            tracker, max_revision
+            """;
     private static final String SAVE = "INSERT INTO air_inst_common AS saved (" + COLUMNS + """
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET

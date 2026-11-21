@@ -10,6 +10,8 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -27,13 +29,15 @@ public class RequirementTrackerItemCatalogQueryProvider implements TrackerItemCa
                 "SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ?)",
                 Boolean.class, trackerId.numericValue()));
     }
+
     @Override
-    public List<Identity> page(TrackerId trackerId, String afterLocalId, int limit) {
+    public List<Identity> page(TrackerId trackerId, Instant baselineAt, String afterLocalId, int limit) {
         return jdbc.query("""
-                SELECT local_id, common_id, revision FROM requirements
-                WHERE tracker_id = ? AND NOT delete_flag AND local_id > ?
-                ORDER BY local_id LIMIT ?
-                """, IDENTITY, trackerId.numericValue(), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
+                        SELECT local_id, common_id, revision FROM requirements
+                        WHERE tracker_id = ? AND NOT delete_flag AND created_at <= ? AND local_id > ?
+                        ORDER BY local_id LIMIT ?
+                        """, IDENTITY, trackerId.numericValue(), Timestamp.from(baselineAt),
+                afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 
     @Override
@@ -59,5 +63,13 @@ public class RequirementTrackerItemCatalogQueryProvider implements TrackerItemCa
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM requirements WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag)
                 """, Boolean.class, trackerId.numericValue(), commonId.numericValue()));
+    }
+
+    @Override
+    public boolean hasActiveFamily(TrackerId trackerId, CommonId commonId, Instant baselineAt) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM requirements
+                    WHERE tracker_id = ? AND common_id = ? AND NOT delete_flag AND created_at <= ?)
+                """, Boolean.class, trackerId.numericValue(), commonId.numericValue(), Timestamp.from(baselineAt)));
     }
 }

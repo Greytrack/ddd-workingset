@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 
-/** Requirement MyBatis-Plus 查询适配器；只读。 */
+/**
+ * Requirement MyBatis-Plus 查询适配器；只读。
+ */
 @Component
 @RequiredArgsConstructor
 public class RequirementQueryProviderImpl implements RequirementQueryProvider {

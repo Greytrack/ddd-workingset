@@ -30,58 +30,39 @@ import java.util.Objects;
  */
 public final class JdbcSoftDelete {
 
-    /** 软删除列模型声明：列名 / 标志值由调用方统一声明，构造期校验。 */
-    public record Columns(String flagColumn, String timeColumn, int aliveValue, int deletedValue) {
-
-        // JDBC 参数不能绑定列名，标识符只接受受限格式，拒绝 SQL 片段。
-        private static final String IDENTIFIER_PATTERN = "[A-Za-z][A-Za-z0-9_]*";
-
-        public Columns {
-            identifier(flagColumn, "flagColumn");
-            identifier(timeColumn, "timeColumn");
-        }
-
-        private static void identifier(String name, String field) {
-            if (name == null || !name.matches(IDENTIFIER_PATTERN)) {
-                throw new IllegalArgumentException("软删除列名非法（应为标识符）: " + field + " = " + name);
-            }
-        }
-    }
-
     private final Columns columns;
 
     /**
      * 以声明的列模型构造软删语句工具。
      *
-     * @param columns
-     *            删除标志列 / 时间列 / 存活与已删标志值声明；列名构造期校验，非法即拒绝
+     * @param columns 删除标志列 / 时间列 / 存活与已删标志值声明；列名构造期校验，非法即拒绝
      */
     public JdbcSoftDelete(Columns columns) {
         this.columns = Objects.requireNonNull(columns, "列模型声明不能为空");
     }
 
-    /** 「未删除」行过滤条件（可带表别名）：{@code (t.delete_flag = 0)}。 */
-    public String aliveCondition(String tableAlias) {
-        return "(" + (tableAlias == null || tableAlias.isBlank() ? "" : tableAlias.trim() + ".") + columns.flagColumn()
-                + " = " + columns.aliveValue() + ")";
-    }
-
-    /** 当前 UTC 毫秒时刻（时间列通用取值：建行审计初值与软删 / 恢复同源；已删行的该值即删除时刻）。 */
+    /**
+     * 当前 UTC 毫秒时刻（时间列通用取值：建行审计初值与软删 / 恢复同源；已删行的该值即删除时刻）。
+     */
     public static long nowMillis() {
         return System.currentTimeMillis();
     }
 
     /**
+     * 「未删除」行过滤条件（可带表别名）：{@code (t.delete_flag = 0)}。
+     */
+    public String aliveCondition(String tableAlias) {
+        return "(" + (tableAlias == null || tableAlias.isBlank() ? "" : tableAlias.trim() + ".") + columns.flagColumn()
+                + " = " + columns.aliveValue() + ")";
+    }
+
+    /**
      * 软删除单条：置标志 + 刷新时间列 + 存活行守卫。返回受影响行数（0 = 不存在或已删除——DELETE 幂等 204 语义，调用方无需报错）。
      *
-     * @param jdbcTemplate
-     *            与调用方事务同源的数据源模板
-     * @param table
-     *            目标表名
-     * @param pkColumn
-     *            主键列名
-     * @param id
-     *            聚合身份
+     * @param jdbcTemplate 与调用方事务同源的数据源模板
+     * @param table        目标表名
+     * @param pkColumn     主键列名
+     * @param id           聚合身份
      */
     public int softDeleteById(JdbcTemplate jdbcTemplate, String table, String pkColumn, Object id) {
         String sql = "UPDATE " + table + " SET " + columns.flagColumn() + " = ?, " + columns.timeColumn()
@@ -93,13 +74,11 @@ public final class JdbcSoftDelete {
      * 软删除单条（可带乐观版本谓词）：{@code versionColumn} 与 {@code expectedVersion} 均非空时谓词追加 {@code AND version = ?}——版本比对与标志改写在单条
      * UPDATE 内原子完成，无先读后判（check-then-act）竞争窗口。 返回受影响行数（0 = 不存在 / 已删除 / 版本不符，语义归类由调用方完成）。
      *
-     * @param versionColumn
-     *            乐观版本列名；空则退化为无条件软删
-     * @param expectedVersion
-     *            期望版本；null 或版本列为空时谓词不生效
+     * @param versionColumn   乐观版本列名；空则退化为无条件软删
+     * @param expectedVersion 期望版本；null 或版本列为空时谓词不生效
      */
     public int softDeleteById(JdbcTemplate jdbcTemplate, String table, String pkColumn, Object id, String versionColumn,
-            Long expectedVersion) {
+                              Long expectedVersion) {
         String sql = "UPDATE " + table + " SET " + columns.flagColumn() + " = ?, " + columns.timeColumn()
                 + " = ? WHERE " + pkColumn + " = ? AND " + columns.flagColumn() + " = " + columns.aliveValue();
         if (expectedVersion != null && versionColumn != null && !versionColumn.isBlank()) {
@@ -112,8 +91,7 @@ public final class JdbcSoftDelete {
     /**
      * 批量软删除：按主键升序逐条执行（加锁次序确定，防多行更新死锁）；返回受影响总行数。
      *
-     * @param ids
-     *            主键集合；空集合不执行任何语句
+     * @param ids 主键集合；空集合不执行任何语句
      */
     public int softDeleteByIds(JdbcTemplate jdbcTemplate, String table, String pkColumn, List<?> ids) {
         if (ids == null || ids.isEmpty()) {
@@ -157,6 +135,26 @@ public final class JdbcSoftDelete {
                     + pkColumn + " = ? AND " + columns.flagColumn() + " = " + columns.deletedValue(), Long.class, id);
         } catch (EmptyResultDataAccessException e) {
             return null;
+        }
+    }
+
+    /**
+     * 软删除列模型声明：列名 / 标志值由调用方统一声明，构造期校验。
+     */
+    public record Columns(String flagColumn, String timeColumn, int aliveValue, int deletedValue) {
+
+        // JDBC 参数不能绑定列名，标识符只接受受限格式，拒绝 SQL 片段。
+        private static final String IDENTIFIER_PATTERN = "[A-Za-z][A-Za-z0-9_]*";
+
+        public Columns {
+            identifier(flagColumn, "flagColumn");
+            identifier(timeColumn, "timeColumn");
+        }
+
+        private static void identifier(String name, String field) {
+            if (name == null || !name.matches(IDENTIFIER_PATTERN)) {
+                throw new IllegalArgumentException("软删除列名非法（应为标识符）: " + field + " = " + name);
+            }
         }
     }
 }

@@ -1,8 +1,10 @@
 # Clean Code Refiner Template
 
-This template defines the structure of the `.lattice/standards/clean-code.md` output document. It contains all default content from the clean-code atom's `defaults.md`, interleaved with interview guidance comments.
+This template defines the structure of the `.lattice/standards/clean-code.md` output document. It contains all default
+content from the clean-code atom's `defaults.md`, interleaved with interview guidance comments.
 
-When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not a conversation log.
+When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not
+a conversation log.
 
 ---
 
@@ -39,13 +41,16 @@ Include the preamble matching the chosen mode. Only one preamble appears in the 
 
 **Overlay preamble:**
 
-> This document overlays project-specific customizations on top of the clean-code atom's embedded defaults. Only sections included here differ from the defaults -- all other sections remain as-is.
+> This document overlays project-specific customizations on top of the clean-code atom's embedded defaults. Only
+> sections included here differ from the defaults -- all other sections remain as-is.
 >
-> Sections below replace matching sections in the defaults (matched by heading). New sections are appended after defaults.
+> Sections below replace matching sections in the defaults (matched by heading). New sections are appended after
+> defaults.
 
 **Override preamble:**
 
-> These are the clean code principles for [PROJECT NAME]. They fully replace the embedded defaults in the clean-code atom.
+> These are the clean code principles for [PROJECT NAME]. They fully replace the embedded defaults in the clean-code
+> atom.
 
 **Table of contents** (for override mode; overlay mode only lists included sections):
 
@@ -80,7 +85,8 @@ Cross-section impact: If the team is purely functional (no classes), this affect
 
 A function should do one thing. A class should have one axis of cohesion -- one reason to change.
 
-**The "and" test**: describe the function's purpose in one sentence. If you need the word "and," the function does more than one thing.
+**The "and" test**: describe the function's purpose in one sentence. If you need the word "and," the function does more
+than one thing.
 
 ```
 // POOR: This function validates, transforms, AND persists
@@ -111,7 +117,8 @@ function createOrder(input):
   return { items, total }
 ```
 
-**Cohesion in classes**: a class is cohesive when most methods use most instance variables. When a subset of methods only touches a subset of fields, that subset likely belongs in its own class.
+**Cohesion in classes**: a class is cohesive when most methods use most instance variables. When a subset of methods
+only touches a subset of fields, that subset likely belongs in its own class.
 
 ---
 
@@ -133,13 +140,14 @@ Cross-section impact: Shorter function limits imply lower complexity budgets (§
 
 ### Thresholds
 
-| Metric | Guideline | Rationale |
-|--------|-----------|-----------|
-| **Lines per function** | Under ~20 | A function visible in one screen without scrolling is easier to reason about |
+| Metric                    | Guideline        | Rationale                                                                                 |
+|---------------------------|------------------|-------------------------------------------------------------------------------------------|
+| **Lines per function**    | Under ~20        | A function visible in one screen without scrolling is easier to reason about              |
 | **Levels of abstraction** | One per function | Mixing high-level orchestration with low-level detail forces the reader to context-switch |
-| **Indentation depth** | Max 2 levels | Each nesting level adds a condition the reader must mentally track |
+| **Indentation depth**     | Max 2 levels     | Each nesting level adds a condition the reader must mentally track                        |
 
-These are signals, not hard rules. A 25-line function with one clear purpose is better than five 5-line functions that obscure the flow. The goal is readability, not line counting.
+These are signals, not hard rules. A 25-line function with one clear purpose is better than five 5-line functions that
+obscure the flow. The goal is readability, not line counting.
 
 ### Extraction Pattern
 
@@ -185,12 +193,12 @@ Cross-section impact: Lower complexity limits may require stricter function size
 
 ### Thresholds
 
-| Complexity | Assessment | Action |
-|-----------|------------|--------|
-| **1-5** | Simple, easy to test | No action needed |
-| **6-10** | Moderate, still manageable | Consider extraction if readability suffers |
-| **11-20** | High, difficult to test thoroughly | Extract sub-decisions into named functions |
-| **21+** | Very high, likely doing multiple things | Decompose aggressively; this function has multiple responsibilities |
+| Complexity | Assessment                              | Action                                                              |
+|------------|-----------------------------------------|---------------------------------------------------------------------|
+| **1-5**    | Simple, easy to test                    | No action needed                                                    |
+| **6-10**   | Moderate, still manageable              | Consider extraction if readability suffers                          |
+| **11-20**  | High, difficult to test thoroughly      | Extract sub-decisions into named functions                          |
+| **21+**    | Very high, likely doing multiple things | Decompose aggressively; this function has multiple responsibilities |
 
 ### Flattening Techniques
 
@@ -271,28 +279,32 @@ Fixed: The principle that names should reveal intent.
 
 ### Naming Patterns
 
-| Category | Convention | Good Examples | Poor Examples |
-|----------|-----------|---------------|---------------|
-| **Boolean variables** | `is`, `has`, `can`, `should` prefix | `isActive`, `hasPermission`, `canRetry` | `active`, `permission`, `retry` |
-| **Boolean functions** | Same prefixes as boolean variables | `isExpired(token)`, `hasAccess(user, resource)` | `checkExpiry(token)`, `access(user, resource)` |
-| **Functions (actions)** | Verb-first | `calculateTotal`, `sendNotification`, `validateInput` | `totalCalculation`, `notification`, `inputCheck` |
-| **Functions (accessors)** | `get`, `find`, `fetch` prefix | `getUser`, `findByEmail`, `fetchLatestOrders` | `user()`, `email()`, `orders()` |
-| **Classes** | Noun or noun phrase | `OrderValidator`, `PaymentProcessor`, `UserRepository` | `ValidateOrder`, `ProcessPayment`, `HandleUser` |
-| **Constants** | UPPER_SNAKE_CASE or descriptive name | `MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE` | `MRC`, `n`, `val` |
-| **Collections** | Plural noun | `activeUsers`, `pendingOrders`, `validTokens` | `list`, `data`, `items` (when domain context exists) |
-| **Maps/dictionaries** | `xByY` pattern | `userById`, `priceByProductId` | `map`, `lookup`, `dict` |
+| Category                  | Convention                           | Good Examples                                          | Poor Examples                                        |
+|---------------------------|--------------------------------------|--------------------------------------------------------|------------------------------------------------------|
+| **Boolean variables**     | `is`, `has`, `can`, `should` prefix  | `isActive`, `hasPermission`, `canRetry`                | `active`, `permission`, `retry`                      |
+| **Boolean functions**     | Same prefixes as boolean variables   | `isExpired(token)`, `hasAccess(user, resource)`        | `checkExpiry(token)`, `access(user, resource)`       |
+| **Functions (actions)**   | Verb-first                           | `calculateTotal`, `sendNotification`, `validateInput`  | `totalCalculation`, `notification`, `inputCheck`     |
+| **Functions (accessors)** | `get`, `find`, `fetch` prefix        | `getUser`, `findByEmail`, `fetchLatestOrders`          | `user()`, `email()`, `orders()`                      |
+| **Classes**               | Noun or noun phrase                  | `OrderValidator`, `PaymentProcessor`, `UserRepository` | `ValidateOrder`, `ProcessPayment`, `HandleUser`      |
+| **Constants**             | UPPER_SNAKE_CASE or descriptive name | `MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE`                 | `MRC`, `n`, `val`                                    |
+| **Collections**           | Plural noun                          | `activeUsers`, `pendingOrders`, `validTokens`          | `list`, `data`, `items` (when domain context exists) |
+| **Maps/dictionaries**     | `xByY` pattern                       | `userById`, `priceByProductId`                         | `map`, `lookup`, `dict`                              |
 
 ### Names to Avoid
 
 - **Single letters** beyond loop counters (`i`, `j`, `k` in loops are fine; `d`, `x`, `t` in business logic are not)
-- **Abbreviations** that require project knowledge (`usr`, `txn`, `mgr`, `ctx` -- unless the abbreviation is industry-standard like `HTTP`, `URL`, `ID`)
-- **Generic names** that carry no information (`data`, `info`, `temp`, `result`, `value`, `item` -- unless scope is two or three lines)
+- **Abbreviations** that require project knowledge (`usr`, `txn`, `mgr`, `ctx` -- unless the abbreviation is
+  industry-standard like `HTTP`, `URL`, `ID`)
+- **Generic names** that carry no information (`data`, `info`, `temp`, `result`, `value`, `item` -- unless scope is two
+  or three lines)
 - **Type-encoded names** (`strName`, `intCount`, `arrItems` -- the type system handles this)
 - **Negated booleans** (`isNotActive`, `hasNoPermission` -- use the positive form and negate at the call site)
 
 ### Scope-Length Rule
 
-Name length should be proportional to scope. A loop variable with a two-line body can be `i`. A module-level constant used across functions should be `MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT`. The wider the scope, the more context the name must carry on its own.
+Name length should be proportional to scope. A loop variable with a two-line body can be `i`. A module-level constant
+used across functions should be `MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT`. The wider the scope, the more context the name must
+carry on its own.
 
 ---
 
@@ -315,12 +327,12 @@ Cross-section impact: If the team is purely functional (from §1), parameter des
 
 ### Thresholds
 
-| Parameter Count | Assessment | Action |
-|----------------|------------|--------|
-| **0-2** | Ideal | No grouping needed |
-| **3** | Acceptable | Consider grouping if parameters are related |
-| **4** | Boundary | Group related parameters into an object |
-| **5+** | Excessive | Always group; the function may also be doing too much |
+| Parameter Count | Assessment | Action                                                |
+|-----------------|------------|-------------------------------------------------------|
+| **0-2**         | Ideal      | No grouping needed                                    |
+| **3**           | Acceptable | Consider grouping if parameters are related           |
+| **4**           | Boundary   | Group related parameters into an object               |
+| **5+**          | Excessive  | Always group; the function may also be doing too much |
 
 ### Grouping Patterns
 
@@ -343,7 +355,8 @@ class SearchOptions:
 
 ### Boolean Parameter Smell
 
-A boolean parameter often means the function does two things -- one when true, one when false. Consider splitting into two functions with descriptive names:
+A boolean parameter often means the function does two things -- one when true, one when false. Consider splitting into
+two functions with descriptive names:
 
 ```
 // POOR: What does `true` mean at the call site?
@@ -354,7 +367,8 @@ renderUserCompact(user)
 renderUserDetailed(user)
 ```
 
-When the boolean genuinely represents an option (not a behavioral fork), an options object makes the call site self-documenting:
+When the boolean genuinely represents an option (not a behavioral fork), an options object makes the call site
+self-documenting:
 
 ```
 // Acceptable: boolean as a named option
@@ -381,12 +395,15 @@ Fixed: The principle that premature abstraction couples unrelated concerns.
 ### The Rule of Three
 
 1. **First occurrence**: Write the code inline. No abstraction.
-2. **Second occurrence**: Note the duplication. Tolerate it. The two instances may serve different purposes and diverge later.
-3. **Third occurrence with same reason to change**: Now extract. You have enough evidence that this is a genuine pattern, not coincidence.
+2. **Second occurrence**: Note the duplication. Tolerate it. The two instances may serve different purposes and diverge
+   later.
+3. **Third occurrence with same reason to change**: Now extract. You have enough evidence that this is a genuine
+   pattern, not coincidence.
 
 ### Same Reason to Change
 
-Two blocks of code that look identical but serve different business purposes are **not** true duplication. They will diverge when their respective requirements change.
+Two blocks of code that look identical but serve different business purposes are **not** true duplication. They will
+diverge when their respective requirements change.
 
 ```
 // These look identical but should NOT be unified:
@@ -433,14 +450,14 @@ Fixed: The principle that comments explaining "what" are a code smell indicating
 
 ### Comment Decision Framework
 
-| Situation | Action |
-|-----------|--------|
-| Code is unclear and a comment would help explain **what** it does | Refactor the code to be self-documenting (rename, extract, simplify) |
-| Non-obvious **why** -- business rule, legal requirement, workaround | Write a comment explaining why |
-| Performance optimization that makes code less readable | Comment explaining the trade-off and what the "obvious" approach would be |
-| TODO or known limitation | Comment with `TODO:` prefix and brief context |
-| API documentation for public interfaces | Use doc comments / docstrings with parameter descriptions |
-| Regex or complex algorithm | Comment explaining intent; regex especially benefits from a plain-English description |
+| Situation                                                           | Action                                                                                |
+|---------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| Code is unclear and a comment would help explain **what** it does   | Refactor the code to be self-documenting (rename, extract, simplify)                  |
+| Non-obvious **why** -- business rule, legal requirement, workaround | Write a comment explaining why                                                        |
+| Performance optimization that makes code less readable              | Comment explaining the trade-off and what the "obvious" approach would be             |
+| TODO or known limitation                                            | Comment with `TODO:` prefix and brief context                                         |
+| API documentation for public interfaces                             | Use doc comments / docstrings with parameter descriptions                             |
+| Regex or complex algorithm                                          | Comment explaining intent; regex especially benefits from a plain-English description |
 
 ### Examples
 
@@ -491,12 +508,12 @@ Cross-section impact: If the team uses Result types instead of exceptions (§8),
 
 ### Core Principles
 
-| Principle | Rationale |
-|-----------|-----------|
-| **Fail fast** | Validate at the boundary; reject bad data before it propagates through layers |
-| **Be explicit** | Every operation that can fail should have visible error handling |
-| **Be actionable** | Error messages should tell the caller what went wrong and what to do about it |
-| **Handle at the right level** | Not too early (losing context), not too late (losing ability to recover) |
+| Principle                          | Rationale                                                                               |
+|------------------------------------|-----------------------------------------------------------------------------------------|
+| **Fail fast**                      | Validate at the boundary; reject bad data before it propagates through layers           |
+| **Be explicit**                    | Every operation that can fail should have visible error handling                        |
+| **Be actionable**                  | Error messages should tell the caller what went wrong and what to do about it           |
+| **Handle at the right level**      | Not too early (losing context), not too late (losing ability to recover)                |
 | **No exceptions for control flow** | Exceptions obscure the normal execution path; use them for truly exceptional situations |
 
 ### Patterns
@@ -579,7 +596,8 @@ Fixed: The principle that testable code is well-structured code.
 Cross-section impact: If §8 uses Result types instead of exceptions, error path testing changes -- test assertions check return values, not catch blocks.
 -->
 
-Code that is hard to test is usually hard to maintain. The same properties that enable testing -- explicit dependencies, no hidden state, pure functions at the core -- make code easier to understand and modify.
+Code that is hard to test is usually hard to maintain. The same properties that enable testing -- explicit dependencies,
+no hidden state, pure functions at the core -- make code easier to understand and modify.
 
 **Prefer pure functions:**
 

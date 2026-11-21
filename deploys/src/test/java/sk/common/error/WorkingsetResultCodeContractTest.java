@@ -17,8 +17,15 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** T4 §5.4: numeric API codes are stable, unique, and assigned to fixed ranges. */
+/**
+ * T4 §5.4: numeric API codes are stable, unique, and assigned to fixed ranges.
+ */
 class WorkingsetResultCodeContractTest {
+
+    private static void assertRange(DomainResCode code, int from, int to) {
+        assertTrue(code.getCode() >= from && code.getCode() <= to,
+                code + " -> " + code.getCode() + " outside " + from + "-" + to);
+    }
 
     @Test
     void bindingFailureResponseKeepsItsPublicReasonAndContext() {
@@ -93,10 +100,5 @@ class WorkingsetResultCodeContractTest {
         }
         assertRange(WorkingsetResultCode.MATERIALIZATION_REJECTED, 1400, 1499);
         assertEquals(1403, RequirementResultCode.LOCK_VERSION_CONFLICT.getCode());
-    }
-
-    private static void assertRange(DomainResCode code, int from, int to) {
-        assertTrue(code.getCode() >= from && code.getCode() <= to,
-                code + " -> " + code.getCode() + " outside " + from + "-" + to);
     }
 }

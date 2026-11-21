@@ -8,15 +8,10 @@ import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import sk.common.error.DomainException;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetController.TrackerBindingView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
 import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
@@ -30,11 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static bootstrap.FixtureIds.fixtureId;
@@ -43,9 +34,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BindingAcceptanceTest {
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private TestRestTemplate rest;
-
     private final String suffix = UUID.randomUUID().toString();
     private final String ws = fixtureId("WS-" + suffix);
     private final String other = fixtureId("OTHER-" + suffix);
@@ -56,6 +44,36 @@ class BindingAcceptanceTest {
     private final String unshared = fixtureId("UN-" + suffix);
     private final String sourceItem = fixtureId("SOURCE-" + suffix);
     private final List<String> worksets = new ArrayList<>();
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private TestRestTemplate rest;
+
+    private static String unbindPath(String id, String tracker) {
+        return path(id) + "/trackers/" + tracker;
+    }
+
+    private static String trackerPath(String tracker) {
+        return "/api/trackers/" + tracker;
+    }
+
+    private static void assertDirectSourceFailure(Executable action) {
+        DomainException failure = Assertions.assertThrows(DomainException.class, action);
+        assertEquals(BindingResCode.SOURCE_TRACKER_NOT_FOUND, failure.getResCode());
+    }
+
+    private static String sharedPath(String id, String tracker) {
+        return path(id) + "/trackers/shared/" + tracker;
+    }
+
+    private static String path(String id) {
+        return "/api/worksets/" + id;
+    }
+
+    private static void assertFailure(ResponseEntity<Map> result, HttpStatus status, String reason) {
+        assertEquals(status, result.getStatusCode(), () -> String.valueOf(result.getBody()));
+        assertEquals(reason, result.getBody().get("reason"));
+    }
 
     @BeforeEach
     void provision() {
@@ -255,7 +273,7 @@ class BindingAcceptanceTest {
         });
         assertEquals(2, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
         assertFailure(rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
-                "title", "A", "description", "deleted tracker", "revision", 3), Map.class),
+                        "title", "A", "description", "deleted tracker", "revision", 3), Map.class),
                 HttpStatus.CONFLICT, "DATA_INTEGRITY_CONFLICT");
     }
 
@@ -381,7 +399,7 @@ class BindingAcceptanceTest {
             Future<HttpStatusCode> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
-                        "title", "A", "description", "concurrent", "revision", 3), Map.class)
+                                "title", "A", "description", "concurrent", "revision", 3), Map.class)
                         .getStatusCode();
             });
             Future<HttpStatusCode> remove = executor.submit(() -> {
@@ -417,14 +435,6 @@ class BindingAcceptanceTest {
         return rest.exchange(path, HttpMethod.DELETE, HttpEntity.EMPTY, Map.class);
     }
 
-    private static String unbindPath(String id, String tracker) {
-        return path(id) + "/trackers/" + tracker;
-    }
-
-    private static String trackerPath(String tracker) {
-        return "/api/trackers/" + tracker;
-    }
-
     private void original(String tracker, String classification, String mode, String parent) {
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode, parent_id)
@@ -450,11 +460,6 @@ class BindingAcceptanceTest {
                 CommonId.of(fixtureId("family-" + sourceLocalId)));
     }
 
-    private static void assertDirectSourceFailure(Executable action) {
-        DomainException failure = Assertions.assertThrows(DomainException.class, action);
-        assertEquals(BindingResCode.SOURCE_TRACKER_NOT_FOUND, failure.getResCode());
-    }
-
     private String spacePath(String id) {
         return path(id) + "/spaces/" + space;
     }
@@ -467,18 +472,5 @@ class BindingAcceptanceTest {
         CreationView task = FixtureIds.extendScope(rest, target, Status.PartiallySucceeded, shared);
         assertTrue(task.failures().stream().anyMatch(failure ->
                 shared.equals(failure.trackerId()) && "SourceTrackerNotFound".equals(failure.reason())));
-    }
-
-    private static String sharedPath(String id, String tracker) {
-        return path(id) + "/trackers/shared/" + tracker;
-    }
-
-    private static String path(String id) {
-        return "/api/worksets/" + id;
-    }
-
-    private static void assertFailure(ResponseEntity<Map> result, HttpStatus status, String reason) {
-        assertEquals(status, result.getStatusCode(), () -> String.valueOf(result.getBody()));
-        assertEquals(reason, result.getBody().get("reason"));
     }
 }

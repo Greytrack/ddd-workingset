@@ -6,7 +6,8 @@ Read this file when writing `.lattice/requirements/` documents. Use these templa
 
 ## Apex File: `.lattice/requirements/index.md`
 
-Thin and rarely hand-touched. Everything below the boundary comment is generated at Step 6 by scanning `epics/*.md` headers — never hand-append a row here.
+Thin and rarely hand-touched. Everything below the boundary comment is generated at Step 6 by scanning `epics/*.md`
+headers — never hand-append a row here.
 
 ```markdown
 ---
@@ -45,7 +46,8 @@ last_updated: [Date]
 
 ## Epic File: `.lattice/requirements/epics/{epic-slug}.md`
 
-Header is hand-authored (written once at Step 3, rarely revisited). Feature table is generated at Step 6 — never hand-append a row.
+Header is hand-authored (written once at Step 3, rarely revisited). Feature table is generated at Step 6 — never
+hand-append a row.
 
 ```markdown
 ---

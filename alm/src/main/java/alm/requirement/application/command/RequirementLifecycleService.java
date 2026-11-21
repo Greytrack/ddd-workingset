@@ -30,8 +30,13 @@ public class RequirementLifecycleService {
     private final ApplicationEventPublisher eventPublisher;
     private final RequirementCommandService commands;
 
+    private static DomainException missing(LocalId id) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, id.value());
+    }
 
-    /** 永久删除：先通过 guard（须已软删），无来源依赖时清除对象并发布彻底删除事件。 */
+    /**
+     * 永久删除：先通过 guard（须已软删），无来源依赖时清除对象并发布彻底删除事件。
+     */
     @Transactional
     public void delete2(LocalId id) {
         Requirement current = requirements.lockById(id).orElseThrow(() -> missing(id));
@@ -46,9 +51,5 @@ public class RequirementLifecycleService {
         }
         requirements.purge(current);
         eventPublisher.publishEvent(new CompleteDeleteEvent(id, current.trackerId(), Instant.now()));
-    }
-
-    private static DomainException missing(LocalId id) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, id.value());
     }
 }

@@ -15,18 +15,17 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
 
 
     /**
+     * 机器标识占用的位数
+     */
+    public static final long MACHINE_BIT = 3;
+    /**
      * 起始的时间戳，可以修改为服务第一次启动的时间 一旦服务已经开始使用，起始时间戳就不应该改变
      */
     static final long START_STAMP = 1577836800000L;
-
     /**
      * 序列号占用的位数
      */
     private static final long SEQUENCE_BIT = 5;
-    /**
-     * 机器标识占用的位数
-     */
-    public static final long MACHINE_BIT = 3;
     /**
      * 数据中心占用的位数
      */
@@ -54,6 +53,7 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
      * 机器标识
      */
     private final long machineId;
+    private final LongSupplier clock;
     /**
      * 序列号
      */
@@ -63,16 +63,12 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
      */
     private long lastStamp = -1L;
 
-    private final LongSupplier clock;
-
 
     /**
      * 通过单例模式来获取实例 分布式部署服务时，数据节点标识和机器标识作为联合键必须唯一
      *
-     * @param datacenterId
-     *            数据节点标识ID
-     * @param machineId
-     *            机器标识ID
+     * @param datacenterId 数据节点标识ID
+     * @param machineId    机器标识ID
      */
     public SnowflakeIdGenerator(long datacenterId, long machineId) {
         this(datacenterId, machineId, System::currentTimeMillis);
@@ -89,6 +85,10 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
         this.datacenterId = datacenterId;
         this.machineId = machineId;
         this.clock = Objects.requireNonNull(clock, "clock");
+    }
+
+    public static long getMaxMachineNum() {
+        return MAX_MACHINE_NUM;
     }
 
     @Override
@@ -130,9 +130,5 @@ public final class SnowflakeIdGenerator implements IdentifierGenerator {
 
     private long getNewStamp() {
         return clock.getAsLong();
-    }
-
-    public static long getMaxMachineNum() {
-        return MAX_MACHINE_NUM;
     }
 }

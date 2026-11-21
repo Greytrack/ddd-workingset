@@ -1,9 +1,9 @@
 package bootstrap;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import sk.workingset.adapters.WorkingSetCreationController.CreationView;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 
@@ -18,7 +18,8 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class FixtureIds {
-    private FixtureIds() {}
+    private FixtureIds() {
+    }
 
     public static String fixtureId(String label) {
         CRC32 digest = new CRC32();
@@ -52,10 +53,10 @@ public final class FixtureIds {
                 Long.class, Long.valueOf(workingSet));
         String source = parent == null ? null : ensureDefaultTracker(jdbc, parent.toString(), space);
         jdbc.update("""
-                INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id,
-                                      name, classification_id, sharing_mode, is_default)
-                VALUES (?, ?, ?, ?, '文件夹', 10070101, 'UNSHARED', TRUE)
-                """, Long.valueOf(id), source == null ? null : Long.valueOf(source),
+                        INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id,
+                                              name, classification_id, sharing_mode, is_default)
+                        VALUES (?, ?, ?, ?, '文件夹', 10070101, 'UNSHARED', TRUE)
+                        """, Long.valueOf(id), source == null ? null : Long.valueOf(source),
                 Long.valueOf(workingSet), Long.valueOf(space));
         return id;
     }

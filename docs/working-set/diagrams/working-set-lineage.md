@@ -2,7 +2,8 @@
 
 **状态：Reviewed（FACT-028 已确认，S6 已实施；图本身未纳入正式基线）**
 
-> 图中的 Tracker 数量仅作示例。同槽多 Tracker 与默认资格见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
+> 图中的 Tracker 数量仅作示例。同槽多 Tracker
+> 与默认资格见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 目的：展示 WorkingSet 单父谱系、子 WS Tracker 来源约束，以及 Merge 只允许直属父子的准入。不表达 GateFlow 版次链特例。
 

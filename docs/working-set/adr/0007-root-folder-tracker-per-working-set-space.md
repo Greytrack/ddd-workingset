@@ -6,23 +6,27 @@
 - **确认人／决策权威**：用户 2026-11-20 明确语义调整
 - **替代**：无
 - **被替代于**：[ADR-0008](0008-tracker-third-level-container.md)（2026-11-20，Folder Tracker 不是特殊根文件夹）
-- **相关**：[ADR-0004](0004-productspace-independent-aggregate.md)；本 ADR 补充“根文件夹 Tracker 可在各 Working Set 创建”的例外，不改变 ProductSpace 独立聚合和绑定归属。
+- **相关**：[ADR-0004](0004-productspace-independent-aggregate.md)；本 ADR 补充“根文件夹 Tracker 可在各 Working Set
+  创建”的例外，不改变 ProductSpace 独立聚合和绑定归属。
 
 ## 背景
 
 此前实现按“产品空间在默认 Working Set 创建一个根文件夹，其他 Working Set 只绑定该 Tracker”处理。用户于 2026-11-20 明确纠正：
 
-> 每个 Working Set 下的每个产品空间拥有自己的根文件夹 Tracker；根文件夹 Tracker 是非共享的，用来承载每个工作集每个产品空间各自的文件夹树。只是约定文件夹树不支持合并，虽然是非共享但是不允许合并比对。
+> 每个 Working Set 下的每个产品空间拥有自己的根文件夹 Tracker；根文件夹 Tracker
+> 是非共享的，用来承载每个工作集每个产品空间各自的文件夹树。只是约定文件夹树不支持合并，虽然是非共享但是不允许合并比对。
 
 这决定了根文件夹 Tracker 的身份作用域，也影响 SpaceBinding 建立后的 Tracker 创建与 Compare/Merge 准入。
 
 ## 决定
 
 1. 根文件夹是 `Tracker` 聚合，分类为文件夹分类（`10070101`），不是 WorkingSet 内部记录。
-2. 根文件夹 Tracker 的身份作用域为 `(WorkingSetId, ProductSpaceId)`：每个 Working Set 的每个产品空间各自拥有一个根文件夹 Tracker。
+2. 根文件夹 Tracker 的身份作用域为 `(WorkingSetId, ProductSpaceId)`：每个 Working Set 的每个产品空间各自拥有一个根文件夹
+   Tracker。
 3. 根文件夹 Tracker 是非共享 Tracker（`UNSHARED`），其文件夹树不跨 Working Set 复用。
 4. 根文件夹 Tracker 及其文件夹树**不参与 Compare/Merge**；即使它属于非共享 Tracker，也不得作为比较或合并对象。
-5. SpaceBinding 建立后，由独立事件为该 `(WorkingSet, ProductSpace)` 创建根文件夹 Tracker，再通过 Tracker 创建事件建立 WorkingSet 绑定；不得在 WorkingSet 绑定事务内直接创建 Tracker。
+5. SpaceBinding 建立后，由独立事件为该 `(WorkingSet, ProductSpace)` 创建根文件夹 Tracker，再通过 Tracker 创建事件建立
+   WorkingSet 绑定；不得在 WorkingSet 绑定事务内直接创建 Tracker。
 6. ProductSpace 创建时负责为默认 Working Set 创建其根文件夹 Tracker；其他 Working Set 在绑定空间时按同一规则按需创建。
 
 ## 备选方案与权衡

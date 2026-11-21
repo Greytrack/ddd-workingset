@@ -7,7 +7,9 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
-/** Requirement 查询 Mapper；仅包含 SELECT。 */
+/**
+ * Requirement 查询 Mapper；仅包含 SELECT。
+ */
 @Mapper
 public interface RequirementQueryMapper {
 
@@ -26,5 +28,5 @@ public interface RequirementQueryMapper {
             ORDER BY local_id
             """)
     List<RequirementDetail> findByTracker(@Param("trackerId") long trackerId,
-                                         @Param("workingSetId") long workingSetId);
+                                          @Param("workingSetId") long workingSetId);
 }

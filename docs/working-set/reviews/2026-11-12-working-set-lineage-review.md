@@ -2,7 +2,8 @@
 
 **状态：Reviewed（2026-11-12；用户裁定 + S6 实施验证；开放问题见 §4；不构成基线发布）**
 
-- 依据：[FACT-028](../domain/facts.md)、[FACT-026/POL-004](../domain/facts.md)、[T2 绑定与删除](../domain/binding-deletion-contract-v1.md)、[多级 WorkingSet 谱系设计](../domain/working-set-lineage-design.md)
+-
+依据：[FACT-028](../domain/facts.md)、[FACT-026/POL-004](../domain/facts.md)、[T2 绑定与删除](../domain/binding-deletion-contract-v1.md)、[多级 WorkingSet 谱系设计](../domain/working-set-lineage-design.md)
 - 范围：WorkingSet 单父谱系、子 WS 创建、Tracker 来源约束、相邻父子 Merge 准入、删除/停用边界
 
 ## 1. 用户裁定（2026-11-12）
@@ -15,7 +16,8 @@
 
 解释说明：第 4 条按“有直属子 WS 的中间 WS 不允许删除/停用”记录；停用的状态与命令尚未纳入 T2，本轮只登记规则，不实现停用状态。
 
-> **2026-11-12 收尾注记**：用户随后裁定 WorkingSet/Tracker **不存在“停用”概念**（D5），`QUESTION-009.a` 已关闭，相关表述与 `assertDisableAllowed` 已从设计与代码中移除。上文中的“停用”表述仅作历史记录保留，不构成当前规则或验收依据。
+> **2026-11-12 收尾注记**：用户随后裁定 WorkingSet/Tracker **不存在“停用”概念**（D5），`QUESTION-009.a` 已关闭，相关表述与
+> `assertDisableAllowed` 已从设计与代码中移除。上文中的“停用”表述仅作历史记录保留，不构成当前规则或验收依据。
 
 ## 2. 设计结论
 
@@ -27,7 +29,8 @@
 
 ## 3. 方案取舍
 
-- 采用 WorkingSet 自身 `parentWorkingSetId`，而不是独立 lineage 表或完全由 Tracker 派生链推导：用户明确选择 WorkingSet 自身属性；它能表达空范围子 WS 与父子判定，且不让 WorkingSet 变成树聚合（只增加一个追溯属性）。
+- 采用 WorkingSet 自身 `parentWorkingSetId`，而不是独立 lineage 表或完全由 Tracker 派生链推导：用户明确选择 WorkingSet
+  自身属性；它能表达空范围子 WS 与父子判定，且不让 WorkingSet 变成树聚合（只增加一个追溯属性）。
 - Tracker 的 `sourceId`/`parentId` 仍分别表达派生链与同 WS 组织父级，不与 WS 谱系合并。
 
 ## 4. 开放问题

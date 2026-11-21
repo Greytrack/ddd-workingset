@@ -31,7 +31,9 @@ public record RequirementSnapshot(LocalId localId,
         Objects.requireNonNull(lockVersion, "lockVersion");
     }
 
-    /** 在业务修改生效前，从当前聚合捕获完整内容。 */
+    /**
+     * 在业务修改生效前，从当前聚合捕获完整内容。
+     */
     public static RequirementSnapshot of(Requirement requirement) {
         Objects.requireNonNull(requirement, "requirement");
         return new RequirementSnapshot(

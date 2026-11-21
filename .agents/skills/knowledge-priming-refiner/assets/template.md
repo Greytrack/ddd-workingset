@@ -1,8 +1,10 @@
 # Knowledge Priming Refiner Template
 
-This template defines the structure of the `.lattice/standards/knowledge-base.md` output document. It contains the 5-section anatomy with interview guidance comments for each section.
+This template defines the structure of the `.lattice/standards/knowledge-base.md` output document. It contains the
+5-section anatomy with interview guidance comments for each section.
 
-When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a reference, not a conversation log.
+When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a reference, not a
+conversation log.
 
 ---
 
@@ -30,11 +32,14 @@ Include the preamble matching the chosen mode. Only one preamble appears in the 
 
 **Override preamble:**
 
-> This is the knowledge base for [PROJECT NAME]. It primes AI with project-specific context -- tech stack, architecture, trusted sources, and project structure -- so generated code fits this codebase rather than defaulting to generic patterns.
+> This is the knowledge base for [PROJECT NAME]. It primes AI with project-specific context -- tech stack, architecture,
+> trusted sources, and project structure -- so generated code fits this codebase rather than defaulting to generic
+> patterns.
 
 **Overlay preamble:**
 
-> This document contains selected knowledge base sections for [PROJECT NAME]. Sections included here were explicitly defined; other sections can be added in future revisions.
+> This document contains selected knowledge base sections for [PROJECT NAME]. Sections included here were explicitly
+> defined; other sections can be added in future revisions.
 
 ---
 

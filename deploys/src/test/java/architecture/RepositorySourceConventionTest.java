@@ -1,7 +1,6 @@
 package architecture;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,7 +9,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Repository 源码约定检查：注解在源码中可见，SQL 直接表名无法由 ArchUnit 字节码规则捕获。
@@ -21,6 +21,25 @@ class RepositorySourceConventionTest {
             "requirements", "requirement_snapshots",
             "parts", "quality_objects", "dqa_items", "gates",
             "reviews", "test_cases", "bugs", "documents");
+
+    private static List<Path> repositorySources() throws IOException {
+        return sharedKernelSources().stream()
+                .filter(path -> path.getFileName().toString().endsWith("RepositoryImpl.java"))
+                .toList();
+    }
+
+    private static List<Path> sharedKernelSources() throws IOException {
+        Path root = Path.of("").toAbsolutePath();
+        while (root != null && !Files.isDirectory(root.resolve("sharedkernel"))) {
+            root = root.getParent();
+        }
+        if (root == null) {
+            throw new IOException("Cannot locate repository root");
+        }
+        try (Stream<Path> files = Files.walk(root.resolve("sharedkernel").resolve("src/main/java"))) {
+            return files.filter(path -> path.getFileName().toString().endsWith(".java")).toList();
+        }
+    }
 
     @Test
     void repository_implementations_have_repository_and_slf4j_annotations() throws IOException {
@@ -47,25 +66,6 @@ class RepositorySourceConventionTest {
                     fail(file.getFileName() + " 直接查询业务表: " + table);
                 }
             }
-        }
-    }
-
-    private static List<Path> repositorySources() throws IOException {
-        return sharedKernelSources().stream()
-                .filter(path -> path.getFileName().toString().endsWith("RepositoryImpl.java"))
-                .toList();
-    }
-
-    private static List<Path> sharedKernelSources() throws IOException {
-        Path root = Path.of("").toAbsolutePath();
-        while (root != null && !Files.isDirectory(root.resolve("sharedkernel"))) {
-            root = root.getParent();
-        }
-        if (root == null) {
-            throw new IOException("Cannot locate repository root");
-        }
-        try (Stream<Path> files = Files.walk(root.resolve("sharedkernel").resolve("src/main/java"))) {
-            return files.filter(path -> path.getFileName().toString().endsWith(".java")).toList();
         }
     }
 }

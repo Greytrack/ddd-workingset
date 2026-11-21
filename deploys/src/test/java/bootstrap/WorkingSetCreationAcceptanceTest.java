@@ -28,28 +28,23 @@ import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetCreation.Mode;
 import sk.workingset.domain.workingset.WorkingSetCreation.Request;
 import sk.workingset.domain.workingset.WorkingSetCreation.Stage;
 import sk.workingset.domain.workingset.WorkingSetCreation.Status;
-import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.error.BindingResCode;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.sql.DataSource;
 
 import static bootstrap.FixtureIds.fixtureId;
 import static org.awaitility.Awaitility.await;
@@ -69,15 +64,24 @@ class WorkingSetCreationAcceptanceTest {
     private final String shared = fixtureId("shared-" + child);
     private final String unshared = fixtureId("unshared-" + child);
 
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private DataSource dataSource;
-    @Autowired private ApplicationEventPublisher events;
-    @Autowired private TransactionTemplate transaction;
-    @Autowired private IndexEvents indexEvents;
-    @Autowired private WorkingSetCreationService creations;
-    @Autowired private LightTrackerItemRepository items;
-    @Autowired private ObjectMapper mapper;
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private DataSource dataSource;
+    @Autowired
+    private ApplicationEventPublisher events;
+    @Autowired
+    private TransactionTemplate transaction;
+    @Autowired
+    private IndexEvents indexEvents;
+    @Autowired
+    private WorkingSetCreationService creations;
+    @Autowired
+    private LightTrackerItemRepository items;
+    @Autowired
+    private ObjectMapper mapper;
 
     @AfterEach
     void cleanUp() {
@@ -210,7 +214,7 @@ class WorkingSetCreationAcceptanceTest {
     void missingTrackerSpaceReportsFailureAndKeepsOtherBindings() {
         seedRange();
         String outsideTracker = fixtureId("outside-" + child);
-        seedTracker(outsideTracker, otherSpace, unshared, "UNSHARED");
+        seedTracker(outsideTracker, otherSpace, UNSHARED_CLASSIFICATION, "UNSHARED");
         String id = submit(new Request("1", child, "partial", List.of(space), List.of(shared),
                 List.of(outsideTracker, unshared)));
         CreationView completed = awaitStatus(id, Status.PartiallySucceeded);
@@ -244,7 +248,7 @@ class WorkingSetCreationAcceptanceTest {
     void bindsCopiedTrackersThatShareSpaceAndClassification() {
         seedRange();
         String sameSlot = fixtureId("z-" + child);
-        seedTracker(sameSlot, space, unshared, "UNSHARED");
+        seedTracker(sameSlot, space, UNSHARED_CLASSIFICATION, "UNSHARED");
         CreationView completed = awaitStatus(submit(new Request("1", child, "slot", List.of(space), List.of(),
                 List.of(unshared, sameSlot))), Status.Succeeded);
 
@@ -360,6 +364,83 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
+    void usesPerTrackerBaselineTimesAndKeepsHeadOnReplay() {
+        seedRange();
+        String second = fixtureId("head-tracker-" + child);
+        seedTracker(second, otherSpace, UNSHARED_CLASSIFICATION, "UNSHARED");
+        String earlier = fixtureId("earlier-" + child);
+        String later = fixtureId("later-" + child);
+        String head = fixtureId("head-" + child);
+        String afterHead = fixtureId("after-head-" + child);
+        Instant cutoff = Instant.parse("2025-02-01T00:00:00Z");
+        seedItem(unshared, earlier, earlier, false);
+        seedItem(unshared, later, later, false);
+        seedItem(second, head, head, false);
+        seedItem(second, afterHead, afterHead, false);
+        jdbc.update("UPDATE requirements SET created_at = ? WHERE local_id = ?",
+                Timestamp.from(cutoff), earlier);
+        jdbc.update("UPDATE requirements SET created_at = ? WHERE local_id = ?",
+                Timestamp.from(cutoff.plusSeconds(1)), later);
+        jdbc.update("UPDATE requirements SET created_at = clock_timestamp() + interval '1 hour' WHERE local_id = ?",
+                afterHead);
+        String requestId = "baseline-" + child;
+        Map<String, Object> request = Map.of("parentWorkingSetId", "1", "requestId", requestId, "mode", "CREATE",
+                "productSpaceIds", List.of(space, otherSpace), "unsharedParentTrackerIds", List.of(unshared, second),
+                "baselineAtByTracker", Map.of(unshared, cutoff.toString()));
+
+        ResponseEntity<CreationView> response = rest.postForEntity(CREATIONS, request, CreationView.class);
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        CreationView submitted = response.getBody();
+        child = submitted.targetWorkingSetId();
+        assertEquals(cutoff, submitted.baselineAtByTracker().get(Long.valueOf(unshared)));
+        assertEquals(submitted.createdAt(), submitted.baselineAtByTracker().get(Long.valueOf(second)));
+        awaitStatus(submitted.creationId(), Status.Succeeded);
+        assertTrue(jdbc.queryForObject("""
+                SELECT jsonb_exists(result->'baselineAtByTracker', ?) FROM working_set_creations WHERE id = ?
+                """, Boolean.class, second, submitted.creationId()));
+        assertEquals(Set.of(earlier, head), Set.copyOf(jdbc.queryForList("""
+                SELECT common_id FROM light_tracker_items WHERE working_set_id = ?
+                """, String.class, child)));
+
+        CreationView replay = rest.postForEntity(CREATIONS, request, CreationView.class).getBody();
+        assertEquals(submitted.creationId(), replay.creationId());
+        assertEquals(submitted.baselineAtByTracker(), replay.baselineAtByTracker());
+    }
+
+    @Test
+    void extendsAtExplicitBaselineAndRejectsChangingItForTheSameRequest() {
+        seedRange();
+        createTarget();
+        String included = fixtureId("extension-before-" + child);
+        String excluded = fixtureId("extension-after-" + child);
+        Instant cutoff = Instant.parse("2025-02-01T00:00:00Z");
+        seedItem(unshared, included, included, false);
+        seedItem(unshared, excluded, excluded, false);
+        jdbc.update("UPDATE requirements SET created_at = ? WHERE local_id = ?",
+                Timestamp.from(cutoff), included);
+        String endpoint = "/api/worksets/" + child + "/extensions";
+        String requestId = "extension-baseline-" + child;
+        Map<String, Object> request = Map.of("requestId", requestId, "trackerIds", List.of(unshared),
+                "baselineAtByTracker", Map.of(unshared, cutoff.toString()));
+
+        ResponseEntity<CreationView> response = rest.postForEntity(endpoint, request, CreationView.class);
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        CreationView submitted = response.getBody();
+        awaitStatus(submitted.creationId(), Status.Succeeded);
+        assertEquals(List.of(included), jdbc.queryForList("""
+                SELECT common_id FROM light_tracker_items WHERE working_set_id = ?
+                """, String.class, child));
+
+        CreationView replay = rest.postForEntity(endpoint, request, CreationView.class).getBody();
+        assertEquals(submitted.creationId(), replay.creationId());
+        assertEquals(cutoff, replay.baselineAtByTracker().get(Long.valueOf(unshared)));
+        assertEquals(HttpStatus.CONFLICT, rest.postForEntity(endpoint,
+                        Map.of("requestId", requestId, "trackerIds", List.of(unshared),
+                                "baselineAtByTracker", Map.of(unshared, cutoff.minusSeconds(1).toString())), Map.class)
+                .getStatusCode());
+    }
+
+    @Test
     void indexesAllThreeNativeItemsWithInheritedIdentityAndSource() {
         seedRange();
         List<String> families = orderedFamilies();
@@ -368,7 +449,7 @@ class WorkingSetCreationAcceptanceTest {
         }
         seedItem(unshared, fixtureId("deleted-" + child), fixtureId("deleted-" + child), true);
         String second = fixtureId("other-tracker-" + child);
-        seedTracker(second, otherSpace, unshared, "UNSHARED");
+        seedTracker(second, otherSpace, UNSHARED_CLASSIFICATION, "UNSHARED");
         seedItem(second, fixtureId("other-item-" + child), fixtureId("other-item-" + child), false);
         String id = submit(new Request("1", child, "index", List.of(space, otherSpace), List.of(), List.of(unshared, second)));
         CreationView completed = awaitStatus(id, Status.Succeeded);
@@ -395,7 +476,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
-    void indexesDerivedParentAndExcludesDeletedSourcesWhileRecordingMissingSources() {
+    void indexesDerivedParentAndReportsUnavailableSourcesFoundDuringScan() {
         seedRange();
         FixtureIds.insertWorkingSet(jdbc, "1", parent);
         FixtureIds.extendWithRootFolder(rest, jdbc, parent, space);
@@ -422,9 +503,9 @@ class WorkingSetCreationAcceptanceTest {
         String id = submit(new Request(parent, child, "index-derived", List.of(space), List.of(), List.of(parentTracker)));
         CreationView completed = awaitStatus(id, Status.PartiallySucceeded);
         assertEquals(2, completed.indexProgress().get(parentTracker).succeeded());
-        assertEquals(2, completed.indexProgress().get(parentTracker).skipped());
+        assertEquals(4, completed.indexProgress().get(parentTracker).skipped());
         assertEquals(0, completed.indexProgress().get(parentTracker).failed());
-        assertEquals(List.of("HISTORY_UNAVAILABLE", "NOT_FOUND"),
+        assertEquals(List.of("DELETED", "DELETED", "HISTORY_UNAVAILABLE", "NOT_FOUND"),
                 completed.failures().stream().map(details -> details.reason()).sorted().toList());
         WorkingSetCreation.Failure failure = completed.failures().stream().filter(it -> it.reason().equals("NOT_FOUND"))
                 .findFirst().orElseThrow();
@@ -529,7 +610,7 @@ class WorkingSetCreationAcceptanceTest {
         seedRange();
         createTarget();
         String secondSource = fixtureId("unshared2-" + child);
-        seedTracker(secondSource, space, unshared, "UNSHARED");
+        seedTracker(secondSource, space, UNSHARED_CLASSIFICATION, "UNSHARED");
         seedItem(unshared, fixtureId("extension-" + child), fixtureId("extension-" + child), false);
         seedItem(secondSource, fixtureId("extension2-" + child), fixtureId("extension2-" + child), false);
         String first = extension(List.of(unshared, secondSource, shared));

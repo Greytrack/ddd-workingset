@@ -18,9 +18,9 @@
 
 ## 知识分类核对
 
-| 声明 | 分类 | 状态 | 证据／确认依据 | 问题 |
-| --- | --- | --- | --- | --- |
-|  | Business Fact／Business Invariant／Business Policy／Hypothesis／Architecture Decision／Technical Constraint／Open Question |  |  |  |
+| 声明 | 分类                                                                                                                       | 状态 | 证据／确认依据 | 问题 |
+|------|----------------------------------------------------------------------------------------------------------------------------|------|----------------|------|
+|      | Business Fact／Business Invariant／Business Policy／Hypothesis／Architecture Decision／Technical Constraint／Open Question |      |                |      |
 
 ## 术语与边界
 
@@ -40,9 +40,9 @@
 
 ## 决策与待办
 
-| 项目 | 负责人／确认人 | 状态 | 目标产物 |
-| --- | --- | --- | --- |
-|  |  | Open／Confirmed／Deferred | 领域文档／场景／ADR／测试／实现 |
+| 项目 | 负责人／确认人 | 状态                      | 目标产物                        |
+|------|----------------|---------------------------|---------------------------------|
+|      |                | Open／Confirmed／Deferred | 领域文档／场景／ADR／测试／实现 |
 
 ## 追溯影响
 

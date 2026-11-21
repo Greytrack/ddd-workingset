@@ -7,7 +7,9 @@ import sk.workingset.domain.*;
 import java.util.Locale;
 import java.util.Objects;
 
-/** ALM Requirement。业务版次、发布版本与乐观锁分别维护。 */
+/**
+ * ALM Requirement。业务版次、发布版本与乐观锁分别维护。
+ */
 public final class Requirement implements TrackerItem {
 
     private final LocalId localId;
@@ -76,27 +78,66 @@ public final class Requirement implements TrackerItem {
                 LockVersion.initial(), false, false);
     }
 
-    @Override
-    public LocalId localId() { return localId; }
+    private static LockVersion requireExpectedLockVersion(LifecycleCommand command) {
+        if (command == null || command.expectedLockVersion() == null) {
+            throw new DomainException(RequirementResultCode.LOCK_VERSION_REQUIRED);
+        }
+        return command.expectedLockVersion();
+    }
+
+    private static void validateTitle(String title) {
+        if (Objects.requireNonNull(title, "title").isBlank()) {
+            throw new DomainException(RequirementResultCode.TITLE_REQUIRED);
+        }
+    }
 
     @Override
-    public CommonId commonId() { return commonId; }
+    public LocalId localId() {
+        return localId;
+    }
 
     @Override
-    public Revision revision() { return revision; }
+    public CommonId commonId() {
+        return commonId;
+    }
+
+    @Override
+    public Revision revision() {
+        return revision;
+    }
 
     @Override
     public boolean hasMaterialized() {
         return this.materialized;
     }
 
-    public TrackerId trackerId() { return trackerId; }
-    public String number() { return number; }
-    public String title() { return title; }
-    public String description() { return description; }
-    public Version version() { return version; }
-    public LockVersion lockVersion() { return lockVersion; }
-    public boolean deleted() { return deleteFlag; }
+    public TrackerId trackerId() {
+        return trackerId;
+    }
+
+    public String number() {
+        return number;
+    }
+
+    public String title() {
+        return title;
+    }
+
+    public String description() {
+        return description;
+    }
+
+    public Version version() {
+        return version;
+    }
+
+    public LockVersion lockVersion() {
+        return lockVersion;
+    }
+
+    public boolean deleted() {
+        return deleteFlag;
+    }
 
     public Requirement changeTitle(String title, LockVersion expectedLockVersion) {
         return changeContent(title, description, expectedLockVersion);
@@ -172,22 +213,9 @@ public final class Requirement implements TrackerItem {
                 : LifecycleResult.conflict("Requirement must be soft-deleted before permanent deletion");
     }
 
-    private static LockVersion requireExpectedLockVersion(LifecycleCommand command) {
-        if (command == null || command.expectedLockVersion() == null) {
-            throw new DomainException(RequirementResultCode.LOCK_VERSION_REQUIRED);
-        }
-        return command.expectedLockVersion();
-    }
-
     private void requireActive() {
         if (deleteFlag) {
             throw new DomainException(RequirementResultCode.DELETED);
-        }
-    }
-
-    private static void validateTitle(String title) {
-        if (Objects.requireNonNull(title, "title").isBlank()) {
-            throw new DomainException(RequirementResultCode.TITLE_REQUIRED);
         }
     }
 

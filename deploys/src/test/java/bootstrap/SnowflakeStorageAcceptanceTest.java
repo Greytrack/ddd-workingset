@@ -26,8 +26,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SnowflakeStorageAcceptanceTest {
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void storesNumericIdsAndPreservesOneReadOnlyNumberAcrossTheFamily() {
@@ -42,7 +44,7 @@ class SnowflakeStorageAcceptanceTest {
                     .filter(tracker -> "14010101".equals(tracker.classificationId()))
                     .filter(tracker -> "UNSHARED".equals(tracker.sharingMode())).findFirst().orElseThrow();
             ResponseEntity<RequirementView> created = rest.postForEntity("/api/requirements", Map.of("trackerId", root.trackerId(),
-                    "workingSetId", "1", "title", "编号初稿", "description", "编号验收", "revision", 1),
+                            "workingSetId", "1", "title", "编号初稿", "description", "编号验收", "revision", 1),
                     RequirementView.class);
             assertEquals(HttpStatus.CREATED, created.getStatusCode());
             RequirementView requirement = created.getBody();
@@ -52,7 +54,7 @@ class SnowflakeStorageAcceptanceTest {
             assertEquals(requirement.number(),
                     jdbc.queryForObject("SELECT number FROM requirements WHERE local_id = ?", String.class, rootId));
 
-            Map<String,Object> request = Map.of("parentWorkingSetId", "1", "requestId", UUID.randomUUID().toString(),
+            Map<String, Object> request = Map.of("parentWorkingSetId", "1", "requestId", UUID.randomUUID().toString(),
                     "name", "编号子工作集", "productSpaceIds", List.of(Long.toString(spaceId)),
                     "unsharedParentTrackerIds", List.of(root.trackerId()));
             ResponseEntity<CreationView> accepted = rest.postForEntity("/api/working-set-creations", request, CreationView.class);
@@ -69,12 +71,12 @@ class SnowflakeStorageAcceptanceTest {
                             TrackerView[].class)).filter(view -> root.trackerId().equals(view.sourceId()))
                     .findFirst().orElseThrow();
             assertEquals(Long.valueOf(root.trackerId()), jdbc.queryForObject("""
-                    SELECT child.common_id
-                    FROM air_inst_tracker_rev child
-                    JOIN air_ws_tracker compat ON compat.id = child.id
-                    WHERE child.id = ? AND child.source_branch_id = ? AND compat.source_branch_id = ?
-                      AND child.id = child.instance_id AND child.id <> child.common_id
-                    """, Long.class, Long.valueOf(tracker.trackerId()), Long.valueOf(root.trackerId()),
+                            SELECT child.common_id
+                            FROM air_inst_tracker_rev child
+                            JOIN air_ws_tracker compat ON compat.id = child.id
+                            WHERE child.id = ? AND child.source_branch_id = ? AND compat.source_branch_id = ?
+                              AND child.id = child.instance_id AND child.id <> child.common_id
+                            """, Long.class, Long.valueOf(tracker.trackerId()), Long.valueOf(root.trackerId()),
                     Long.valueOf(root.trackerId())));
             Map<String, Object> item = jdbc.queryForMap("""
                     SELECT local_id, common_id FROM light_tracker_items

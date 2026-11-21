@@ -2,6 +2,7 @@
 name: context-anchoring
 description: "Manage per-feature living documents that capture decisions, constraints, and reasoning across AI sessions during active development. Scoped to feature-level work — design, implementation, bugfix, refactor — not for codebase-wide assessments or product-wide specifications (those define their own document lifecycles). Handles creating new context documents, loading existing ones, and enriching them with new decisions. Use when starting a new feature, resuming work, making technical decisions, resolving questions, or when context needs to persist across sessions. Use this skill whenever the user mentions 'load context', 'update context', 'context doc', 'decisions', 'continue where we left off', 'what did we decide', or 'capture this decision'."
 ---
+
 # Context Anchoring
 
 ## Scope
@@ -17,11 +18,14 @@ Skill manage dir of per-feature context docs. Resolution order:
 3. If custom path exist, use that dir for context docs
 4. If no config/path/path not found, use default `.lattice/context/`
 
-Each feature get one doc at `<context_base>/<feature-name>.md`. No default principles, no overlay modes, no override files -- just thin template and per-feature docs that grow through enrichment.
+Each feature get one doc at `<context_base>/<feature-name>.md`. No default principles, no overlay modes, no override
+files -- just thin template and per-feature docs that grow through enrichment.
 
 ## Problem
 
-AI no persistent memory. Context decay real: by message 30+, early decisions contradicted, naming inconsistent, "why" evaporate. Damage compound -- forgotten decision become potential contradiction, lost constraint become violation, unresolved question become silent assumption.
+AI no persistent memory. Context decay real: by message 30+, early decisions contradicted, naming inconsistent, "why"
+evaporate. Damage compound -- forgotten decision become potential contradiction, lost constraint become violation,
+unresolved question become silent assumption.
 
 Context anchor docs solve:
 
@@ -31,31 +35,36 @@ Context anchor docs solve:
 - **Session-spanning** -- doc outlive conversation, carry context forward
 - **Git-native** -- live in repo, versioned alongside code
 
-Two docs per feature: **requirement doc** (static, written upfront, not managed by this skill) and **context anchor doc** (living, evolving, managed by this skill). Requirement doc define *what* build. Context anchor doc capture *how* and *why* -- decisions, constraints, reasoning that emerge during development.
+Two docs per feature: **requirement doc** (static, written upfront, not managed by this skill) and **context anchor
+doc** (living, evolving, managed by this skill). Requirement doc define *what* build. Context anchor doc capture *how*
+and *why* -- decisions, constraints, reasoning that emerge during development.
 
-The requirement doc may live in this repo, or in whatever system the team already tracks requirements in (Jira, Linear, a wiki) -- this atom never writes to it regardless of where it lives.
+The requirement doc may live in this repo, or in whatever system the team already tracks requirements in (Jira, Linear,
+a wiki) -- this atom never writes to it regardless of where it lives.
 
 ## Document Lifecycle
 
-Three behaviors govern context anchor doc lifecycle. Each triggered reactively (user ask) or proactively (AI suggest). Both cases, AI **always confirm before acting** -- propose, user dispose.
+Three behaviors govern context anchor doc lifecycle. Each triggered reactively (user ask) or proactively (AI suggest).
+Both cases, AI **always confirm before acting** -- propose, user dispose.
 
-| Behavior | Purpose | Reactive Trigger | Proactive Trigger |
-|----------|---------|-----------------|-------------------|
-| **Create** | Start new context doc | User ask create one | AI detect feature work beginning without doc |
-| **Load** | Restore context from existing doc | User ask load/resume | AI detect existing docs and suggest loading |
-| **Enrich** | Add new decision, constraint, resolution | User ask capture something | AI detect decision made in conversation |
+| Behavior   | Purpose                                  | Reactive Trigger           | Proactive Trigger                            |
+|------------|------------------------------------------|----------------------------|----------------------------------------------|
+| **Create** | Start new context doc                    | User ask create one        | AI detect feature work beginning without doc |
+| **Load**   | Restore context from existing doc        | User ask load/resume       | AI detect existing docs and suggest loading  |
+| **Enrich** | Add new decision, constraint, resolution | User ask capture something | AI detect decision made in conversation      |
 
 ## Status Lifecycle
 
 Every context doc carries a `status` frontmatter field. Never infer status from body prose.
 
-| Value | Set by |
-|---|---|
-| `draft` | `context-anchoring` Create — design not yet complete |
+| Value      | Set by                                                      |
+|------------|-------------------------------------------------------------|
+| `draft`    | `context-anchoring` Create — design not yet complete        |
 | `approved` | `design-blueprint` Step 3 — L1–L4 complete, design reviewed |
-| `complete` | `code-forge` Step 5 — implementation done |
+| `complete` | `code-forge` Step 5 — implementation done                   |
 
-**STOP: Check this field before acting on a context doc.** `draft` ≠ approved. `approved` ≠ complete. Deviation from approved design: update doc and re-approve — no new status values.
+**STOP: Check this field before acting on a context doc.** `draft` ≠ approved. `approved` ≠ complete. Deviation from
+approved design: update doc and re-approve — no new status values.
 
 ## Create Behavior
 
@@ -63,32 +72,35 @@ Always confirm before creating.
 
 **Steps**:
 
-1. **Identify feature name.** Derive kebab-case filename from feature name (e.g., "User Authentication" → `user-authentication.md`). Confirm name with user.
-2. **Ask about requirement doc.** If user has a requirement document, capture it for the `requirement_doc` frontmatter field -- a local file path, or an external reference (URL, ticket ID, or other identifier resolvable via a connected MCP tool). If neither, leave `null`.
+1. **Identify feature name.** Derive kebab-case filename from feature name (e.g., "User Authentication" →
+   `user-authentication.md`). Confirm name with user.
+2. **Ask about requirement doc.** If user has a requirement document, capture it for the `requirement_doc` frontmatter
+   field -- a local file path, or an external reference (URL, ticket ID, or other identifier resolvable via a connected
+   MCP tool). If neither, leave `null`.
 3. **Create dir** if `<context_base>/` not already exist.
 4. **Generate from template.** Read `./assets/feature-doc-template.md` and fill in:
-   - Frontmatter: `feature`, `requirement_doc`, `created` (today date), `status: draft`
-   - H1 heading: feature name
-   - Summary: one-line description (ask user or derive from context)
-   - If template file not found, generate doc using this minimal structure:
-     ```
-     ---
-     feature: <feature-name>
-     requirement_doc: <local path, external reference, or null>
-     created: <today's date>
-     status: draft
-     ---
-     # <Feature Name>
-     <one-line summary>
-     ## Decisions Log
-     | Date | Decision | Reasoning | Alternatives Considered |
-     |------|----------|-----------|------------------------|
-     ## Open Questions
-     None.
-     ## Constraints
-     None.
-     ## Key Files
-     ```
+    - Frontmatter: `feature`, `requirement_doc`, `created` (today date), `status: draft`
+    - H1 heading: feature name
+    - Summary: one-line description (ask user or derive from context)
+    - If template file not found, generate doc using this minimal structure:
+      ```
+      ---
+      feature: <feature-name>
+      requirement_doc: <local path, external reference, or null>
+      created: <today's date>
+      status: draft
+      ---
+      # <Feature Name>
+      <one-line summary>
+      ## Decisions Log
+      | Date | Decision | Reasoning | Alternatives Considered |
+      |------|----------|-----------|------------------------|
+      ## Open Questions
+      None.
+      ## Constraints
+      None.
+      ## Key Files
+      ```
 5. **Confirm creation.** Show user proposed path and content summary.
 
 ## Load Behavior
@@ -98,17 +110,23 @@ Always confirm before loading.
 **Steps**:
 
 1. **Read context doc.** Parse frontmatter and all sections.
-2. **Resolve linked requirement doc** if `requirement_doc` not null. Local path → read directly. External reference (URL, ticket ID, or other identifier) and a connected MCP tool can resolve it → attempt fetch. Neither applies → ask the user to paste the current requirement constraints directly -- expected, not an error. Use whatever is resolved to understand feature goals and scope, but not modify.
+2. **Resolve linked requirement doc** if `requirement_doc` not null. Local path → read directly. External reference
+   (URL, ticket ID, or other identifier) and a connected MCP tool can resolve it → attempt fetch. Neither applies → ask
+   the user to paste the current requirement constraints directly -- expected, not an error. Use whatever is resolved to
+   understand feature goals and scope, but not modify.
 3. **Present structured acknowledgment** (see Output Formats below):
-   - Feature name and summary
-   - **Status** (from frontmatter `status` field — surface explicitly)
-   - Requirement doc status (linked or not linked)
-   - Decision count and latest decision
-   - Open questions (if any)
-   - Constraints (if any)
-4. **Honor all logged decisions.** Every decision in log treated as active commitment. Never contradict logged decision without explicit discussion and new decision entry explaining change.
-5. **Respect constraints as non-negotiable.** Constraints harder than decisions -- represent boundaries that cannot be crossed without deliberate, documented override.
-6. **Flag open questions when work touch them.** If current task involve area with unresolved question, surface immediately. Not silently assume answer.
+    - Feature name and summary
+    - **Status** (from frontmatter `status` field — surface explicitly)
+    - Requirement doc status (linked or not linked)
+    - Decision count and latest decision
+    - Open questions (if any)
+    - Constraints (if any)
+4. **Honor all logged decisions.** Every decision in log treated as active commitment. Never contradict logged decision
+   without explicit discussion and new decision entry explaining change.
+5. **Respect constraints as non-negotiable.** Constraints harder than decisions -- represent boundaries that cannot be
+   crossed without deliberate, documented override.
+6. **Flag open questions when work touch them.** If current task involve area with unresolved question, surface
+   immediately. Not silently assume answer.
 
 ## Enrich Behavior
 
@@ -126,12 +144,21 @@ Always confirm before writing.
 1. **Append-only.** New entries go bottom of Decisions Log table. Never modify or remove existing entries.
 2. **Chronological order.** Entries reflect order decisions made, not grouped by topic.
 3. **Concise but complete.** Each entry understandable on own without re-reading full conversation.
-4. **Feature-bound only.** Only capture decisions relevant to this specific feature. Cross-cutting concerns, project-wide conventions, general preferences belong elsewhere.
-5. **Resolve open questions explicitly.** When open question answered, add answer as decision in log *and* remove question from Open Questions list.
-6. **Constraints non-negotiable.** Once constraint recorded, it binding. Changing constraint require new decision entry explaining why constraint being revised.
-7. **Constraint Override Protocol.** If user explicitly say override constraint (e.g., "forget that constraint, we've changed direction"), not silently delete. Instead: (a) ask user confirm override explicitly, (b) strike through constraint in Constraints section (prefix with `~~`), and (c) add decision entry in Decisions Log recording override and reasoning. Constraint history preserved; binding status revoked.
-8. **Key Files dedup.** When adding to the Key Files table, check if the path already exists in the table. If it does — skip.
-9. **Cross-cutting check.** After enriching, apply the learning-harvest cross-cutting test: (1) does it name a pattern or approach, not a feature-specific fact? (2) could a developer on a different feature apply it without knowing this feature's context? If both pass — silently add to the learning-harvest queue. Do not prompt the user here.
+4. **Feature-bound only.** Only capture decisions relevant to this specific feature. Cross-cutting concerns,
+   project-wide conventions, general preferences belong elsewhere.
+5. **Resolve open questions explicitly.** When open question answered, add answer as decision in log *and* remove
+   question from Open Questions list.
+6. **Constraints non-negotiable.** Once constraint recorded, it binding. Changing constraint require new decision entry
+   explaining why constraint being revised.
+7. **Constraint Override Protocol.** If user explicitly say override constraint (e.g., "forget that constraint, we've
+   changed direction"), not silently delete. Instead: (a) ask user confirm override explicitly, (b) strike through
+   constraint in Constraints section (prefix with `~~`), and (c) add decision entry in Decisions Log recording override
+   and reasoning. Constraint history preserved; binding status revoked.
+8. **Key Files dedup.** When adding to the Key Files table, check if the path already exists in the table. If it does —
+   skip.
+9. **Cross-cutting check.** After enriching, apply the learning-harvest cross-cutting test: (1) does it name a pattern
+   or approach, not a feature-specific fact? (2) could a developer on a different feature apply it without knowing this
+   feature's context? If both pass — silently add to the learning-harvest queue. Do not prompt the user here.
 
 ## Document Discovery
 
@@ -142,15 +169,20 @@ When user ask load or resume but not specify which feature:
 3. **If multiple docs exist**, present numbered list with feature name, creation date, decision count. Let user choose.
 4. **If only one doc exist**, suggest loading it. Confirm before proceeding.
 5. **If no docs exist**, inform user and suggest creating one.
-6. **Fuzzy match**: If user term partially match multiple docs (e.g., "auth" matching `user-authentication.md` and `oauth-authentication.md`), show all partial matches with full filenames and let user choose. Never guess.
+6. **Fuzzy match**: If user term partially match multiple docs (e.g., "auth" matching `user-authentication.md` and
+   `oauth-authentication.md`), show all partial matches with full filenames and let user choose. Never guess.
 
-When user mention feature name in conversation, check if matching context doc exist. If it do and not been loaded in this session, suggest loading it.
+When user mention feature name in conversation, check if matching context doc exist. If it do and not been loaded in
+this session, suggest loading it.
 
 ## Output Formats
 
-**Load**: Show feature name, **status** (from frontmatter), requirement doc status, decision count, open questions, constraints, latest decision. Close with: "All logged decisions are active. Constraints are non-negotiable. I will flag open questions when work touches them."
+**Load**: Show feature name, **status** (from frontmatter), requirement doc status, decision count, open questions,
+constraints, latest decision. Close with: "All logged decisions are active. Constraints are non-negotiable. I will flag
+open questions when work touches them."
 
-**Enrich**: Show exactly what will be added (decision, reasoning, alternatives considered). Wait confirmation before writing.
+**Enrich**: Show exactly what will be added (decision, reasoning, alternatives considered). Wait confirmation before
+writing.
 
 **Create**: Show proposed path, feature name, requirement doc link. Wait confirmation before creating.
 
@@ -158,7 +190,11 @@ When user mention feature name in conversation, check if matching context doc ex
 
 This atom composed by molecules that orchestrate feature workflows:
 
-- **`design-blueprint`** -- invoke **Create** or **Load** in Step 1 (Establish Context), then invoke **Enrich** at each design level checkpoint to capture decisions as they emerge
-- **`code-forge`** -- invoke **Load** in Step 1 (Establish Implementation Context) to load blueprint, then invoke **Enrich** throughout Steps 3-5 to capture implementation decisions, key files, resolved questions
+- **`design-blueprint`** -- invoke **Create** or **Load** in Step 1 (Establish Context), then invoke **Enrich** at each
+  design level checkpoint to capture decisions as they emerge
+- **`code-forge`** -- invoke **Load** in Step 1 (Establish Implementation Context) to load blueprint, then invoke
+  **Enrich** throughout Steps 3-5 to capture implementation decisions, key files, resolved questions
 
-When context doc active (loaded in current session), **Enrich** run continuously -- AI monitor conversation for decisions worth capturing and suggest enrichment as they arise. Not limited to molecule that loaded doc; any skill producing decisions can trigger enrichment suggestion.
+When context doc active (loaded in current session), **Enrich** run continuously -- AI monitor conversation for
+decisions worth capturing and suggest enrichment as they arise. Not limited to molecule that loaded doc; any skill
+producing decisions can trigger enrichment suggestion.

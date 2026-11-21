@@ -5,6 +5,7 @@ version: "{version}"
 
 <!-- This is the template for the language-idioms-refiner output.
      Sections marked with <!-- INTERVIEW GUIDANCE: --> contain instructions
+
      for the refiner interview. Strip ALL guidance comments from the final output.
 
      IMPORTANT: The 6 core section headings below are a STABLE CONTRACT.

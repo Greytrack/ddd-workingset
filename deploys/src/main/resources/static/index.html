@@ -1,115 +1,130 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Working Set Explorer</title>
-<link rel="stylesheet" href="/app.css?v=10">
-<link rel="stylesheet" href="/merge.css?v=3">
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>Working Set Explorer</title>
+    <link href="/app.css?v=10" rel="stylesheet">
+    <link href="/merge.css?v=3" rel="stylesheet">
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">
-    <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-    <div>
-      <h1>Working Set Explorer</h1>
-      <p>工作集管理</p>
-    </div>
-  </div>
-  <div class="context-pickers">
-    <div class="workset-field">
-      <details id="worksetPicker" name="workspace-context" class="context-picker">
-        <summary><span class="picker-label">工作集</span><strong id="activeWorkset">请选择</strong><span class="picker-chevron" aria-hidden="true"></span></summary>
-        <div class="picker-menu">
-          <div class="panel-head"><h2>切换工作集</h2><span id="worksetCount" class="muted"></span></div>
-          <div id="worksetTree" class="tree"></div>
+    <div class="brand">
+        <div aria-hidden="true" class="logo"><i></i><i></i><i></i><i></i></div>
+        <div>
+            <h1>Working Set Explorer</h1>
+            <p>工作集管理</p>
         </div>
-      </details>
-      <button id="editWorksetBtn" type="button" class="workset-edit" aria-label="编辑当前工作集" title="编辑工作集名称与颜色" disabled>
-        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M9.6 2.6 13.4 6.4 5.4 14.4H1.6v-3.8l8-8Z"/>
-          <path d="M8.5 3.7 12.3 7.5"/>
-        </svg>
-      </button>
     </div>
-    <details id="spacePicker" name="workspace-context" class="context-picker">
-      <summary><span class="picker-label">产品空间</span><strong id="activeSpace">请选择</strong><span class="picker-chevron" aria-hidden="true"></span></summary>
-      <div class="picker-menu">
-        <div class="panel-head"><h2>切换产品空间</h2><span id="spaceCount" class="muted"></span></div>
-        <div id="spaceList" class="space-list"></div>
-      </div>
-    </details>
-  </div>
-  <div class="actions">
-    <span id="status" class="status" role="status">准备就绪</span>
-    <button id="createWorksetBtn" type="button" class="btn primary hidden">＋ 新建工作集</button>
-    <button id="extendWorksetBtn" type="button" class="btn primary hidden">＋ 扩展工作集</button>
-    <button id="taskCenterBtn" type="button" class="btn">任务中心 <span id="taskBadge" class="badge task-badge">0</span></button>
-    <button id="refresh" type="button" class="btn">刷新</button>
-  </div>
+    <div class="context-pickers">
+        <div class="workset-field">
+            <details class="context-picker" id="worksetPicker" name="workspace-context">
+                <summary><span class="picker-label">工作集</span><strong id="activeWorkset">请选择</strong><span
+                        aria-hidden="true" class="picker-chevron"></span></summary>
+                <div class="picker-menu">
+                    <div class="panel-head"><h2>切换工作集</h2><span class="muted" id="worksetCount"></span></div>
+                    <div class="tree" id="worksetTree"></div>
+                </div>
+            </details>
+            <button aria-label="编辑当前工作集" class="workset-edit" disabled id="editWorksetBtn"
+                    title="编辑工作集名称与颜色" type="button">
+                <svg aria-hidden="true" fill="none" focusable="false" height="15" stroke="currentColor" stroke-linecap="round"
+                     stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 16 16" width="15">
+                    <path d="M9.6 2.6 13.4 6.4 5.4 14.4H1.6v-3.8l8-8Z"/>
+                    <path d="M8.5 3.7 12.3 7.5"/>
+                </svg>
+            </button>
+        </div>
+        <details class="context-picker" id="spacePicker" name="workspace-context">
+            <summary><span class="picker-label">产品空间</span><strong id="activeSpace">请选择</strong><span
+                    aria-hidden="true" class="picker-chevron"></span></summary>
+            <div class="picker-menu">
+                <div class="panel-head"><h2>切换产品空间</h2><span class="muted" id="spaceCount"></span></div>
+                <div class="space-list" id="spaceList"></div>
+            </div>
+        </details>
+    </div>
+    <div class="actions">
+        <span class="status" id="status" role="status">准备就绪</span>
+        <button class="btn primary hidden" id="createWorksetBtn" type="button">＋ 新建工作集</button>
+        <button class="btn primary hidden" id="extendWorksetBtn" type="button">＋ 扩展工作集</button>
+        <button class="btn" id="taskCenterBtn" type="button">任务中心 <span class="badge task-badge"
+                                                                            id="taskBadge">0</span></button>
+        <button class="btn" id="refresh" type="button">刷新</button>
+    </div>
 </header>
 
-<nav class="pane-nav" aria-label="工作区">
-  <button type="button" data-pane="trackers" aria-controls="trackersPanel" aria-pressed="true">跟踪分类</button>
-  <button type="button" data-pane="items" aria-controls="itemsPanel" aria-pressed="false">Item</button>
+<nav aria-label="工作区" class="pane-nav">
+    <button aria-controls="trackersPanel" aria-pressed="true" data-pane="trackers" type="button">跟踪分类</button>
+    <button aria-controls="itemsPanel" aria-pressed="false" data-pane="items" type="button">Item</button>
 </nav>
 
 <main class="layout" data-active-pane="trackers">
-  <aside id="trackersPanel" class="panel" aria-labelledby="trackerPanelTitle">
-    <div class="panel-head tracker-panel-head">
-      <div class="tracker-panel-heading">
-        <h2 id="trackerPanelTitle">跟踪分类</h2>
-        <div class="panel-actions">
-          <span id="trackerCount" class="muted"></span>
-          <button id="createTrackerBtn" type="button" class="btn small primary hidden" aria-label="新建跟踪分类">＋ 新建</button>
+    <aside aria-labelledby="trackerPanelTitle" class="panel" id="trackersPanel">
+        <div class="panel-head tracker-panel-head">
+            <div class="tracker-panel-heading">
+                <h2 id="trackerPanelTitle">跟踪分类</h2>
+                <div class="panel-actions">
+                    <span class="muted" id="trackerCount"></span>
+                    <button aria-label="新建跟踪分类" class="btn small primary hidden" id="createTrackerBtn"
+                            type="button">＋ 新建
+                    </button>
+                </div>
+            </div>
+            <button aria-controls="trackerPaneContent" aria-expanded="true" aria-label="收起跟踪分类"
+                    class="btn tracker-panel-toggle" id="toggleTrackerPanel" title="收起跟踪分类"
+                    type="button"><span aria-hidden="true"></span></button>
         </div>
-      </div>
-      <button id="toggleTrackerPanel" type="button" class="btn tracker-panel-toggle" aria-controls="trackerPaneContent" aria-expanded="true" aria-label="收起跟踪分类" title="收起跟踪分类"><span aria-hidden="true"></span></button>
-    </div>
-    <div id="trackerPaneContent" class="tracker-pane-content">
-      <div id="selectedSpace" class="selected-workset hidden"></div>
-      <div id="trackerList" class="tree"></div>
-    </div>
-  </aside>
+        <div class="tracker-pane-content" id="trackerPaneContent">
+            <div class="selected-workset hidden" id="selectedSpace"></div>
+            <div class="tree" id="trackerList"></div>
+        </div>
+    </aside>
 
-  <section id="itemsPanel" class="panel" aria-labelledby="itemsTitle">
-    <header class="item-header">
-      <div class="item-scope">
-        <div class="item-heading"><h2 id="itemsTitle">Item</h2><span id="itemCount" class="muted" role="status"></span></div>
-        <ol id="itemContext" class="item-context hidden" aria-label="Item 所属范围" role="list">
-          <li><span class="visually-hidden">工作集 </span><span id="itemWorksetName" class="context-name"></span></li>
-          <li><span class="visually-hidden">产品空间 </span><span id="itemSpaceName" class="context-name"></span></li>
-          <li><span class="visually-hidden">跟踪分类 </span><span id="itemTrackerName" class="context-name"></span></li>
-        </ol>
-      </div>
-      <div id="itemToolbar" class="item-toolbar hidden">
-        <input id="itemFilter" type="search" aria-label="筛选 Item" placeholder="搜索名称、编号或 ID">
-      </div>
-      <div id="itemActions" class="item-actions hidden" role="group" aria-label="Item 操作">
-        <button type="button" class="btn small hidden" data-action="compare-tracker">比较 / 合并</button>
-        <button type="button" class="btn small primary hidden" data-action="new-requirement">＋ 新建需求</button>
-      </div>
-    </header>
-    <div id="itemArea" class="item-area" aria-busy="false"><div class="empty">选择跟踪分类后查看 Item</div></div>
-    <div id="itemDetail" class="item-detail" aria-label="Item 详情" role="region" aria-hidden="true"></div>
-  </section>
+    <section aria-labelledby="itemsTitle" class="panel" id="itemsPanel">
+        <header class="item-header">
+            <div class="item-scope">
+                <div class="item-heading"><h2 id="itemsTitle">Item</h2><span class="muted" id="itemCount"
+                                                                             role="status"></span></div>
+                <ol aria-label="Item 所属范围" class="item-context hidden" id="itemContext" role="list">
+                    <li><span class="visually-hidden">工作集 </span><span class="context-name"
+                                                                          id="itemWorksetName"></span></li>
+                    <li><span class="visually-hidden">产品空间 </span><span class="context-name"
+                                                                            id="itemSpaceName"></span></li>
+                    <li><span class="visually-hidden">跟踪分类 </span><span class="context-name"
+                                                                            id="itemTrackerName"></span></li>
+                </ol>
+            </div>
+            <div class="item-toolbar hidden" id="itemToolbar">
+                <input aria-label="筛选 Item" id="itemFilter" placeholder="搜索名称、编号或 ID" type="search">
+            </div>
+            <div aria-label="Item 操作" class="item-actions hidden" id="itemActions" role="group">
+                <button class="btn small hidden" data-action="compare-tracker" type="button">比较 / 合并</button>
+                <button class="btn small primary hidden" data-action="new-requirement" type="button">＋ 新建需求</button>
+            </div>
+        </header>
+        <div aria-busy="false" class="item-area" id="itemArea">
+            <div class="empty">选择跟踪分类后查看 Item</div>
+        </div>
+        <div aria-hidden="true" aria-label="Item 详情" class="item-detail" id="itemDetail" role="region"></div>
+    </section>
 </main>
 
-<div id="modalOverlay" class="modal-overlay hidden">
-  <section id="modalPanel" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div id="modalContent"></div>
-  </section>
+<div class="modal-overlay hidden" id="modalOverlay">
+    <section aria-labelledby="modalTitle" aria-modal="true" class="modal" id="modalPanel" role="dialog">
+        <div id="modalContent"></div>
+    </section>
 </div>
 
-<div id="mergeOverlay" class="modal-overlay hidden">
-  <section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="mergeTitle">
-    <div id="mergeContent"></div>
-  </section>
+<div class="modal-overlay hidden" id="mergeOverlay">
+    <section aria-labelledby="mergeTitle" aria-modal="true" class="modal wide" role="dialog">
+        <div id="mergeContent"></div>
+    </section>
 </div>
 
-<script src="/js/core.js?v=8" defer></script>
-<script src="/js/worksets.js?v=14" defer></script>
-<script src="/js/features.js?v=15" defer></script>
-<script src="/js/merge.js?v=8" defer></script>
+<script defer src="/js/core.js?v=8"></script>
+<script defer src="/js/worksets.js?v=14"></script>
+<script defer src="/js/features.js?v=15"></script>
+<script defer src="/js/merge.js?v=8"></script>
 </body>
 </html>

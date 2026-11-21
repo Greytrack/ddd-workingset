@@ -6,9 +6,11 @@ Embedded defaults clean code. Opinionated guardrails — override via SKILL.md C
 
 Function do one thing. Class have one axis cohesion -- one reason change.
 
-**"and" test**: describe function purpose one sentence. Need word "and"? Function do more than one thing. Extract each responsibility into named function — function name IS the documentation.
+**"and" test**: describe function purpose one sentence. Need word "and"? Function do more than one thing. Extract each
+responsibility into named function — function name IS the documentation.
 
-**Class cohesion**: class cohesive when most methods use most instance variables. Subset methods only touch subset fields? That subset likely belong own class.
+**Class cohesion**: class cohesive when most methods use most instance variables. Subset methods only touch subset
+fields? That subset likely belong own class.
 
 ---
 
@@ -16,13 +18,14 @@ Function do one thing. Class have one axis cohesion -- one reason change.
 
 ### Thresholds
 
-| Metric | Guideline |
-|--------|-----------|
-| **Lines per function** | Under ~20 |
+| Metric                    | Guideline        |
+|---------------------------|------------------|
+| **Lines per function**    | Under ~20        |
 | **Levels of abstraction** | One per function |
-| **Indentation depth** | Max 2 levels |
+| **Indentation depth**     | Max 2 levels     |
 
-Signals, not hard rules. 25-line function one clear purpose better than five 5-line functions obscure flow. Goal: readability, not line counting.
+Signals, not hard rules. 25-line function one clear purpose better than five 5-line functions obscure flow. Goal:
+readability, not line counting.
 
 ### Extraction Pattern
 
@@ -46,7 +49,8 @@ function renderUserProfile(userId):
   return template.render("profile", profile)
 ```
 
-Extracted function names replace comments you would write. `buildProfileViewModel` document we construct view model -- function name IS comment.
+Extracted function names replace comments you would write. `buildProfileViewModel` document we construct view model --
+function name IS comment.
 
 ---
 
@@ -54,18 +58,20 @@ Extracted function names replace comments you would write. `buildProfileViewMode
 
 ### Thresholds
 
-| Complexity | Assessment | Action |
-|-----------|------------|--------|
-| **1-5** | Simple, easy test | No action |
-| **6-10** | Moderate, manageable | Consider extract if readability suffer |
-| **11-20** | High, difficult test thoroughly | Extract sub-decisions into named functions |
-| **21+** | Very high, likely do multiple things | Decompose aggressive; function have multiple responsibilities |
+| Complexity | Assessment                           | Action                                                        |
+|------------|--------------------------------------|---------------------------------------------------------------|
+| **1-5**    | Simple, easy test                    | No action                                                     |
+| **6-10**   | Moderate, manageable                 | Consider extract if readability suffer                        |
+| **11-20**  | High, difficult test thoroughly      | Extract sub-decisions into named functions                    |
+| **21+**    | Very high, likely do multiple things | Decompose aggressive; function have multiple responsibilities |
 
 ### Flattening Techniques
 
 1. **Guard clauses**: replace nested conditions with early returns — flatten nesting, reduce indentation depth
-2. **Extract named conditions**: complex boolean expressions → named variable or function (`canApproveOrder = isAdmin(user) or isManagerOfDepartment(user, order.department)`)
-3. **Pipeline over loops**: when language supports, replace loop-with-accumulation with filter/map chain — each step explicit
+2. **Extract named conditions**: complex boolean expressions → named variable or function
+   (`canApproveOrder = isAdmin(user) or isManagerOfDepartment(user, order.department)`)
+3. **Pipeline over loops**: when language supports, replace loop-with-accumulation with filter/map chain — each step
+   explicit
 
 ---
 
@@ -73,42 +79,45 @@ Extracted function names replace comments you would write. `buildProfileViewMode
 
 ### Naming Patterns
 
-| Category | Convention | Good Examples | Poor Examples |
-|----------|-----------|---------------|---------------|
-| **Boolean variables** | `is`, `has`, `can`, `should` prefix | `isActive`, `hasPermission`, `canRetry` | `active`, `permission`, `retry` |
-| **Boolean functions** | Same prefixes as boolean variables | `isExpired(token)`, `hasAccess(user, resource)` | `checkExpiry(token)`, `access(user, resource)` |
-| **Functions (actions)** | Verb-first | `calculateTotal`, `sendNotification`, `validateInput` | `totalCalculation`, `notification`, `inputCheck` |
-| **Functions (accessors)** | `get`, `find`, `fetch` prefix | `getUser`, `findByEmail`, `fetchLatestOrders` | `user()`, `email()`, `orders()` |
-| **Classes** | Noun or noun phrase | `OrderValidator`, `PaymentProcessor`, `UserRepository` | `ValidateOrder`, `ProcessPayment`, `HandleUser` |
-| **Constants** | UPPER_SNAKE_CASE or descriptive name | `MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE` | `MRC`, `n`, `val` |
-| **Collections** | Plural noun | `activeUsers`, `pendingOrders`, `validTokens` | `list`, `data`, `items` (when domain context exists) |
-| **Maps/dictionaries** | `xByY` pattern | `userById`, `priceByProductId` | `map`, `lookup`, `dict` |
+| Category                  | Convention                           | Good Examples                                          | Poor Examples                                        |
+|---------------------------|--------------------------------------|--------------------------------------------------------|------------------------------------------------------|
+| **Boolean variables**     | `is`, `has`, `can`, `should` prefix  | `isActive`, `hasPermission`, `canRetry`                | `active`, `permission`, `retry`                      |
+| **Boolean functions**     | Same prefixes as boolean variables   | `isExpired(token)`, `hasAccess(user, resource)`        | `checkExpiry(token)`, `access(user, resource)`       |
+| **Functions (actions)**   | Verb-first                           | `calculateTotal`, `sendNotification`, `validateInput`  | `totalCalculation`, `notification`, `inputCheck`     |
+| **Functions (accessors)** | `get`, `find`, `fetch` prefix        | `getUser`, `findByEmail`, `fetchLatestOrders`          | `user()`, `email()`, `orders()`                      |
+| **Classes**               | Noun or noun phrase                  | `OrderValidator`, `PaymentProcessor`, `UserRepository` | `ValidateOrder`, `ProcessPayment`, `HandleUser`      |
+| **Constants**             | UPPER_SNAKE_CASE or descriptive name | `MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE`                 | `MRC`, `n`, `val`                                    |
+| **Collections**           | Plural noun                          | `activeUsers`, `pendingOrders`, `validTokens`          | `list`, `data`, `items` (when domain context exists) |
+| **Maps/dictionaries**     | `xByY` pattern                       | `userById`, `priceByProductId`                         | `map`, `lookup`, `dict`                              |
 
 ### Names to Avoid
 
 - **Single letters** beyond loop counters (`i`, `j`, `k` in loops fine; `d`, `x`, `t` in business logic NOT)
-- **Abbreviations** need project knowledge (`usr`, `txn`, `mgr`, `ctx` -- unless industry-standard like `HTTP`, `URL`, `ID`)
+- **Abbreviations** need project knowledge (`usr`, `txn`, `mgr`, `ctx` -- unless industry-standard like `HTTP`, `URL`,
+  `ID`)
 - **Generic names** carry no info (`data`, `info`, `temp`, `result`, `value`, `item` -- unless scope 2-3 lines)
 - **Type-encoded names** (`strName`, `intCount`, `arrItems` -- type system handle this)
 - **Negated booleans** (`isNotActive`, `hasNoPermission` -- use positive form, negate at call site)
 
 ### Scope-Length Rule
 
-Name length proportional to scope. Loop variable 2-line body can be `i`. Module-level constant used across functions should be `MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT`. Wider scope, more context name must carry alone.
+Name length proportional to scope. Loop variable 2-line body can be `i`. Module-level constant used across functions
+should be `MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT`. Wider scope, more context name must carry alone.
 
 ### Magic Numbers and Strings
 
-Extraction test: **reader pause ask "why this specific value?"** If yes, extract named constant. Value self-evident from context? Leave inline — constant add indirection without clarity.
+Extraction test: **reader pause ask "why this specific value?"** If yes, extract named constant. Value self-evident from
+context? Leave inline — constant add indirection without clarity.
 
-| Scenario | Action | Example |
-|----------|--------|---------|
-| Meaning not self-evident | Extract named constant | `MAX_RETRIES = 3`, `SESSION_TIMEOUT_MS = 30_000`, `DEFAULT_PAGE_SIZE = 25` |
-| Appears multiple places | Extract named constant | Threshold used three different validation functions |
-| Empty collection literal | Leave inline | `return []`, `users = []`, `new Map()` |
-| Zero as start index | Leave inline | `startIndex = 0`, `offset = 0` |
-| Mathematical identity | Leave inline | `percentage / 100`, `radians * (180 / Math.PI)` |
-| HTTP status in framework call | Leave inline | `res.status(404).json(...)`, `Response(data, status=200)` |
-| Boolean default | Leave inline | `enabled = false`, `verbose = true` as initial values |
+| Scenario                      | Action                 | Example                                                                    |
+|-------------------------------|------------------------|----------------------------------------------------------------------------|
+| Meaning not self-evident      | Extract named constant | `MAX_RETRIES = 3`, `SESSION_TIMEOUT_MS = 30_000`, `DEFAULT_PAGE_SIZE = 25` |
+| Appears multiple places       | Extract named constant | Threshold used three different validation functions                        |
+| Empty collection literal      | Leave inline           | `return []`, `users = []`, `new Map()`                                     |
+| Zero as start index           | Leave inline           | `startIndex = 0`, `offset = 0`                                             |
+| Mathematical identity         | Leave inline           | `percentage / 100`, `radians * (180 / Math.PI)`                            |
+| HTTP status in framework call | Leave inline           | `res.status(404).json(...)`, `Response(data, status=200)`                  |
+| Boolean default               | Leave inline           | `enabled = false`, `verbose = true` as initial values                      |
 
 ---
 
@@ -116,12 +125,12 @@ Extraction test: **reader pause ask "why this specific value?"** If yes, extract
 
 ### Thresholds
 
-| Parameter Count | Assessment | Action |
-|----------------|------------|--------|
-| **0-2** | Ideal | No grouping need |
-| **3** | Acceptable | Consider group if parameters related |
-| **4** | Boundary | Group related parameters into object |
-| **5+** | Excessive | Always group; function may also do too much |
+| Parameter Count | Assessment | Action                                      |
+|-----------------|------------|---------------------------------------------|
+| **0-2**         | Ideal      | No grouping need                            |
+| **3**           | Acceptable | Consider group if parameters related        |
+| **4**           | Boundary   | Group related parameters into object        |
+| **5+**          | Excessive  | Always group; function may also do too much |
 
 ### Grouping Patterns
 
@@ -144,7 +153,8 @@ class SearchOptions:
 
 ### Boolean Parameter Smell
 
-Boolean parameter often mean function do two things -- one when true, one when false. Split into two functions with descriptive names:
+Boolean parameter often mean function do two things -- one when true, one when false. Split into two functions with
+descriptive names:
 
 ```
 // POOR: What does `true` mean at the call site?
@@ -170,11 +180,13 @@ renderUser(user, { compact: true })
 
 1. **First occurrence**: Write code inline. No abstraction.
 2. **Second occurrence**: Note duplication. Tolerate. Two instances may serve different purposes, diverge later.
-3. **Third occurrence with same reason change**: Now extract. Have enough evidence this genuine pattern, not coincidence.
+3. **Third occurrence with same reason change**: Now extract. Have enough evidence this genuine pattern, not
+   coincidence.
 
 ### Same Reason to Change
 
-Two blocks code look identical but serve different business purposes NOT true duplication. Will diverge when respective requirements change.
+Two blocks code look identical but serve different business purposes NOT true duplication. Will diverge when respective
+requirements change.
 
 ```
 // These look identical but should NOT be unified:
@@ -208,14 +220,14 @@ function applyVolumeDiscount(amount, threshold, rate): ...
 
 ### Comment Decision Framework
 
-| Situation | Action |
-|-----------|--------|
-| Code unclear, comment help explain **what** it does | Refactor code be self-documenting (rename, extract, simplify) |
-| Non-obvious **why** -- business rule, legal requirement, workaround | Write comment explain why |
-| Performance optimization make code less readable | Comment explain trade-off, what "obvious" approach would be |
-| TODO or known limitation | Comment with `TODO:` prefix, brief context |
-| API documentation for public interfaces | Use doc comments / docstrings with parameter descriptions |
-| Regex or complex algorithm | Comment explain intent; regex especially benefit plain-English description |
+| Situation                                                           | Action                                                                     |
+|---------------------------------------------------------------------|----------------------------------------------------------------------------|
+| Code unclear, comment help explain **what** it does                 | Refactor code be self-documenting (rename, extract, simplify)              |
+| Non-obvious **why** -- business rule, legal requirement, workaround | Write comment explain why                                                  |
+| Performance optimization make code less readable                    | Comment explain trade-off, what "obvious" approach would be                |
+| TODO or known limitation                                            | Comment with `TODO:` prefix, brief context                                 |
+| API documentation for public interfaces                             | Use doc comments / docstrings with parameter descriptions                  |
+| Regex or complex algorithm                                          | Comment explain intent; regex especially benefit plain-English description |
 
 ### Examples
 
@@ -274,11 +286,16 @@ throw Error("User with email 'a@b.com' already exists. Use updateUser() to modif
 throw Error("Connection to payments API timed out after 5s. Retry or check service status at status.payments.io")
 ```
 
-> **Trust boundary note**: These actionable messages appropriate for application-level errors (service-to-service, logged server-side). At trust boundaries (HTTP responses, user-facing UI), strip internal details (emails, method names), return generic but actionable message with correlation ID. See `framework:secure-coding`.
+> **Trust boundary note**: These actionable messages appropriate for application-level errors (service-to-service,
+> logged server-side). At trust boundaries (HTTP responses, user-facing UI), strip internal details (emails, method
+> names), return generic but actionable message with correlation ID. See `framework:secure-coding`.
 
-**Handle at right level** — not too early (lose context, caller can't decide), not too late (lose ability to recover). Let errors propagate to the layer with enough context to make a meaningful decision. Catch-and-return-null hides whether failure was "not found", "connection error", or "permission denied."
+**Handle at right level** — not too early (lose context, caller can't decide), not too late (lose ability to recover).
+Let errors propagate to the layer with enough context to make a meaningful decision. Catch-and-return-null hides whether
+failure was "not found", "connection error", or "permission denied."
 
-**No swallowed errors** — empty catch blocks make bugs invisible. Always log, re-throw, or explicitly document why ignoring is safe:
+**No swallowed errors** — empty catch blocks make bugs invisible. Always log, re-throw, or explicitly document why
+ignoring is safe:
 
 ```
 try:
@@ -294,12 +311,17 @@ catch error:
 
 Design for testability by default:
 
-1. **Prefer pure functions** — all inputs explicit as parameters (no `Date.now()`, no globals). Deterministic output. Easiest to test.
-2. **Inject dependencies** — constructor/parameter injection over `new` inside methods. Enables mocking, swapping implementations.
-3. **Avoid hidden state** — no module-level mutable variables. Encapsulate state in explicit objects with reset capability.
-4. **Push side effects to boundaries** — separate pure business logic (calculation, validation) from I/O (database, network, filesystem). Pure core + thin orchestration shell.
+1. **Prefer pure functions** — all inputs explicit as parameters (no `Date.now()`, no globals). Deterministic output.
+   Easiest to test.
+2. **Inject dependencies** — constructor/parameter injection over `new` inside methods. Enables mocking, swapping
+   implementations.
+3. **Avoid hidden state** — no module-level mutable variables. Encapsulate state in explicit objects with reset
+   capability.
+4. **Push side effects to boundaries** — separate pure business logic (calculation, validation) from I/O (database,
+   network, filesystem). Pure core + thin orchestration shell.
 
-**Anti-pattern — God Function with embedded I/O**: function that reads from DB, applies business logic, writes to DB, and sends notifications in one body. Extract pure calculation, let orchestration layer handle I/O.
+**Anti-pattern — God Function with embedded I/O**: function that reads from DB, applies business logic, writes to DB,
+and sends notifications in one body. Extract pure calculation, let orchestration layer handle I/O.
 
 ---
 

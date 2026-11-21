@@ -46,4 +46,7 @@ flowchart TB
 
 ## 阶段 3 局部协作候选
 
-BC 消费依赖是 AC-001；反向运行时协作由 BC 适配器提供授权内容、语义比较、合法提交与结果回读。业务内容事实的上游是 BC，工作范围协议的上游是 Working Set；不新增 SK 核心对业务实现的依赖。Privilege/Workflow/Class Hierarchy 为各自事实提供方，精确合同与治理待定。见 [责任边界](../domain/shared-kernel-boundary.md) 与 [阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)。
+BC 消费依赖是 AC-001；反向运行时协作由 BC 适配器提供授权内容、语义比较、合法提交与结果回读。业务内容事实的上游是
+BC，工作范围协议的上游是 Working Set；不新增 SK 核心对业务实现的依赖。Privilege/Workflow/Class Hierarchy
+为各自事实提供方，精确合同与治理待定。见 [责任边界](../domain/shared-kernel-boundary.md)
+与 [阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)。

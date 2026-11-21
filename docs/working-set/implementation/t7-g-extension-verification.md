@@ -1,6 +1,7 @@
 # T7-G 扩展工作集验收
 
-**状态：Reviewed（2026-11-17）**。依据 [T7 设计 §12A](../domain/working-set-creation-lro-design.md)、[T7 后续计划](t7-implementation-prompt.md)、[T6-F §4.2](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
+**状态：Reviewed（2026-11-17）**
+。依据 [T7 设计 §12A](../domain/working-set-creation-lro-design.md)、[T7 后续计划](t7-implementation-prompt.md)、[T6-F §4.2](../reviews/2026-11-16-t6-f-lineage-constraints.md)。
 
 ## 1. 能力
 
@@ -26,22 +27,23 @@
 - `working_set_creations` 通过 `request->mode` 区分 `CREATE/EXTEND`。
 - `uq_creation_target` 只约束 `CREATE` 目标；`uq_active_extension_target` 只约束未终态 `EXTEND`。
 - `trackers.visible` 默认 `TRUE`；扩展新 Tracker 插入 `FALSE`，终态更新为 `TRUE`。
-- 轮次/快照仍按 `working_set_creations`、`working_set_creation_snapshots`、`working_set_creation_items` 存储，沿用 T7-D 的冻结与游标恢复。
+- 当时实现沿用 T7-D 的冻结和游标恢复。当前任务只使用 `working_set_creations` 保存 Tracker
+  的基线时间及游标，见 [ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md)。
 
 ## 3. 测试证据
 
 [WorkingSetCreationAcceptanceTest](../../../deploys/src/test/java/bootstrap/WorkingSetCreationAcceptanceTest.java)：
 
 - `extendsAnExistingChildWithSharedAndDerivedTrackersAndFiltersAlreadyIncludedSources`
-  - 同一任务复用一个共享 Tracker 的原 ID，并派生、索引和绑定两个非共享 Tracker；
-  - 新 Tracker 终态可见；
-  - 重复扩展返回 409 `NoDerivableTracker` 且不新增 Tracker；
-  - `/derive` 返回 404。
+    - 同一任务复用一个共享 Tracker 的原 ID，并派生、索引和绑定两个非共享 Tracker；
+    - 新 Tracker 终态可见；
+    - 重复扩展返回 409 `NoDerivableTracker` 且不新增 Tracker；
+    - `/derive` 返回 404。
 - `extensionKeepsValidTrackerWhenAnotherSelectionFails`
-  - 一个有效 Tracker + 一个不存在 Tracker；
-  - 任务 `PartiallySucceeded`，有效 Tracker 可见，失败明细含 `SourceTrackerNotFound`。
+    - 一个有效 Tracker + 一个不存在 Tracker；
+    - 任务 `PartiallySucceeded`，有效 Tracker 可见，失败明细含 `SourceTrackerNotFound`。
 - `rejectsAnotherExtensionWhileOneIsUnfinished`
-  - 存在未终态扩展任务时，新请求返回 409 `Preparing`。
+    - 存在未终态扩展任务时，新请求返回 409 `Preparing`。
 
 `mvn -B test`：**165 项通过，0 失败、0 错误、0 跳过**。
 `WorkingSetCreationAcceptanceTest`：17 项通过。
@@ -51,6 +53,7 @@ Chrome（Playwright 模拟接口）验证默认与子工作集入口切换、已
 ## 4. 边界
 
 - 扩展不自动合并目标已有 Tracker 的 Item；这些差异继续走普通 Merge。
-- Tracker 派生链为 1:1：同一子工作集对同一父 Tracker 至多一个派生 Tracker。同一分类可投影多个 Tracker，但它们使用不同父 TrackerId，不是同一父下的多个派生。
+- Tracker 派生链为 1:1：同一子工作集对同一父 Tracker 至多一个派生 Tracker。同一分类可投影多个 Tracker，但它们使用不同父
+  TrackerId，不是同一父下的多个派生。
 - 失败的新 Tracker 保持 `visible=false`，可在任务明细中定位；不自动删除副本。
 - UI 普通 Tracker/Bindings 列表过滤不可见项；任务专用轮询仍可读取任务状态。

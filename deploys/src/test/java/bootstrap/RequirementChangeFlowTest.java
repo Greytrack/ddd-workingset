@@ -29,7 +29,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** 验证来源修改命令与仓储、快照和发布端口的协作。 */
+/**
+ * 验证来源修改命令与仓储、快照和发布端口的协作。
+ */
 class RequirementChangeFlowTest {
 
     private static final LocalId L0 = LocalId.of("260574482192320");
@@ -48,6 +50,14 @@ class RequirementChangeFlowTest {
             mock(LightTrackerItemRepository.class));
     private final Requirement before = Requirement.create(
             L0, CommonId.of("265506033508288"), TrackerId.of("264905365135296"), "A", "source description", R3, Version.of("1.2"));
+
+    private static void assertEvent(BusinessObjectUpdateEvent event, SnapshotRefEvent ref, long beforeLock, long afterLock) {
+        assertEquals(R3, event.beforeRevision());
+        assertEquals(R3, event.afterRevision());
+        assertEquals(LockVersion.of(beforeLock), event.beforeLockVersion());
+        assertEquals(LockVersion.of(afterLock), event.afterLockVersion());
+        assertEquals(ref, event.snapshotRef());
+    }
 
     @BeforeEach
     void setUp() {
@@ -158,13 +168,5 @@ class RequirementChangeFlowTest {
         verifyNoInteractions(publisher);
         assertEquals("A", before.title());
         assertEquals(LockVersion.of(0), before.lockVersion());
-    }
-
-    private static void assertEvent(BusinessObjectUpdateEvent event, SnapshotRefEvent ref, long beforeLock, long afterLock) {
-        assertEquals(R3, event.beforeRevision());
-        assertEquals(R3, event.afterRevision());
-        assertEquals(LockVersion.of(beforeLock), event.beforeLockVersion());
-        assertEquals(LockVersion.of(afterLock), event.afterLockVersion());
-        assertEquals(ref, event.snapshotRef());
     }
 }

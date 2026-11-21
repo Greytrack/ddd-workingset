@@ -22,14 +22,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(classes = WorkingsetApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class JdbcSnapshotStoreTest {
 
-    private final LocalId localId = LocalId.of(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
     private static final CommonId C1 = CommonId.of("265506033508288");
     private static final TrackerId T0 = TrackerId.of("264905365135296");
     private static final Revision R3 = Revision.of(3);
-
-    @Autowired private JdbcRequirementSnapshotStore store;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private IdentifierGenerator ids;
+    private final LocalId localId = LocalId.of(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
+    @Autowired
+    private JdbcRequirementSnapshotStore store;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private IdentifierGenerator ids;
 
     @AfterEach
     void cleanUp() {

@@ -3,7 +3,9 @@ package alm.requirement.adapters;
 import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.domain.Requirement;
 
-/** Requirement 的最小读模型。 */
+/**
+ * Requirement 的最小读模型。
+ */
 public record RequirementView(String localId,
                               String commonId,
                               String trackerId,

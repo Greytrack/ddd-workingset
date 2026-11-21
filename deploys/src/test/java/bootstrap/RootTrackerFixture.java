@@ -4,11 +4,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static bootstrap.FixtureIds.fixtureId;
 
-/** 最小平台登记数据，供既有 Requirement 与 COW 验收使用。 */
+/**
+ * 最小平台登记数据，供既有 Requirement 与 COW 验收使用。
+ */
 record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
     private static final String REQUIREMENT_CLASSIFICATION = "14010101";
 
-    private String spaceId() { return fixtureId(trackerId + "-s"); }
+    private String spaceId() {
+        return fixtureId(trackerId + "-s");
+    }
 
     void provision() {
         jdbc.update("INSERT INTO product_spaces VALUES (?)", spaceId());

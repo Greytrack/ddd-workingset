@@ -24,10 +24,10 @@ import sk.productspace.domain.ProductSpace;
 import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.domain.repository.TrackerRepository;
+import sk.workingset.adapters.WorkingSetController;
 import sk.workingset.adapters.WorkingSetController.BindingsView;
 import sk.workingset.adapters.WorkingSetController.ClassificationView;
 import sk.workingset.adapters.WorkingSetController.TrackerView;
-import sk.workingset.adapters.WorkingSetController;
 import sk.workingset.application.query.WorkingSetQueryService;
 import sk.workingset.application.query.model.TrackerBindingSummary;
 import sk.workingset.application.query.provider.ClassificationCatalog;
@@ -36,32 +36,35 @@ import sk.workingset.domain.workingset.WorkingSetCreation;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static bootstrap.FixtureIds.fixtureId;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。 */
+/**
+ * T6-F e 裁定：每个（工作集，空间，分类）一个默认 Tracker；同空间+分类允许出现多个 Tracker。
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class TrackerDefaultAcceptanceTest {
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private TrackerRepository trackerRepository;
-    @Autowired private ClassificationCatalog classifications;
-    @Autowired private LiteBusinessObjectProvider instanceSummaries;
-    @Autowired private WorkingSetQueryService workingSetQueries;
-    @Autowired private TransactionTemplate transactions;
-
     private final String suffix = UUID.randomUUID().toString().substring(0, 8);
     private final String child = fixtureId("WS-CHILD-" + suffix);
     private final String sharedClassification = "14010102";
     private final Set<String> testSpaces = new HashSet<>();
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private TrackerRepository trackerRepository;
+    @Autowired
+    private ClassificationCatalog classifications;
+    @Autowired
+    private LiteBusinessObjectProvider instanceSummaries;
+    @Autowired
+    private WorkingSetQueryService workingSetQueries;
+    @Autowired
+    private TransactionTemplate transactions;
 
     @AfterEach
     void cleanup() {
@@ -335,7 +338,7 @@ class TrackerDefaultAcceptanceTest {
 
         String url = "/api/worksets/1/trackers";
         for (Classification.SharingMode mode : Classification.SharingMode.values()) {
-            Map<String,String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
+            Map<String, String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
                     "14010101", "sharingMode", mode.name());
             ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
@@ -348,7 +351,7 @@ class TrackerDefaultAcceptanceTest {
                 assertTrue(bindings.trackers().stream().anyMatch(binding -> tracker.trackerId().equals(binding.trackerId())));
             });
             assertEquals(HttpStatus.OK, rest.getForEntity(
-                    "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class)
+                            "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=1", String.class)
                     .getStatusCode());
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
 
@@ -366,10 +369,10 @@ class TrackerDefaultAcceptanceTest {
                         request, Map.class).getStatusCode());
             }
         }
-        Map<String,String> allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
+        Map<String, String> allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
                 sharedClassification, "sharingMode", "SHARED");
         assertEquals(HttpStatus.CREATED, rest.postForEntity(url, allowed, TrackerView.class).getStatusCode());
-        Map<String,String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
+        Map<String, String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
                 sharedClassification, "sharingMode", "UNSHARED");
         ResponseEntity<Map> refusal = rest.postForEntity(url, rejected, Map.class);
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, refusal.getStatusCode());

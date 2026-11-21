@@ -53,11 +53,16 @@ class RequirementAcceptanceTest {
     @Autowired
     private JdbcTemplate jdbc;
 
-    @Autowired private ApplicationEventPublisher events;
-    @Autowired private TransactionTemplate transaction;
-    @SpyBean private LightTrackerItemRepository items;
-    @Autowired private LightTrackerItemQueryProvider indexQueries;
-    @Autowired private TrackerItemLifecycleService indexLifecycle;
+    @Autowired
+    private ApplicationEventPublisher events;
+    @Autowired
+    private TransactionTemplate transaction;
+    @SpyBean
+    private LightTrackerItemRepository items;
+    @Autowired
+    private LightTrackerItemQueryProvider indexQueries;
+    @Autowired
+    private TrackerItemLifecycleService indexLifecycle;
 
     private RootTrackerFixture fixture;
     private String localId;

@@ -8,7 +8,9 @@ import sk.workingset.domain.LocalId;
 
 import java.util.Optional;
 
-/** Requirement 写入用例所需的聚合仓储与事务内锁定能力。 */
+/**
+ * Requirement 写入用例所需的聚合仓储与事务内锁定能力。
+ */
 public interface RequirementMutationStore extends RequirementRepository {
     Optional<Requirement> lockById(LocalId id);
 

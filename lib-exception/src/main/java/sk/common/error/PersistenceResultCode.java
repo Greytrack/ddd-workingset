@@ -1,6 +1,8 @@
 package sk.common.error;
 
-/** 公共持久化失败码。 */
+/**
+ * 公共持久化失败码。
+ */
 public enum PersistenceResultCode implements DomainResCode {
     VERSION_CONFLICT(601, "乐观锁异常，请刷新重试");
 

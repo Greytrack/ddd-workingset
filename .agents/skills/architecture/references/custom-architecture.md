@@ -1,6 +1,7 @@
 # Custom Architecture Enforcement Rules
 
-Enforcement instructions for custom architecture mode. Guide AI read/apply team architecture doc when `architecture_mode: custom` set. No embedded defaults — team doc = sole standard.
+Enforcement instructions for custom architecture mode. Guide AI read/apply team architecture doc when
+`architecture_mode: custom` set. No embedded defaults — team doc = sole standard.
 
 ## Reading the Team's Document
 
@@ -21,11 +22,14 @@ If doc have additional sections beyond §8, read/apply as additional arch guidan
 
 ## Self-Validation Checklist
 
-STOP after gen each component. Read **Validation Checklist** section (§6) from loaded arch doc. Walk through each numbered item sequentially, verify ALL before proceed. If any check clearly fail, fix code before present. If check = judgment call (see Ambiguity Signals), flag it — present options/reasoning rather than silent choose.
+STOP after gen each component. Read **Validation Checklist** section (§6) from loaded arch doc. Walk through each
+numbered item sequentially, verify ALL before proceed. If any check clearly fail, fix code before present. If check =
+judgment call (see Ambiguity Signals), flag it — present options/reasoning rather than silent choose.
 
 If loaded doc have no Validation Checklist section, surface warning:
 
-> "Your architecture document is missing a Validation Checklist section. Without it, the architecture atom cannot run style-specific post-generation verification. Consider re-running `/architecture-refiner` to add a Validation Checklist."
+> "Your architecture document is missing a Validation Checklist section. Without it, the architecture atom cannot run
+> style-specific post-generation verification. Consider re-running `/architecture-refiner` to add a Validation Checklist."
 
 Then apply these baseline structural checks as fallback — partial enforcement better than no enforcement:
 
@@ -36,17 +40,21 @@ Then apply these baseline structural checks as fallback — partial enforcement 
 
 ## Active Anti-Pattern Scan
 
-After verify checklist, read **Anti-Patterns** section (§7) from loaded arch doc. Scan output for each listed anti-pattern. If find any, fix before present code.
+After verify checklist, read **Anti-Patterns** section (§7) from loaded arch doc. Scan output for each listed
+anti-pattern. If find any, fix before present code.
 
 If loaded doc have no Anti-Patterns section, surface warning:
 
-> "Your architecture document is missing an Anti-Patterns section. Without it, the architecture atom cannot scan for style-specific anti-patterns. Consider re-running `/architecture-refiner` to add an Anti-Patterns section."
+> "Your architecture document is missing an Anti-Patterns section. Without it, the architecture atom cannot scan for
+> style-specific anti-patterns. Consider re-running `/architecture-refiner` to add an Anti-Patterns section."
 
 ## Ambiguity Signals
 
-If loaded doc have **Ambiguity Signals** section (§8), read before gen code. When encounter described scenario during gen, present options/reasoning using `framework:collaborative-judgment` rather than silent choose.
+If loaded doc have **Ambiguity Signals** section (§8), read before gen code. When encounter described scenario during
+gen, present options/reasoning using `framework:collaborative-judgment` rather than silent choose.
 
-If loaded doc have no Ambiguity Signals section, use judgment — when component could reasonably live two different layers per doc rules, or flow could follow multiple valid patterns, surface as judgment call.
+If loaded doc have no Ambiguity Signals section, use judgment — when component could reasonably live two different
+layers per doc rules, or flow could follow multiple valid patterns, surface as judgment call.
 
 ## Applying the Architecture
 
@@ -58,4 +66,5 @@ Use loaded doc definitions enforce structural rules:
 - **Per-layer rules**: Verify each layer allowed/forbidden patterns match doc Per-Layer Rules section
 - **Flow validation**: When doc describe arch flows (Key Flows section), use as reference validate gen code structure
 
-When apply rules, treat doc definitions as authoritative — represent team arch decisions, take same enforcement weight as clean architecture built-in rules.
+When apply rules, treat doc definitions as authoritative — represent team arch decisions, take same enforcement weight
+as clean architecture built-in rules.

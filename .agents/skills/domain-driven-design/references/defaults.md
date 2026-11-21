@@ -6,15 +6,18 @@ Embedded defaults DDD tactical patterns. Opinionated guardrails — override via
 
 ### Consistency Boundary
 
-Aggregate = objects **must** immediately consistent after every transaction. Not "related things." Specifically: objects whose combined state must satisfy invariant checked atomically.
+Aggregate = objects **must** immediately consistent after every transaction. Not "related things." Specifically: objects
+whose combined state must satisfy invariant checked atomically.
 
 Ask: *"If entity changes, what else MUST valid same instant?"* Only those belong same aggregate.
 
 ### Sizing Heuristic
 
-Start **smallest possible aggregate**: root entity + value objects. Add internal entities only when transactional invariant forces. Debating whether belongs? Almost certainly not.
+Start **smallest possible aggregate**: root entity + value objects. Add internal entities only when transactional
+invariant forces. Debating whether belongs? Almost certainly not.
 
-**Anti-pattern — God Aggregate**: Many internal entities, slow load, high contention → decompose. Keep only what share transactional invariant.
+**Anti-pattern — God Aggregate**: Many internal entities, slow load, high contention → decompose. Keep only what share
+transactional invariant.
 
 ### Reference by Identity
 
@@ -27,13 +30,16 @@ class Order
 
 ### One Transaction Rule
 
-Single business operation modify at most one aggregate per transaction. Need two aggregates updated atomically? Boundary wrong (merge) or accept eventual consistency via domain events.
+Single business operation modify at most one aggregate per transaction. Need two aggregates updated atomically? Boundary
+wrong (merge) or accept eventual consistency via domain events.
 
-**Anti-pattern — Cross-Aggregate Transaction**: Updating two aggregates one transaction → use domain event + eventual consistency.
+**Anti-pattern — Cross-Aggregate Transaction**: Updating two aggregates one transaction → use domain event + eventual
+consistency.
 
 ### Invariant Ownership
 
 Every business rule belongs exactly one aggregate. Rule spans two aggregates?
+
 1. Boundary wrong — should be one aggregate.
 2. One aggregate own rule by receiving other's state as value (not reference).
 3. Rule eventual consistency concern — enforce via domain events + compensating actions.
@@ -73,13 +79,15 @@ class Order                                   // Aggregate Root
 
 ## 2. Entity Patterns
 
-Entity has persistent identity surviving state changes. Two entities equal iff same identity — regardless attribute values.
+Entity has persistent identity surviving state changes. Two entities equal iff same identity — regardless attribute
+values.
 
 ### Behavior-Rich Entities
 
 Entities encapsulate business rules as methods. Guard state transitions, raise events, enforce invariants.
 
-**Anti-pattern — Anemic Domain Model**: Entity data holder only getter/setter; all logic in services → move business rules into entity.
+**Anti-pattern — Anemic Domain Model**: Entity data holder only getter/setter; all logic in services → move business
+rules into entity.
 
 ```
 class Account
@@ -97,7 +105,8 @@ class Account
 
 ## 3. Value Object Patterns
 
-Value objects: no identity, defined by attributes, immutable, self-validating at construction. Operations return new instances.
+Value objects: no identity, defined by attributes, immutable, self-validating at construction. Operations return new
+instances.
 
 ### Self-Validation
 
@@ -114,35 +123,38 @@ class Email
 
 ### Common Value Object Catalog
 
-Wrap primitives carrying domain meaning, requiring validation, or preventing type-confusion bugs. Don't wrap low-significance values (pagination sizes, retry counts).
+Wrap primitives carrying domain meaning, requiring validation, or preventing type-confusion bugs. Don't wrap
+low-significance values (pagination sizes, retry counts).
 
-| Concept | Instead of | Why |
-|---------|-----------|-----|
-| **Money** | number/decimal | Carries currency, prevents mixed-currency arithmetic |
-| **Email** | string | Self-validates format, normalizes casing |
-| **Address** | multiple strings | Groups related fields, validates completeness |
-| **DateRange** | two dates | Enforces start < end, provides overlap logic |
-| **Quantity** | integer | Enforces non-negative, provides arithmetic |
-| **Typed ID** (OrderId, CustomerId) | string/UUID | Prevents passing wrong ID type |
-| **Status** | string/enum | Encapsulates valid transitions |
+| Concept                            | Instead of       | Why                                                  |
+|------------------------------------|------------------|------------------------------------------------------|
+| **Money**                          | number/decimal   | Carries currency, prevents mixed-currency arithmetic |
+| **Email**                          | string           | Self-validates format, normalizes casing             |
+| **Address**                        | multiple strings | Groups related fields, validates completeness        |
+| **DateRange**                      | two dates        | Enforces start < end, provides overlap logic         |
+| **Quantity**                       | integer          | Enforces non-negative, provides arithmetic           |
+| **Typed ID** (OrderId, CustomerId) | string/UUID      | Prevents passing wrong ID type                       |
+| **Status**                         | string/enum      | Encapsulates valid transitions                       |
 
 **Anti-pattern — Primitive Obsession**: Raw string email, number money, UUID ID → wrap value object.
 
-**Anti-pattern — Misidentified Entity/Value Object**: Apply identity test — *"Business track individual instances over time?"* Same attributes = same thing? Value object. Different lifecycle per instance? Entity.
+**Anti-pattern — Misidentified Entity/Value Object**: Apply identity test — *"Business track individual instances over
+time?"* Same attributes = same thing? Value object. Different lifecycle per instance? Entity.
 
 ---
 
 ## 4. Domain Service Rules
 
-Domain service: stateless business logic **spanning multiple entities/value objects** with no natural home in any single one.
+Domain service: stateless business logic **spanning multiple entities/value objects** with no natural home in any single
+one.
 
 ### When to Use vs NOT
 
-| Use Domain Service | Do NOT Use — Instead |
-|---|---|
-| Logic operates on data from multiple aggregates | Single-entity logic → entity method |
-| Pure business computation, no I/O | Orchestration/workflow → application service |
-| No single entity "owns" the computation | I/O operations → infrastructure |
+| Use Domain Service                              | Do NOT Use — Instead                         |
+|-------------------------------------------------|----------------------------------------------|
+| Logic operates on data from multiple aggregates | Single-entity logic → entity method          |
+| Pure business computation, no I/O               | Orchestration/workflow → application service |
+| No single entity "owns" the computation         | I/O operations → infrastructure              |
 
 ### Pure Domain — No I/O
 
@@ -161,7 +173,8 @@ class PricingService
     return price
 ```
 
-**Anti-pattern — Leaking Domain Logic**: Business rule in controller or application service → extract to domain object or domain service.
+**Anti-pattern — Leaking Domain Logic**: Business rule in controller or application service → extract to domain object
+or domain service.
 
 ---
 
@@ -171,7 +184,8 @@ Domain events: past tense, describe what already happened. Facts, not commands.
 
 ### Payload
 
-Event carries aggregate ID, relevant values describing change, timestamp. Don't put entire aggregate state — include only what consumers need.
+Event carries aggregate ID, relevant values describing change, timestamp. Don't put entire aggregate state — include
+only what consumers need.
 
 ### When to Raise
 
@@ -184,7 +198,8 @@ Don't raise events trivial internal changes nothing reacts to.
 
 ### Not Event Sourcing
 
-Default: domain events for communication + coordination, not persistence mechanism. Aggregates persisted through repositories. Event sourcing separate architectural choice — don't conflate.
+Default: domain events for communication + coordination, not persistence mechanism. Aggregates persisted through
+repositories. Event sourcing separate architectural choice — don't conflate.
 
 ```
 class Order
@@ -215,7 +230,8 @@ class Order
 
 ### What Does NOT Belong
 
-Complex reporting queries, bulk operations, search with complex filters → use Provider (query flow). Repository job: persist + reconstitute aggregates for command operations.
+Complex reporting queries, bulk operations, search with complex filters → use Provider (query flow). Repository job:
+persist + reconstitute aggregates for command operations.
 
 ```
 // Repository — command flow, domain objects
@@ -233,7 +249,9 @@ class OrderProvider
 
 ## 7. Object Creation Patterns
 
-Complex aggregate creation should encapsulate validation and assembly. Multiple valid approaches exist — creation pattern choice (factory method, standalone factory, builder) depends on assembly complexity and team conventions. See SKILL.md Ambiguity Signals.
+Complex aggregate creation should encapsulate validation and assembly. Multiple valid approaches exist — creation
+pattern choice (factory method, standalone factory, builder) depends on assembly complexity and team conventions. See
+SKILL.md Ambiguity Signals.
 
 ### Static Factory Method (Most Common)
 
@@ -249,7 +267,8 @@ class Order
 
 ### Reconstitution
 
-Repository implementations rebuild aggregates from stored data — bypass creation-time validation (data already valid when first persisted).
+Repository implementations rebuild aggregates from stored data — bypass creation-time validation (data already valid
+when first persisted).
 
 ```
 class Order
@@ -300,4 +319,5 @@ class CourseGradebook               // Grading aggregate
 
 ---
 
-*Defaults synthesize Evans Domain-Driven Design, Vernon Implementing Domain-Driven Design, practical aggregate design heuristics.*
+*Defaults synthesize Evans Domain-Driven Design, Vernon Implementing Domain-Driven Design, practical aggregate design
+heuristics.*

@@ -1,20 +1,24 @@
 # Review Refiner Template
 
-This template defines the structure of the `.lattice/standards/review-standards.md` output document. It contains all default values from the review molecule's hardcoded behavior, interleaved with interview guidance comments.
+This template defines the structure of the `.lattice/standards/review-standards.md` output document. It contains all
+default values from the review molecule's hardcoded behavior, interleaved with interview guidance comments.
 
-When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not a conversation log.
+When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not
+a conversation log.
 
-**Scope boundary**: This template configures *how the review process works* -- atom loading, severity levels, report format, scope rules, insight capture, health logging. It does NOT configure *what atoms check for* -- those quality standards belong in atom-specific refiners (architecture-refiner, clean-code-refiner, ddd-refiner).
+**Scope boundary**: This template configures *how the review process works* -- atom loading, severity levels, report
+format, scope rules, insight capture, health logging. It does NOT configure *what atoms check for* -- those quality
+standards belong in atom-specific refiners (architecture-refiner, clean-code-refiner, ddd-refiner).
 
 | Belongs here (process orchestration) | Belongs in atom refiners (quality standards) |
-|---------------------------------------|----------------------------------------------|
-| Which atoms load and when | What checks an atom runs |
-| Severity level definitions | What constitutes a violation |
-| Report format and grouping | Checklist items and anti-patterns |
-| Delta scope rules | Layer definitions, naming rules |
-| Insight capture preferences | Domain modeling rules |
-| Health log format | Security check thresholds |
-| Custom review dimensions | Atom-specific validation logic |
+|--------------------------------------|----------------------------------------------|
+| Which atoms load and when            | What checks an atom runs                     |
+| Severity level definitions           | What constitutes a violation                 |
+| Report format and grouping           | Checklist items and anti-patterns            |
+| Delta scope rules                    | Layer definitions, naming rules              |
+| Insight capture preferences          | Domain modeling rules                        |
+| Health log format                    | Security check thresholds                    |
+| Custom review dimensions             | Atom-specific validation logic               |
 
 ---
 
@@ -51,13 +55,16 @@ Include the preamble matching the chosen mode. Only one preamble appears in the 
 
 **Overlay preamble:**
 
-> This document overlays project-specific customizations on top of the review molecule's embedded defaults. Only sections included here differ from the defaults — all other sections remain as-is.
+> This document overlays project-specific customizations on top of the review molecule's embedded defaults. Only
+> sections included here differ from the defaults — all other sections remain as-is.
 >
-> Sections below replace matching sections in the defaults (matched by heading). New sections are appended after defaults.
+> Sections below replace matching sections in the defaults (matched by heading). New sections are appended after
+> defaults.
 
 **Override preamble:**
 
-> These are the review process standards for [PROJECT NAME]. They fully replace the embedded defaults in the review molecule.
+> These are the review process standards for [PROJECT NAME]. They fully replace the embedded defaults in the review
+> molecule.
 
 **Table of contents** (for override mode; overlay mode only lists included sections):
 
@@ -73,14 +80,15 @@ Include the preamble matching the chosen mode. Only one preamble appears in the 
 
 Decisions in one section affect others. When a user changes a section, flag the dependent sections:
 
-| Decision in | Affects | How |
-|-------------|---------|-----|
-| §1 Atom Loading | §2, §3, §5, §6 | Per-atom severity overrides reference atom names; report sections map to loaded atoms; insight categories follow atoms; log atom names must match |
-| §2 Severity | §3, §5, §6, §7 | Report ordering follows severity levels; capture criteria reference severity; log counts use severity names; custom dimensions need severity assignment |
-| §4 Scope Rules | §1, §7 | Expanded scope may trigger more conditional atoms; custom dimensions follow scope rules |
-| §7 Custom Dimensions | §2, §3 | Custom dimensions contribute findings needing severity classification and report placement |
+| Decision in          | Affects        | How                                                                                                                                                     |
+|----------------------|----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| §1 Atom Loading      | §2, §3, §5, §6 | Per-atom severity overrides reference atom names; report sections map to loaded atoms; insight categories follow atoms; log atom names must match       |
+| §2 Severity          | §3, §5, §6, §7 | Report ordering follows severity levels; capture criteria reference severity; log counts use severity names; custom dimensions need severity assignment |
+| §4 Scope Rules       | §1, §7         | Expanded scope may trigger more conditional atoms; custom dimensions follow scope rules                                                                 |
+| §7 Custom Dimensions | §2, §3         | Custom dimensions contribute findings needing severity classification and report placement                                                              |
 
-When a dependency is triggered, inform the user: "Since you changed [X], we should also review [Y] — it's affected by that decision."
+When a dependency is triggered, inform the user: "Since you changed [X], we should also review [Y] — it's affected by
+that decision."
 
 ---
 
@@ -118,21 +126,21 @@ Cross-section impact:
 
 These atoms are loaded for every review regardless of what changed:
 
-| Atom | Why always |
-|------|-----------|
-| `clean-code` | Code craft standards (SRP, naming, complexity, error handling) apply to all code |
-| `knowledge-priming` | Project context (tech stack, architecture, conventions) informs all validation |
+| Atom                | Why always                                                                       |
+|---------------------|----------------------------------------------------------------------------------|
+| `clean-code`        | Code craft standards (SRP, naming, complexity, error handling) apply to all code |
+| `knowledge-priming` | Project context (tech stack, architecture, conventions) informs all validation   |
 
 ### Conditionally Load
 
 These atoms load when the delta matches specific criteria:
 
-| Atom | Trigger condition | Why conditional |
-|------|-------------------|-----------------|
-| `architecture` | Delta touches multiple layers, adds new files, or changes file locations | Structural checks are only relevant when structure changes |
-| `domain-driven-design` | Delta includes files in the configured domain folder or modifies domain objects | Domain modeling rules only apply to domain code |
-| `secure-coding` | Delta touches trust boundaries (HTTP handlers, auth, DB queries, external APIs, secrets, config) | Security checks target code that handles untrusted input or sensitive operations |
-| `test-quality` | Delta includes test files | Test standards (AAA, isolation, naming) only apply to test code |
+| Atom                   | Trigger condition                                                                                | Why conditional                                                                  |
+|------------------------|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| `architecture`         | Delta touches multiple layers, adds new files, or changes file locations                         | Structural checks are only relevant when structure changes                       |
+| `domain-driven-design` | Delta includes files in the configured domain folder or modifies domain objects                  | Domain modeling rules only apply to domain code                                  |
+| `secure-coding`        | Delta touches trust boundaries (HTTP handlers, auth, DB queries, external APIs, secrets, config) | Security checks target code that handles untrusted input or sensitive operations |
+| `test-quality`         | Delta includes test files                                                                        | Test standards (AAA, isolation, naming) only apply to test code                  |
 
 ### Suppressed
 
@@ -194,11 +202,11 @@ Cross-section impact:
 
 Findings are classified into these levels, ordered from most to least severe:
 
-| Level | Meaning | Guidance |
-|-------|---------|----------|
-| **critical** | Will cause bugs, security vulnerabilities, or data loss | Must fix before merging |
-| **warning** | Violates a principle and will cause maintenance pain | Should fix — technical debt if left |
-| **suggestion** | Could be improved but works correctly as-is | Consider fixing — not blocking |
+| Level          | Meaning                                                 | Guidance                            |
+|----------------|---------------------------------------------------------|-------------------------------------|
+| **critical**   | Will cause bugs, security vulnerabilities, or data loss | Must fix before merging             |
+| **warning**    | Violates a principle and will cause maintenance pain    | Should fix — technical debt if left |
+| **suggestion** | Could be improved but works correctly as-is             | Consider fixing — not blocking      |
 
 ### Per-Atom Severity Overrides
 
@@ -220,7 +228,9 @@ No per-atom overrides by default. All atoms use the standard severity classifica
   minimum_severity: warning
 ```
 
-When a per-atom override is active, findings from that atom are clamped to the specified range. A security finding that would normally be a "suggestion" gets promoted to "warning" with a minimum override. A DDD finding that would normally be "critical" gets capped to "warning" with a maximum override.
+When a per-atom override is active, findings from that atom are clamped to the specified range. A security finding that
+would normally be a "suggestion" gets promoted to "warning" with a minimum override. A DDD finding that would normally
+be "critical" gets capped to "warning" with a maximum override.
 
 ---
 
@@ -274,7 +284,8 @@ Each finding follows this format:
 
 - Findings organized by atom (one section per loaded atom)
 - All findings included, severity-ordered within each atom section
-- End with **"What's done well"** (2-3 positive observations) and optional **"Improvement suggestions"** (1-2 broader patterns)
+- End with **"What's done well"** (2-3 positive observations) and optional **"Improvement suggestions"** (1-2 broader
+  patterns)
 
 ### Grouping Strategy
 
@@ -282,13 +293,15 @@ Default grouping: **by-severity** in summary mode, **by-atom** in full mode.
 
 **Alternative grouping options** (not active by default):
 
-- **by-file**: Group findings by file path, severity-ordered within each file. Useful for large deltas touching many files.
+- **by-file**: Group findings by file path, severity-ordered within each file. Useful for large deltas touching many
+  files.
 - **by-severity**: Group findings by severity level, all atoms mixed. Default for summary mode.
 - **by-atom**: Group findings by atom, severity-ordered within each atom. Default for full mode.
 
 ### "What's Done Well"
 
-Enabled by default. Every review includes at least one positive observation about the delta — good naming, proper error handling, clean test structure, correct layer placement.
+Enabled by default. Every review includes at least one positive observation about the delta — good naming, proper error
+handling, clean test structure, correct layer placement.
 
 ### Custom Report Sections
 
@@ -344,19 +357,22 @@ The review focuses on the delta — changed files and lines. This is the set of 
 
 ### Surrounding Code Policy
 
-**Default**: Focus on the delta. Exception: review surrounding code when a change in the delta creates a new violation in existing code (e.g., a new dependency that breaks the dependency rule for an existing file). When reviewing surrounding code, note that the finding originates from the delta's impact, not from pre-existing issues.
+**Default**: Focus on the delta. Exception: review surrounding code when a change in the delta creates a new violation
+in existing code (e.g., a new dependency that breaks the dependency rule for an existing file). When reviewing
+surrounding code, note that the finding originates from the delta's impact, not from pre-existing issues.
 
 **Available policies:**
 
-| Policy | Behavior |
-|--------|----------|
-| **strict** | Delta only. Never look at surrounding code. |
-| **default** | Delta + surrounding code only when the delta creates new violations in it. |
-| **expansive** | Delta + broader context around changed code for holistic review. |
+| Policy        | Behavior                                                                   |
+|---------------|----------------------------------------------------------------------------|
+| **strict**    | Delta only. Never look at surrounding code.                                |
+| **default**   | Delta + surrounding code only when the delta creates new violations in it. |
+| **expansive** | Delta + broader context around changed code for holistic review.           |
 
 ### Dependency Expansion
 
-Disabled by default. When enabled, the review also examines files that directly import from changed files ("immediate dependencies"). This catches cases where a change breaks a consumer.
+Disabled by default. When enabled, the review also examines files that directly import from changed files ("immediate
+dependencies"). This catches cases where a change breaks a consumer.
 
 ### Directory Exclusions
 
@@ -428,7 +444,8 @@ Cross-section impact:
 
 ### File Location
 
-Managed by the `learning-harvest` atom at `.lattice/learnings/operational-learnings.md`. The review molecule invokes learning-harvest's Harvest behavior at session end — this section provides additional capture guidance.
+Managed by the `learning-harvest` atom at `.lattice/learnings/operational-learnings.md`. The review molecule invokes
+learning-harvest's Harvest behavior at session end — this section provides additional capture guidance.
 
 ### Entry Format
 
@@ -440,7 +457,8 @@ Each entry is ONE bullet point, max 2 lines. Organized by category in the operat
 
 ### Capture Criteria
 
-Only propose patterns that would help future sessions — not every finding. A one-off typo is not a learning; "domain services keep doing repository work" is. Additional criteria to pass to learning-harvest:
+Only propose patterns that would help future sessions — not every finding. A one-off typo is not a learning; "domain
+services keep doing repository work" is. Additional criteria to pass to learning-harvest:
 
 - Recurring patterns across reviews
 - Systematic violations (not one-off mistakes)
@@ -526,7 +544,8 @@ Each entry is a structured summary, max **8 lines**:
 
 ### History Cap
 
-If the log exceeds **~20 entries**, move the oldest entries to a one-line `## History` summary section at the top of the file.
+If the log exceeds **~20 entries**, move the oldest entries to a one-line `## History` summary section at the top of the
+file.
 
 ### Custom Fields
 
@@ -603,7 +622,8 @@ Cross-section impact:
 - Dimensions follow scope rules from §4
 -->
 
-No custom dimensions by default. This section is entirely additive — define dimensions for review concerns specific to your project that existing atoms don't cover.
+No custom dimensions by default. This section is entirely additive — define dimensions for review concerns specific to
+your project that existing atoms don't cover.
 
 ### Example Dimensions
 
@@ -677,14 +697,15 @@ default_severity: warning
 
 Each custom dimension must include:
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Human-readable name for the dimension |
-| `check` | Yes | What to look for — a checklist of patterns or rules |
-| `trigger` | Yes | When this dimension applies — based on delta classification |
-| `default_severity` | Yes | Default severity for findings from this dimension (must be a level from §2) |
+| Field              | Required | Description                                                                 |
+|--------------------|----------|-----------------------------------------------------------------------------|
+| `name`             | Yes      | Human-readable name for the dimension                                       |
+| `check`            | Yes      | What to look for — a checklist of patterns or rules                         |
+| `trigger`          | Yes      | When this dimension applies — based on delta classification                 |
+| `default_severity` | Yes      | Default severity for findings from this dimension (must be a level from §2) |
 
-Dimensions follow the same two-pass pattern as atoms: check criteria against the delta, then record findings with severity, file location, and suggested fix. Dimension findings merge into the report alongside atom findings.
+Dimensions follow the same two-pass pattern as atoms: check criteria against the delta, then record findings with
+severity, file location, and suggested fix. Dimension findings merge into the report alongside atom findings.
 
 ---
 

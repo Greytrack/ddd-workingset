@@ -24,11 +24,12 @@ import static bootstrap.FixtureIds.fixtureId;
  * 目录范围与共享模式检查在这里显式执行，避免夹具绕过被测绑定规则。
  */
 final class DeriveFixture {
-    private DeriveFixture() {}
+    private DeriveFixture() {
+    }
 
     static Result derive(JdbcTemplate jdbc, String targetWorkingSet, String sourceTrackerId,
                          String sourceLocalId, Revision revision, CommonId commonId) {
-        Map<String,Object> source = tracker(jdbc, sourceTrackerId);
+        Map<String, Object> source = tracker(jdbc, sourceTrackerId);
         String targetParent = jdbc.queryForObject(
                 "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?",
                 String.class, Long.valueOf(targetWorkingSet));
@@ -54,32 +55,32 @@ final class DeriveFixture {
 
         String trackerId = fixtureId("DERIVED-T-" + UUID.randomUUID());
         boolean isDefault = !exists(jdbc, """
-                SELECT 1 FROM trackers WHERE working_set_id = ? AND product_space_id = ?
-                    AND classification_id = ? AND is_default
-                """, Long.valueOf(targetWorkingSet), Long.valueOf(source.get("product_space_id").toString()),
+                        SELECT 1 FROM trackers WHERE working_set_id = ? AND product_space_id = ?
+                            AND classification_id = ? AND is_default
+                        """, Long.valueOf(targetWorkingSet), Long.valueOf(source.get("product_space_id").toString()),
                 Long.valueOf(source.get("classification_id").toString()));
         jdbc.update("""
-                INSERT INTO trackers (tracker_id, name, source_id, working_set_id, product_space_id,
-                    classification_id, sharing_mode, is_default, visible)
-                VALUES (?, ?, ?, ?, ?, ?, 'UNSHARED', ?, TRUE)
-                """, Long.valueOf(trackerId), source.get("name"), Long.valueOf(sourceTrackerId),
+                        INSERT INTO trackers (tracker_id, name, source_id, working_set_id, product_space_id,
+                            classification_id, sharing_mode, is_default, visible)
+                        VALUES (?, ?, ?, ?, ?, ?, 'UNSHARED', ?, TRUE)
+                        """, Long.valueOf(trackerId), source.get("name"), Long.valueOf(sourceTrackerId),
                 Long.valueOf(targetWorkingSet), Long.valueOf(source.get("product_space_id").toString()),
                 Long.valueOf(source.get("classification_id").toString()), isDefault);
         jdbc.update("""
-                INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id,
-                    classification_id, sharing_mode, origin)
-                VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
-                """, Long.valueOf(targetWorkingSet), Long.valueOf(trackerId),
+                        INSERT INTO tracker_bindings (working_set_id, tracker_id, product_space_id,
+                            classification_id, sharing_mode, origin)
+                        VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
+                        """, Long.valueOf(targetWorkingSet), Long.valueOf(trackerId),
                 Long.valueOf(source.get("product_space_id").toString()),
                 Long.valueOf(source.get("classification_id").toString()));
 
         Content content = content(jdbc, sourceTrackerId, sourceLocalId, commonId, revision);
         String localId = fixtureId("DERIVED-L-" + UUID.randomUUID());
         jdbc.update("""
-                INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
-                    source_local_id, source_revision, materialized)
-                VALUES (?, ?, ?, ?, ?, ?, ?, FALSE)
-                """, Long.valueOf(localId), Long.valueOf(commonId.value()), Long.valueOf(trackerId),
+                        INSERT INTO light_tracker_items (local_id, common_id, tracker_id, working_set_id, revision,
+                            source_local_id, source_revision, materialized)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, FALSE)
+                        """, Long.valueOf(localId), Long.valueOf(commonId.value()), Long.valueOf(trackerId),
                 Long.valueOf(targetWorkingSet), revision.value(), Long.valueOf(content.localId()),
                 content.revision().value());
 
@@ -92,7 +93,7 @@ final class DeriveFixture {
     }
 
     private static Map<String, Object> tracker(JdbcTemplate jdbc, String trackerId) {
-        List<Map<String,Object>> rows = jdbc.queryForList("""
+        List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT name, source_id, product_space_id, classification_id, sharing_mode
                 FROM trackers WHERE tracker_id = ?
                 """, Long.valueOf(trackerId));
@@ -107,14 +108,14 @@ final class DeriveFixture {
         boolean derived = jdbc.queryForObject("SELECT source_id IS NOT NULL FROM trackers WHERE tracker_id = ?",
                 Boolean.class, Long.valueOf(sourceTrackerId));
         if (derived) {
-            List<Map<String,Object>> rows = jdbc.queryForList("""
+            List<Map<String, Object>> rows = jdbc.queryForList("""
                     SELECT tracker_id, common_id, revision, source_local_id, source_revision, materialized
                     FROM light_tracker_items WHERE local_id = ?
                     """, Long.valueOf(sourceLocalId));
             if (rows.isEmpty()) {
                 throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
             }
-            Map<String,Object> row = rows.getFirst();
+            Map<String, Object> row = rows.getFirst();
             if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                     || !commonId.value().equals(row.get("common_id").toString())
                     || revision.value() != ((Number) row.get("revision")).intValue()) {
@@ -124,13 +125,13 @@ final class DeriveFixture {
             return new Content(materialized ? sourceLocalId : row.get("source_local_id").toString(),
                     Revision.of(((Number) (materialized ? row.get("revision") : row.get("source_revision"))).intValue()));
         }
-        List<Map<String,Object>> rows = jdbc.queryForList("""
+        List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT tracker_id, common_id FROM requirements WHERE local_id = ?
                 """, Long.valueOf(sourceLocalId));
         if (rows.isEmpty()) {
             throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
         }
-        Map<String,Object> row = rows.getFirst();
+        Map<String, Object> row = rows.getFirst();
         if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                 || !commonId.value().equals(row.get("common_id").toString())) {
             throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
@@ -142,7 +143,9 @@ final class DeriveFixture {
         return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (" + sql + ")", Boolean.class, args));
     }
 
-    record Result(String trackerId, String sourceTrackerId, LightTrackerItem item) {}
+    record Result(String trackerId, String sourceTrackerId, LightTrackerItem item) {
+    }
 
-    private record Content(String localId, Revision revision) {}
+    private record Content(String localId, Revision revision) {
+    }
 }

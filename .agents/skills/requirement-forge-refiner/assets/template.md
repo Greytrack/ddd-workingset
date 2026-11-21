@@ -9,7 +9,9 @@ OVERLAY PREAMBLE — include this text verbatim in overlay-mode output, substitu
 OVERRIDE PREAMBLE — replace with the override preamble below.
 -->
 
-This document customises the built-in requirement standards for **[Project Name]**. Sections present here override the corresponding defaults in the `requirement-quality` atom. Sections not present here use the atom's embedded defaults unchanged.
+This document customises the built-in requirement standards for **[Project Name]**. Sections present here override the
+corresponding defaults in the `requirement-quality` atom. Sections not present here use the atom's embedded defaults
+unchanged.
 
 <!-- OVERRIDE PREAMBLE (use this instead of overlay preamble for mode: override):
 This document defines the requirement standards for **[Project Name]**. The `requirement-quality` atom uses this document as its sole source of structural decisions — no built-in defaults apply.
@@ -33,7 +35,8 @@ What is customisable: naming convention, scope description, size expectation.
 What is fixed: epics are navigational — they group features, they are not implemented directly.
 -->
 
-An epic is a named group of related features forming a coherent product area or capability. One epic represents a meaningful increment of product value — not an individual feature, not the entire product.
+An epic is a named group of related features forming a coherent product area or capability. One epic represents a
+meaningful increment of product value — not an individual feature, not the entire product.
 
 **Naming:** Title Case noun phrase (e.g., "User Authentication", "Payment Processing").
 
@@ -57,9 +60,11 @@ What is customisable: size signal (max scenarios), description of independence.
 What is fixed: features must be independently designable and implementable.
 -->
 
-A feature is a complete, self-contained unit of product behavior. It is independently designable and implementable — it can be handed to design-blueprint and then code-forge without resolving unknowns that sit outside its scope.
+A feature is a complete, self-contained unit of product behavior. It is independently designable and implementable — it
+can be handed to design-blueprint and then code-forge without resolving unknowns that sit outside its scope.
 
-**Size signal:** more than 5 scenarios suggests the feature should be split. Fewer than 2 scenarios suggests it should be merged with a related feature.
+**Size signal:** more than 5 scenarios suggests the feature should be split. Fewer than 2 scenarios suggests it should
+be merged with a related feature.
 
 ---
 
@@ -79,6 +84,7 @@ What is fixed: independence is required for the pipeline (forge → design → c
 -->
 
 A feature is considered independently specced when:
+
 - All requirements and acceptance criteria are fully stated within the feature file.
 - No external decisions are needed before design-blueprint can begin.
 - It delivers coherent user value on its own — a user can complete a meaningful action using this feature alone.
@@ -105,15 +111,14 @@ What is fixed: scenarios are ordered chronologically (natural implementation seq
 -->
 
 A scenario is a bounded situation the feature must handle. Scenarios are:
+
 - Named with a verb phrase describing the situation (e.g., "User submits valid form").
 - Ordered chronologically — the natural implementation sequence.
 - Bounded: 3–6 acceptance criteria per scenario. If more are needed, the scenario is too broad.
 
-**Nomenclature:** scenario
-**Ordering:** chronological — the natural implementation sequence. Not negotiable.
-**Max per feature:** 5. More than 5 signals the feature should be split.
-**Min per feature:** 2. At least one happy path and one failure or edge case.
-**Max ACs per scenario:** 6. More than 6 signals the scenario is too broad.
+**Nomenclature:** scenario **Ordering:** chronological — the natural implementation sequence. Not negotiable. **Max per
+feature:** 5. More than 5 signals the feature should be split. **Min per feature:** 2. At least one happy path and one
+failure or edge case. **Max ACs per scenario:** 6. More than 6 signals the scenario is too broad.
 
 ---
 
@@ -141,13 +146,15 @@ What is fixed: ACs must be verifiable — each one has a clear pass/fail conditi
 **Format:** Given/When/Then
 
 Each acceptance criterion:
+
 ```
 Given [context or precondition],
 when [action or event],
 then [expected outcome].
 ```
 
-ACs must be verifiable — each one has a clear pass/fail condition. Vague ACs ("the system should handle errors gracefully") are not acceptable.
+ACs must be verifiable — each one has a clear pass/fail condition. Vague ACs ("the system should handle errors
+gracefully") are not acceptable.
 
 ---
 
@@ -175,11 +182,11 @@ What is fixed: priority must appear in the feature file's frontmatter so the mol
 
 **Notation:** P0 / P1 / P2
 
-| Value | Meaning |
-|---|---|
-| P0 | Critical — must be delivered for the epic to ship |
-| P1 | Important — should be delivered; acceptable to defer only under constraints |
-| P2 | Nice-to-have — deliver if capacity allows |
+| Value | Meaning                                                                     |
+|-------|-----------------------------------------------------------------------------|
+| P0    | Critical — must be delivered for the epic to ship                           |
+| P1    | Important — should be delivered; acceptable to defer only under constraints |
+| P2    | Nice-to-have — deliver if capacity allows                                   |
 
 Priority lives at the feature level (frontmatter field).
 
@@ -210,12 +217,12 @@ Feature status progresses in this order:
 
 `draft` → `approved` → `in-design` → `implemented`
 
-| Status | Meaning |
-|---|---|
-| draft | Being specced — not yet agreed |
-| approved | Spec agreed; ready for design-blueprint |
-| in-design | Design work is underway or complete for this feature |
-| implemented | Feature is built and shipped |
+| Status      | Meaning                                              |
+|-------------|------------------------------------------------------|
+| draft       | Being specced — not yet agreed                       |
+| approved    | Spec agreed; ready for design-blueprint              |
+| in-design   | Design work is underway or complete for this feature |
+| implemented | Feature is built and shipped                         |
 
 ---
 
@@ -239,12 +246,12 @@ What is customisable: all naming conventions.
 What is fixed: file names must be filesystem-safe (no spaces, lowercase preferred).
 -->
 
-| Artifact | Convention | Example |
-|---|---|---|
-| Epic name | Title Case noun phrase | "Payment Processing" |
-| Feature file name | kebab-case | `user-login.md` |
-| Feature display name | Title Case | "User Login" |
-| Scenario name | Verb phrase, sentence case | "User submits valid credentials" |
+| Artifact             | Convention                 | Example                          |
+|----------------------|----------------------------|----------------------------------|
+| Epic name            | Title Case noun phrase     | "Payment Processing"             |
+| Feature file name    | kebab-case                 | `user-login.md`                  |
+| Feature display name | Title Case                 | "User Login"                     |
+| Scenario name        | Verb phrase, sentence case | "User submits valid credentials" |
 
 ---
 
@@ -265,13 +272,15 @@ What is customisable: level of detail, count range.
 What is fixed: slices are ordered chronologically and describe "what", not "how".
 -->
 
-Implementation slices are ordering hints inside a feature file — they describe the natural build sequence without prescribing technical implementation.
+Implementation slices are ordering hints inside a feature file — they describe the natural build sequence without
+prescribing technical implementation.
 
-**Level of detail:** high-level "what" only. No implementation specifics.
-**Count:** 2–5 slices per feature. More than 5 suggests the feature may be too large.
-**Format:** numbered list, each a short phrase describing what is built in that step.
+**Level of detail:** high-level "what" only. No implementation specifics. **Count:** 2–5 slices per feature. More than 5
+suggests the feature may be too large. **Format:** numbered list, each a short phrase describing what is built in that
+step.
 
 Example:
+
 ```
 1. Core form render and validation
 2. Submission and success state

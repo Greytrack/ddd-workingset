@@ -24,10 +24,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WorkingSetPresentationAcceptanceTest {
 
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
-
     private final List<String> created = new ArrayList<>();
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    private static String path(String id) {
+        return "/api/worksets/" + id;
+    }
 
     @AfterEach
     void removeCreated() {
@@ -91,9 +96,5 @@ class WorkingSetPresentationAcceptanceTest {
     private RestClient restClient() {
         return RestClient.builder().baseUrl(rest.getRootUri())
                 .requestFactory(new JdkClientHttpRequestFactory()).build();
-    }
-
-    private static String path(String id) {
-        return "/api/worksets/" + id;
     }
 }

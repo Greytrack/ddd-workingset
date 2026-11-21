@@ -1,18 +1,18 @@
 package bootstrap;
 
-import sk.tracker.domain.Tracker;
-import sk.tracker.infrastructure.repositories.TrackerCompatibilityRow;
-import sk.tracker.infrastructure.repositories.TrackerRow;
-import sk.workingset.infrastructure.repositories.WorkingSetRow;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import sk.tracker.domain.Tracker;
 import sk.tracker.domain.TrackerId;
 import sk.tracker.infrastructure.repositories.JdbcTrackerRepository;
+import sk.tracker.infrastructure.repositories.TrackerCompatibilityRow;
+import sk.tracker.infrastructure.repositories.TrackerRow;
 import sk.workingset.domain.workingset.WorkingSetId;
 import sk.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
+import sk.workingset.infrastructure.repositories.WorkingSetRow;
 
 import java.math.BigDecimal;
 
@@ -21,9 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Transactional
 class LegacyWideRowAcceptanceTest {
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private JdbcWorkingSetRepository workingSets;
-    @Autowired private JdbcTrackerRepository trackers;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private JdbcWorkingSetRepository workingSets;
+    @Autowired
+    private JdbcTrackerRepository trackers;
 
     @Test
     void readsWorkingSetSlotsIndependentlyFromItsOrdinaryColumns() {

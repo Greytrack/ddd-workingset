@@ -10,14 +10,16 @@ import sk.common.error.DomainException;
 import sk.workingset.domain.LockVersion;
 import sk.workingset.domain.Version;
 import sk.workingset.domain.event.MergeEntryApprovedEvent;
-import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 import sk.workingset.domain.event.MergeEntryResolvedEvent;
+import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 import sk.workingset.error.MergeResCode;
 
 import java.util.Map;
 import java.util.Optional;
 
-/** ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。 */
+/**
+ * ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,8 +28,33 @@ public final class RequirementMergeWriter {
     private final RequirementCommandService requirements;
     private final RequirementMergeReceiptStore receipts;
 
+    private static MergeEntryResolvedEvent rejected(MergeEntryApprovedEvent command, Outcome outcome,
+                                                    String failure) {
+        return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), outcome, null,
+                command.sourceRevision(), command.targetRevision(), false, command.inherited(), failure);
+    }
 
-    /** 幂等应用合并条目：整体校验目标、提交并返回结果事件。 */
+    private static Requirement create(MergeEntryApprovedEvent command) {
+        if (command.operation() == MergeEntryApprovedEvent.Operation.RESTORE) {
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "deleted target is absent");
+        }
+        return Requirement.create(command.localId(), command.commonId(), command.trackerId(),
+                text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),
+                text(command.acceptedFields(), "description", text(command.baseFields(), "description", null)),
+                command.targetRevision(), command.version() == null ? Version.none() : Version.of(command.version()));
+    }
+
+    private static String text(Map<String, Object> values, String field, String fallback) {
+        Object value = values.getOrDefault(field, fallback);
+        if (!(value instanceof String text)) {
+            throw new IllegalArgumentException("Requirement field is unreadable: " + field);
+        }
+        return text;
+    }
+
+    /**
+     * 幂等应用合并条目：整体校验目标、提交并返回结果事件。
+     */
     public MergeEntryResolvedEvent apply(MergeEntryApprovedEvent command) {
         Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());
         if (existing.isPresent()) {
@@ -90,29 +117,5 @@ public final class RequirementMergeWriter {
         return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
                 changed.localId(), command.sourceRevision(), changed.revision(), false,
                 command.inherited(), null);
-    }
-
-    private static MergeEntryResolvedEvent rejected(MergeEntryApprovedEvent command, Outcome outcome,
-                                                    String failure) {
-        return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), outcome, null,
-                command.sourceRevision(), command.targetRevision(), false, command.inherited(), failure);
-    }
-
-    private static Requirement create(MergeEntryApprovedEvent command) {
-        if (command.operation() == MergeEntryApprovedEvent.Operation.RESTORE) {
-            throw DomainException.withMessage(MergeResCode.CONFLICT, "deleted target is absent");
-        }
-        return Requirement.create(command.localId(), command.commonId(), command.trackerId(),
-                text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),
-                text(command.acceptedFields(), "description", text(command.baseFields(), "description", null)),
-                command.targetRevision(), command.version() == null ? Version.none() : Version.of(command.version()));
-    }
-
-    private static String text(Map<String, Object> values, String field, String fallback) {
-        Object value = values.getOrDefault(field, fallback);
-        if (!(value instanceof String text)) {
-            throw new IllegalArgumentException("Requirement field is unreadable: " + field);
-        }
-        return text;
     }
 }

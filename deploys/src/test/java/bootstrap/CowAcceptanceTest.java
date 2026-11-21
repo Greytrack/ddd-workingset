@@ -25,11 +25,7 @@ import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
 import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,19 +38,23 @@ import static org.mockito.Mockito.doAnswer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CowAcceptanceTest {
-    @Autowired private TestRestTemplate rest;
-    @Autowired private JdbcTemplate jdbc;
-    @Autowired private CowFailureLogQueryProvider failures;
-    @Autowired private RequirementCommandService requirements;
-    @SpyBean private LightTrackerItemRepository items;
-
     private final List<String> targets = new ArrayList<>();
     private final List<String> worksets = new ArrayList<>();
-    private String source;
-    private String common;
     private final String tracker = fixtureId("T-" + UUID.randomUUID());
     private final String space = fixtureId("S-" + UUID.randomUUID());
     private final String classification = "14010101";
+    @Autowired
+    private TestRestTemplate rest;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private CowFailureLogQueryProvider failures;
+    @Autowired
+    private RequirementCommandService requirements;
+    @SpyBean
+    private LightTrackerItemRepository items;
+    private String source;
+    private String common;
 
     @AfterEach
     void cleanUp() {
@@ -377,8 +377,8 @@ class CowAcceptanceTest {
 
     private int completedEvents() {
         return jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE serialized_event LIKE ?"
-                + " AND event_type LIKE '%.BusinessObjectUpdateEvent' AND completion_date IS NOT NULL"
-                + " AND listener_id LIKE '%RequirementChangedListener%'",
+                        + " AND event_type LIKE '%.BusinessObjectUpdateEvent' AND completion_date IS NOT NULL"
+                        + " AND listener_id LIKE '%RequirementChangedListener%'",
                 Integer.class, eventPattern());
     }
 
@@ -397,9 +397,6 @@ class CowAcceptanceTest {
                 materialized);
     }
 
-    private record ReadContent(Map<String, Object> fields, int contentRevision, String contentLocalId,
-                               boolean materialized) {}
-
     private void assertLocalContent(Target target, String title) {
         ReadContent content = read(target);
         assertTrue(content.materialized());
@@ -407,5 +404,10 @@ class CowAcceptanceTest {
         assertEquals(title, content.fields().get("title"));
     }
 
-    private record Target(String ws, String id, String trackerId) {}
+    private record ReadContent(Map<String, Object> fields, int contentRevision, String contentLocalId,
+                               boolean materialized) {
+    }
+
+    private record Target(String ws, String id, String trackerId) {
+    }
 }

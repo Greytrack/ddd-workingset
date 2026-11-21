@@ -2,11 +2,13 @@
 
 **状态：Draft / Candidate（T6-E 后的当前交互；Q1～Q4 语义见 ADR-0005，确认归属见 ADR-0006；图本身未纳入正式基线）**
 
-- 目的：表达一页 Merge 决策从 Compare、提交、异步执行、业务 BC 提交、LightTrackerItem 维护到合并确认的协作顺序，以及 MergeRound 的一次执行与终态。
+- 目的：表达一页 Merge 决策从 Compare、提交、异步执行、业务 BC 提交、LightTrackerItem 维护到合并确认的协作顺序，以及
+  MergeRound 的一次执行与终态。
 - 适用范围：直属父子非共享 Tracker。登记与分发的证据边界见 [ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)。
 - 依据：[Merge 执行契约 v1](../domain/merge-execution-contract-v1.md)、ADR-0005、ADR-0006、D-019、T6-E、T6-B。
 - 不表达：事件中间件、数据库表、事务隔离级别；不表达共享 Tracker 与兄弟/跨代合并。
-- **2026-11-16 更新**：Compare 只读瞬时，不返回可回读的 `ComparisonToken`；提交入口改为整页决策（1～50 条，`requestId` 幂等），轮次由事件异步执行，客户端轮询。
+- **2026-11-16 更新**：Compare 只读瞬时，不返回可回读的 `ComparisonToken`；提交入口改为整页决策（1～50 条，`requestId`
+  幂等），轮次由事件异步执行，客户端轮询。
 
 ## 图例
 
@@ -84,7 +86,8 @@ stateDiagram-v2
     Conflict --> [*]: 重新 compare 后新建轮次
 ```
 
-状态定义与责任边界见 [T1 §5、§8](../domain/merge-execution-contract-v1.md)，落地证据见 [T6-E 验收](../implementation/t6-e-merge-round-verification.md)。
+状态定义与责任边界见 [T1 §5、§8](../domain/merge-execution-contract-v1.md)
+，落地证据见 [T6-E 验收](../implementation/t6-e-merge-round-verification.md)。
 
 ### MergeRound 一次执行与终态
 
@@ -106,10 +109,10 @@ stateDiagram-v2
 
 当前实现没有独立 `Completed` 阶段：本轮全部条目完成后直接进入三种终态之一。
 
-
 ## 3. 确认归属与只读查询
 
-依据 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 与 [SCN-058](../scenarios/core-scenarios.md)。组合箭头表示聚合内所有权；依赖箭头仅表示读写路径，不表示第二份确认数据。
+依据 [ADR-0006](../adr/0006-merge-confirmation-ownership.md) 与 [SCN-058](../scenarios/core-scenarios.md)
+。组合箭头表示聚合内所有权；依赖箭头仅表示读写路径，不表示第二份确认数据。
 
 ```mermaid
 classDiagram

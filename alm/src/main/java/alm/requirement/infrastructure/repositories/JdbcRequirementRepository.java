@@ -1,13 +1,12 @@
 package alm.requirement.infrastructure.repositories;
 
-import lombok.extern.slf4j.Slf4j;
-
 import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -116,10 +115,10 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                 FROM requirements r JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
                 WHERE r.local_id = ?
                 """, (rs, row) -> new AirInstCommonPo(id, 1401L, 140101L, 14010101L,
-                        rs.getObject("work_space", Long.class), rs.getString("number"), rs.getString("name"),
-                        null, rs.getString("version"), rs.getLong("revision"), rs.getBoolean("delete_flag") ? 1 : 0,
-                        rs.getLong("lock_version"), null, null, null, null, null, null, rs.getLong("common_id"),
-                        rs.getLong("working_set_id"), null, rs.getLong("tracker_id"), rs.getLong("revision")), id);
+                rs.getObject("work_space", Long.class), rs.getString("number"), rs.getString("name"),
+                null, rs.getString("version"), rs.getLong("revision"), rs.getBoolean("delete_flag") ? 1 : 0,
+                rs.getLong("lock_version"), null, null, null, null, null, null, rs.getLong("common_id"),
+                rs.getLong("working_set_id"), null, rs.getLong("tracker_id"), rs.getLong("revision")), id);
         commonInstances.save(common);
     }
 

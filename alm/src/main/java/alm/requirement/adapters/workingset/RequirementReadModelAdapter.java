@@ -1,8 +1,5 @@
 package alm.requirement.adapters.workingset;
 
-import java.util.Map;
-import java.util.Objects;
-
 import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
 import sk.common.error.DomainException;
@@ -12,6 +9,9 @@ import sk.workingset.application.query.provider.TrackerItemQueryProvider;
 import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
+
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * ALM 查询侧 Adapter：用 Requirement 读模型实现 SK 的只读内容端口。
@@ -26,6 +26,11 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
     public RequirementReadModelAdapter(RequirementQueryProvider query, LocalId localId) {
         this.query = Objects.requireNonNull(query, "query");
         this.localId = Objects.requireNonNull(localId, "localId");
+    }
+
+    private static DomainException notFound(LocalId localId) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND,
+                "requirement not found: " + localId.value());
     }
 
     @Override
@@ -61,10 +66,5 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
 
     private RequirementDetail find() {
         return query.find(localId.numericValue()).orElseThrow(() -> notFound(localId));
-    }
-
-    private static DomainException notFound(LocalId localId) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND,
-                "requirement not found: " + localId.value());
     }
 }

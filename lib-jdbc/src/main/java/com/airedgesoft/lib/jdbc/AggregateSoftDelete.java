@@ -32,27 +32,36 @@ public final class AggregateSoftDelete {
     /**
      * 以数据源模板、实体元数据上下文与软删列模型构造。
      *
-     * @param jdbcTemplate
-     *            与调用方事务同源的数据源模板
-     * @param mappingContext
-     *            Spring Data 关系型映射上下文（表名 / 主键列 / 版本列元数据来源）
-     * @param columns
-     *            软删列模型声明（标志列 / 时间列 / 存活与已删标志值）
+     * @param jdbcTemplate   与调用方事务同源的数据源模板
+     * @param mappingContext Spring Data 关系型映射上下文（表名 / 主键列 / 版本列元数据来源）
+     * @param columns        软删列模型声明（标志列 / 时间列 / 存活与已删标志值）
      */
     public AggregateSoftDelete(JdbcTemplate jdbcTemplate,
-            MappingContext<? extends RelationalPersistentEntity<?>, ?> mappingContext, JdbcSoftDelete.Columns columns) {
+                               MappingContext<? extends RelationalPersistentEntity<?>, ?> mappingContext, JdbcSoftDelete.Columns columns) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "JDBC 模板不能为空");
         this.mappingContext = Objects.requireNonNull(mappingContext, "映射上下文不能为空");
         this.columns = Objects.requireNonNull(columns, "列模型声明不能为空");
     }
 
     /**
+     * 版本推进片段：软删除 / 恢复属于状态变更，存在版本列时同步 {@code version = version + 1}；无版本列时为空。
+     */
+    private static String versionIncrement(Meta meta) {
+        return meta.versionColumn() == null ? "" : ", " + meta.versionColumn() + " = " + meta.versionColumn() + " + 1";
+    }
+
+    /**
+     * 版本谓词片段：<b>仅在存在期望版本时附加</b>——SQL 谓词与绑定参数必须同步，否则参数个数不匹配。
+     */
+    private static String versionPredicate(Meta meta, Long expectedVersion) {
+        return expectedVersion == null || meta.versionColumn() == null ? "" : " AND " + meta.versionColumn() + " = ?";
+    }
+
+    /**
      * 无条件软删除（回收站）：存活行 → 置软删标记；已删 / 不存在 → false（调用方映射 404 或幂等 204）。
      *
-     * @param entityType
-     *            持久化实体类型（元数据来源：表名 / 主键列 / 版本列）
-     * @param id
-     *            聚合身份
+     * @param entityType 持久化实体类型（元数据来源：表名 / 主键列 / 版本列）
+     * @param id         聚合身份
      */
     public <P> boolean softDelete(Class<P> entityType, Object id) {
         return softDelete(entityType, id, null);
@@ -134,7 +143,9 @@ public final class AggregateSoftDelete {
         return false;
     }
 
-    /** 实体元数据（表名 / 主键列 / 版本列）。 */
+    /**
+     * 实体元数据（表名 / 主键列 / 版本列）。
+     */
     private Meta meta(Class<?> entityType) {
         RelationalPersistentEntity<?> entity = mappingContext.getRequiredPersistentEntity(entityType);
         String versionColumn = null;
@@ -146,24 +157,9 @@ public final class AggregateSoftDelete {
     }
 
     /**
-     * 版本推进片段：软删除 / 恢复属于状态变更，存在版本列时同步 {@code version = version + 1}；无版本列时为空。
-     */
-    private static String versionIncrement(Meta meta) {
-        return meta.versionColumn() == null ? "" : ", " + meta.versionColumn() + " = " + meta.versionColumn() + " + 1";
-    }
-
-    /**
-     * 版本谓词片段：<b>仅在存在期望版本时附加</b>——SQL 谓词与绑定参数必须同步，否则参数个数不匹配。
-     */
-    private static String versionPredicate(Meta meta, Long expectedVersion) {
-        return expectedVersion == null || meta.versionColumn() == null ? "" : " AND " + meta.versionColumn() + " = ?";
-    }
-
-    /**
      * 0 行归类：目标行存在（软删 / 已删）但版本与期望不符 → 409（并发版本冲突）；否则静默返回，由调用方按 false 映射 404。
      *
-     * @param deletedScope
-     *            true = 目标行处于「已软删」状态（恢复 / 物理删除场景），false = 存活行（软删场景）
+     * @param deletedScope true = 目标行处于「已软删」状态（恢复 / 物理删除场景），false = 存活行（软删场景）
      */
     private void throwIfConcurrentMismatch(Meta meta, Object id, Long expected, boolean deletedScope) {
         if (expected == null || meta.versionColumn() == null) {
@@ -179,7 +175,9 @@ public final class AggregateSoftDelete {
         }
     }
 
-    /** 实体元数据快照。 */
+    /**
+     * 实体元数据快照。
+     */
     private record Meta(String table, String idColumn, String versionColumn) {
     }
 }

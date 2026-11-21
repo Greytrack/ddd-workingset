@@ -13,10 +13,12 @@ import sk.workingset.domain.workingset.WorkingSetCreationRepository;
 import sk.workingset.domain.workingset.WorkingSetId;
 
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
- * WorkingSetCreation 任务仓储的 JDBC 实现；任务进度与范围快照以 JSONB 保存。
+ * WorkingSetCreation 任务仓储的 JDBC 实现；任务进度、选择和基线时间以 JSONB 保存。
  */
 @Slf4j
 @Repository
@@ -25,6 +27,10 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
 
+    @Override
+    public Instant acceptanceTime() {
+        return Objects.requireNonNull(jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class)).toInstant();
+    }
 
     @Override
     public boolean save(WorkingSetCreation creation) {

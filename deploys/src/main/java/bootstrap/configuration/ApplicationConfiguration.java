@@ -10,10 +10,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import sk.tracker.domain.repository.TrackerRepository;
 import sk.workingset.application.command.SourceSerialCowCoordinator;
 import sk.workingset.application.command.WorkingSetItemIndexer;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import sk.workingset.domain.workingset.WorkingSetCreationSnapshotStore;
+import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.time.Duration;
@@ -47,11 +46,10 @@ public class ApplicationConfiguration {
             TrackerRepository trackers,
             LightTrackerItemQueryProvider itemQueries,
             LightTrackerItemRepository items,
-            WorkingSetCreationSnapshotStore snapshots,
             BusinessObjectTypeRegistry registry,
             IdentifierGenerator ids,
             @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
-        return new WorkingSetItemIndexer(bindings, trackers, itemQueries, items, snapshots,
+        return new WorkingSetItemIndexer(bindings, trackers, itemQueries, items,
                 registry, ids, batchSize);
     }
 }

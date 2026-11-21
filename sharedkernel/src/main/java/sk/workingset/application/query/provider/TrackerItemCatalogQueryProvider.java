@@ -5,6 +5,7 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.Revision;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -17,7 +18,10 @@ public interface TrackerItemCatalogQueryProvider {
      */
     boolean hasAnyItem(TrackerId trackerId);
 
-    List<Identity> page(TrackerId trackerId, String afterLocalId, int limit);
+    /**
+     * Best-effort scan of active items created no later than the baseline. Missing time evidence is excluded.
+     */
+    List<Identity> page(TrackerId trackerId, Instant baselineAt, String afterLocalId, int limit);
 
     /**
      * Full active identity list for a tracker.
@@ -32,6 +36,8 @@ public interface TrackerItemCatalogQueryProvider {
     }
 
     boolean hasActiveFamily(TrackerId trackerId, CommonId commonId);
+
+    boolean hasActiveFamily(TrackerId trackerId, CommonId commonId, Instant baselineAt);
 
     record Identity(LocalId localId, CommonId commonId, Revision revision) {
     }

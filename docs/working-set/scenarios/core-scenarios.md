@@ -2,7 +2,9 @@
 
 **状态：Draft**
 
-这些场景把历史行为描述转成可讨论的业务例子，不是已确认验收标准。`Then` 中凡写“候选预期”均需业务确认；关联规则见 [候选不变量](../domain/invariants.md)，问题见 [开放问题](../domain/open-questions.md)。
+这些场景把历史行为描述转成可讨论的业务例子，不是已确认验收标准。`Then`
+中凡写“候选预期”均需业务确认；关联规则见 [候选不变量](../domain/invariants.md)
+，问题见 [开放问题](../domain/open-questions.md)。
 
 ## `SCN-001` 创建 Working Set
 
@@ -21,23 +23,26 @@
 
 - **Given** 多个工作集已绑定同一个 SHARED Tracker。
 - **When** 用户从任一工作集入口合法修改该 Tracker，或新增、修改其中 Item。
-- **Then** 修改实际发生在默认工作集，所有绑定该共享 Tracker 的工作集同时可见；不存在只在特定子工作集生效的新增或修改，不派生副本、不通过 Merge 同步。
+- **Then** 修改实际发生在默认工作集，所有绑定该共享 Tracker 的工作集同时可见；不存在只在特定子工作集生效的新增或修改，不派生副本、不通过
+  Merge 同步。
 - **When** 用户尝试从工作集中移除已绑定的共享 Tracker。
 - **Then** 按 T2 §4.2 解除子工作集的 Shared 绑定，保留 Tracker 聚合；即使存在 Item 也不阻止解绑（INV-064，替代早期禁止移除预期）。
-- **边界**：业务对象的校验及提交仍由所属 BC 负责。权限差异、各读取面的可见性实现与验收指标继续设计，不能以异步投影为由擅自放宽“同时可见”的业务要求。Shared 解绑不删除 Tracker 或 Item，具体准入见 T2。
+- **边界**：业务对象的校验及提交仍由所属 BC 负责。权限差异、各读取面的可见性实现与验收指标继续设计，不能以异步投影为由擅自放宽“同时可见”的业务要求。Shared
+  解绑不删除 Tracker 或 Item，具体准入见 T2。
 
 ## Tracker 共享特性的创建约束
 
 **状态**：业务规则已获用户确认，技术实现待设计。**来源**：本对话用户明确说明及 [POL-003](../domain/facts.md)。
 
-| Given 分类配置 | When 创建时指定共享特性 | Then |
-| --- | --- | --- |
-| 共享 | 共享 | 共享特性校验通过 |
-| 共享 | 非共享 | 拒绝创建 |
-| 非共享 | 共享 | 共享特性校验通过 |
-| 非共享 | 非共享 | 共享特性校验通过 |
+| Given 分类配置 | When 创建时指定共享特性 | Then             |
+|----------------|-------------------------|------------------|
+| 共享           | 共享                    | 共享特性校验通过 |
+| 共享           | 非共享                  | 拒绝创建         |
+| 非共享         | 共享                    | 共享特性校验通过 |
+| 非共享         | 非共享                  | 共享特性校验通过 |
 
-“校验通过”仅指共享特性约束满足，创建仍需满足其余适用业务规则。Tracker 创建成功后，任何将共享改为非共享或将非共享改为共享的请求均被拒绝，保持原共享特性。未指定共享特性时的默认值没有确认，不自行补充。分类配置的共享特性为固定出厂设定，不允许修改。
+“校验通过”仅指共享特性约束满足，创建仍需满足其余适用业务规则。Tracker
+创建成功后，任何将共享改为非共享或将非共享改为共享的请求均被拒绝，保持原共享特性。未指定共享特性时的默认值没有确认，不自行补充。分类配置的共享特性为固定出厂设定，不允许修改。
 
 - **Given** 分类出厂配置为共享或非共享，分别覆盖尚未创建 Tracker 与已经创建 Tracker。
 - **When** 尝试修改分类配置的共享特性。
@@ -65,7 +70,8 @@
 
 ## `SCN-004` 首次修改 VIRTUAL Item 触发 COW
 
-**来源删除验收（QUESTION-006）**：来源先软删；派生项切换完成前，永久删除返回 `Preparing` 并保留快照。切换后永久删除清除来源及其历史，派生项仍按原 LocalId 和自身版次可编辑。见 [T3](../domain/lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)。
+**来源删除验收（QUESTION-006）**：来源先软删；派生项切换完成前，永久删除返回 `Preparing` 并保留快照。切换后永久删除清除来源及其历史，派生项仍按原
+LocalId 和自身版次可编辑。见 [T3](../domain/lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)。
 
 **来源**：`INV-003/004/005`；**状态**：Candidate。
 
@@ -100,7 +106,8 @@
 - **When** 用户选择 source 和 target 发起 Compare。
 - **Then（候选预期）** 先按 Item Family 对齐存在性，再按字段规则比较；不存在、删除、无权和历史不可用分别呈现；LocalId 不同本身不是差异。
 - **准入范围（用户已确认）**：比对与合并只允许直接父子工作集之间进行。兄弟和跨代工作集不允许直接比对或合并。
-- **验证例子**：V1 → V2 → V3 中，V1/V2 与 V2/V3 满足关系条件，V1/V3 不满足。相同父工作集下的两个子工作集也不满足。GateFlow 用 V1 内容替换 V3 草稿遵循已确认的历史内容替换合同。
+- **验证例子**：V1 → V2 → V3 中，V1/V2 与 V2/V3 满足关系条件，V1/V3 不满足。相同父工作集下的两个子工作集也不满足。GateFlow 用
+  V1 内容替换 V3 草稿遵循已确认的历史内容替换合同。
 
 ## `SCN-008` 执行字段级合并
 
@@ -112,13 +119,17 @@
 - **反例**：有差异字段未选择时拒绝提交；两个分别合法字段组合后仍可能整体非法。
 
 <a id="keep_target-的已处理确认"></a>
+
 ## 忽略更新字段后的确认
 
-**用户已确认。** 内容未合并、双侧仍然不同，也允许以 `markAsMerged=true` 标记已处理。决策结果记入 MergeCheckpoint。下一次比对时，只要两边版次都没有发生变化，就不再显示该差异。
+**用户已确认。** 内容未合并、双侧仍然不同，也允许以 `markAsMerged=true` 标记已处理。决策结果记入
+MergeCheckpoint。下一次比对时，只要两边版次都没有发生变化，就不再显示该差异。
 
 例如源标题为「定稿」，目标为「初稿」。用户选择保留目标并标记已处理，目标仍为「初稿」。MergeCheckpoint 保存该决定及对应双侧版次，后续同版次组合比对抑制该差异。
 
-确认依据为本对话中用户对保留目标的原裁定及 QUESTION-008.b 的新选择范围。用户进一步明确「版次」为显式升级的业务版次。普通修改增加乐观锁 `lock_version`，业务版次不增加，也不产生新版次历史数据。显式升级才产生版次历史数据，并将版次号向前推进 +1。即使普通编辑改变了标题，只要双侧业务版次未变，已处理差异仍继续隐藏。关联 [阶段 3 裁定进度](../reviews/2026-11-09-stage-3-architecture-review.md#裁定进度)。
+确认依据为本对话中用户对保留目标的原裁定及 QUESTION-008.b 的新选择范围。用户进一步明确「版次」为显式升级的业务版次。普通修改增加乐观锁
+`lock_version`，业务版次不增加，也不产生新版次历史数据。显式升级才产生版次历史数据，并将版次号向前推进
++1。即使普通编辑改变了标题，只要双侧业务版次未变，已处理差异仍继续隐藏。关联 [阶段 3 裁定进度](../reviews/2026-11-09-stage-3-architecture-review.md#裁定进度)。
 
 ## `SCN-009` 合并后 source 再次修改
 
@@ -138,7 +149,10 @@
 
 - **Given** 用户审阅完差异后，target 被另一命令修改，同时有重复 Merge 请求。
 - **When** 两个执行者提交相同或不同决定。
-- **Then（候选预期）** 对于已选 ACCEPT 的字段，按 [B09 已确认政策](shared-kernel-boundary-scenarios.md#b09-接受字段时取源端最新值) 取源端最新值。审阅后、提交前目标同字段已被编辑时，只要目标整体校验通过，就覆盖该字段且不提示冲突。候选执行协议仍需保护提交过程中的写入竞争、Checkpoint 顺序和幂等，同请求不重复应用，已成功部分保留实际结果。
+- **Then（候选预期）** 对于已选 ACCEPT
+  的字段，按 [B09 已确认政策](shared-kernel-boundary-scenarios.md#b09-接受字段时取源端最新值)
+  取源端最新值。审阅后、提交前目标同字段已被编辑时，只要目标整体校验通过，就覆盖该字段且不提示冲突。候选执行协议仍需保护提交过程中的写入竞争、Checkpoint
+  顺序和幂等，同请求不重复应用，已成功部分保留实际结果。
 - **待确认**：部分成功及仅重试未完成项已由 B08 确认；剩余为结果呈现、依赖组顺序和恢复协议。
 
 ## 子工作集新建 Item 与 Tracker 边界
@@ -149,7 +163,8 @@
 - 从子工作集入口在共享 Tracker 下新建 Item，视觉上在子工作集操作，实际在默认工作集创建，并通过共享 Tracker 可见。
 - 子工作集不允许新建 Tracker。
 
-具体对象的创建合法性与权限由所属 BC 裁决。PLM/DQA 的共享查看范围沿用各 BC 合同。标识分配见 [T4 §4](../domain/cross-bc-contract-v1.md#4-六个用例的契约边界)。
+具体对象的创建合法性与权限由所属 BC 裁决。PLM/DQA 的共享查看范围沿用各 BC
+合同。标识分配见 [T4 §4](../domain/cross-bc-contract-v1.md#4-六个用例的契约边界)。
 
 来源为本对话用户的明确答复。关联 [POL-002/007](../domain/facts.md)、[创建边界](../domain/shared-kernel-boundary.md#item-创建入口与归属用户已确认)。
 
@@ -161,26 +176,30 @@
 - **When** 用户通过合并选择将这条新增需求带回父工作集。
 - **Then** 允许在父工作集创建对应 Item，目标业务 BC 负责校验并提交。父侧对象由用户的合并决定创建，属于存在性差异的显式处理。
 
-父侧已有有效同族时，双方均为 PRESENT，用户可合并适用字段。父侧原变体软删时，Compare 显示 ABSENT，用户选择 CREATE 后恢复原 LocalId 并写入源侧内容，恢复和更新一并提交。重复 Apply 返回原结果。两个已登记轮次竞争同一父侧席位时，先提交的一轮创建变体，后续轮次复核得到过期证据。
+父侧已有有效同族时，双方均为 PRESENT，用户可合并适用字段。父侧原变体软删时，Compare 显示 ABSENT，用户选择 CREATE 后恢复原
+LocalId 并写入源侧内容，恢复和更新一并提交。重复 Apply 返回原结果。两个已登记轮次竞争同一父侧席位时，先提交的一轮创建变体，后续轮次复核得到过期证据。
 
-身份、来源审计与事务约束见 [T1 §8](../domain/merge-execution-contract-v1.md#8-轮次终态与结果表达)，验收见 [T6-D](../implementation/t6-d-merge-back-verification.md)。
+身份、来源审计与事务约束见 [T1 §8](../domain/merge-execution-contract-v1.md#8-轮次终态与结果表达)
+，验收见 [T6-D](../implementation/t6-d-merge-back-verification.md)。
 
 ## 直接父子双向合并新增、删除、修改
 
 **状态**：业务能力已获用户确认，执行协议待设计。**来源**：本对话用户明确说明及 [FACT-007 / POL-004](../domain/facts.md)。
 
-前提为直接父子工作集、支持比对和合并的对应非共享 Tracker，用户主动比对并选择应用差异。下列接收效果均以目标业务 BC 校验通过并提交成功为前提。
+前提为直接父子工作集、支持比对和合并的对应非共享 Tracker，用户主动比对并选择应用差异。下列接收效果均以目标业务 BC
+校验通过并提交成功为前提。
 
-| 方向 | 源侧变化 | 接收方效果 |
-| --- | --- | --- |
-| 子 → 父 | 新增 Item | 父侧新增对应 Item |
+| 方向    | 源侧变化          | 接收方效果        |
+|---------|-------------------|-------------------|
+| 子 → 父 | 新增 Item         | 父侧新增对应 Item |
 | 子 → 父 | 删除已派生的 Item | 父侧删除对应 Item |
-| 子 → 父 | 修改 Item | 父侧应用选定修改 |
-| 父 → 子 | 新增 Item | 子侧新增对应 Item |
+| 子 → 父 | 修改 Item         | 父侧应用选定修改  |
+| 父 → 子 | 新增 Item         | 子侧新增对应 Item |
 | 父 → 子 | 删除已派生的 Item | 子侧删除对应 Item |
-| 父 → 子 | 修改 Item | 子侧应用选定修改 |
+| 父 → 子 | 修改 Item         | 子侧应用选定修改  |
 
-被目标 BC 拒绝时，不执行该业务变化，本条合并保持未完成，保留用户选择与拒绝结果。新增沿用已确认的 CommonId/LocalId 身份规则；修改使用登记时批准的冻结值。删除是用户明确选择的存在性操作，不因源侧删除自动删除其他工作集内容；既有派生内容在未应用删除合并时仍按已确认规则独立可编辑。[ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)
+被目标 BC 拒绝时，不执行该业务变化，本条合并保持未完成，保留用户选择与拒绝结果。新增沿用已确认的 CommonId/LocalId
+身份规则；修改使用登记时批准的冻结值。删除是用户明确选择的存在性操作，不因源侧删除自动删除其他工作集内容；既有派生内容在未应用删除合并时仍按已确认规则独立可编辑。[ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)
 
 此能力不允许移除 Tracker 绑定，不扩展到共享 Tracker、兄弟或跨代工作集。删除的软删/彻底删除机制、删除证据保留、目标已删除等执行边界继续设计，不由此场景自动裁定。
 
@@ -188,17 +207,21 @@
 
 ## 合并删除覆盖接收方修改
 
-**状态**：Historical。下列原始裁定中的并发覆盖语义已由 [ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md) 替代。现行验收区分登记前证据过期和登记后目标并发冲突。
+**状态**：Historical。下列原始裁定中的并发覆盖语义已由 [ADR-0009](../adr/0009-merge-dispatch-frozen-evidence.md)
+替代。现行验收区分登记前证据过期和登记后目标并发冲突。
 
 - **Given** 直接父子工作集有对应 Requirement，子侧已删除该对象，父侧随后又修改它。
 - **When** 用户选择将子侧删除合并到父侧。
 - **Then** 不因父侧新修改提示合并冲突，仍按删除决定交由 ALM 校验并执行；校验通过并提交成功后，父侧对应对象被删除。
 - **反向验收**：父侧删除、子侧随后修改，用户选择向子侧合并删除时，执行相同政策。
-- **通用政策**：用户已将决策优先规则扩展到接收方的各种变动，不限于本例。新增、删除、修改的执行都应遵守用户选择，内部竞争处理不能另行要求用户作冲突决策。对象合法性仍由目标 BC 判断，未提交或被业务拒绝的操作不得标记成功。
+- **通用政策**：用户已将决策优先规则扩展到接收方的各种变动，不限于本例。新增、删除、修改的执行都应遵守用户选择，内部竞争处理不能另行要求用户作冲突决策。对象合法性仍由目标
+  BC 判断，未提交或被业务拒绝的操作不得标记成功。
 
 ## 阶段 3 seam 建议
 
-在规则获得确认后，优先选择三个公共 seam：工作范围发布结果、Item Variant 首次本地写入、单条 Merge Decision 应用结果。当前只记录建议，不创建测试或接口合同。共享 Tracker、COW、Merge 和并发场景进入行为设计时，再按 [图表渐进交付清单](../diagrams/README.md) 增加状态图、时序图或事件流程图。
+在规则获得确认后，优先选择三个公共 seam：工作范围发布结果、Item Variant 首次本地写入、单条 Merge Decision
+应用结果。当前只记录建议，不创建测试或接口合同。共享 Tracker、COW、Merge
+和并发场景进入行为设计时，再按 [图表渐进交付清单](../diagrams/README.md) 增加状态图、时序图或事件流程图。
 
 ## SCN-011 单工作集内同族有效变体唯一
 
@@ -222,17 +245,21 @@
 
 ## SCN-013 非共享 Tracker 派生独立身份
 
-**业务事实：用户确认 D-002；验收表述：Draft，未执行测试。** 关联 FACT-003、QUESTION-002；[直接裁定依据](../reviews/2026-11-09-stage-3-architecture-review.md#d-002)。
+**业务事实：用户确认 D-002；验收表述：Draft，未执行测试。** 关联
+FACT-003、QUESTION-002；[直接裁定依据](../reviews/2026-11-09-stage-3-architecture-review.md#d-002)。
 
 - Given 一个非共享源 Tracker A。
 - When 对 A 执行一次合法派生。
-- Then 产生具有不同业务身份的 Tracker B，A 与 B 是两个独立领域对象；Tracker 具有自己的状态、生命周期与管理行为，Working Set 不拥有其完整生命周期。
+- Then 产生具有不同业务身份的 Tracker B，A 与 B 是两个独立领域对象；Tracker 具有自己的状态、生命周期与管理行为，Working Set
+  不拥有其完整生命周期。
 - Then Tracker 追溯层级通过 parentId/sourceId 表达；在字段语义裁定前，不写 parentId=A 或 sourceId=A 的测试期望。
-- 范围：仅一次非共享派生；不推导 B 能继续派生、不允许或允许改谱系、同工作集能同时纳入 A/B、Item 所属聚合或删除级联。SCN-002 的 Shared 规则保持原样。
+- 范围：仅一次非共享派生；不推导 B 能继续派生、不允许或允许改谱系、同工作集能同时纳入 A/B、Item 所属聚合或删除级联。SCN-002 的
+  Shared 规则保持原样。
 
 ## SCN-014 Tracker 双维关系
 
-**业务规则：用户确认 D-003；验收表述 Draft，未运行测试。** 依据：[D-003](../reviews/2026-11-09-stage-3-architecture-review.md#d-003)，[完整图](../diagrams/tracker-dual-relations.md)。
+**业务规则：用户确认 D-003；验收表述 Draft，未运行测试。**
+依据：[D-003](../reviews/2026-11-09-stage-3-architecture-review.md#d-003)，[完整图](../diagrams/tracker-dual-relations.md)。
 
 - Given WS0→WS1→WS2 是直接逐级工作集链，非共享 T0→T1→T2 逐级派生。
 - Then T1.sourceId=T0，T2.sourceId=T1；T2.sourceId=T0 不符合禁止跳级规则。
@@ -245,17 +272,21 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 ## SCN-015 非共享 Tracker 派生组织裁剪
 
-**业务规则：用户确认 D-004；验收表述 Draft，未运行测试。** 关联 POL-009、INV-019—021；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)、[图](../diagrams/tracker-dual-relations.md#d-004-clipping)。
+**业务规则：用户确认 D-004；验收表述 Draft，未运行测试。** 关联
+POL-009、INV-019—021；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-004)、[图](../diagrams/tracker-dual-relations.md#d-004-clipping)。
 
 - Given WS0 中非共享 Tracker B 的直属结构父为 A；WS1 直接派生自 WS0。
 - When 派生 WS1 时只选择 B，没有选择 A，采用允许的根节点结果。
-- Then WS1 产生新身份 Tracker B1，B1.parentId=null、B1.sourceId=B；不自动创建 A1。B1 是 WS1 中的合法根，源 A/B 的组织关系不因目标裁剪被改写。
+- Then WS1 产生新身份 Tracker B1，B1.parentId=null、B1.sourceId=B；不自动创建 A1。B1 是 WS1 中的合法根，源 A/B
+  的组织关系不因目标裁剪被改写。
 - 反例：不能以“必须完整继承树”为由拒绝这一结果或自动补建 A1；不能将 B1.sourceId 清空或改为 A 来修复组织父。
-- 未决分支：Shared 混合树不在本场景补全；同槽多 Tracker 是独立分类投影，派生链为 1:1；T7-G 扩展按部分成功。父也选择时的默认继承与创建前显式重组已由 D-005 确认（见 SCN-016），派生后移动已由 D-006 禁止（见 SCN-017）。源关系不被回写是本例派生含义的推论，不规定其并发编辑协议。
+- 未决分支：Shared 混合树不在本场景补全；同槽多 Tracker 是独立分类投影，派生链为 1:1；T7-G 扩展按部分成功。父也选择时的默认继承与创建前显式重组已由
+  D-005 确认（见 SCN-016），派生后移动已由 D-006 禁止（见 SCN-017）。源关系不被回写是本例派生含义的推论，不规定其并发编辑协议。
 
 ## SCN-016 创建前显式重组
 
-**业务规则：用户确认 D-005；验收表述 Draft，未运行测试。** 关联 POL-010、INV-023；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-005)。
+**业务规则：用户确认 D-005；验收表述 Draft，未运行测试。** 关联
+POL-010、INV-023；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-005)。
 
 - Given WS0 中非共享 Tracker B 的结构父为 A；WS1 派生时同时选择了 A 与 B。
 - When 创建 WS1 的派生 Tracker，且未在创建完成前做显式重组。
@@ -266,25 +297,31 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 ## SCN-017 创建后组织位置不可变
 
-**业务规则：用户确认 D-006；验收表述 Draft，未运行测试。** 关联 POL-011、INV-022；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
+**业务规则：用户确认 D-006；验收表述 Draft，未运行测试。** 关联
+POL-011、INV-022；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
 
 - Given Tracker T 已完成创建，组织位置为 parentId=P。
 - When 请求将 T 移动（更改 parentId）、更换父节点或调整为根（parentId=null）。
 - Then 全部被拒绝，parentId 保持创建完成时确定的值；不存在创建后移动的合法路径。
-- 边界：此冻结仅针对组织位置，不影响 T 的其他业务状态或生命周期；不封闭该 Working Set 继续加入新的 Tracker，也不扩大 POL-002 的原生创建入口。sourceId 不因移动请求而变化。
+- 边界：此冻结仅针对组织位置，不影响 T 的其他业务状态或生命周期；不封闭该 Working Set 继续加入新的 Tracker，也不扩大 POL-002
+  的原生创建入口。sourceId 不因移动请求而变化。
 
 ## SCN-018 创建时父缺失与组织环反例
 
-**业务规则：合法性约束与 D-006 相关；验收表述 Draft，未运行测试。** 关联 INV-014/015/023；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
+**业务规则：合法性约束与 D-006 相关；验收表述 Draft，未运行测试。** 关联
+INV-014/015/023；[裁定](../reviews/2026-11-09-stage-3-architecture-review.md#d-006)。
 
 - Given 创建 Tracker 时指定 parentId 指向一个在当前 Working Set 有效组织范围内不存在的父节点。
 - Then 创建不能以该非法父完成；必须改用合法父或 null 根。父缺失是创建期反例，不是创建后移动的借口。
 - Given 创建候选结构形成组织环（如 A.parent=B 且 B.parent=A，或自环 A.parent=A）。
 - Then 该候选结构非法，创建不能完成。无环检查集中于创建候选结构（INV-015），不批准创建后并发移动。
-- 已裁定（删除部分，2026-11-11 K2）：父 Tracker 存在组织子级或派生子级（或自身有 TrackerItem）时**禁止删除**，不自动断链、不重挂 `parentId`/`sourceId`、不级联删除（见 SCN-062）。
-- 已关闭（停用部分，QUESTION-009.a）：WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），因此不涉及父 Tracker 停用时子级的处理；不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
+- 已裁定（删除部分，2026-11-11 K2）：父 Tracker 存在组织子级或派生子级（或自身有 TrackerItem）时**禁止删除**，不自动断链、不重挂
+  `parentId`/`sourceId`、不级联删除（见 SCN-062）。
+- 已关闭（停用部分，QUESTION-009.a）：WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），因此不涉及父 Tracker
+  停用时子级的处理；不得自动清空/重挂子 parentId 或级联删除，也不以本问题重新开放普通移动权限。
 
 <a id="scn-019"></a>
+
 ## SCN-019 首次 COW 业务对象与索引身份一致
 
 **候选；D-007 提出，未确认事务协议。** 关联 INV-024。
@@ -295,6 +332,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：LightTrackerItem 是否为有效身份及版本定位的权威来源；新业务对象与索引更新的提交顺序与一致性协议；业务对象成功但索引失败时的恢复。
 
 <a id="scn-020"></a>
+
 ## SCN-020 业务提交成功而索引失败
 
 **候选；D-007 提出，未确认收敛协议。** 关联 INV-025。
@@ -305,16 +343,19 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：业务提交与索引是双事实，权威回读、幂等键、失败可见性与恢复协议；不得用索引状态反向否定业务提交成功。
 
 <a id="scn-021"></a>
+
 ## SCN-021 派生创建 LightTrackerItem
 
 **业务规则：用户确认 D-008；验收表述 Draft。** 关联 INV-026/027、FACT-013。
 
 - Given 已创建 Working Set 聚合与 Tracker 聚合。
 - When 执行 TrackerItem 派生（Copy-on-Write，不立即物化完整业务对象副本）。
-- Then 创建 LightTrackerItem，分配当前变体 LocalId、保留 CommonId，记录 SourceLocalId 与 SourceRevision，经 TrackerId/WorkingSetId 指向。
+- Then 创建 LightTrackerItem，分配当前变体 LocalId、保留 CommonId，记录 SourceLocalId 与 SourceRevision，经
+  TrackerId/WorkingSetId 指向。
 - 反例：不得把派生等同立即物化；未物化不代表变体不存在。
 
 <a id="scn-022"></a>
+
 ## SCN-022 LightTrackerItem 引用范围约束
 
 **候选；D-008 指向确认，范围约束规则未定。** 关联 INV-028。
@@ -324,6 +365,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：范围约束的精确规则与校验协议。
 
 <a id="scn-023"></a>
+
 ## SCN-023 未物化经 Query 与工厂重建
 
 **业务规则：用户确认 D-008；验收表述 Draft。** 关联 INV-029/030。
@@ -334,6 +376,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：Working Set 不拥有或重建业务 BC 完整状态；业务对象内部不变量由业务 BC 负责。
 
 <a id="scn-024"></a>
+
 ## SCN-024 首次 COW 并发反例
 
 **候选；D-008 提出，物化协议未定。** 关联 INV-031/032。
@@ -344,16 +387,19 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：首次物化完成标志与有效内容指针、LocalId 是否等同业务聚合变体身份、业务内容与 LightTrackerItem 更新是否同步原子。
 
 <a id="scn-025"></a>
+
 ## SCN-025 来源变更触发 COW 物化并切换有效内容
 
 **业务规则：用户确认 D-009；验收表述 Draft。** 关联 FACT-014、INV-033。
 
 - Given WS0 的 R0 被 WS1 的 R1（未物化，Source-backed）引用为派生来源。
 - When WS0 对 R0 做普通修改（Revision 不升级）：先 Query 修改前事实 A，再修改保存为 B，发送来源变更事件。
-- Then COW 物化 Handler 据 A 形成 R1 自身完整业务聚合并保存，发物化完成事件；LightTrackerItem 索引 Handler 标记 R1 已物化，有效内容来源切换到自身 LocalId 及自身有效版次（Local-backed）。
+- Then COW 物化 Handler 据 A 形成 R1 自身完整业务聚合并保存，发物化完成事件；LightTrackerItem 索引 Handler 标记 R1
+  已物化，有效内容来源切换到自身 LocalId 及自身有效版次（Local-backed）。
 - 反例：普通修改不得自动升级 Revision；物化前 R1 不依赖源端最新头版次作为永久内容。
 
 <a id="scn-026"></a>
+
 ## SCN-026 修改前事实的可靠取得（反例二，D-010 已确认）
 
 **业务规则：用户确认 D-010；验收表述 Draft。** 关联 INV-034。
@@ -364,6 +410,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：事件序列化、可靠交付机制与持久化策略留待实施设计；不得将可变的头 Revision 或仅有 SourceVersion 的事件当作不可变快照。
 
 <a id="scn-027"></a>
+
 ## SCN-027 物化切换后保留派生历史来源（反例三）
 
 **候选；D-009 提出，不未经确认新增字段。** 关联 INV-036。
@@ -374,6 +421,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：派生历史来源与当前有效内容来源是否分别建模、如何表达；不得未经确认增加数据库字段。
 
 <a id="scn-028"></a>
+
 ## SCN-028 连续修改的多事件乱序（反例四）
 
 **候选；D-009 提出，未确认幂等与并发。** 关联 INV-035。
@@ -384,16 +432,19 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：事件顺序、幂等键、有效内容指针的 CAS 收敛。
 
 <a id="scn-029"></a>
+
 ## SCN-029 物化完成前的查询可见性（反例一，D-010 已确认）
 
 **业务规则：用户确认 D-010；验收表述 Draft。**
 
 - Given WS0 的 R0 Revision 3 内容为 A；WS1 的 R1 未物化，引用 R0 头版次；R0 普通修改为 B 但 Revision 仍为 3；来源变更事件尚未处理。
 - When WS1 此时执行 Query。
-- Then（已确认）来源修改已保存、COW 尚未完成期间，允许派生工作集暂时读取到来源修改后的内容 B；物化完成后，R1 以需要保护的修改前事实 A 形成独立内容。
+- Then（已确认）来源修改已保存、COW 尚未完成期间，允许派生工作集暂时读取到来源修改后的内容 B；物化完成后，R1 以需要保护的修改前事实
+  A 形成独立内容。
 - 语义：这是最终一致性，物化完成前允许暂时读到新内容，物化完成后以修改前快照 A 形成独立内容。
 
 <a id="scn-030"></a>
+
 ## SCN-030 连续修改与事件乱序（D-011 首次快照优先）
 
 **业务规则：用户确认 D-011；验收表述 Draft。** 关联 INV-037/038、FACT-016。
@@ -404,6 +455,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：不得采用「最先收到的事件直接物化」；同一 R1 不得因重复/乱序事件产生多个有效物化结果。
 
 <a id="scn-031"></a>
+
 ## SCN-031 首次事件重复投递
 
 **候选；D-011 提出，幂等协议未定。** 关联 INV-038。
@@ -414,6 +466,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：幂等键与物化声明的收敛协议；不得用数据库锁/消息队列偏移量替代业务裁定。
 
 <a id="scn-032"></a>
+
 ## SCN-032 Local-backed 后收到旧来源事件
 
 **业务规则：用户确认 D-011 第 6 条；验收表述 Draft。** 关联 INV-039。
@@ -424,16 +477,19 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：历史派生来源保留追溯，但当前有效内容来源不再由来源事件改变。
 
 <a id="scn-033"></a>
+
 ## SCN-033 同一业务 Revision 下多次普通修改
 
 **候选；D-011 提出，来源变更顺序表达未定。** 关联 Source Change Order。
 
-- Given 来源 R0 保持业务 Revision 3，期间发生多次普通内容修改（A→B→C），每次普通修改只推进乐观锁 `lock_version`、不升级 Revision。
+- Given 来源 R0 保持业务 Revision 3，期间发生多次普通内容修改（A→B→C），每次普通修改只推进乐观锁 `lock_version`、不升级
+  Revision。
 - When 各次修改分别产生来源变更事件。
 - Then（候选预期）首次快照仍按来源修改的实际先后顺序确定，业务 Revision 不参与排序；需 Source Change Order 机制反映成功修改顺序。
 - 待确认：复用已有乐观锁 `lock_version` 还是独立变更序列表达来源修改顺序。
 
 <a id="scn-034"></a>
+
 ## SCN-034 来源修改与目标派生并发
 
 **候选；D-011 提出，派生基准识别未定。** 关联 Derivation Baseline。
@@ -444,17 +500,20 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 待确认：多级派生中各层需要保护的目标变体如何识别。
 
 <a id="scn-035"></a>
+
 ## SCN-035 COW 前后 SourceLocalId/SourceRevision 字段对比
 
 **业务规则：用户确认 D-012；验收表述 Draft。** 关联 INV-040/041/042、FACT-017。
 
 - Given WS0 的 R0（CommonId=C100、LocalId=R0、Revision=3）；WS1 派生 R1（CommonId=C100、LocalId=R1、Revision=3）。
 - When COW 前（Source-backed）：R1.SourceLocalId=R0、R1.SourceRevision=3，通过来源解析完整业务内容。
-- When COW 完成后（Local-backed）：R1.LocalId=R1、R1.CommonId=C100、R1.SourceLocalId=R1、R1.SourceRevision=R1.Revision，真实业务内容已物化。
+- When COW 完成后（Local-backed）：R1.LocalId=R1、R1.CommonId=C100、R1.SourceLocalId=R1、R1.SourceRevision=
+  R1.Revision，真实业务内容已物化。
 - Then COW 不改变 LocalId、CommonId；SourceLocalId/SourceRevision 从指向来源切换为指向自身。
 - 边界：Revision=3 仅为示例，不推断物化时业务 Revision 必然不变；R0→R1 历史派生关系不要求由 LightTrackerItem 保存。
 
 <a id="scn-036"></a>
+
 ## SCN-036 多级派生与有效内容解析（D-012 历史，逐级解析假设被 D-013 排除）
 
 **历史候选；D-012 提出「逐级递归解析」，现由 D-013 排除。** 关联 FACT-017/FACT-018。
@@ -464,6 +523,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 现见 SCN-037（场景 A）与 SCN-038（场景 B）。
 
 <a id="scn-037"></a>
+
 ## SCN-037 仅根物化的直接定位与扇出（场景 A）
 
 **业务规则：用户确认 D-013；验收表述 Draft。** 关联 FACT-018、INV-043/044。
@@ -475,6 +535,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：不得采用逐级递归解析；R2 不因 R1 未物化而无法定位。
 
 <a id="scn-038"></a>
+
 ## SCN-038 中间层物化后的定位与依赖（场景 B）
 
 **业务规则：用户确认 D-013；验收表述 Draft。** 关联 FACT-018、INV-044。
@@ -486,6 +547,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：R0 修改不得触发 R2 物化；依赖者集合由 SourceLocalId 指向的实际来源决定。
 
 <a id="scn-039"></a>
+
 ## SCN-039 中间上游物化不重定向已有下游（场景 A）
 
 **业务规则：用户确认 D-014；验收表述 Draft。** 关联 FACT-019、INV-045。
@@ -496,6 +558,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：不得因 R1 物化而自动更新 R2 的 SourceLocalId；SourceLocalId 不需始终动态指向最近已物化祖先。
 
 <a id="scn-040"></a>
+
 ## SCN-040 有效来源依赖而非派生层级触发 COW（场景 B/C）
 
 **业务规则：用户确认 D-014；验收表述 Draft。** 关联 FACT-019。
@@ -506,6 +569,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：识别需物化变体基于当前有效来源依赖关系，而非递归遍历工作集后代。
 
 <a id="scn-041"></a>
+
 ## SCN-041 多目标并行物化互不影响（场景 D）
 
 **候选；D-014 提出，快照选择独立性确认。** 关联 INV-037/038。
@@ -516,6 +580,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：一个目标的完成不得触发其他目标的来源重定向或快照替换。
 
 <a id="scn-042"></a>
+
 ## SCN-042 新派生按 D-013 选来源与已有下游对照（场景 E）
 
 **业务规则：用户确认 D-014；验收表述 Draft。** 关联 FACT-018/FACT-019。
@@ -526,25 +591,31 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：新派生选来源与已有下游不重定向是两条不同规则，不得混用。
 
 <a id="scn-043"></a>
+
 ## SCN-043 派生按时间基准选 Revision 且不复制内容
 
 **业务规则：用户确认 D-015；验收表述 Draft。** 关联 FACT-020、INV-046。
 
 - Given 用户发起 Working Set 派生，选择命名 Snapshot 或 Head 作为时间基准 T。
-- When 系统按 T 选择之前适用的最大业务 Revision，定位实际拥有内容的来源 LocalId，创建 LightTrackerItem 保存 LocalId/CommonId/SourceLocalId/SourceRevision。
+- When 系统按 T 选择之前适用的最大业务 Revision，定位实际拥有内容的来源 LocalId，创建 LightTrackerItem 保存
+  LocalId/CommonId/SourceLocalId/SourceRevision。
 - Then 派生完成，不复制完整业务聚合；SourceLocalId 遵循 D-013 直接指向实际拥有内容的变体。
 - 反例：Head 不是动态查询时刻，而是派生请求确定的时间点；派生不等待来源停止变化，不因并发修改先完成而改变已选时间基准。
 
 <a id="scn-044"></a>
+
 ## SCN-044 同一 Revision 内时间基准与内容状态（D-015 反例，D-016 部分裁定）
 
 **D-015 提出，D-016 部分裁定：派生仅固定版次、COW 保护从派生完成开始。** 关联 INV-047/048/049。
 
-- Given R0 Revision 3 在 10:00 已存在；10:20 内容 A；10:20 普通修改 A→B（Revision 仍 3）；10:30 用户以 Head 派生 R1 选 Revision 3；10:40 普通修改 B→C（Revision 仍 3）。
-- D-016 裁定：SourceRevision=3 只表达业务版次，不表达内容；派生不冻结 Revision 3 的普通内容。10:40 修改是否触发 R1 COW，取决于 R1 完整派生是否已在 10:40 前完成（见 SCN-045/046）。
+- Given R0 Revision 3 在 10:00 已存在；10:20 内容 A；10:20 普通修改 A→B（Revision 仍 3）；10:30 用户以 Head 派生 R1 选
+  Revision 3；10:40 普通修改 B→C（Revision 仍 3）。
+- D-016 裁定：SourceRevision=3 只表达业务版次，不表达内容；派生不冻结 Revision 3 的普通内容。10:40 修改是否触发 R1 COW，取决于
+  R1 完整派生是否已在 10:40 前完成（见 SCN-045/046）。
 - 仍待裁定：完整派生完成与来源修改实际先后的判定协议（场景 C 竞态）。
 
 <a id="scn-045"></a>
+
 ## SCN-045 派生完成后来源修改触发 COW（场景 A，D-017 后判定简化为消费时）
 
 **业务规则：用户确认 D-016/D-017；验收表述 Draft。** 关联 FACT-021/022、INV-049/050。
@@ -555,6 +626,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：判定依据是消费时是否满足条件，而非追溯修改开始时间。
 
 <a id="scn-046"></a>
+
 ## SCN-046 消费时未满足条件则不物化（场景 B，D-017 修订）
 
 **业务规则：用户确认 D-017；验收表述 Draft。** 关联 FACT-022、INV-050。
@@ -565,6 +637,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：判定依据是消费时是否查询到满足条件的 LightTrackerItem，而非修改发生时派生是否完成。
 
 <a id="scn-047"></a>
+
 ## SCN-047 来源修改与派生完成竞态（D-016 场景 C，D-017 关闭）
 
 **D-016 提出，D-017 关闭：不再比较修改开始与派生完成时间。** 关联 FACT-022。
@@ -574,6 +647,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：不再以开始时间还是提交时间判断，改为消费时确定。
 
 <a id="scn-048"></a>
+
 ## SCN-048 COW 目标集合在消费时确定
 
 **业务规则：用户确认 D-017；验收表述 Draft。** 关联 FACT-022、INV-050。
@@ -584,6 +658,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 反例：不在修改开始时提前固定目标集合；即使派生在修改开始后才完成，只要消费时满足条件也参与。
 
 <a id="scn-049"></a>
+
 ## SCN-049 Revision 显式升级触发 COW 与 LightTrackerItem Revision
 
 **业务规则：用户确认 D-018；验收表述 Draft。** 关联 FACT-023、INV-051/052。
@@ -595,27 +670,38 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：LightTrackerItem 自身 Revision 与业务 BC 的 TrackerItem Revision 通过事件同步（细节不细化）。
 
 <a id="scn-050"></a>
+
 ## SCN-050 空间绑定前置与多 Tracker 默认
 
 **业务规则：用户确认（2026-11-10 补充）；T6-F 修订；验收表述 Draft。** 关联 POL-012、INV-053/054/055/056。
 
 - Given 目标 WorkingSet WS1 尚未关联 ProductSpace P。
 - When 尝试为 P 下的 Tracker 建立 TrackerBinding。
-- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效 SpaceBinding；同一 WS1/ProductSpace/Classification 可绑定多个 Tracker。
-- Shared 默认：WS1 只绑定同槽非默认 Shared Tracker 时，列表可见该 Tracker，槽内无默认。绑定根工作集的默认 Shared Tracker 后，列表显示原默认标记；解绑或合法删除默认项后，其余 Tracker 不补位。见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)。
-- 反例：不得在没有 SpaceBinding 时建立 TrackerBinding；不得在同一 WorkingSet 重复纳入同一 Tracker；不得在同一组合出现两个默认 Tracker。
+- Then 必须先有 WS1 对 P 的 SpaceBinding；Tracker.productSpaceId 必须等于 P；同一 WS1/ProductSpace 最多一个有效
+  SpaceBinding；同一 WS1/ProductSpace/Classification 可绑定多个 Tracker。
+- Shared 默认：WS1 只绑定同槽非默认 Shared Tracker 时，列表可见该 Tracker，槽内无默认。绑定根工作集的默认 Shared Tracker
+  后，列表显示原默认标记；解绑或合法删除默认项后，其余 Tracker
+  不补位。见 [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)。
+- 反例：不得在没有 SpaceBinding 时建立 TrackerBinding；不得在同一 WorkingSet 重复纳入同一 Tracker；不得在同一组合出现两个默认
+  Tracker。
 
 <a id="scn-051"></a>
+
 ## SCN-051 Classification 投影生成 Tracker
 
 **业务规则：用户确认（2026-11-10 补充）；验收表述 Draft。** 关联 FACT-025、INV-056。
 
 - Given 平台元数据已初始化 Classification 集合，常驻内存。
 - When 创建 ProductSpace P。
-- Then P、默认 WorkingSet 的 SpaceBinding（INITIAL_PROJECTION）、适用分类的默认 Tracker 及 TrackerBinding 通过可靠事件协作，在各自聚合事务中创建并最终收敛。2026-11-19 裁定替代原同事务预期；处理中状态、部分失败与可见性验收待专项补齐，不得用“P 已创建”表示全部初始化完成。
-- 边界：Tracker 随产品空间创建。同一 Classification 在不同 ProductSpace 可对应不同 Tracker；同一（WorkingSet，ProductSpace，Classification）可存在多个 Tracker，但只有一个默认。产品空间只能归属默认工作集；创建入口路径中的工作集 ID 仅为路由占位，不参与目标选择，也不在入口层做限制。
+- Then P、默认 WorkingSet 的 SpaceBinding（INITIAL_PROJECTION）、适用分类的默认 Tracker 及 TrackerBinding
+  通过可靠事件协作，在各自聚合事务中创建并最终收敛。2026-11-19 裁定替代原同事务预期；处理中状态、部分失败与可见性验收待专项补齐，不得用“P
+  已创建”表示全部初始化完成。
+- 边界：Tracker 随产品空间创建。同一 Classification 在不同 ProductSpace 可对应不同
+  Tracker；同一（WorkingSet，ProductSpace，Classification）可存在多个 Tracker，但只有一个默认。产品空间只能归属默认工作集；创建入口路径中的工作集
+  ID 仅为路由占位，不参与目标选择，也不在入口层做限制。
 
 <a id="scn-052"></a>
+
 ## SCN-052 子 WorkingSet 纳入与移除（Shared/非共享）
 
 **业务规则：用户确认（2026-11-10，修订 POL-006）；验收表述 Draft。** 关联 POL-013/014、INV-057/058/060。
@@ -624,11 +710,13 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When Shared Tracker 纳入：复用原 TrackerId，仅建立新 TrackerBinding。
 - When 非共享 Tracker 纳入：创建新 Tracker 聚合，建立直接 sourceId 来源。
 - When 移除 Shared Tracker：仅解除 TrackerBinding（不删除聚合；不受「有 Item 不允许删除」约束，因为那是针对聚合删除）。
-- When 移除非共享 Tracker：无 TrackerItem 数据且无派生子 Tracker → 删除该 Tracker 并解除绑定；已有派生子 Tracker → 不允许删除（保留来源链）。
+- When 移除非共享 Tracker：无 TrackerItem 数据且无派生子 Tracker → 删除该 Tracker 并解除绑定；已有派生子 Tracker →
+  不允许删除（保留来源链）。
 - When 任意 Tracker 存在 TrackerItem 数据 → 不允许移除（避免遗留业务数据）。
 - 边界：非共享成功移除后可重新纳入、重新派生新身份；移除空间内最后一个 Tracker 不触发空间移除（SpaceBinding 保留）。
 
 <a id="scn-053"></a>
+
 ## SCN-053 Tracker 删除约束
 
 **业务规则：用户确认（2026-11-10）；验收表述 Draft。** 关联 POL-014、INV-058。
@@ -636,10 +724,13 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Given 一个非共享 Tracker T。
 - When 尝试删除 T。
 - Then 必须满足：无 TrackerItem 数据（空 Tracker）、无派生子 Tracker、无组织子节点（parentId 指向 T）；否则不允许删除，校验提示含有子节点。
-- 反例：有 Item 的 Tracker 不能删除；有派生子 Tracker 的非共享 Tracker 不能删除；有组织子节点但无派生子节点的也不能删除（避免 parentId 悬空，D-006 禁止重挂）。
-- 例外：默认 WorkingSet 下的 Shared Tracker 在空且无子时可以删除；Shared Tracker 从子 WorkingSet 移除仅解除 TrackerBinding。
+- 反例：有 Item 的 Tracker 不能删除；有派生子 Tracker 的非共享 Tracker 不能删除；有组织子节点但无派生子节点的也不能删除（避免
+  parentId 悬空，D-006 禁止重挂）。
+- 例外：默认 WorkingSet 下的 Shared Tracker 在空且无子时可以删除；Shared Tracker 从子 WorkingSet 移除仅解除
+  TrackerBinding。
 
 <a id="scn-054"></a>
+
 ## SCN-054 默认 WorkingSet 与 ProductSpace 创建初始化
 
 **业务规则：用户确认（2026-11-10 补充）；验收表述 Draft。** 关联 FACT-024/026、INV-059。
@@ -647,9 +738,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Given 系统初始化：默认 WorkingSet（固定 Id=1）由平台元数据预初始化，无 ProductSpace。
 - When 用户创建 ProductSpace P。
 - Then 读取适用 Classification 集合，按分类逐个创建 Tracker 聚合并持久化，归属 P，建立在默认 WorkingSet 的绑定关系。
-- 边界：默认 WorkingSet 不可删除/隐藏；Tracker 只能在默认 WorkingSet 创建原始聚合；子 WorkingSet 不能独立创建原始 Tracker，只能纳入直接上游。
+- 边界：默认 WorkingSet 不可删除/隐藏；Tracker 只能在默认 WorkingSet 创建原始聚合；子 WorkingSet 不能独立创建原始
+  Tracker，只能纳入直接上游。
 
 <a id="scn-055"></a>
+
 ## SCN-055 未物化变体参与 Diff 与 Merge 修改
 
 **业务规则：用户确认（2026-11-10）；验收表述 Draft。** 关联 FACT-027、INV-061/062。
@@ -662,6 +755,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：Merge 修改仍需目标业务 BC 整体校验并提交；Merge 不绕过 COW/物化语义。
 
 <a id="scn-056"></a>
+
 ## SCN-056 MergeRound 载体与 MergeCheckpoint
 
 **业务规则：用户确认（2026-11-10）；验收表述 Draft。** 关联 FACT-027、INV-063。
@@ -672,9 +766,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：MergeRound/MergeCheckpoint 属合并模型区域，不是三类核心聚合之一；共享 Tracker 不参与，非共享只允许直接父子准入。
 
 <a id="scn-057"></a>
+
 ## SCN-057 过期审阅：比较凭据失效后拒绝执行
 
-**业务规则：Q2 裁定（ADR-0005，2026-11-10）；验收表述 Draft。** 关联 INV-006、D-015 反例、[契约 §3.2/§5](../domain/merge-execution-contract-v1.md)。
+**业务规则：Q2 裁定（ADR-0005，2026-11-10）；验收表述 Draft。** 关联 INV-006、D-015
+反例、[契约 §3.2/§5](../domain/merge-execution-contract-v1.md)。
 
 - Given R0 与 R1 已 `compare` 产生 `TrackerItemDiff` 与双侧瞬时证据，用户已查看字段差异。
 - When 审阅期间 R0 某字段再次被修改（业务 Revision 未升级，仅乐观锁 `lock_version` 增加），随后用户提交 `ACCEPT`。
@@ -683,6 +779,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：重新比较后以新的所选差异证据提交属新的执行；旧证据不得复用。
 
 <a id="scn-058"></a>
+
 ## SCN-058 确认原子提交与旧轮次重放
 
 - Given 同一 Tracker 对已提交轮次 A，条目成功且要求确认。
@@ -691,6 +788,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then A 不追加新记录，当前基准仍为 B；业务内容与业务 Revision 均不变。
 
 <a id="scn-059"></a>
+
 ## SCN-059 接收、忽略与轮次终态
 
 - Given 新增 A 被接收，删除 B 被忽略，更新 C 的标题接收、描述忽略且不标记已处理。
@@ -698,6 +796,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then 下轮仍展示未被确认且仍存在的差异。对于更新，如果所有字段都忽略且标记已处理，只写确认，不修改目标内容。
 
 <a id="scn-060"></a>
+
 ## SCN-060 部分成功后以新轮次重做未完成项
 
 **业务规则：B08／R10 已确认；轮次一次执行即终态、重做须新建 MergeRound 为 2026-11-11 用户裁定（方案 B）；验收表述 Draft。**
@@ -711,9 +810,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：不存在「同一 MergeRound 内重试 B/C」；旧轮次结果保留可追溯；消息重复投递的幂等处理不属于业务重试。
 
 <a id="scn-061"></a>
+
 ## SCN-061 绑定移除与聚合删除的区分（Shared / 非共享）
 
-**业务规则：用户确认（2026-11-11，K1/K3；POL-014、INV-058、INV-064/065）。验收表述 Draft。** 关联 [绑定与删除契约](../domain/binding-deletion-contract-v1.md)。
+**业务规则：用户确认（2026-11-11，K1/K3；POL-014、INV-058、INV-064/065）。验收表述 Draft。**
+关联 [绑定与删除契约](../domain/binding-deletion-contract-v1.md)。
 
 - Given 子 WorkingSet 中纳入 Shared Tracker S 与非共享 Tracker N；S 在默认工作集有 Item，N 存在 Item 或组织子级或派生子级。
 - When 删除该子工作集。
@@ -723,6 +824,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：独立解绑入口已于 2026-11-20 撤除。
 
 <a id="scn-062"></a>
+
 ## SCN-062 Tracker 删除限制（组织子级 / 派生子级 / Item）
 
 **业务规则：用户确认（2026-11-11，K2；POL-014、INV-058/065）。验收表述 Draft。** 关联 D-006。
@@ -735,6 +837,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：本场景只裁定删除；WorkingSet 与 Tracker 不存在“停用”生命周期（用户 2026-11-12 裁定），删除契约不引入停用状态与行为。
 
 <a id="scn-063"></a>
+
 ## SCN-063 子 WorkingSet 删除的成员关系约束
 
 **业务规则：用户确认（2026-11-21 更新，K3；FACT-026、INV-059/067）。验收表述 Draft。**
@@ -750,9 +853,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then 只删除 WS1。默认 WorkingSet 始终不可删除（`DefaultWorkingSetUndeletable`）。
 
 <a id="scn-064"></a>
+
 ## SCN-064 删除无绑定的空 ProductSpace
 
-**业务规则：用户于 2026-11-21 裁定，见[绑定与删除契约 §4.3](../domain/binding-deletion-contract-v1.md#43-聚合删除)。验收表述 Draft。**
+**业务规则：用户于 2026-11-21 裁定，见[绑定与删除契约 §4.3](../domain/binding-deletion-contract-v1.md#43-聚合删除)。验收表述
+Draft。**
 
 - Given 根与子工作集绑定了 P，P 内只有空 Tracker。
 - When 在默认工作集删除 P。
@@ -765,6 +870,7 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - Then 请求受理，逐个删除空 Tracker，最后删除 P。
 
 <a id="scn-065"></a>
+
 ## SCN-065 删除不可恢复（K1）
 
 **业务规则：用户确认（2026-11-11，K1；POL-016、INV-068）。验收表述 Draft。**
@@ -777,18 +883,24 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：不强制映射为数据库物理 `DELETE`；实现层可保留审计副本、延迟清理或历史归档，但不得据此让业务侧产生「可恢复」预期。
 
 <a id="scn-066"></a>
+
 ## SCN-066 独立物化状态字段与来源一致性
 
-**业务规则：用户确认（2026-11-11，K1′；INV-069）。验收表述 Draft。** 关联 [物化协议契约](../domain/lighttrackeritem-materialization-contract-v1.md)。
+**业务规则：用户确认（2026-11-11，K1′；INV-069）。验收表述 Draft。**
+关联 [物化协议契约](../domain/lighttrackeritem-materialization-contract-v1.md)。
 
 - Given 某 LightTrackerItem 尚未物化。
 - Then `materialized = false`；`sourceLocalId` 指向外部实际有效内容来源；`sourceRevision` 为该来源的业务 Revision。
 - When 该变体完成首次物化。
-- Then 在**同一次 LightTrackerItem 聚合状态变更**中：`materialized = true`、`sourceLocalId = localId`、`sourceRevision = revision`。
-- 反例：若只改 `materialized` 而来源字段仍指向外部（或反之），属**元数据一致性缺陷**，须由修复流程收敛；Query 不得把这种不一致当成第三种业务状态。
-- 边界：`sourceLocalId != localId` 不再是唯一权威状态定义，只作为身份/来源一致性约束；状态字段不得由外部服务绕过聚合行为直接修改；不存在 `Materializing` 业务态。
+- Then 在**同一次 LightTrackerItem 聚合状态变更**中：`materialized = true`、`sourceLocalId = localId`、
+  `sourceRevision = revision`。
+- 反例：若只改 `materialized` 而来源字段仍指向外部（或反之），属**元数据一致性缺陷**，须由修复流程收敛；Query
+  不得把这种不一致当成第三种业务状态。
+- 边界：`sourceLocalId != localId` 不再是唯一权威状态定义，只作为身份/来源一致性约束；状态字段不得由外部服务绕过聚合行为直接修改；不存在
+  `Materializing` 业务态。
 
 <a id="scn-067"></a>
+
 ## SCN-067 业务保存成功而状态切换失败后的幂等收敛
 
 **业务规则：用户确认（2026-11-11，K3′；INV-071）。验收表述 Draft。** 关联 INV-025/038。
@@ -797,25 +909,30 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When 随后的 LightTrackerItem 切换失败（`materialized` 仍为 `false`）。
 - Then 不回滚已保存的业务内容；R1 仍为 Source-backed；不得对外宣称已物化。
 - When 幂等重试执行。
-- Then **只补齐尚未完成的步骤**（三字段同步切换），不重新构建或覆盖已存在的业务对象；成功后 R1 为 Local-backed，且不产生第二个有效物化结果（INV-038）。
+- Then **只补齐尚未完成的步骤**（三字段同步切换），不重新构建或覆盖已存在的业务对象；成功后 R1 为
+  Local-backed，且不产生第二个有效物化结果（INV-038）。
 - 边界：物化完成 = 业务保存成功 **且** 切换成功；`materialized=false` 但业务内容已存在属可收敛的中间态，不是新业务状态。
 
 <a id="scn-068"></a>
+
 ## SCN-068 预分配 LocalId 的稳定复用与跨 BC 解析
 
 **业务规则：用户确认（2026-11-11，K2′；INV-070）。验收表述 Draft。** 关联 INV-026/040。
 
 - Given 非共享派生创建 LightTrackerItem R1，派生时预分配全局唯一 `localId` 与 `commonId`。
 - When R1 首次物化。
-- Then 业务 BC 以同一 `localId` 定位或创建对应业务变体（业务主键不必等于 `localId`，但必须能按它定位）；物化前后 `localId`/`commonId` 不变（INV-040）。
+- Then 业务 BC 以同一 `localId` 定位或创建对应业务变体（业务主键不必等于 `localId`，但必须能按它定位）；物化前后 `localId`/
+  `commonId` 不变（INV-040）。
 - Then LightTrackerItem 不持久化内容指针、不持有完整业务字段；跨 BC 解析通过稳定 `localId` 完成。
 - 反例：若物化时另分配新身份，同一变体会出现两个身份，破坏引用、去重与 Merge/Checkpoint 的 Revision 追溯。
 - 边界：业务 BC 是否以 `localId` 作为存储主键由该 BC 自决；不因此放宽其业务不变量。
 
 <a id="scn-069"></a>
+
 ## SCN-069 跨 BC 读取的统一失败语义
 
-**业务规则：用户确认（2026-11-11，K2″）；AC-001、D-007、QUESTION-013 已确认。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)、B02。
+**业务规则：用户确认（2026-11-11，K2″）；AC-001、D-007、QUESTION-013 已确认。验收表述 Draft。**
+关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)、B02。
 
 - Given 查询者通过 Working Set 解析某业务对象。
 - When 对象从未存在（或不在身份空间内）→ `NotFound`。
@@ -826,12 +943,16 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - When 范围或成员处于准备中 → `Preparing`（不得当作已完成返回）。
 - When 依赖（Privilege/Workflow/Class Hierarchy）不可用 → `DependencyUnavailable`（不得默许通过）。
 - When 执行结果未知 → `Unknown`（不得解释为确定未执行，须按幂等协议恢复或确认）。
-- 边界：九分类是**统一语义词汇表**，不是九状态生命周期；每个用例只暴露其适用子集（见[契约 §5.2](../domain/cross-bc-contract-v1.md)），不要求每个接口统一返回九类；对外披露按权限政策脱敏（B02/B12）。
+- 边界：九分类是**统一语义词汇表**
+  ，不是九状态生命周期；每个用例只暴露其适用子集（见[契约 §5.2](../domain/cross-bc-contract-v1.md)
+  ），不要求每个接口统一返回九类；对外披露按权限政策脱敏（B02/B12）。
 
 <a id="scn-070"></a>
+
 ## SCN-070 能力不支持不等于无差异，写入必须经 BC
 
-**业务规则：用户确认（2026-11-11，K1″）；POL-003、QUESTION-013、B05 已确认。验收表述 Draft。** 关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)。
+**业务规则：用户确认（2026-11-11，K1″）；POL-003、QUESTION-013、B05 已确认。验收表述 Draft。**
+关联 [跨 BC 契约](../domain/cross-bc-contract-v1.md)。
 
 - Given 用户对两个工作集中的 Part（或 DQA 对象）发起 Diff。
 - When SK 通过 `TrackerItemQueryProvider` 查询能力声明，得到 `comparable = false`。
@@ -843,9 +964,11 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 边界：`TrackerItemQueryProvider` 只提供身份、Revision、内容解析、能力声明与授权事实；整体校验与提交属业务 BC 职责，不是只读契约的方法。
 
 <a id="scn-071"></a>
+
 ## SCN-071 契约版本与能力协商（团队开放项）
 
-**业务规则：`QUESTION-014` 保持 Open，未裁定（2026-11-11 K3″：延后至四 BC 共同评审）；版本治理方案 B（版本化 Published Language + 能力协商）为推荐候选，非当前有效契约。验收表述 Draft。**
+**业务规则：`QUESTION-014` 保持 Open，未裁定（2026-11-11 K3″：延后至四 BC 共同评审）；版本治理方案 B（版本化 Published
+Language + 能力协商）为推荐候选，非当前有效契约。验收表述 Draft。**
 
 - Given Shared Kernel 发布新版本契约（新增一个可选能力标记）。
 - When 旧版本 BC 适配器接入。
@@ -856,7 +979,9 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 ## SCN-072 普通字段与附件关系的固定时点
 
-**规则已确认（2026-11-11 用户选择 A）；验收表述 Draft，未运行测试。** 依据：[T3 §2.1](../domain/lighttrackeritem-materialization-contract-v1.md)、R07/R19、[裁定记录](../reviews/2026-11-11-consistency-reconciliation.md)。
+**规则已确认（2026-11-11 用户选择 A）；验收表述 Draft，未运行测试。**
+依据：[T3 §2.1](../domain/lighttrackeritem-materialization-contract-v1.md)
+、R07/R19、[裁定记录](../reviews/2026-11-11-consistency-reconciliation.md)。
 
 - Given R1 派生时，来源普通字段为 A、附件为 F0、关系为 L0；R1 尚未物化，来源业务 Revision 为 3。
 - When 来源普通修改为 B，附件/关系改为 F1/L1，COW 尚未完成。
@@ -868,7 +993,8 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 ## SCN-073 聚合接口与应用层 Adapter 并存
 
-**责任已确认（2026-11-11 用户选择 B）；验收表述 Draft，未运行测试。** 依据：D-007、ADR-0002、[T4 §3.1](../domain/cross-bc-contract-v1.md)。
+**责任已确认（2026-11-11 用户选择 B）；验收表述 Draft，未运行测试。**
+依据：D-007、ADR-0002、[T4 §3.1](../domain/cross-bc-contract-v1.md)。
 
 - Given 业务 BC 的 Requirement 聚合实现 TrackerItem，BC Adapter 实现 `TrackerItemQueryProvider`，跨聚合写入通过请求和结果事件协作。
 - When SK 发起读取或物化请求。
@@ -877,13 +1003,15 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 - 验证边界：接口实现关系由架构检查验证，公开行为与拒绝结果由 Port 契约测试验证，不以内部调用次数作为验收。
 
 <a id="scn-074"></a>
+
 ## SCN-074 Merge 执行中断后接续原轮次
 
 **验收范围：T6-B，沿用 Q4 与 D15-B。** 见 [T1 §8.1](../domain/merge-execution-contract-v1.md#81-执行中断与结果恢复t6-b)。
 
 - Given 一轮已受理 Apply，条目 A 的业务写入和提交凭据已落库，轮次结果尚未保存。
 - When 并发 Apply 同一轮次，或执行者中断后重新 Apply。
-- Then 执行权仍被持有时返回 `RoundInProgress`。可恢复后先查回 A 的提交事实，再补其 Checkpoint 和结果、推进余下条目。A 的业务写入只提交一次。终态重提返回同一结果。
+- Then 执行权仍被持有时返回 `RoundInProgress`。可恢复后先查回 A 的提交事实，再补其 Checkpoint 和结果、推进余下条目。A
+  的业务写入只提交一次。终态重提返回同一结果。
 - 若目标 LTI 切换失败，按 2026-11-18 用户裁定保持失败终态，不提供 COW Recovery 或重投入口；该历史场景的自动收敛承诺已撤回。
 
 ## SCN-075 按范围异步创建工作集
@@ -892,13 +1020,19 @@ SCN-013 的字段未定描述为 D-002 当时状态，当前字段期望以本�
 
 - Given 直属父工作集有选中的空间、一个选中的共享 Tracker，以及一个含多个有效 Item 和软删 Item 的非共享 Tracker。
 - When 提交创建任务并轮询，随后重复提交相同请求。
-- Then 返回同一任务。子工作集只复用所选共享 Tracker，非共享 Tracker 只复制一次。索引包含所有有效父 Item，已软删 Item 不纳入。父变体未物化时，子索引保留实际内容来源。
-- 按 [T7 阶段顺序](../domain/working-set-creation-lro-design.md#42-步骤与状态机)复制所选空间内的 Tracker，再绑定空间和 Tracker。若漏选一个 Tracker 所属的空间，该 Tracker 的复制失败、绑定跳过。若直属父工作集未绑定共享 Tracker，该项拒绝纳入。轮询可读失败位置和分阶段计数，其余合法项仍可完成。若子工作集本体无法创建，任务失败并停止。
+- Then 返回同一任务。子工作集只复用所选共享 Tracker，非共享 Tracker 只复制一次。索引包含所有有效父 Item，已软删 Item
+  不纳入。父变体未物化时，子索引保留实际内容来源。
+- 按 [T7 阶段顺序](../domain/working-set-creation-lro-design.md#42-步骤与状态机)复制所选空间内的 Tracker，再绑定空间和
+  Tracker。若漏选一个 Tracker 所属的空间，该 Tracker 的复制失败、绑定跳过。若直属父工作集未绑定共享
+  Tracker，该项拒绝纳入。轮询可读失败位置和分阶段计数，其余合法项仍可完成。若子工作集本体无法创建，任务失败并停止。
 - 任务在终态前允许轮询，现有入口访问目标工作集时返回 `Preparing`。
 - 目标 ID 已存在 → 受理直接 409 `WorkingSetAlreadyExists`，不改变该 WS 的普通可见性。
 - 父 WS 正在被其他任务创建（Pending/Running）→ 以它为父的受理返回 409 `Preparing`；普通子级/祖先查询不包含创建中的 WS。
-- 任务上下文可通过 `GET /api/working-set-creations/{id}/working-set` 读取目标 WS；普通 `GET /api/worksets/{id}` 仍返回 `Preparing`。
+- 任务上下文可通过 `GET /api/working-set-creations/{id}/working-set` 读取目标 WS；普通 `GET /api/worksets/{id}` 仍返回
+  `Preparing`。
 - 若处理进程在索引批次提交后中断，事件重投依据已提交进度继续。成功批次不重复生成 LTI。
-- 受理后新增的父 Item 不进入本次冻结范围。已冻结项的来源随后软删、消失或版次不可读时，跳过并保留明细。
+- 各 Tracker 按任务保存的基线时间扫描，创建时间超过上界的 Item
+  不纳入。已发现的来源软删、消失或不可读时，跳过并保留明细；扫描前已消失的对象可以缺席。[ADR-0010](../adr/0010-working-set-creation-tracker-baseline-time.md)
 - 验证边界：通过受理与轮询 REST 观察任务状态、阶段和失败详情，再通过现有查询验证已提交范围。
-- 实施证据见 [T7-C 范围绑定验收](../implementation/t7-c-binding-verification.md) 和 [T7-D 批量索引验收](../implementation/t7-d-index-verification.md)。
+- 实施证据见 [T7-C 范围绑定验收](../implementation/t7-c-binding-verification.md)
+  和 [T7-D 批量索引验收](../implementation/t7-d-index-verification.md)。

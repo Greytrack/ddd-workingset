@@ -1,6 +1,7 @@
 # T7-E 关系事件契约（2026-11-17 最新业务决策）
 
-**状态：Reviewed（2026-11-18；工作集侧事件契约与发布已实现，关系消费守卫仍开放）**。范围：T7-E 在创建/扩展工作集和 Merge 完成后的**关系事件发布**；WorkingSet 不操作 Reference/Association 聚合。
+**状态：Reviewed（2026-11-18；工作集侧事件契约与发布已实现，关系消费守卫仍开放）**。范围：T7-E 在创建/扩展工作集和 Merge 完成后的
+**关系事件发布**；WorkingSet 不操作 Reference/Association 聚合。
 
 ## 1. 职责边界
 
@@ -17,8 +18,8 @@
 
 Reference 不再指定“引用属性”，与 Association 一样只表达两个端点的关联，但额外固定版次：
 
-| 端点 | 字段 |
-| --- | --- |
+| 端点   | 字段                                                                                         |
+|--------|----------------------------------------------------------------------------------------------|
 | source | `sourceWorkingSetId`、`sourceLocalId`、`sourceCommonId`、`sourceTrackerId`、`sourceRevision` |
 | target | `targetWorkingSetId`、`targetLocalId`、`targetCommonId`、`targetTrackerId`、`targetRevision` |
 
@@ -31,8 +32,8 @@ Reference 不再指定“引用属性”，与 Association 一样只表达两个
 
 Association 不固定版次：
 
-| 端点 | 字段 |
-| --- | --- |
+| 端点   | 字段                                                                       |
+|--------|----------------------------------------------------------------------------|
 | source | `sourceWorkingSetId`、`sourceLocalId`、`sourceCommonId`、`sourceTrackerId` |
 | target | `targetWorkingSetId`、`targetLocalId`、`targetCommonId`、`targetTrackerId` |
 
@@ -129,9 +130,9 @@ occurredAt         事件发生时间
 
 - `PUBLISH_RELATION_EVENTS` 在索引完成后执行；
 - 只发布：
-  - `ReferenceCreationRequestedEvent`（新引用）；
-  - `DanglingReferenceRepairRequestedEvent`（目标已可解析的既有悬空引用）；
-  - `AssociationCreationRequestedEvent`（新关联）。
+    - `ReferenceCreationRequestedEvent`（新引用）；
+    - `DanglingReferenceRepairRequestedEvent`（目标已可解析的既有悬空引用）；
+    - `AssociationCreationRequestedEvent`（新关联）。
 - 下游引用/关联不发布事件。
 - 不执行关系聚合写操作。
 
@@ -158,25 +159,28 @@ Merge 完成
 
 以下由关系服务消费事件后执行，不是 WorkingSet 的行为：
 
-| 场景 | Reference | Association |
-| --- | --- | --- |
-| 目标缺失 | 保留悬空 Reference；逻辑目标/钉版保留 | 保留恢复意图，不落 Association |
-| 目标软删 | 保留行，标记软删 | 暂停/意图 |
-| 目标永久删除 | 保留悬空，不自动重建 | 丢弃关系/意图 |
-| 目标后续纳入 | 修复同一 `originalRelationId` | 按意图建立关联 |
-| 钉版不可读 | 保留 pin，标记历史不可用，不降级 HEAD | 目标不可读标记 |
-| 权限 | 工作集跳过；关系服务按自身权限策略处理 | 同左 |
+| 场景         | Reference                              | Association                    |
+|--------------|----------------------------------------|--------------------------------|
+| 目标缺失     | 保留悬空 Reference；逻辑目标/钉版保留  | 保留恢复意图，不落 Association |
+| 目标软删     | 保留行，标记软删                       | 暂停/意图                      |
+| 目标永久删除 | 保留悬空，不自动重建                   | 丢弃关系/意图                  |
+| 目标后续纳入 | 修复同一 `originalRelationId`          | 按意图建立关联                 |
+| 钉版不可读   | 保留 pin，标记历史不可用，不降级 HEAD  | 目标不可读标记                 |
+| 权限         | 工作集跳过；关系服务按自身权限策略处理 | 同左                           |
 
 ## 6. 已实现的契约骨架
 
-- `RelationSourceQueryProvider`：业务 BC 只读事实端口，提供 `upstreamReferences`、`upstreamAssociations`、`referencesTargeting`、`associationsTargeting` 及 `ReferenceFact`/`AssociationFact`。
+- `RelationSourceQueryProvider`：业务 BC 只读事实端口，提供 `upstreamReferences`、`upstreamAssociations`、
+  `referencesTargeting`、`associationsTargeting` 及 `ReferenceFact`/`AssociationFact`。
 - `EmptyRelationSourceQueryProviderImpl`：业务 BC Adapter 尚未接入时的空实现，不伪造事件。
 - `RelationEventPublisher`：按 fact 生成 `eventId`，保留业务 `originalRelationId`，发布三类 `...Requested` 事件。
 - `RelationEventContractTest`、`RelationEventPublisherTest` 覆盖端点、悬空 target、Association 无版次和发布元数据。
 - `T7RelationEventAcceptanceTest` 覆盖创建/扩展 task 实际发布 Reference/Association/Dangling repair 三类事件。
-- T7 创建/扩展已接入 `PUBLISH_RELATION_EVENTS`：索引后逐 Tracker 发布新引用/关联/悬空修复事件；失败记录为任务明细并进入 `PartiallySucceeded`，不自动重试。
+- T7 创建/扩展已接入 `PUBLISH_RELATION_EVENTS`：索引后逐 Tracker 发布新引用/关联/悬空修复事件；失败记录为任务明细并进入
+  `PartiallySucceeded`，不自动重试。
 - 全量测试 **165 项通过**。
-- Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布 `DanglingReferenceRepairRequestedEvent`；失败不改变 Merge 终态、不自动重试。
+- Merge 已接入 `MergeRelationRepairStep`：Merge 终态后只对本轮实际成功且改变目标变体的条目发布
+  `DanglingReferenceRepairRequestedEvent`；失败不改变 Merge 终态、不自动重试。
 
 ## 7. 仍开放
 

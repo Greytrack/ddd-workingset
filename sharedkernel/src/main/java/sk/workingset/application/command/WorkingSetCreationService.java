@@ -23,6 +23,7 @@ import sk.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import sk.workingset.domain.workingset.*;
 import sk.workingset.domain.workingset.WorkingSetCreation.*;
 import sk.workingset.error.BindingResCode;
+import sk.workingset.error.WorkingsetResultCode;
 
 import java.time.Instant;
 import java.util.*;
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class WorkingSetCreationService {
-    private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(10070101L);
+    private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(WorkingSetItemIndexer.FOLDER_CLASSIFICATION_ID);
 
     private final WorkingSetCreationRepository workingSetCreationRepository;
     private final IdentifierGenerator ids;
@@ -59,6 +60,17 @@ public class WorkingSetCreationService {
                 && binding.numericClassificationId() == classificationId);
     }
 
+    private static void validateBaselines(Collection<Long> trackerIds, Map<Long, Instant> overrides, Instant acceptedAt) {
+        if (!trackerIds.containsAll(overrides.keySet()) || overrides.values().stream().anyMatch(time -> time.isAfter(acceptedAt))) {
+            throw DomainException.withMessage(WorkingsetResultCode.BAD_REQUEST,
+                    "Baseline time must reference a selected Tracker and cannot be in the future");
+        }
+    }
+
+    private static List<Long> explicit(List<Long> ids, Request request) {
+        return ids.stream().filter(id -> !request.automaticTrackerIds().contains(id)).toList();
+    }
+
     /**
      * 按 requestId 幂等受理创建请求；同键返回既有任务。
      */
@@ -67,7 +79,7 @@ public class WorkingSetCreationService {
         Optional<WorkingSetCreation> existing = workingSetCreationRepository.findByRequest(requestId);
         if (existing.isPresent()) {
             WorkingSetCreation task = existing.get();
-            return replay(task, withDefaultTrackers(request.apply(task.request().newWorkingSetId()), null));
+            return replayCreate(task, request.apply(task.request().newWorkingSetId()));
         }
         return submit(request.apply(Long.toString(ids.nextId(null).longValue())));
     }
@@ -77,7 +89,6 @@ public class WorkingSetCreationService {
      */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submit(WorkingSetCreation.Request request) {
-        request = withDefaultTrackers(request, null);
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
         }
@@ -87,26 +98,24 @@ public class WorkingSetCreationService {
         }
         Optional<WorkingSetCreation> previous = workingSetCreationRepository.findByTarget(target);
         if (previous.isPresent()) {
-            return replay(previous.orElseThrow(), request);
+            return replayCreate(previous.orElseThrow(), request);
         }
         if (workingSets.findByIdForCreation(target).isPresent()) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, target.value());
         }
         // 准备中的父工作集拒绝受理；不存在的父工作集由创建阶段记录为任务失败。
         workingSets.findById(WorkingSetId.of(request.parentWorkingSetId()));
+        Instant acceptedAt = workingSetCreationRepository.acceptanceTime();
+        validateBaselines(request.selectedTrackerIds(), request.baselineOverrides(), acceptedAt);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
-                request, RequestThreadHolder.getUserId(), Instant.now());
+                withDefaultTrackers(request, null), RequestThreadHolder.getUserId(), acceptedAt);
         if (workingSetCreationRepository.save(creation)) {
-            indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
         WorkingSetCreation winner = workingSetCreationRepository.findByRequest(request.requestId())
                 .or(() -> workingSetCreationRepository.findByTarget(target)).orElseThrow();
-        WorkingSetCreation.Request normalized = new WorkingSetCreation.Request(request.parentWorkingSetId(), winner.request().newWorkingSetId(),
-                request.requestId(), request.productSpaceIds(), request.sharedTrackerIds(),
-                request.unsharedParentTrackerIds(), request.name(), request.mode(), request.color());
-        return replay(winner, normalized);
+        return replayCreate(winner, request);
     }
 
     /**
@@ -114,22 +123,30 @@ public class WorkingSetCreationService {
      */
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public WorkingSetCreation submitExtension(WorkingSetId target, String requestId,
-                                              List<String> parentTrackerIds) {
+                                              List<String> parentTrackerIds, Map<Long, Instant> overrides) {
+        Map<Long, Instant> baselineOverrides = overrides == null ? Map.of() : Map.copyOf(overrides);
+        List<Long> submittedIds = parentTrackerIds == null ? List.of()
+                : parentTrackerIds.stream().map(TrackerId::of).map(TrackerId::numericValue).distinct().sorted().toList();
+        Optional<WorkingSetCreation> existing = workingSetCreationRepository.findByRequest(requestId);
+        if (existing.isPresent()) {
+            return replayExtension(existing.orElseThrow(), target, submittedIds, baselineOverrides);
+        }
         Optional<WorkingSetCreation> active = workingSetCreationRepository.findActiveExtension(target);
         if (active.isPresent()) {
             if (active.get().request().requestId().equals(requestId)) {
-                return active.get();
+                return replayExtension(active.get(), target, submittedIds, baselineOverrides);
             }
             throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
         WorkingSet targetSet = workingSets.findById(target)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, target.value()));
         WorkingSetId parentId = targetSet.requireParentId();
-        TreeSet<String> requested = new TreeSet<>(parentTrackerIds == null ? List.of() : parentTrackerIds);
+        Instant acceptedAt = workingSetCreationRepository.acceptanceTime();
+        validateBaselines(submittedIds, baselineOverrides, acceptedAt);
         TreeSet<String> spaces = new TreeSet<>();
-        ArrayList<String> shared = new ArrayList<>();
-        ArrayList<String> unshared = new ArrayList<>();
-        for (String trackerId : requested) {
+        ArrayList<Long> shared = new ArrayList<>();
+        ArrayList<Long> unshared = new ArrayList<>();
+        for (Long trackerId : submittedIds) {
             TrackerId id = TrackerId.of(trackerId);
             Tracker source = trackers.findById(id).orElse(null);
             if (source != null && REQUIRED_TRACKER_CLASSIFICATIONS.contains(source.numericClassificationId())
@@ -151,25 +168,26 @@ public class WorkingSetCreationService {
         if (shared.isEmpty() && unshared.isEmpty() && spaces.isEmpty()) {
             throw DomainException.withMessage(BindingResCode.NO_DERIVABLE_TRACKER, target.value());
         }
-        WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.value(), target.value(), requestId,
-                List.copyOf(spaces), shared, unshared, targetSet.name(), Mode.EXTEND);
+        WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId.numericValue(), target.numericValue(), requestId,
+                spaces.stream().map(Long::valueOf).toList(), shared, unshared, targetSet.name(), Mode.EXTEND,
+                null, baselineOverrides, List.of(), submittedIds);
         request = withDefaultTrackers(request, targetSet);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
-                request, RequestThreadHolder.getUserId(), Instant.now());
+                request, RequestThreadHolder.getUserId(), acceptedAt);
         if (workingSetCreationRepository.save(creation)) {
-            indexer.snapshot(creation);
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
         Optional<WorkingSetCreation> concurrent = workingSetCreationRepository.findActiveExtension(target);
         if (concurrent.isPresent()) {
             if (concurrent.get().request().requestId().equals(requestId)) {
-                return concurrent.get();
+                return replayExtension(concurrent.get(), target, submittedIds, baselineOverrides);
             }
             throw DomainException.withMessage(FailureReason.PREPARING, target.value());
         }
-        return replay(workingSetCreationRepository.findByRequest(requestId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, target.value())), request);
+        return replayExtension(workingSetCreationRepository.findByRequest(requestId)
+                        .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, target.value())),
+                target, submittedIds, baselineOverrides);
     }
 
     /**
@@ -179,6 +197,7 @@ public class WorkingSetCreationService {
     private WorkingSetCreation.Request withDefaultTrackers(WorkingSetCreation.Request request, WorkingSet existingTarget) {
         TreeSet<Long> unshared = new TreeSet<>(request.numericUnsharedTrackerIds());
         TreeSet<Long> shared = new TreeSet<>(request.numericSharedTrackerIds());
+        List<Long> automatic = new ArrayList<>();
         WorkingSetId parent = WorkingSetId.of(request.numericParentWorkingSetId());
         for (Long spaceId : request.numericProductSpaceIds()) {
             for (Long classificationId : REQUIRED_TRACKER_CLASSIFICATIONS) {
@@ -188,18 +207,38 @@ public class WorkingSetCreationService {
                 trackerQueries.findDefaultTrackerId(parent, spaceId, classificationId)
                         .flatMap(trackers::findById).ifPresent(tracker -> {
                             TreeSet<Long> selection = tracker.sharingMode() == SharingMode.SHARED ? shared : unshared;
-                            selection.add(tracker.trackerId().numericValue());
+                            if (selection.add(tracker.trackerId().numericValue())) {
+                                automatic.add(tracker.trackerId().numericValue());
+                            }
                         });
             }
         }
         return new WorkingSetCreation.Request(request.numericParentWorkingSetId(),
                 request.numericTargetWorkingSetId(), request.requestId(), request.numericProductSpaceIds(),
-                List.copyOf(shared), List.copyOf(unshared), request.name(), request.mode(), request.color());
+                List.copyOf(shared), List.copyOf(unshared), request.name(), request.mode(), request.color(),
+                request.baselineOverrides(), automatic, request.submittedExtensionTrackerIds());
     }
 
-    private WorkingSetCreation replay(WorkingSetCreation existing, WorkingSetCreation.Request request) {
-        if (!existing.request().equals(request)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, request.newWorkingSetId());
+    private WorkingSetCreation replayCreate(WorkingSetCreation existing, Request requested) {
+        Request saved = existing.request();
+        if (saved.mode() != Mode.CREATE || saved.mode() != requested.mode() || !saved.requestId().equals(requested.requestId())
+                || !saved.numericParentWorkingSetId().equals(requested.numericParentWorkingSetId())
+                || !saved.numericProductSpaceIds().equals(requested.numericProductSpaceIds())
+                || !explicit(saved.numericSharedTrackerIds(), saved).equals(requested.numericSharedTrackerIds())
+                || !explicit(saved.numericUnsharedTrackerIds(), saved).equals(requested.numericUnsharedTrackerIds())
+                || !Objects.equals(saved.name(), requested.name()) || !Objects.equals(saved.color(), requested.color())
+                || !saved.baselineOverrides().equals(requested.baselineOverrides())) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, requested.newWorkingSetId());
+        }
+        return existing;
+    }
+
+    private WorkingSetCreation replayExtension(WorkingSetCreation existing, WorkingSetId target,
+                                               List<Long> submittedIds, Map<Long, Instant> overrides) {
+        Request saved = existing.request();
+        if (saved.mode() != Mode.EXTEND || !saved.numericTargetWorkingSetId().equals(target.numericValue())
+                || !saved.submittedExtensionTrackerIds().equals(submittedIds) || !saved.baselineOverrides().equals(overrides)) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, target.value());
         }
         return existing;
     }

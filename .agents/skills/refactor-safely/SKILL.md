@@ -2,6 +2,7 @@
 name: refactor-safely
 description: "Restructure existing code safely without changing externally observable behavior. Composes context, design, architecture, code quality, and testing guardrails into a characterization-first refactoring workflow. Use when the user says 'refactor this', 'clean this up', 'untangle this module', 'move this to the right layer', 'simplify this code', or 'improve this structure'."
 ---
+
 # Refactor Safely
 
 ## Required Skills
@@ -26,25 +27,32 @@ Load these skills based on refactor scope (see Steps 3, 5, 6 for conditional use
 Start from **current pain**, not preferred abstraction.
 
 - Identify target area: module, service, aggregate, endpoint path, subsystem
-- Clarify **why** refactor needed: mixed responsibilities, duplication, wrong-layer logic, coupling, poor testability, unreadable control flow
-- Clarify what user expects to improve: simpler structure, correct layer placement, smaller units, clearer domain behavior, easier testing, safer extension points
-- Use `framework:learning-harvest` Load behavior. Focus hint: "refactoring session — focus: structural health, quality signals".
+- Clarify **why** refactor needed: mixed responsibilities, duplication, wrong-layer logic, coupling, poor testability,
+  unreadable control flow
+- Clarify what user expects to improve: simpler structure, correct layer placement, smaller units, clearer domain
+  behavior, easier testing, safer extension points
+- Use `framework:learning-harvest` Load behavior. Focus hint: "refactoring session — focus: structural health, quality
+  signals".
 - Use `framework:context-anchoring` Document Discovery to check for existing context doc for affected feature/module
-  - **If found** → Load it (context-anchoring Load behavior). Honor existing decisions and constraints as active commitments while planning refactor
-  - **If not found** → Proceed from conversation and current code. Don't block planning on missing context
+    - **If found** → Load it (context-anchoring Load behavior). Honor existing decisions and constraints as active
+      commitments while planning refactor
+    - **If not found** → Proceed from conversation and current code. Don't block planning on missing context
 
 End step, summarize intent one sentence:
 
 > "Refactor X to improve Y while preserving Z."
 
-**STOP:** If can't state improvement target and preservation target that clearly, continue clarifying before planning changes.
+**STOP:** If can't state improvement target and preservation target that clearly, continue clarifying before planning
+changes.
 
 **Optional persistence check**:
 
 - If refactor substantial, risky, or likely span multiple sessions, ask whether user wants persist approved plan
 - If relevant context doc already exists and user wants persistence → load and update it
-- If no relevant doc exists and user wants persistence → propose creating one, confirm doc name per `framework:context-anchoring`, then use as source of truth for approved plan
-- If user doesn't want persistence or refactor small and local → continue in non-persistent mode. Approval gates still apply; plan simply remains in-session
+- If no relevant doc exists and user wants persistence → propose creating one, confirm doc name per
+  `framework:context-anchoring`, then use as source of truth for approved plan
+- If user doesn't want persistence or refactor small and local → continue in non-persistent mode. Approval gates still
+  apply; plan simply remains in-session
 
 ### Step 2: Define Preservation Boundaries
 
@@ -68,7 +76,8 @@ Also list explicit **out-of-scope changes**:
 - Intentional behavior changes
 - Unrelated cleanup outside approved area
 
-This step defines refactor's safety boundary. If desired outcome requires changing preserved behavior, stop and discuss whether task actually bug fix, feature, or broader redesign.
+This step defines refactor's safety boundary. If desired outcome requires changing preserved behavior, stop and discuss
+whether task actually bug fix, feature, or broader redesign.
 
 ### Step 3: Propose High-Level Structural Plan
 
@@ -95,7 +104,8 @@ End step with explicit gate:
 
 **STOP:** Don't write refactor code until user explicitly approves.
 
-If persistence enabled, use `framework:context-anchoring` Enrich behavior to capture approved preservation boundaries, target structure, movement plan, out-of-scope items. **STOP:** Don't proceed to Step 4 until plan written.
+If persistence enabled, use `framework:context-anchoring` Enrich behavior to capture approved preservation boundaries,
+target structure, movement plan, out-of-scope items. **STOP:** Don't proceed to Step 4 until plan written.
 
 ### Step 4: Add Characterization Protection First
 
@@ -112,7 +122,8 @@ Before changing structure, lock current behavior with tests.
 
 - If important preserved behavior not protected by tests, pause and make that gap explicit before refactoring
 - Don't start structural edits without believable safety net unless user explicitly accepts risk
-- Green characterization tests are baseline for refactor; if red before first structural change, resolve that first or re-scope task
+- Green characterization tests are baseline for refactor; if red before first structural change, resolve that first or
+  re-scope task
 
 End step with explicit gate:
 
@@ -128,15 +139,19 @@ Preferred strategies:
 
 - **Extract and redirect** -- extract focused units, route callers gradually
 - **Introduce seam, then migrate** -- add interface or boundary, then move behavior behind it
-- **Move behavior inward** -- shift business rules from outer layers into appropriate inner layer per `framework:architecture`
+- **Move behavior inward** -- shift business rules from outer layers into appropriate inner layer per
+  `framework:architecture`
 - **Split and collapse** -- separate unrelated responsibilities, then remove old mixed path
 
 Preferred pacing:
 
 > "How would you like review refactor?"
-> 1. **Slice-by-slice** (recommended) -- Refactor one safe slice at time, pause after each slice. Best for risky legacy code.
-> 2. **Layer-by-layer** -- Complete refactor for one structural layer or concern, then pause for review. Best for broader architectural cleanup.
-> 3. **Full autonomy** -- Execute approved refactor end-to-end, present complete result at end. Best for tightly scoped, low-risk refactors. (Still pause if slice reveals approved plan unsafe or invalid — see Step 6 Deviation Rule.)
+> 1. **Slice-by-slice** (recommended) -- Refactor one safe slice at time, pause after each slice. Best for risky legacy
+>    code.
+> 2. **Layer-by-layer** -- Complete refactor for one structural layer or concern, then pause for review. Best for
+>    broader architectural cleanup.
+> 3. **Full autonomy** -- Execute approved refactor end-to-end, present complete result at end. Best for tightly scoped,
+>    low-risk refactors. (Still pause if slice reveals approved plan unsafe or invalid — see Step 6 Deviation Rule.)
 
 Default to **slice-by-slice** if user doesn't express preference.
 
@@ -148,11 +163,13 @@ For each slice:
 
 1. Make one structural improvement from approved plan
 2. Re-run relevant characterization tests
-   - If any characterization test goes red, **stop immediately**. Don't proceed to next slice. Fix regression or revert slice before continuing.
+    - If any characterization test goes red, **stop immediately**. Don't proceed to next slice. Fix regression or revert
+      slice before continuing.
 3. Apply applicable atom self-validation checklists
 4. Run applicable anti-pattern scans
 5. Fix violations before presenting slice
-6. Collect judgment calls for slice using `framework:collaborative-judgment`, surface them before presenting slice's code. Don't interrupt mid-slice unless approved plan becomes unsafe or invalid.
+6. Collect judgment calls for slice using `framework:collaborative-judgment`, surface them before presenting slice's
+   code. Don't interrupt mid-slice unless approved plan becomes unsafe or invalid.
 
 Always apply:
 
@@ -162,12 +179,15 @@ Always apply:
 Conditionally apply:
 
 - **If responsibilities move across layers or dependency direction changes** → Apply `framework:architecture`
-- **If business rules, aggregates, value objects, or domain behavior move or sharpen** → Apply `framework:domain-driven-design`
-- **If trust boundaries, authz, validation, queries, or sensitive data handling touched** → Apply `framework:secure-coding`
+- **If business rules, aggregates, value objects, or domain behavior move or sharpen** → Apply
+  `framework:domain-driven-design`
+- **If trust boundaries, authz, validation, queries, or sensitive data handling touched** → Apply
+  `framework:secure-coding`
 
 **Deviation rule**:
 
-- If implementation reveals approved refactor plan incomplete, unsafe, or would require changing preserved behavior, pause immediately and discuss before continuing
+- If implementation reveals approved refactor plan incomplete, unsafe, or would require changing preserved behavior,
+  pause immediately and discuss before continuing
 
 ### Step 7: Verify Preservation and Structural Improvement
 
@@ -208,9 +228,13 @@ Use `framework:context-anchoring` Enrich behavior to preserve important parts of
 - Key files changed: path and purpose
 - Deferred debt: what remains and why intentionally left for later
 
-If no context doc exists and refactor involved non-trivial structural reasoning, suggest creating one so decisions not lost across sessions.
+If no context doc exists and refactor involved non-trivial structural reasoning, suggest creating one so decisions not
+lost across sessions.
 
-**Harvest learnings.** Use `framework:learning-harvest` Harvest behavior. Session context: "refactoring session — structural restructuring and debt resolution". Synthesize and propose cross-cutting patterns from this session — structural debt that accumulated, migration strategies that worked, characterization test gaps discovered. User confirms what enters the document. **STOP: run this before recommending `/review` below.**
+**Harvest learnings.** Use `framework:learning-harvest` Harvest behavior. Session context: "refactoring session —
+structural restructuring and debt resolution". Synthesize and propose cross-cutting patterns from this session —
+structural debt that accumulated, migration strategies that worked, characterization test gaps discovered. User confirms
+what enters the document. **STOP: run this before recommending `/review` below.**
 
 After refactor complete, recommend `/review` when change:
 

@@ -1,8 +1,10 @@
 # DDD Refiner Template
 
-This template defines the structure of the `.lattice/standards/ddd-principles.md` output document. It contains all default content from the domain-driven-design atom's `defaults.md`, interleaved with interview guidance comments.
+This template defines the structure of the `.lattice/standards/ddd-principles.md` output document. It contains all
+default content from the domain-driven-design atom's `defaults.md`, interleaved with interview guidance comments.
 
-When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not a conversation log.
+When producing the output, strip all `<!-- INTERVIEW GUIDANCE: -->` comments. The final document is a specification, not
+a conversation log.
 
 ---
 
@@ -39,13 +41,16 @@ Include the preamble matching the chosen mode. Only one preamble appears in the 
 
 **Overlay preamble:**
 
-> This document overlays project-specific customizations on top of the domain-driven-design atom's embedded defaults. Only sections included here differ from the defaults — all other sections remain as-is.
+> This document overlays project-specific customizations on top of the domain-driven-design atom's embedded defaults.
+> Only sections included here differ from the defaults — all other sections remain as-is.
 >
-> Sections below replace matching sections in the defaults (matched by heading). New sections are appended after defaults.
+> Sections below replace matching sections in the defaults (matched by heading). New sections are appended after
+> defaults.
 
 **Override preamble:**
 
-> These are the domain-driven design principles for [PROJECT NAME]. They fully replace the embedded defaults in the domain-driven-design atom.
+> These are the domain-driven design principles for [PROJECT NAME]. They fully replace the embedded defaults in the
+> domain-driven-design atom.
 
 **Table of contents** (for override mode; overlay mode only lists included sections):
 
@@ -84,21 +89,28 @@ Aggregate boundaries are the single hardest design decision in DDD. Everything e
 
 ### Consistency Boundary Principle
 
-An aggregate is the set of objects that **must** be immediately consistent after every transaction. Not "things that are related." Not "things that share a database table." Specifically: the objects whose combined state must satisfy an invariant that is checked atomically.
+An aggregate is the set of objects that **must** be immediately consistent after every transaction. Not "things that are
+related." Not "things that share a database table." Specifically: the objects whose combined state must satisfy an
+invariant that is checked atomically.
 
-Ask: *"If this entity changes, what else MUST be valid in the same instant?"* Only those objects belong in the same aggregate.
+Ask: *"If this entity changes, what else MUST be valid in the same instant?"* Only those objects belong in the same
+aggregate.
 
 ### Sizing Heuristic
 
-Start with the **smallest possible aggregate**: a root entity plus its value objects. Add internal entities only when a transactional invariant forces them inside. If you are debating whether something belongs inside, it almost certainly does not.
+Start with the **smallest possible aggregate**: a root entity plus its value objects. Add internal entities only when a
+transactional invariant forces them inside. If you are debating whether something belongs inside, it almost certainly
+does not.
 
 Small aggregates load fast, conflict rarely, and scale well. Large aggregates are slow, contended, and fragile.
 
-**Anti-pattern — God Aggregate**: Many internal entities, slow load, high contention → decompose. Keep only what shares transactional invariant.
+**Anti-pattern — God Aggregate**: Many internal entities, slow load, high contention → decompose. Keep only what shares
+transactional invariant.
 
 ### Reference by Identity
 
-Aggregates reference other aggregates by ID only — never by direct object reference. Object references create hidden coupling, expand transaction scope, and make it impossible to distribute aggregates independently.
+Aggregates reference other aggregates by ID only — never by direct object reference. Object references create hidden
+coupling, expand transaction scope, and make it impossible to distribute aggregates independently.
 
 ```
 // WRONG: Order holds a direct reference to Customer
@@ -112,20 +124,26 @@ class Order
 
 ### One Transaction Rule
 
-Each aggregate defines one transaction boundary. A single business operation should modify at most one aggregate per transaction. If you need two aggregates updated atomically, either the boundary is wrong (merge them) or you should accept eventual consistency via domain events.
+Each aggregate defines one transaction boundary. A single business operation should modify at most one aggregate per
+transaction. If you need two aggregates updated atomically, either the boundary is wrong (merge them) or you should
+accept eventual consistency via domain events.
 
-**Anti-pattern — Cross-Aggregate Transaction**: Updating two aggregates in one transaction → use domain event + eventual consistency.
+**Anti-pattern — Cross-Aggregate Transaction**: Updating two aggregates in one transaction → use domain event + eventual
+consistency.
 
 ### Invariant Ownership
 
-Every business rule belongs to exactly one aggregate — the one whose root enforces it. If a rule genuinely spans two aggregates, one of three things is true:
+Every business rule belongs to exactly one aggregate — the one whose root enforces it. If a rule genuinely spans two
+aggregates, one of three things is true:
+
 1. The boundary is wrong — they should be one aggregate.
 2. One aggregate can own the rule by receiving the other's state as a value (not reference).
 3. The rule is an eventual consistency concern — enforce via domain events and compensating actions.
 
 ### Code Example: Order Aggregate with LineItems
 
-LineItems are inside the Order aggregate because the invariant "order total must equal the sum of line item subtotals" requires atomic consistency.
+LineItems are inside the Order aggregate because the invariant "order total must equal the sum of line item subtotals"
+requires atomic consistency.
 
 ```
 class Order                                   // Aggregate Root
@@ -171,7 +189,8 @@ class LineItem                                // Internal Entity
     return unitPrice.multiply(quantity.value)
 ```
 
-Customer is a separate aggregate referenced by `CustomerId`. It has its own lifecycle, its own invariants, and its own transaction boundary. Loading an Order should never require loading a Customer.
+Customer is a separate aggregate referenced by `CustomerId`. It has its own lifecycle, its own invariants, and its own
+transaction boundary. Loading an Order should never require loading a Customer.
 
 ### Code Example: Decomposing a God Aggregate
 
@@ -202,7 +221,8 @@ class Shipment                // separate Aggregate Root
       raise ShipmentDelivered(id, orderId)
 ```
 
-Order and Shipment evolve independently. When a shipment is delivered, a domain event notifies the Order context if needed.
+Order and Shipment evolve independently. When a shipment is delivered, a domain event notifies the Order context if
+needed.
 
 ---
 
@@ -225,11 +245,13 @@ Cross-section impact: Entity identity patterns affect §3 (typed ID value object
 
 ### Identity
 
-An entity has a persistent identity that survives state changes. An Order remains the same Order whether its status is DRAFT or CONFIRMED. Identity is typically a typed identifier (value object wrapping a raw ID).
+An entity has a persistent identity that survives state changes. An Order remains the same Order whether its status is
+DRAFT or CONFIRMED. Identity is typically a typed identifier (value object wrapping a raw ID).
 
 ### Equality
 
-Two entities are equal if and only if they have the same identity — regardless of their attribute values. An Order with id=123 is the same entity whether its total is $50 or $500.
+Two entities are equal if and only if they have the same identity — regardless of their attribute values. An Order with
+id=123 is the same entity whether its total is $50 or $500.
 
 ```
 class Entity
@@ -242,9 +264,11 @@ class Entity
 
 ### Behavior-Rich Entities
 
-Entities encapsulate business rules as methods. If an entity has only getters and setters, the logic that should live inside it has leaked elsewhere (typically into application services).
+Entities encapsulate business rules as methods. If an entity has only getters and setters, the logic that should live
+inside it has leaked elsewhere (typically into application services).
 
-**Anti-pattern — Anemic Domain Model**: Entity data holder only getter/setter; all logic in services → move business rules into entity.
+**Anti-pattern — Anemic Domain Model**: Entity data holder only getter/setter; all logic in services → move business
+rules into entity.
 
 ```
 // WRONG: Anemic entity — data holder only
@@ -275,7 +299,8 @@ class Account
 
 ### Lifecycle
 
-Entities have a lifecycle: creation → state transitions → possible deactivation or completion. Each transition should enforce its preconditions.
+Entities have a lifecycle: creation → state transitions → possible deactivation or completion. Each transition should
+enforce its preconditions.
 
 ```
 class Order
@@ -319,11 +344,13 @@ Cross-section impact: Value objects chosen here are used throughout §1 (aggrega
 
 ### Attributes Define It
 
-A value object has no identity. It is defined entirely by its attributes. Two Money objects with amount=10 and currency=USD are the same Money — there is no concept of "which one."
+A value object has no identity. It is defined entirely by its attributes. Two Money objects with amount=10 and currency=
+USD are the same Money — there is no concept of "which one."
 
 ### Immutability
 
-Value objects never change after creation. Operations that would "modify" a value object return a new instance instead. This eliminates aliasing bugs and makes them safe to share.
+Value objects never change after creation. Operations that would "modify" a value object return a new instance instead.
+This eliminates aliasing bugs and makes them safe to share.
 
 ```
 class Money
@@ -345,7 +372,8 @@ class Money
 
 ### Self-Validation
 
-A value object validates itself at construction. If the constructor succeeds, the value is valid. Invalid states are unrepresentable.
+A value object validates itself at construction. If the constructor succeeds, the value is valid. Invalid states are
+unrepresentable.
 
 ```
 class Email
@@ -378,18 +406,18 @@ class Money
 
 These domain concepts should almost always be value objects, not raw primitives:
 
-| Concept | Instead of | Why |
-|---------|-----------|-----|
-| **Money** | number/decimal | Carries currency, prevents mixed-currency arithmetic |
-| **Email** | string | Self-validates format, normalizes casing |
-| **PhoneNumber** | string | Validates format, normalizes country code |
-| **Address** | multiple strings | Groups related fields, validates completeness |
-| **DateRange** | two dates | Enforces start < end, provides overlap/contains logic |
-| **TimeSlot** | two times | Enforces start < end, prevents overlap |
-| **Quantity** | integer | Enforces non-negative, provides arithmetic |
-| **Percentage** | number | Enforces 0-100 range (or 0-1), prevents misuse |
-| **Typed ID** (OrderId, CustomerId) | string/UUID | Prevents passing wrong ID type to wrong method |
-| **Status** | string/enum | Encapsulates valid transitions, prevents invalid states |
+| Concept                            | Instead of       | Why                                                     |
+|------------------------------------|------------------|---------------------------------------------------------|
+| **Money**                          | number/decimal   | Carries currency, prevents mixed-currency arithmetic    |
+| **Email**                          | string           | Self-validates format, normalizes casing                |
+| **PhoneNumber**                    | string           | Validates format, normalizes country code               |
+| **Address**                        | multiple strings | Groups related fields, validates completeness           |
+| **DateRange**                      | two dates        | Enforces start < end, provides overlap/contains logic   |
+| **TimeSlot**                       | two times        | Enforces start < end, prevents overlap                  |
+| **Quantity**                       | integer          | Enforces non-negative, provides arithmetic              |
+| **Percentage**                     | number           | Enforces 0-100 range (or 0-1), prevents misuse          |
+| **Typed ID** (OrderId, CustomerId) | string/UUID      | Prevents passing wrong ID type to wrong method          |
+| **Status**                         | string/enum      | Encapsulates valid transitions, prevents invalid states |
 
 ### Code Example: Typed Identifier
 
@@ -414,11 +442,13 @@ class OrderId
     return value.toString()
 ```
 
-Typed identifiers prevent a class of bugs where a CustomerId is accidentally passed where an OrderId is expected. The type system catches this at compile time.
+Typed identifiers prevent a class of bugs where a CustomerId is accidentally passed where an OrderId is expected. The
+type system catches this at compile time.
 
 **Anti-pattern — Primitive Obsession**: Raw string email, number money, UUID ID → wrap value object.
 
-**Anti-pattern — Misidentified Entity/Value Object**: Apply identity test — *"Business track individual instances over time?"* Same attributes = same thing? Value object. Different lifecycle per instance? Entity.
+**Anti-pattern — Misidentified Entity/Value Object**: Apply identity test — *"Business track individual instances over
+time?"* Same attributes = same thing? Value object. Different lifecycle per instance? Entity.
 
 ### Code Example: Status as Value Object with Behavior
 
@@ -467,7 +497,9 @@ Fixed: Domain services must be stateless and pure (no I/O). The distinction from
 
 ### When to Use
 
-A domain service encapsulates business logic that **spans multiple entities or value objects** and has no natural home in any single one. The key test: if the logic operates on data from multiple aggregates or entities and no single entity "owns" the computation, it belongs in a domain service.
+A domain service encapsulates business logic that **spans multiple entities or value objects** and has no natural home
+in any single one. The key test: if the logic operates on data from multiple aggregates or entities and no single entity
+"owns" the computation, it belongs in a domain service.
 
 ### When NOT to Use
 
@@ -478,23 +510,26 @@ A domain service encapsulates business logic that **spans multiple entities or v
 
 ### Statelessness
 
-Domain services are stateless. They receive everything they need as parameters and return results. No internal state, no retained references to entities.
+Domain services are stateless. They receive everything they need as parameters and return results. No internal state, no
+retained references to entities.
 
 ### Pure Domain — No I/O
 
-A domain service performs pure business computation. It does not call databases, APIs, or file systems. If the logic requires external data, the application service fetches that data and passes it to the domain service.
+A domain service performs pure business computation. It does not call databases, APIs, or file systems. If the logic
+requires external data, the application service fetches that data and passes it to the domain service.
 
-**Anti-pattern — Leaking Domain Logic**: Business rule in controller or application service → extract to domain object or domain service.
+**Anti-pattern — Leaking Domain Logic**: Business rule in controller or application service → extract to domain object
+or domain service.
 
 ### The Distinction: Domain Service vs Application Service
 
-| Aspect | Domain Service | Application Service |
-|--------|---------------|-------------------|
-| **Contains** | Business rules and computations | Workflow orchestration |
-| **State** | Stateless | Stateless |
-| **I/O** | None — pure computation | Coordinates I/O via infrastructure |
-| **Dependencies** | Other domain objects only | Domain + infrastructure interfaces |
-| **Example** | Calculate price given product, customer tier, and discount rules | Fetch product from repo, fetch customer, call pricing service, save order |
+| Aspect           | Domain Service                                                   | Application Service                                                       |
+|------------------|------------------------------------------------------------------|---------------------------------------------------------------------------|
+| **Contains**     | Business rules and computations                                  | Workflow orchestration                                                    |
+| **State**        | Stateless                                                        | Stateless                                                                 |
+| **I/O**          | None — pure computation                                          | Coordinates I/O via infrastructure                                        |
+| **Dependencies** | Other domain objects only                                        | Domain + infrastructure interfaces                                        |
+| **Example**      | Calculate price given product, customer tier, and discount rules | Fetch product from repo, fetch customer, call pricing service, save order |
 
 ### Code Example: PricingService
 
@@ -562,15 +597,16 @@ Cross-section impact: Domain events defined here are used in §1 (cross-aggregat
 
 ### Naming Convention
 
-Domain events are named in **past tense** — they describe something that has already happened in the domain. They are facts, not commands.
+Domain events are named in **past tense** — they describe something that has already happened in the domain. They are
+facts, not commands.
 
-| Good | Bad |
-|------|-----|
-| OrderPlaced | PlaceOrder (command, not event) |
-| PaymentReceived | ProcessPayment (command) |
-| InventoryReserved | ReserveInventory (command) |
-| CustomerDeactivated | DeactivateCustomer (command) |
-| ShipmentDelivered | DeliverShipment (command) |
+| Good                | Bad                             |
+|---------------------|---------------------------------|
+| OrderPlaced         | PlaceOrder (command, not event) |
+| PaymentReceived     | ProcessPayment (command)        |
+| InventoryReserved   | ReserveInventory (command)      |
+| CustomerDeactivated | DeactivateCustomer (command)    |
+| ShipmentDelivered   | DeliverShipment (command)       |
 
 ### Payload
 
@@ -594,13 +630,17 @@ Do NOT raise events for trivial internal state changes that nothing else reacts 
 
 ### Where Events Live
 
-Domain events are **defined in the domain layer** — they are part of the ubiquitous language. They are published by the aggregate (collected during the operation) or by the application service after persisting.
+Domain events are **defined in the domain layer** — they are part of the ubiquitous language. They are published by the
+aggregate (collected during the operation) or by the application service after persisting.
 
 ### Not Event Sourcing
 
-The default approach is domain events for **communication and coordination**, not as the persistence mechanism. Aggregates are persisted through their repositories to a database. Events are a side channel for notifying other parts of the system.
+The default approach is domain events for **communication and coordination**, not as the persistence mechanism.
+Aggregates are persisted through their repositories to a database. Events are a side channel for notifying other parts
+of the system.
 
-Event sourcing (persisting events as the source of truth and rebuilding state from them) is a separate architectural choice with its own trade-offs. Do not conflate the two.
+Event sourcing (persisting events as the source of truth and rebuilding state from them) is a separate architectural
+choice with its own trade-offs. Do not conflate the two.
 
 ### Code Example: OrderConfirmed Event
 
@@ -672,11 +712,14 @@ Cross-section impact: Repository patterns here must align with §1 (one per aggr
 
 ### One Per Aggregate Root
 
-Repositories exist for aggregate roots only — not for internal entities or value objects. If `LineItem` is inside the `Order` aggregate, there is no `LineItemRepository`. You save and load the entire Order aggregate through `OrderRepository`.
+Repositories exist for aggregate roots only — not for internal entities or value objects. If `LineItem` is inside the
+`Order` aggregate, there is no `LineItemRepository`. You save and load the entire Order aggregate through
+`OrderRepository`.
 
 ### Collection Semantics
 
-Think of a repository as an in-memory collection of aggregates. The interface should feel like adding to, finding in, and removing from a collection — not like issuing SQL queries.
+Think of a repository as an in-memory collection of aggregates. The interface should feel like adding to, finding in,
+and removing from a collection — not like issuing SQL queries.
 
 ```
 interface OrderRepository
@@ -688,11 +731,15 @@ interface OrderRepository
 
 ### Interface in Domain, Implementation in Infrastructure
 
-The repository interface is defined in the domain layer — it is a port. The implementation lives in infrastructure and handles the actual persistence mechanics (SQL, ORM, document store). This is already enforced by Clean Architecture; DDD defines the semantic contract.
+The repository interface is defined in the domain layer — it is a port. The implementation lives in infrastructure and
+handles the actual persistence mechanics (SQL, ORM, document store). This is already enforced by Clean Architecture; DDD
+defines the semantic contract.
 
 ### Returns Fully-Constituted Aggregates
 
-A repository returns complete aggregates with all internal entities and value objects properly assembled. Never partial objects, never DTOs, never raw database rows. The consumer receives a ready-to-use domain object with all invariants already satisfied.
+A repository returns complete aggregates with all internal entities and value objects properly assembled. Never partial
+objects, never DTOs, never raw database rows. The consumer receives a ready-to-use domain object with all invariants
+already satisfied.
 
 ```
 // WRONG: Returning partial or raw data
@@ -707,11 +754,13 @@ interface OrderRepository
 
 ### What Does NOT Belong in a Repository
 
-- **Complex reporting queries**: Multi-table joins, aggregations, analytics → use a Provider (Clean Architecture query flow)
+- **Complex reporting queries**: Multi-table joins, aggregations, analytics → use a Provider (Clean Architecture query
+  flow)
 - **Bulk operations**: Mass updates, batch deletes → use infrastructure-level operations
 - **Search with complex filters**: Full-text search, faceted queries → use a Provider or dedicated search infrastructure
 
-The repository's job is to persist and reconstitute aggregates for command operations. Read-optimized queries belong in Providers.
+The repository's job is to persist and reconstitute aggregates for command operations. Read-optimized queries belong in
+Providers.
 
 ### Code Example: Repository Interface
 
@@ -761,11 +810,14 @@ Customizable: Creation pattern choice (factory method, standalone factory, build
 Fixed: Creation must enforce creation-time invariants. Reconstitution must be separate from initial creation.
 -->
 
-Complex aggregate creation should encapsulate validation and assembly. Multiple valid approaches exist — creation pattern choice (factory method, standalone factory, builder) depends on assembly complexity and team conventions. See SKILL.md Ambiguity Signals.
+Complex aggregate creation should encapsulate validation and assembly. Multiple valid approaches exist — creation
+pattern choice (factory method, standalone factory, builder) depends on assembly complexity and team conventions. See
+SKILL.md Ambiguity Signals.
 
 ### Static Factory Method (Most Common)
 
-For most cases, a static factory method on the root is the simplest and best approach. It enforces creation invariants and returns a fully valid aggregate.
+For most cases, a static factory method on the root is the simplest and best approach. It enforces creation invariants
+and returns a fully valid aggregate.
 
 ```
 class Order
@@ -789,7 +841,8 @@ class Order
 
 ### Standalone Factory
 
-Use a standalone factory when creation requires data from multiple sources or when the assembly logic is complex enough to warrant its own class.
+Use a standalone factory when creation requires data from multiple sources or when the assembly logic is complex enough
+to warrant its own class.
 
 ```
 class LoanApplicationFactory
@@ -811,11 +864,13 @@ class LoanApplicationFactory
     )
 ```
 
-Note: The `creditScoreService` here is a domain service (pure computation from applicant data), not an infrastructure call. If external I/O is needed to get the credit score, the application service should fetch it first and pass it in.
+Note: The `creditScoreService` here is a domain service (pure computation from applicant data), not an infrastructure
+call. If external I/O is needed to get the credit score, the application service should fetch it first and pass it in.
 
 ### Reconstitution
 
-Repository implementations use reconstitution to rebuild aggregates from stored data. This bypasses creation-time validation (the data was already valid when first persisted) but reconstructs all internal structure.
+Repository implementations use reconstitution to rebuild aggregates from stored data. This bypasses creation-time
+validation (the data was already valid when first persisted) but reconstructs all internal structure.
 
 ```
 class Order
@@ -848,21 +903,29 @@ Note: Anti-patterns related to aggregate sizing (god aggregate, cross-aggregate 
 
 An aggregate needs decomposition when:
 
-1. **Too many internal entities** (more than 3-5): Question whether they all share a transactional invariant with the root.
-2. **Multiple unrelated invariants**: Rules that never reference each other's entities probably belong in separate aggregates.
-3. **Methods that touch only a subset**: If root methods only operate on some internal entities, that subset may be its own aggregate.
+1. **Too many internal entities** (more than 3-5): Question whether they all share a transactional invariant with the
+   root.
+2. **Multiple unrelated invariants**: Rules that never reference each other's entities probably belong in separate
+   aggregates.
+3. **Methods that touch only a subset**: If root methods only operate on some internal entities, that subset may be its
+   own aggregate.
 4. **Slow loading**: "I need to load everything to validate one thing" — the boundary is too coarse.
-5. **High contention**: Multiple users frequently conflict on the same aggregate because they are modifying unrelated parts.
+5. **High contention**: Multiple users frequently conflict on the same aggregate because they are modifying unrelated
+   parts.
 6. **Growing entity count**: New features keep adding entities to the aggregate rather than creating new aggregates.
 
 ### Step-by-Step Decomposition
 
 1. **List all invariants** the aggregate root currently enforces.
 2. **Group entities by invariant participation**: Which entities are involved in which invariants?
-3. **Identify independent groups**: Entities that participate in separate, non-overlapping invariants are candidates for extraction.
-4. **Extract to new aggregate**: Create a new aggregate root for the extracted group. Replace the direct reference with an ID reference.
-5. **Add domain events**: If the original aggregate needs to react to changes in the extracted aggregate (or vice versa), use domain events.
-6. **Verify**: Each resulting aggregate should be loadable and savable independently. No cross-aggregate invariant should require a shared transaction.
+3. **Identify independent groups**: Entities that participate in separate, non-overlapping invariants are candidates for
+   extraction.
+4. **Extract to new aggregate**: Create a new aggregate root for the extracted group. Replace the direct reference with
+   an ID reference.
+5. **Add domain events**: If the original aggregate needs to react to changes in the extracted aggregate (or vice
+   versa), use domain events.
+6. **Verify**: Each resulting aggregate should be loadable and savable independently. No cross-aggregate invariant
+   should require a shared transaction.
 
 ### Before/After Example
 
@@ -911,7 +974,8 @@ class CourseGradebook                      // Grading aggregate
     grades.add(new Grade(studentId, assignmentId, score))
 ```
 
-Each aggregate loads independently. Enrollment contention does not block grading. New grading features do not risk breaking enrollment invariants.
+Each aggregate loads independently. Enrollment contention does not block grading. New grading features do not risk
+breaking enrollment invariants.
 
 ---
 

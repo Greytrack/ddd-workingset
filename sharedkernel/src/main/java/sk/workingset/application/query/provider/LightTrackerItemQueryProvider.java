@@ -5,6 +5,7 @@ import sk.workingset.domain.CommonId;
 import sk.workingset.domain.LocalId;
 import sk.workingset.domain.workingset.WorkingSetId;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,8 @@ public interface LightTrackerItemQueryProvider {
     List<LightTrackerItemSummary> findInTracker(TrackerId trackerId);
 
     List<LightTrackerItemSummary> pageInTracker(TrackerId trackerId, String afterLocalId, int limit);
+
+    List<LightTrackerItemSummary> pageInTracker(TrackerId trackerId, Instant baselineAt, String afterLocalId, int limit);
 
     boolean existsInTracker(TrackerId trackerId);
 

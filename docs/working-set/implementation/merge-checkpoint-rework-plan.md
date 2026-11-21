@@ -1,13 +1,17 @@
 # Merge Checkpoint 重构实施记录（2026-11-16）
 
-**状态：Historical（已实施）**。设计裁定见 [Checkpoint 对齐裁定](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)，现行实现见[合并执行契约 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)，下文只记录当期实现。
+**状态：Historical（已实施）**。设计裁定见 [Checkpoint 对齐裁定](../reviews/2026-11-16-merge-checkpoint-legacy-alignment.md)
+，现行实现见[合并执行契约 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)，下文只记录当期实现。
 
 ## 实施步骤
 
-1. `merge_checkpoints` 重建为 Tracker 分支对身份（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` + `merge_direction` + `revoked` + 审计列），唯一键 `(tracker_a_id, tracker_b_id, common_id)`；
+1. `merge_checkpoints` 重建为 Tracker 分支对身份（`tracker_a_id`/`tracker_b_id` + `round_id` + `change_kind` +
+   `merge_direction` + `revoked` + 审计列），唯一键 `(tracker_a_id, tracker_b_id, common_id)`；
 2. `merge_rounds` 增加 `tracker_a_id`/`tracker_b_id` 与并发闸门索引；
-3. `MergeCheckpoint`、`MergeRepository`、`JdbcMergeRepository`、`MergeComparisonService`、`MergeExecutionService`、`MergeController`、`MergeFailure` 同步；
-4. `MergeCheckpointCleanupJob` 定时清理被超越锚点（`workingset.merge.checkpoint-cleanup-cron`，默认每天 03:00）；**2026-11-20 后该清理任务已移除，确认由轮次保存、跨轮次改为只读查询，见 ADR-0006**；
+3. `MergeCheckpoint`、`MergeRepository`、`JdbcMergeRepository`、`MergeComparisonService`、`MergeExecutionService`、
+   `MergeController`、`MergeFailure` 同步；
+4. `MergeCheckpointCleanupJob` 定时清理被超越锚点（`workingset.merge.checkpoint-cleanup-cron`，默认每天 03:00）；
+   **2026-11-20 后该清理任务已移除，确认由轮次保存、跨轮次改为只读查询，见 ADR-0006**；
 5. 前端 `core.js` 补 `PairMergeInProgress` 文案。
 
 ## 验收
@@ -18,7 +22,8 @@
 
 ## 旧数据处置记录（2026-11-17）
 
-当时移除 `Difference.key` / `entryKey` 后，旧轮次 JSON 未迁移，验收使用重建后的开发数据。数值 ID 版本的库初始化与 Demo 重建统一见 [仓库 README](../../../README.md)。
+当时移除 `Difference.key` / `entryKey` 后，旧轮次 JSON 未迁移，验收使用重建后的开发数据。数值 ID 版本的库初始化与 Demo
+重建统一见 [仓库 README](../../../README.md)。
 
 ## 风险（已接受）
 

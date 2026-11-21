@@ -70,6 +70,7 @@ function handleRequest(req):
 ### By Type
 
 **String validation:**
+
 ```
 // POOR: Accept any string
 function setUsername(name):
@@ -87,6 +88,7 @@ function setUsername(name):
 ```
 
 **Number validation:**
+
 ```
 // POOR: Trust the input is a valid number
 function setQuantity(qty):
@@ -102,6 +104,7 @@ function setQuantity(qty):
 ```
 
 **Email validation:**
+
 ```
 // POOR: Regex-only validation (unreliable for email)
 function setEmail(email):
@@ -120,6 +123,7 @@ function setEmail(email):
 ```
 
 **URL validation:**
+
 ```
 // POOR: Accept any URL
 function setCallbackUrl(url):
@@ -136,6 +140,7 @@ function setCallbackUrl(url):
 ```
 
 **File path validation:**
+
 ```
 // POOR: Accept any path
 function readFile(userPath):

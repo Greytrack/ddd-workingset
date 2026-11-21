@@ -1,6 +1,8 @@
 package com.airedgesoft.lib.jdbc.common;
 
-/** air_inst_common 表的持久化记录。 */
+/**
+ * air_inst_common 表的持久化记录。
+ */
 public record AirInstCommonPo(
         Long id, Long baseClass, Long clazz, Long type, Long workSpace, String number, String name,
         Long status, String version, Long revision, Integer deleteFlag, Long lockVersion,
