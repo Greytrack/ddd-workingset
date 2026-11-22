@@ -1,10 +1,10 @@
 package alm.requirement.adapters.workingset;
 
 import alm.requirement.application.port.RequirementMutationStore;
+import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sk.workingset.application.port.TrackerItemSourceLock;
-import sk.workingset.domain.LocalId;
 
 import java.util.Optional;
 

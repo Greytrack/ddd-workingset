@@ -1,5 +1,14 @@
 package bootstrap;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharekernel.workingset.domain.CommonId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
+import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,15 +19,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.common.error.DomainException;
-import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetController.TrackerView;
-import sk.workingset.adapters.WorkingSetController.WorkingSetView;
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.workingset.WorkingSetCreation.Status;
-import sk.workingset.error.BindingResCode;
 
 import java.time.Duration;
 import java.util.ArrayList;

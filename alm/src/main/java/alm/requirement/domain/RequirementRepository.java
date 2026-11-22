@@ -1,6 +1,6 @@
 package alm.requirement.domain;
 
-import sk.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 
 import java.util.Optional;
 

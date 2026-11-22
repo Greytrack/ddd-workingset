@@ -1,10 +1,17 @@
 /* Workspace view preferences and tree navigation. */
 function layoutReadPreference(key) {
-    try { return localStorage.getItem(key); } catch { return null; }
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
+    }
 }
 
 function layoutSavePreference(key, value) {
-    try { localStorage.setItem(key, String(value)); } catch { /* Preferences are optional. */ }
+    try {
+        localStorage.setItem(key, String(value));
+    } catch { /* Preferences are optional. */
+    }
 }
 
 function layoutBindResize(handle, {key, initial, limits, position, apply}) {
@@ -91,7 +98,11 @@ function layoutInitTree() {
     list.addEventListener('click', toggle, true);
     list.addEventListener('keydown', toggle, true);
     filter.addEventListener('input', render);
-    $('#expandTrackers').addEventListener('click', () => { collapsed.clear(); filter.value = ''; render(); });
+    $('#expandTrackers').addEventListener('click', () => {
+        collapsed.clear();
+        filter.value = '';
+        render();
+    });
     $('#collapseTrackers').addEventListener('click', () => {
         list.querySelectorAll('[data-tracker-id]').forEach((row) => collapsed.add(row.dataset.trackerId));
         filter.value = '';

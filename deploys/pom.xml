@@ -5,25 +5,29 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.airedgesoft</groupId>
         <artifactId>ddd-workingset</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>deploys</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.airedgesoft</groupId>
             <artifactId>lib-exception</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>sharedkernel</artifactId>
+            <groupId>com.airedgesoft</groupId>
+            <artifactId>shared-kernel</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.airedgesoft</groupId>
             <artifactId>alm</artifactId>
+            <version>${revision}</version>
         </dependency>
         <!-- Swagger UI 和 Knife4j 共用 Spring Boot 3.3 对应的 Springdoc。 -->
         <dependency>

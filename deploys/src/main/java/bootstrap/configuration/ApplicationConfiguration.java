@@ -1,5 +1,12 @@
 package bootstrap.configuration;
 
+import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
+import com.airedgesoft.sharekernel.workingset.application.command.SourceSerialCowCoordinator;
+import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetItemIndexer;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -7,13 +14,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
-import sk.tracker.domain.repository.TrackerRepository;
-import sk.workingset.application.command.SourceSerialCowCoordinator;
-import sk.workingset.application.command.WorkingSetItemIndexer;
-import sk.workingset.application.query.provider.BusinessObjectTypeRegistry;
-import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.workingset.WorkingSetRepository;
 
 import java.time.Duration;
 

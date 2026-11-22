@@ -2,18 +2,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.airedgesoft</groupId>
         <artifactId>ddd-workingset</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>lib-jdbc</artifactId>
-    <name>Archetype - lib-jdbc</name>
+    <name>lib-jdbc</name>
     <description>受控 PostgreSQL 增量写入技术库，不包含业务表与版次规则</description>
     <dependencies>
         <!-- 领域异常体系（并发冲突等持久化失败的统一出口：技术异常不出栈） -->
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.airedgesoft</groupId>
             <artifactId>lib-exception</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>

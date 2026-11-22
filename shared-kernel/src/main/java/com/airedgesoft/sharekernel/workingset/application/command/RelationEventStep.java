@@ -1,0 +1,80 @@
+package com.airedgesoft.sharekernel.workingset.application.command;
+
+import com.airedgesoft.sharekernel.tracker.domain.Tracker;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.event.AssociationEndpointEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.ReferenceEndpointEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * T7 创建/扩展索引后的关系事件 step。只发布事件，不写 Reference/Association 聚合。
+ * 每个来源 Item 独立尝试；失败累计并交由任务标记，不自动重试。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public final class RelationEventStep {
+    private final TrackerRepository trackers;
+    private final WorkingSetRepository workingSets;
+    private final LightTrackerItemQueryProvider itemQueries;
+    private final RelationSourceQueryProvider source;
+    private final RelationEventPublisher publisher;
+
+
+    /**
+     * 对已索引的派生 Tracker 发布关系创建/修复事件；失败累计，不自动重试。
+     */
+    public StepResult publish(WorkingSetId target, TrackerId parent, OriginType originType, String originId) {
+        try {
+            Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
+            WorkingSet targetSet = workingSets.findByIdForCreation(target).orElse(null);
+            if (child == null || targetSet == null || !targetSet.hasTrackerBinding(child.trackerId())) {
+                return new StepResult(0, 0, true);
+            }
+            return publishIndexed(target, child, itemQueries.findInTracker(child.trackerId()), originType, originId);
+        } catch (RuntimeException failure) {
+            return new StepResult(0, 1, false);
+        }
+    }
+
+    private StepResult publishIndexed(WorkingSetId target, Tracker child, List<LightTrackerItemSummary> indexed,
+                                      OriginType originType, String originId) {
+        int published = 0;
+        int failed = 0;
+        for (LightTrackerItemSummary item : indexed) {
+            try {
+                ReferenceEndpointEvent referenceSource = new ReferenceEndpointEvent(target,
+                        item.localId(), item.commonId(), child.trackerId(), item.revision());
+                AssociationEndpointEvent associationSource = new AssociationEndpointEvent(target,
+                        item.localId(), item.commonId(), child.trackerId());
+                published += publisher.publishReferenceCreations(originId, originType,
+                        source.upstreamReferences(referenceSource)).size();
+                published += publisher.publishAssociationCreations(originId, originType,
+                        source.upstreamAssociations(associationSource)).size();
+                published += publisher.publishReferenceRepairs(originId, originType,
+                        source.referencesTargeting(referenceSource)).size();
+            } catch (RuntimeException failure) {
+                failed++;
+            }
+        }
+        return new StepResult(published, failed, false);
+    }
+
+    public record StepResult(int published, int failed, boolean skipped) {
+        public boolean succeeded() {
+            return failed == 0;
+        }
+    }
+}

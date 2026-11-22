@@ -33,7 +33,7 @@
 
 `sk.businessframework` 是 Shared Kernel 的通用业务对象、版次、属性与排序能力，不是 Working Set 聚合，也不自动拥有 Working
 Set 的身份或范围语义。它是一个可被多个 BC 复用的能力模块；其 `BusinessObject`/`Revisionable` 契约与
-`sk.workingset.domain.TrackerItem` 的公共工作集契约不是同一概念，不能互相替代。
+`com.airedgesoft.sharekernel.workingset.domain.TrackerItem` 的公共工作集契约不是同一概念，不能互相替代。
 
 共享能力与业务聚合的边界：
 

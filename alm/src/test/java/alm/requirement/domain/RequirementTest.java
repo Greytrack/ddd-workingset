@@ -1,9 +1,8 @@
 package alm.requirement.domain;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import org.junit.jupiter.api.Test;
-import sk.common.error.DomainException;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 

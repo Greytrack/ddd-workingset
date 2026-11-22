@@ -1,11 +1,11 @@
 package bootstrap;
 
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
-import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

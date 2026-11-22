@@ -77,24 +77,31 @@
                     type="button"><span aria-hidden="true"></span></button>
         </div>
         <div class="tracker-pane-content" id="trackerPaneContent">
-            <button class="drawer-heading hidden" id="generalTrackerDrawer" type="button" aria-expanded="true" aria-controls="trackerList">通用跟踪分类 <span aria-hidden="true">⌄</span></button>
+            <button aria-controls="trackerList" aria-expanded="true" class="drawer-heading hidden" id="generalTrackerDrawer"
+                    type="button">通用跟踪分类 <span aria-hidden="true">⌄</span></button>
             <div class="tracker-tools">
-                <input id="trackerFilter" type="search" placeholder="搜索分类名称或 ID" aria-label="搜索跟踪分类">
-                <div><button class="btn small" id="expandTrackers" type="button">展开全部</button>
-                <button class="btn small" id="collapseTrackers" type="button">收起全部</button></div>
-                <span id="trackerFilterStatus" class="muted" role="status"></span>
+                <input aria-label="搜索跟踪分类" id="trackerFilter" placeholder="搜索分类名称或 ID" type="search">
+                <div>
+                    <button class="btn small" id="expandTrackers" type="button">展开全部</button>
+                    <button class="btn small" id="collapseTrackers" type="button">收起全部</button>
+                </div>
+                <span class="muted" id="trackerFilterStatus" role="status"></span>
             </div>
             <div class="selected-workset hidden" id="selectedSpace"></div>
             <div class="tree" id="trackerList"></div>
             <section class="folder-drawer" id="folderDrawer">
-                <button class="drawer-heading" id="folderDrawerToggle" type="button" aria-expanded="false" aria-controls="folderInstanceTree" disabled><span>▱ 文件夹</span><span aria-hidden="true">⌃</span></button>
-                <div id="folderInstanceTree" class="folder-instance-tree hidden" role="region" aria-label="文件夹实例树"></div>
+                <button aria-controls="folderInstanceTree" aria-expanded="false" class="drawer-heading" disabled
+                        id="folderDrawerToggle" type="button"><span>▱ 文件夹</span><span
+                        aria-hidden="true">⌃</span></button>
+                <div aria-label="文件夹实例树" class="folder-instance-tree hidden" id="folderInstanceTree"
+                     role="region"></div>
             </section>
         </div>
     </aside>
 
     <section aria-labelledby="itemsTitle" class="panel" id="itemsPanel">
-        <div class="folder-content-placeholder hidden" id="folderContentPlaceholder"><strong>文件夹关联内容</strong><p>在左侧浏览文件夹；此区域将用于展示文件夹关联的业务对象。</p></div>
+        <div class="folder-content-placeholder hidden" id="folderContentPlaceholder"><strong>文件夹关联内容</strong>
+            <p>在左侧浏览文件夹；此区域将用于展示文件夹关联的业务对象。</p></div>
         <header class="item-header">
             <div class="item-scope">
                 <div class="item-heading"><h2 id="itemsTitle">Item</h2><span class="muted" id="itemCount"

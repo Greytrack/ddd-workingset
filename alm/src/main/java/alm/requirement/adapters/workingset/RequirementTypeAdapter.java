@@ -3,15 +3,15 @@ package alm.requirement.adapters.workingset;
 import alm.requirement.application.RequirementTypes;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
 import alm.requirement.infrastructure.providers.RequirementTrackerItemCatalogQueryProvider;
+import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectType;
+import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
+import com.airedgesoft.sharekernel.workingset.application.port.Capabilities;
+import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sk.workingset.application.port.BusinessObjectType;
-import sk.workingset.application.port.BusinessObjectTypeAdapter;
-import sk.workingset.application.port.Capabilities;
-import sk.workingset.application.port.TrackerItemSourceLock;
-import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import sk.workingset.application.query.provider.TrackerItemQueryProvider;
-import sk.workingset.domain.LocalId;
 
 import java.util.Set;
 

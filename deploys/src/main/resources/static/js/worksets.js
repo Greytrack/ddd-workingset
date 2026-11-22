@@ -76,7 +76,10 @@ function setTrackerPanelCollapsed(collapsed) {
     button.setAttribute('aria-expanded', String(!collapsed));
     button.setAttribute('aria-label', label);
     button.title = label;
-    try { localStorage.setItem('ws-sidebar-collapsed', String(collapsed)); } catch { /* Storage may be unavailable. */ }
+    try {
+        localStorage.setItem('ws-sidebar-collapsed', String(collapsed));
+    } catch { /* Storage may be unavailable. */
+    }
 }
 
 async function loadWorksetTree() {

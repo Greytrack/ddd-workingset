@@ -1,11 +1,11 @@
 package com.airedgesoft.lib.jdbc;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.lib.execption.PersistenceResultCode;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.relational.core.mapping.RelationalPersistentEntity;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.common.error.DomainException;
-import sk.common.error.PersistenceResultCode;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,15 +1,15 @@
 package bootstrap;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.domain.CommonId;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
+import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.common.error.DomainException;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.lighttrackeritem.ItemClassification;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.workingset.WorkingSetId;
-import sk.workingset.error.BindingResCode;
 
 import java.util.List;
 import java.util.Map;

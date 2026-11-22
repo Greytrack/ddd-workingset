@@ -1,14 +1,14 @@
 package alm.requirement.infrastructure.providers;
 
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.CommonId;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
 
 import java.util.List;
 

@@ -1,8 +1,8 @@
 package alm.requirement.application.command;
 
 import alm.requirement.domain.Requirement;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.domain.*;
 
 import java.util.Objects;
 

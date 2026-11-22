@@ -14,6 +14,7 @@
 - [不变量](invariants.md)（当前陈述；已接受子集以事实政策基线为准）
 - [开放问题](open-questions.md)
 -
+
 契约：[T1 Merge](merge-execution-contract-v1.md) · [T2 绑定与删除](binding-deletion-contract-v1.md) · [T3 物化](lighttrackeritem-materialization-contract-v1.md) · [T4 跨 BC](cross-bc-contract-v1.md) · [T7 创建 LRO](working-set-creation-lro-design.md)
 
 ## 历史与候选

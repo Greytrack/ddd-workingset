@@ -1,6 +1,13 @@
 package bootstrap.web;
 
 import alm.requirement.domain.LockVersionConflictException;
+import com.airedgesoft.lib.execption.APIException;
+import com.airedgesoft.lib.execption.AppException;
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.lib.execption.ResCode;
+import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
+import com.airedgesoft.sharekernel.workingset.error.MergeResCode;
+import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -8,13 +15,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import sk.common.error.APIException;
-import sk.common.error.AppException;
-import sk.common.error.DomainException;
-import sk.common.error.ResCode;
-import sk.workingset.error.BindingResCode;
-import sk.workingset.error.MergeResCode;
-import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

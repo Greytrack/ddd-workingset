@@ -1,5 +1,6 @@
 package bootstrap;
 
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
-import sk.workingset.adapters.WorkingSetController.WorkingSetView;
 
 import java.util.ArrayList;
 import java.util.List;

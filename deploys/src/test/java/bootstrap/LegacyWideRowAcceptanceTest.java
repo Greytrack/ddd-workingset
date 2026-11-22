@@ -1,18 +1,18 @@
 package bootstrap;
 
+import com.airedgesoft.sharekernel.tracker.domain.Tracker;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.JdbcTrackerRepository;
+import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.TrackerCompatibilityRow;
+import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.TrackerRow;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+import com.airedgesoft.sharekernel.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
+import com.airedgesoft.sharekernel.workingset.infrastructure.repositories.WorkingSetRow;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import sk.tracker.domain.Tracker;
-import sk.tracker.domain.TrackerId;
-import sk.tracker.infrastructure.repositories.JdbcTrackerRepository;
-import sk.tracker.infrastructure.repositories.TrackerCompatibilityRow;
-import sk.tracker.infrastructure.repositories.TrackerRow;
-import sk.workingset.domain.workingset.WorkingSetId;
-import sk.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
-import sk.workingset.infrastructure.repositories.WorkingSetRow;
 
 import java.math.BigDecimal;
 

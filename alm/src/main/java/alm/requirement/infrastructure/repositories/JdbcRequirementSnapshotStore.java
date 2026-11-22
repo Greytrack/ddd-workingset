@@ -2,14 +2,14 @@ package alm.requirement.infrastructure.repositories;
 
 import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.RequirementSnapshotStore;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.domain.*;
+import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
-import sk.workingset.domain.event.SnapshotRefEvent;
 
 import java.util.Optional;
 

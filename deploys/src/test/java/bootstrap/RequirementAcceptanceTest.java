@@ -1,5 +1,17 @@
 package bootstrap;
 
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemLifecycleService;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.CommonId;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
+import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
+import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
+import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,18 +26,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.application.command.TrackerItemLifecycleService;
-import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.event.BusinessObjectDeleteEvent;
-import sk.workingset.domain.event.TrackerItemCreatedEvent;
-import sk.workingset.domain.lighttrackeritem.ItemClassification;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItem;
-import sk.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import sk.workingset.domain.workingset.WorkingSet;
 
 import java.time.Duration;
 import java.util.List;

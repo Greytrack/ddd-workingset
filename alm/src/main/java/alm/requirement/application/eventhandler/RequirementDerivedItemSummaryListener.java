@@ -1,9 +1,9 @@
 package alm.requirement.application.eventhandler;
 
+import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-import sk.workingset.domain.event.TrackerItemsIndexedEvent;
 
 /**
  * 派生需求的公共查询视图投影入口。

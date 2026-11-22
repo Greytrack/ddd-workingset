@@ -1,6 +1,10 @@
 package bootstrap;
 
 import alm.requirement.adapters.RequirementView;
+import com.airedgesoft.sharekernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,10 +14,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.productspace.adapters.ProductSpaceController.ProductSpaceView;
-import sk.workingset.adapters.WorkingSetController.TrackerView;
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
-import sk.workingset.domain.workingset.WorkingSetCreation.Status;
 
 import java.time.Duration;
 import java.util.Arrays;

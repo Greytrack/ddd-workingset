@@ -1,5 +1,16 @@
 package bootstrap;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
+import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
+import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetLineageDomainService;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
+import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -12,17 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.transaction.annotation.Transactional;
-import sk.common.error.DomainException;
-import sk.productspace.domain.ProductSpace;
-import sk.productspace.domain.repository.ProductSpaceRepository;
-import sk.workingset.adapters.WorkingSetController.BindingsView;
-import sk.workingset.adapters.WorkingSetController.WorkingSetView;
-import sk.workingset.application.command.WorkingSetCommandService;
-import sk.workingset.domain.workingset.WorkingSet;
-import sk.workingset.domain.workingset.WorkingSetId;
-import sk.workingset.domain.workingset.WorkingSetLineageDomainService;
-import sk.workingset.domain.workingset.WorkingSetRepository;
-import sk.workingset.error.BindingResCode;
 
 import javax.sql.DataSource;
 import java.sql.Connection;

@@ -270,8 +270,14 @@ function mergeRowHtml(row, index) {
     const decidable = isMergeRowDecidable(row);
     const decisions = !decidable ? '证据不可读' : updated
         ? (difference.fields || []).map((field, fieldIndex) => `
-        <div class="merge-field-decision"><div class="merge-decision-line"><span title="${escapeHtml(field)}">${escapeHtml(({title: '标题', description: '描述'})[field] || field)}：</span>
-          ${mergeDecisionSwitch(index, fieldIndex, row.fields[field], ({title: '标题', description: '描述'})[field] || field)}
+        <div class="merge-field-decision"><div class="merge-decision-line"><span title="${escapeHtml(field)}">${escapeHtml(({
+            title: '标题',
+            description: '描述'
+        })[field] || field)}：</span>
+          ${mergeDecisionSwitch(index, fieldIndex, row.fields[field], ({
+            title: '标题',
+            description: '描述'
+        })[field] || field)}
         </div></div>`).join('')
         : `<div class="merge-field-decision"><div class="merge-decision-line"><span>${difference.kind === 'DELETED' ? '删除' : '新增'}：</span>${mergeDecisionSwitch(index, -1, row.action, difference.kind === 'DELETED' ? '删除对象' : '新增对象')}</div></div>`;
     const mark = !decidable ? '—' : updated
@@ -385,7 +391,13 @@ function renderMergeRound(round) {
     const body = $('#mergeBody');
     const result = round.result;
     const state = result?.state || round.state;
-    const states = {Preparing: '正在准备合并', Running: '正在执行合并', Succeeded: '本轮合并已完成', PartiallySucceeded: '本轮合并部分完成', Failed: '本轮合并未成功'};
+    const states = {
+        Preparing: '正在准备合并',
+        Running: '正在执行合并',
+        Succeeded: '本轮合并已完成',
+        PartiallySucceeded: '本轮合并部分完成',
+        Failed: '本轮合并未成功'
+    };
     const tone = !result ? 'running' : state === 'Succeeded' ? 'success' : state === 'Failed' ? 'error' : 'warning';
     const stats = result ? [['已执行', result.summary.applied], ['已确认', result.summary.confirmed], ['已拒绝', result.summary.rejected], ['有冲突', result.summary.conflict], ['证据过期', result.summary.staleEvidence]] : [];
     const summary = `<section class="merge-result-banner ${tone}" role="status">
@@ -394,13 +406,26 @@ function renderMergeRound(round) {
       ${infoDisclosure('执行详情', [['轮次 ID', round.id], ['状态代码', state]])}
     </section>
     ${stats.length ? `<div class="merge-result-stats">${stats.map(([label, count]) => `<div><strong>${escapeHtml(String(count ?? 0))}</strong><span>${label}</span></div>`).join('')}</div>` : ''}`;
-    const outcomes = {Applied: ['已执行', 'success'], Confirmed: ['已确认', 'success'], Rejected: ['已拒绝', 'error'], Conflict: ['有冲突', 'warning'], StaleEvidence: ['证据过期', 'warning'], Unknown: ['结果待核实', 'warning']};
+    const outcomes = {
+        Applied: ['已执行', 'success'],
+        Confirmed: ['已确认', 'success'],
+        Rejected: ['已拒绝', 'error'],
+        Conflict: ['有冲突', 'warning'],
+        StaleEvidence: ['证据过期', 'warning'],
+        Unknown: ['结果待核实', 'warning']
+    };
     const entries = round.entries.map((entry) => {
         const evidence = entry.evidence || {};
         const decision = entry.decision || {};
         const outcome = entry.result ? outcomes[entry.result.outcome] || ['结果待核实', 'warning'] : ['等待执行', 'running'];
-        const operation = decision.existence ? ({ACCEPT: '接收变更', IGNORED: '忽略变更'})[decision.existence] || '存在性决策'
-            : Object.entries(decision.fields || {}).map(([field, action]) => `${({title: '标题', description: '描述'})[field] || field}：${action === 'ACCEPT' ? '接收' : action === 'IGNORED' ? '忽略' : action}`).join(' · ') || '字段决策';
+        const operation = decision.existence ? ({
+            ACCEPT: '接收变更',
+            IGNORED: '忽略变更'
+        })[decision.existence] || '存在性决策'
+            : Object.entries(decision.fields || {}).map(([field, action]) => `${({
+            title: '标题',
+            description: '描述'
+        })[field] || field}：${action === 'ACCEPT' ? '接收' : action === 'IGNORED' ? '忽略' : action}`).join(' · ') || '字段决策';
         return `
     <tr>
       <td>${infoDisclosure(mergeItemName(evidence), [['家族 ID', evidence.family?.value]])}</td>

@@ -25,7 +25,8 @@ LocalId、业务及内容版次、发布版本、乐观锁与字段证据。分�
 
 ## S7-B · MergeRound、MergeEntry 与 ApplyResult
 
-[MergeRound](../../../sharedkernel/src/main/java/sk/workingset/domain/merge/MergeRound.java) 拥有条目和唯一终态快照，持久化于
+[MergeRound](../../../sharedkernel/src/main/java/com/airedgesoft/sharekernel/workingset/domain/merge/MergeRound.java)
+拥有条目和唯一终态快照，持久化于
 `merge_rounds`。轮次从 `Preparing` 进入 `Running`，按结果完成为 `Succeeded`、`PartiallySucceeded` 或 `Failed`。重复 Apply
 返回原结果。新轮次重新比较，由用户选择要执行的条目。
 

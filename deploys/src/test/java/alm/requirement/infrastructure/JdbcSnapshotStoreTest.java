@@ -4,15 +4,15 @@ import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.Requirement;
 import alm.requirement.infrastructure.repositories.JdbcRequirementSnapshotStore;
 import bootstrap.WorkingsetApplication;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.domain.*;
+import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
-import sk.workingset.domain.event.SnapshotRefEvent;
 
 import java.util.UUID;
 

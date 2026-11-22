@@ -5,9 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.airedgesoft</groupId>
         <artifactId>ddd-workingset</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>alm</artifactId>
@@ -18,16 +19,19 @@
             <artifactId>spring-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.airedgesoft</groupId>
             <artifactId>lib-exception</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.airedgesoft</groupId>
             <artifactId>lib-jdbc</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>sharedkernel</artifactId>
+            <groupId>com.airedgesoft</groupId>
+            <artifactId>shared-kernel</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>

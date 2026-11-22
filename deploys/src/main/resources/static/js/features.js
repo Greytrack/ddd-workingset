@@ -94,7 +94,9 @@ function addTask(creation, meta) {
 let taskCenterTab = 'CREATE';
 const TASK_TYPE_LABELS = {CREATE: '创建工作集任务', EXTEND: '拓展工作集任务', MERGE: '合并分支任务'};
 
-function taskType(task) { return task.mode || 'CREATE'; }
+function taskType(task) {
+    return task.mode || 'CREATE';
+}
 
 function addMergeTask(round) {
     addTask({creationId: round.id, status: round.result?.state || round.state, round}, {
@@ -117,8 +119,11 @@ async function selectTaskCenterTab(mode) {
     taskCenterTab = mode;
     renderTaskCenter();
     await Promise.all(state.tasks.filter((task) => taskType(task) === mode).map(async (task) => {
-        try { Object.assign(task, await queryTask(task), {lastError: null}); }
-        catch (error) { task.lastError = reasonText(error.body) || error.message; }
+        try {
+            Object.assign(task, await queryTask(task), {lastError: null});
+        } catch (error) {
+            task.lastError = reasonText(error.body) || error.message;
+        }
     }));
     saveTasks();
     updateTaskBadge();
@@ -206,7 +211,13 @@ function renderMergeTaskCard(task) {
     const status = task.status || 'Preparing';
     const labels = {...STATUS_LABELS, Preparing: '准备中'};
     const cls = status === 'Failed' ? 'failed' : isTerminal(status) ? 'succeeded' : 'running';
-    const rows = (round.entries || []).map((entry) => `<div class="merge-task-entry"><span>${escapeHtml(mergeItemName(entry.evidence || {}))}</span><span>${escapeHtml(({Applied: '已执行', Confirmed: '已确认', Rejected: '已拒绝', Conflict: '有冲突', StaleEvidence: '证据过期'})[entry.result?.outcome] || '等待结果')}</span>${entry.result?.failure ? `<p class="error-text">${escapeHtml(reasonText(entry.result.failure) || String(entry.result.failure))}</p>` : ''}</div>`).join('');
+    const rows = (round.entries || []).map((entry) => `<div class="merge-task-entry"><span>${escapeHtml(mergeItemName(entry.evidence || {}))}</span><span>${escapeHtml(({
+        Applied: '已执行',
+        Confirmed: '已确认',
+        Rejected: '已拒绝',
+        Conflict: '有冲突',
+        StaleEvidence: '证据过期'
+    })[entry.result?.outcome] || '等待结果')}</span>${entry.result?.failure ? `<p class="error-text">${escapeHtml(reasonText(entry.result.failure) || String(entry.result.failure))}</p>` : ''}</div>`).join('');
     return `<article class="task-card ${cls}"><div class="task-top"><div><div class="task-title">合并分支任务 · ${escapeHtml(task.trackerName)}</div><p class="task-route">${escapeHtml(task.sourceName)} <span aria-label="合并到">→</span> ${escapeHtml(task.targetName)}</p></div><span class="task-status ${cls}">${escapeHtml(labels[status] || status)}</span></div>
       ${summary ? `<div class="merge-summary"><span>已执行 ${summary.applied}</span><span>已确认 ${summary.confirmed}</span><span>拒绝 ${summary.rejected}</span><span>冲突 ${summary.conflict}</span><span>证据过期 ${summary.staleEvidence}</span></div>` : '<p class="muted">正在执行，结果自动更新</p>'}
       <details><summary>查看条目结果</summary>${rows || '<p class="muted">暂无条目结果</p>'}</details>
@@ -886,7 +897,9 @@ async function submitRequirementDelete(form, localId) {
     submit.disabled = true;
     submit.textContent = '正在删除…';
     panel.setAttribute('aria-busy', 'true');
-    panel.querySelectorAll('[data-close-modal]').forEach((button) => { button.disabled = true; });
+    panel.querySelectorAll('[data-close-modal]').forEach((button) => {
+        button.disabled = true;
+    });
     $('#deleteRequirementError').textContent = '';
     try {
         await api('/api/requirements/' + encodeURIComponent(localId), {method: 'DELETE'});
@@ -906,7 +919,9 @@ async function submitRequirementDelete(form, localId) {
         if (form.isConnected) {
             submit.disabled = false;
             submit.textContent = '确认删除';
-            panel.querySelectorAll('[data-close-modal]').forEach((button) => { button.disabled = false; });
+            panel.querySelectorAll('[data-close-modal]').forEach((button) => {
+                button.disabled = false;
+            });
         }
     }
 }
@@ -1062,7 +1077,10 @@ function bindEvents() {
 
     $('#modalContent').addEventListener('click', (event) => {
         const taskTab = event.target.closest('[data-task-type]');
-        if (taskTab) { selectTaskCenterTab(taskTab.dataset.taskType); return; }
+        if (taskTab) {
+            selectTaskCenterTab(taskTab.dataset.taskType);
+            return;
+        }
         if (event.target.closest('[data-close-modal]')) {
             closeModal();
             return;

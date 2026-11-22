@@ -1,7 +1,7 @@
 package alm.requirement.domain;
 
-import sk.common.error.DomainErrorType;
-import sk.common.error.DomainResCode;
+import com.airedgesoft.lib.execption.DomainErrorType;
+import com.airedgesoft.lib.execption.DomainResCode;
 
 public enum RequirementResultCode implements DomainResCode {
     LOCK_VERSION_CONFLICT(DomainErrorType.ABORTED, 1403, "Lock version conflict"),

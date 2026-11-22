@@ -1,7 +1,7 @@
 package alm.requirement.domain;
 
 import alm.requirement.application.command.RequirementSnapshot;
-import sk.workingset.domain.event.SnapshotRefEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 
 import java.util.Optional;
 

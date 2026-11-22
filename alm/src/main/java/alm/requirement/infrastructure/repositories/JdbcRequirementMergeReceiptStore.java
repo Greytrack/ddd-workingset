@@ -1,13 +1,13 @@
 package alm.requirement.infrastructure.repositories;
 
 import alm.requirement.application.command.RequirementMergeReceiptStore;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.event.MergeEntryResolvedEvent;
-import sk.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 
 import java.util.Optional;
 

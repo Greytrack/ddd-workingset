@@ -1,6 +1,6 @@
 package alm.requirement.application;
 
-import sk.workingset.application.port.BusinessObjectType;
+import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectType;
 
 import java.util.Set;
 

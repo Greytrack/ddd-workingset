@@ -1,5 +1,15 @@
 package bootstrap;
 
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.CommonId;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.airedgesoft.sharekernel.workingset.domain.event.*;
+import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,16 +23,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.adapters.WorkingSetCreationController.CreationView;
-import sk.workingset.application.query.provider.RelationSourceQueryProvider;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
-import sk.workingset.domain.event.*;
-import sk.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import sk.workingset.domain.workingset.WorkingSet;
-import sk.workingset.domain.workingset.WorkingSetCreation;
 
 import java.time.Duration;
 import java.util.List;

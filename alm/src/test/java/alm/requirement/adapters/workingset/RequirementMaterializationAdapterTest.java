@@ -5,13 +5,12 @@ import alm.requirement.application.command.RequirementSnapshot;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementRepository;
 import alm.requirement.domain.RequirementSnapshotStore;
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.application.command.dto.MaterializeRequest;
+import com.airedgesoft.sharekernel.workingset.application.common.TargetIdentity;
+import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import org.junit.jupiter.api.Test;
-import sk.common.error.DomainException;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.application.command.dto.MaterializeRequest;
-import sk.workingset.application.common.TargetIdentity;
-import sk.workingset.domain.*;
-import sk.workingset.domain.event.SnapshotRefEvent;
 
 import java.util.List;
 import java.util.Optional;

@@ -1,0 +1,34 @@
+package com.airedgesoft.sharekernel.workingset.domain;
+
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.ItemOutcome.Succeeded;
+import static com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Stage.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class WorkingSetCreationStageTest {
+    @Test
+    void createsChildAndCopiesEverySelectedTrackerBeforeBindingAnySpace() {
+        long now = 0L;
+        WorkingSetCreation.Request request = new WorkingSetCreation.Request("1", "2", "range", List.of("10", "11"),
+                List.of("30"), List.of("20", "21"));
+        WorkingSetCreation task = WorkingSetCreation.submit("3", request, "4", now).start(now);
+
+        assertEquals(CREATE_WORKING_SET, task.stage());
+        assertEquals("2", task.currentItem());
+        task = task.advance(Succeeded, null, now);
+        assertEquals(COPY_UNSHARED_TRACKERS, task.stage());
+        assertEquals("20", task.currentItem());
+        task = task.advance(Succeeded, null, now);
+        assertEquals(COPY_UNSHARED_TRACKERS, task.stage());
+        assertEquals("21", task.currentItem());
+        task = task.advance(Succeeded, null, now);
+        assertEquals(BIND_PRODUCT_AND_TRACKER, task.stage());
+        assertEquals("2", task.currentItem());
+        assertEquals(INDEX_UNSHARED_TRACKERS, task.recordBindingResult(true, List.of(), now).stage());
+    }
+
+}

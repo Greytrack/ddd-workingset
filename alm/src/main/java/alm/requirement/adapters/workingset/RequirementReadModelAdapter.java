@@ -2,13 +2,13 @@ package alm.requirement.adapters.workingset;
 
 import alm.requirement.application.query.model.RequirementDetail;
 import alm.requirement.application.query.provider.RequirementQueryProvider;
-import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.application.TrackerItemContent;
-import sk.workingset.application.query.provider.TrackerItemQueryProvider;
-import sk.workingset.domain.CommonId;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.Revision;
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.workingset.application.FailureReason;
+import com.airedgesoft.sharekernel.workingset.application.TrackerItemContent;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.CommonId;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.Revision;
 
 import java.util.Map;
 import java.util.Objects;

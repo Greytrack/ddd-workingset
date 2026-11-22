@@ -32,9 +32,11 @@ ADR 列表见 [ADR README](../adr/README.md) 与 [BASELINE](../BASELINE.md)。AD
 - 阶段
   4/5：[阶段 4 评审](2026-11-10-stage-4-productspace-classification-review.md)、[基线与不变量审核](2026-11-10-baseline-v1-audit.md)、[不变量证据](2026-11-10-invariant-evidence-review.md)、[契约计划](2026-11-10-stage-5-contract-plan.md)
 -
+
 T1～T4：[T1](2026-11-11-t1-contract-review.md) · [T2](2026-11-11-t2-binding-deletion-review.md) · [T3](2026-11-11-t3-materialization-review.md) · [T4](2026-11-11-t4-cross-bc-review.md) · [一致性修正](2026-11-11-consistency-reconciliation.md)
 -
 T5：[S0 审核](2026-11-11-t5-s0-design-review.md)、[S7 实施裁定](2026-11-12-s7-merge-implementation-decisions.md)、[谱系评审](2026-11-12-working-set-lineage-review.md)
+
 - T6/T7
   过程：[T6-D 回并](2026-11-13-t6-d-merge-back-review.md)、[T7-A LRO](2026-11-13-t7-a-creation-lro-review.md)、[文档收敛](2026-11-16-doc-consolidation.md)、[仓库降噪](2026-11-18-cleanup-and-alignment.md)
 

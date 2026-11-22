@@ -1,11 +1,11 @@
 package com.airedgesoft.lib.jdbc;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.lib.execption.PersistenceResultCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import sk.common.error.DomainException;
-import sk.common.error.PersistenceResultCode;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;

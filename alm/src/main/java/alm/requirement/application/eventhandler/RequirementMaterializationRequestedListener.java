@@ -1,14 +1,14 @@
 package alm.requirement.application.eventhandler;
 
 import alm.requirement.application.command.RequirementMaterializationService;
+import com.airedgesoft.sharekernel.workingset.application.command.dto.MaterializeRequest;
+import com.airedgesoft.sharekernel.workingset.application.common.TargetIdentity;
+import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent.Outcome;
+import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-import sk.workingset.application.command.dto.MaterializeRequest;
-import sk.workingset.application.common.TargetIdentity;
-import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
-import sk.workingset.domain.event.TrackerItemMaterializationCompletedEvent.Outcome;
-import sk.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 
 /**
  * ALM 监听 SK 的实例化请求，在自己的事务中保存 Requirement 并返回完成事件。

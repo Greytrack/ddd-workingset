@@ -18,20 +18,20 @@ BUILD SUCCESS
 
 ## 2. 场景与检查对应
 
-| 编号                                                                                         | 测试类/方法                                                                                                                              | 结果       |
-|----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|------------|
-| AT-03 前半：普通修改不升级 Revision、不改变发布 version、lock_version 递增、快照为修改前内容 | `bootstrap.RequirementChangeFlowTest#AT03_change_title_keeps_revision_and_version_but_increments_lock_version`                           | ✅         |
-| 事件仅在保存成功后发布                                                                       | 同上 `#event_is_published_only_after_saved_state_is_visible`                                                                             | ✅         |
-| 并发证据：旧 `expectedLockVersion` 显式拒绝，无事件、无快照                                  | 同上 `#stale_expected_lock_version_is_rejected_without_event_or_snapshot`                                                                | ✅         |
-| 连续修改：事件有序、每次捕获修改前快照                                                       | 同上 `#consecutive_changes_publish_ordered_events_and_capture_each_pre_change_snapshot`                                                  | ✅         |
-| 保存失败不发布事件                                                                           | 同上 `#save_failure_does_not_publish_event_or_change_stored_content`                                                                     | ✅         |
-| Spring Boot 非 web 上下文可加载                                                              | `bootstrap.ApplicationContextTest#context_loads_without_web_and_exposes_composition_root_beans`                                          | ✅         |
-| `BusinessObjectUpdateEvent` 经 Spring Event 同步派发                                         | 同上 `#requirement_changed_is_delivered_through_spring_event_synchronously`                                                              | ✅         |
-| 雪花 ID 唯一性、位段、时钟回拨                                                               | `sk.workingset.infrastructure.SnowflakeIdGeneratorTest`（5 项）                                                                          | ✅         |
-| 派生 LocalId/TrackerId 为雪花值（非 UUID）                                                   | Historical：原 `derived_local_id_is_a_snowflake_value_not_uuid` 已随单 Item 派生入口删除；雪花身份由现有 ID/存储测试覆盖                 | ✅（当时） |
-| changeTitle 不可变、version 可空与 lock_version 自动递增                                     | `alm.requirement.domain.RequirementTest`（6 项）                                                                                         | ✅         |
-| 快照完整性与修改隔离（含 version/lock_version）                                              | `alm.requirement.infrastructure.SnapshotStoreTest`（4 项）                                                                               | ✅         |
-| S1 回归（AT-01/AT-02、AC-01、AC-02）                                                         | `bootstrap.WorkingSetSliceIntegrationTest`（6 项）、`architecture.ArchitectureTest`、`sk.workingset.domain.LightTrackerItemTest`（6 项） | ✅         |
+| 编号                                                                                         | 测试类/方法                                                                                                                                                       | 结果       |
+|----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| AT-03 前半：普通修改不升级 Revision、不改变发布 version、lock_version 递增、快照为修改前内容 | `bootstrap.RequirementChangeFlowTest#AT03_change_title_keeps_revision_and_version_but_increments_lock_version`                                                    | ✅         |
+| 事件仅在保存成功后发布                                                                       | 同上 `#event_is_published_only_after_saved_state_is_visible`                                                                                                      | ✅         |
+| 并发证据：旧 `expectedLockVersion` 显式拒绝，无事件、无快照                                  | 同上 `#stale_expected_lock_version_is_rejected_without_event_or_snapshot`                                                                                         | ✅         |
+| 连续修改：事件有序、每次捕获修改前快照                                                       | 同上 `#consecutive_changes_publish_ordered_events_and_capture_each_pre_change_snapshot`                                                                           | ✅         |
+| 保存失败不发布事件                                                                           | 同上 `#save_failure_does_not_publish_event_or_change_stored_content`                                                                                              | ✅         |
+| Spring Boot 非 web 上下文可加载                                                              | `bootstrap.ApplicationContextTest#context_loads_without_web_and_exposes_composition_root_beans`                                                                   | ✅         |
+| `BusinessObjectUpdateEvent` 经 Spring Event 同步派发                                         | 同上 `#requirement_changed_is_delivered_through_spring_event_synchronously`                                                                                       | ✅         |
+| 雪花 ID 唯一性、位段、时钟回拨                                                               | `sk.workingset.infrastructure.SnowflakeIdGeneratorTest`（5 项）                                                                                                   | ✅         |
+| 派生 LocalId/TrackerId 为雪花值（非 UUID）                                                   | Historical：原 `derived_local_id_is_a_snowflake_value_not_uuid` 已随单 Item 派生入口删除；雪花身份由现有 ID/存储测试覆盖                                          | ✅（当时） |
+| changeTitle 不可变、version 可空与 lock_version 自动递增                                     | `alm.requirement.domain.RequirementTest`（6 项）                                                                                                                  | ✅         |
+| 快照完整性与修改隔离（含 version/lock_version）                                              | `alm.requirement.infrastructure.SnapshotStoreTest`（4 项）                                                                                                        | ✅         |
+| S1 回归（AT-01/AT-02、AC-01、AC-02）                                                         | `bootstrap.WorkingSetSliceIntegrationTest`（6 项）、`architecture.ArchitectureTest`、`com.airedgesoft.sharekernel.workingset.domain.LightTrackerItemTest`（6 项） | ✅         |
 
 ## 3. 实现位置
 

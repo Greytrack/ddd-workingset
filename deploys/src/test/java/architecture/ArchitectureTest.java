@@ -1,11 +1,11 @@
 package architecture;
 
+import com.airedgesoft.lib.execption.AppException;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import org.springframework.transaction.annotation.Transactional;
-import sk.common.error.AppException;
 
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackages;

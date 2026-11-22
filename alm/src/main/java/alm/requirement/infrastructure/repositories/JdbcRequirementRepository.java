@@ -3,19 +3,19 @@ package alm.requirement.infrastructure.repositories;
 import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.LockVersionConflictException;
 import alm.requirement.domain.Requirement;
+import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.application.FailureReason;
+import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
+import com.airedgesoft.sharekernel.workingset.domain.*;
+import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import sk.common.error.DomainException;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.application.FailureReason;
-import sk.workingset.application.port.TrackerItemSourceLock;
-import sk.workingset.domain.*;
-import sk.workingset.error.WorkingsetResultCode;
 
 import java.util.Optional;
 

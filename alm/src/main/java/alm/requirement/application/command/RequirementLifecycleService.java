@@ -3,18 +3,18 @@ package alm.requirement.application.command;
 import alm.requirement.application.port.RequirementMutationStore;
 import alm.requirement.domain.Requirement;
 import alm.requirement.domain.RequirementResultCode;
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.workingset.application.FailureReason;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.LifecycleCommand;
+import com.airedgesoft.sharekernel.workingset.domain.LifecycleResult;
+import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.airedgesoft.sharekernel.workingset.domain.event.CompleteDeleteEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sk.common.error.DomainException;
-import sk.workingset.application.FailureReason;
-import sk.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import sk.workingset.domain.LifecycleCommand;
-import sk.workingset.domain.LifecycleResult;
-import sk.workingset.domain.LocalId;
-import sk.workingset.domain.event.CompleteDeleteEvent;
 
 
 /**

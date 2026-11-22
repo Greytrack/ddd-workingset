@@ -1,8 +1,8 @@
 package alm.requirement.domain;
 
-import sk.common.error.DomainException;
-import sk.tracker.domain.TrackerId;
-import sk.workingset.domain.*;
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+import com.airedgesoft.sharekernel.workingset.domain.*;
 
 import java.util.Locale;
 import java.util.Objects;

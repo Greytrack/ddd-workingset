@@ -19,7 +19,8 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 | `sk.workingset`        | WorkingSet/绑定、LightTrackerItem、COW、WorkingSet 创建 LRO、Compare/Merge、关系和查询 Provider | Working Set 核心能力；命令侧聚合仓储与查询侧 Provider 分离。                                                                              |
 | `alm.requirement`      | Requirement 参考实现、Merge 执行适配、物化请求消费、继承编辑查询回退                            | 业务 BC 参考实现；只读使用 SK 共享聚合/仓储，写入通过事件协作。                                                                           |
 
-`sk.businessframework.domain` 中的 `BusinessObject` 是**通用业务对象能力接口**，与 `sk.workingset.domain.TrackerItem`
+`sk.businessframework.domain` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
+`com.airedgesoft.sharekernel.workingset.domain.TrackerItem`
 的公共工作集契约不是同一概念；不得因为命名相近而把二者互相替代。
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
