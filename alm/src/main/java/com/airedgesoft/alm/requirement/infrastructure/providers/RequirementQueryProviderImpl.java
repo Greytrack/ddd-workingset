@@ -26,4 +26,9 @@ public class RequirementQueryProviderImpl implements RequirementQueryProvider {
     public List<RequirementDetail> findByTracker(long trackerId) {
         return mapper.findByTracker(trackerId);
     }
+
+    @Override
+    public List<RequirementDetail> findByIds(List<Long> localIds) {
+        return localIds.isEmpty() ? List.of() : mapper.findByIds(localIds);
+    }
 }

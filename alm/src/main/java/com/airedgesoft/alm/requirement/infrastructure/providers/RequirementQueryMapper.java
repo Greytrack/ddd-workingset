@@ -24,8 +24,21 @@ public interface RequirementQueryMapper {
             SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
                    lock_version, delete_flag AS deleted, TRUE AS materialized
             FROM requirements
-            WHERE tracker_id = #{trackerId} AND NOT delete_flag
+            WHERE tracker_id = #{trackerId}
             ORDER BY local_id
             """)
     List<RequirementDetail> findByTracker(@Param("trackerId") long trackerId);
+
+    @Select("""
+            <script>
+            SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
+                   lock_version, delete_flag AS deleted, TRUE AS materialized
+            FROM requirements
+            WHERE local_id IN
+            <foreach collection="localIds" item="localId" open="(" separator="," close=")">
+                #{localId}
+            </foreach>
+            </script>
+            """)
+    List<RequirementDetail> findByIds(@Param("localIds") List<Long> localIds);
 }

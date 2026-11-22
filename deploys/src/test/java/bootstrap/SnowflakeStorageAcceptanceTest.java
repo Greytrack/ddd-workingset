@@ -97,10 +97,19 @@ class SnowflakeStorageAcceptanceTest {
             assertEquals(HttpStatus.OK, inherited.getStatusCode());
             assertEquals(requirement.number(), inherited.getBody().number());
             assertEquals(tracker.trackerId(), inherited.getBody().trackerId());
+            String trackerItemsPath = "/api/requirements?trackerId=" + tracker.trackerId() + "&workingSetId=" + targetId;
+            RequirementView[] inheritedItems = rest.getForObject(trackerItemsPath, RequirementView[].class);
+            assertEquals(1, inheritedItems.length);
+            assertEquals(itemLocalId, inheritedItems[0].localId());
+            assertEquals(requirement.title(), inheritedItems[0].title());
             ResponseEntity<RequirementView> edited = rest.exchange(itemPath + "/title", HttpMethod.PUT,
                     new HttpEntity<>(Map.of("title", "编号修订", "expectedLockVersion", 0)), RequirementView.class);
             assertEquals(HttpStatus.OK, edited.getStatusCode());
             assertEquals(requirement.number(), edited.getBody().number());
+            RequirementView[] materializedItems = rest.getForObject(trackerItemsPath, RequirementView[].class);
+            assertEquals(1, materializedItems.length);
+            assertEquals(itemLocalId, materializedItems[0].localId());
+            assertEquals("编号修订", materializedItems[0].title());
             assertEquals(1, jdbc.queryForObject("""
                     SELECT count(*) FROM air_inst_common WHERE id = ? AND name = '编号修订'
                     """, Integer.class, childLocalId));

@@ -13,7 +13,9 @@ public interface RequirementQueryProvider {
 
     /**
      * 共享 Tracker 的 Item 属于其权威工作集，但通过绑定对所有子工作集可见；
-     * 非共享 Tracker 的 Item 属于单一工作集。因此按 Tracker 读取，不按请求工作集过滤。
+     * 非共享 Tracker 的 Item 属于单一工作集。返回包含软删状态的本地行，供应用侧决定是否展示。
      */
     List<RequirementDetail> findByTracker(long trackerId);
+
+    List<RequirementDetail> findByIds(List<Long> localIds);
 }
