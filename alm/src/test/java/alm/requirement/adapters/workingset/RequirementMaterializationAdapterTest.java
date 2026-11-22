@@ -9,6 +9,7 @@ import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.dto.MaterializeRequest;
 import com.airedgesoft.sharekernel.workingset.application.common.TargetIdentity;
+import com.airedgesoft.sharekernel.workingset.domain.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import org.junit.jupiter.api.Test;
 
