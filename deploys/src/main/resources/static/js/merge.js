@@ -27,7 +27,7 @@ function mergeOverlay() {
 
 let mergeTrigger = null;
 
-function closeMerge() {
+function closeMerge(refresh = true) {
     const wasOpen = mergeView.open;
     if (mergeView.poller) clearInterval(mergeView.poller);
     mergeView.poller = null;
@@ -40,7 +40,7 @@ function closeMerge() {
     syncModalBackground();
     mergeTrigger?.focus();
     mergeTrigger = null;
-    if (wasOpen) {
+    if (wasOpen && refresh) {
         refreshSelectedRange().catch((error) => setStatus('刷新失败：' + error.message, 'error'));
     }
 }
@@ -54,8 +54,7 @@ async function openMerge() {
 
     const anchor = {workingSetId, trackerId: selected.trackerId, name: selected.name};
     const parent = node.ws.parentWorkingSetId;
-    const adjacent = [...(parent && selected.sourceId ? [parent] : []),
-        ...node.children.filter((child) => child.ws).map((child) => child.id)];
+    const adjacent = parent && selected.sourceId ? [parent] : [];
     const ranges = await Promise.all(adjacent.map(async (id) => {
         const base = '/api/worksets/' + encodeURIComponent(id);
         const [trackers, bindings] = await Promise.all([
@@ -65,12 +64,12 @@ async function openMerge() {
         const boundIds = new Set(bindings?.trackers.map((binding) => binding.trackerId));
         return trackers.filter((tracker) => tracker.sharingMode === 'UNSHARED'
             && (id === '1' || boundIds.has(tracker.trackerId))
-            && (id === parent ? tracker.trackerId === selected.sourceId : tracker.sourceId === selected.trackerId))
+            && tracker.trackerId === selected.sourceId)
             .map((tracker) => ({workingSetId: id, trackerId: tracker.trackerId, name: tracker.name}));
     }));
     if (state.selectedTracker !== selected || state.selectedWs !== workingSetId) return;
 
-    closeMerge();
+    closeMerge(false);
     mergeTrigger = trigger;
     mergeView.open = true;
     mergeView.anchor = anchor;
@@ -78,38 +77,33 @@ async function openMerge() {
     mergeOverlay().classList.remove('hidden');
     syncModalBackground();
     renderMergeShell();
-    $('#mergeTrackerSelect').focus();
+    $('#mergeDirection').focus();
+    if (mergeView.peers.length) await mergeStartComparison();
 }
 
 function renderMergeShell() {
     const peers = mergeView.peers;
-    const options = peers.map((peer, index) => `<option value="${index}">${escapeHtml(
-        peer.name || '未命名分类'
-    )}</option>`).join('');
     $('#mergeContent').innerHTML = `
     <div class="modal-head">
       <div>
         <h3 id="mergeTitle">比较/合并跟踪分类 <span class="merge-title-name">${escapeHtml(mergeView.anchor.name || '未命名分类')}</span></h3>
-        <label class="merge-tracker-selector"><span class="visually-hidden">比较跟踪分类</span><select id="mergeTrackerSelect" onchange="mergeResetComparison()" aria-label="比较跟踪分类">
-          <option value="" selected disabled>请选择跟踪分类</option>${options}
-        </select></label>
         <p id="mergeSubtitle"></p>
       <div class="merge-picker">
         <div class="merge-workset-path" aria-label="工作集合并方向">
-          <div class="merge-endpoint"><span class="merge-endpoint-role">来源</span><strong id="mergeSourceWorkset"></strong><span id="mergeSourceTracker" class="merge-endpoint-tracker"></span></div>
-        <button type="button" id="mergeDirection" class="merge-direction-toggle" value="source"
-          aria-label="切换比对方向" aria-pressed="false" onclick="mergeFlipDirection()">
+          <div class="merge-endpoint"><span class="merge-endpoint-role">来源工作集</span><strong id="mergeSourceWorkset"></strong></div>
+        <button type="button" id="mergeDirection" class="merge-direction-toggle" value="target"
+          aria-label="切换比对方向" aria-pressed="true" onclick="mergeFlipDirection()" ${peers.length ? '' : 'disabled'}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16m-4-4 4 4-4 4M20 16H4m4-4-4 4 4 4"/></svg>
         </button>
-          <div class="merge-endpoint"><span class="merge-endpoint-role">接收方</span><strong id="mergeTargetWorkset"></strong><span id="mergeTargetTracker" class="merge-endpoint-tracker"></span></div>
+          <div class="merge-endpoint"><span class="merge-endpoint-role">接收工作集</span><strong id="mergeTargetWorkset"></strong></div>
         </div>
-        <button type="button" class="btn" id="mergeCompare" onclick="mergeStartComparison()" disabled>开始比较</button>
+        <button type="button" class="btn" id="mergeCompare" onclick="mergeStartComparison()" ${peers.length ? '' : 'disabled'}>重新比较</button>
       </div>
       </div>
       <button type="button" class="modal-close" aria-label="关闭" onclick="closeMerge()">✕</button>
     </div>
     <div class="modal-body">
-      <div id="mergeBody"><div class="empty">${peers.length ? '请选择比较对象和方向' : '没有可比较的直属派生 跟踪分类'}</div></div>
+      <div id="mergeBody"><div class="empty">${peers.length ? '正在比较…' : '没有可比较的直属父级跟踪分类'}</div></div>
     </div>
     <div class="modal-foot">
       <span id="mergeHint" class="muted"></span>
@@ -122,18 +116,13 @@ function renderMergeShell() {
 
 function mergeUpdateDirectionLabel() {
     const button = $('#mergeDirection');
-    const selection = $('#mergeTrackerSelect').value;
-    const peer = selection === '' ? null : mergeView.peers[Number(selection)];
+    const peer = mergeView.peers[0];
     const current = worksetLabel(mergeView.anchor.workingSetId, '当前工作集');
-    const other = peer ? worksetLabel(peer.workingSetId, '比较对象') : '比较对象';
+    const other = peer ? worksetLabel(peer.workingSetId, '父工作集') : '无可比较父级';
     const direction = button.value === 'source' ? `${current} → ${other}` : `${other} → ${current}`;
     $('#mergeSourceWorkset').textContent = button.value === 'source' ? current : other;
     $('#mergeTargetWorkset').textContent = button.value === 'source' ? other : current;
-    const source = button.value === 'source' ? mergeView.anchor : peer;
-    const target = button.value === 'source' ? peer : mergeView.anchor;
-    $('#mergeSourceTracker').textContent = source?.name || '请选择跟踪分类';
-    $('#mergeTargetTracker').textContent = target?.name || '请选择跟踪分类';
-    button.title = direction + '；点击切换方向，再开始比较';
+    button.title = direction + '；点击切换方向，再重新比较';
     button.setAttribute('aria-label', direction + '，点击切换方向');
     $('#mergeSubtitle').textContent = '';
 }
@@ -144,23 +133,22 @@ function mergeFlipDirection() {
     button.value = button.value === 'source' ? 'target' : 'source';
     button.setAttribute('aria-pressed', String(button.value === 'target'));
     mergeResetComparison();
-    $('#mergeBody').innerHTML = '<div class="empty" role="status">方向已切换，点击“开始比较”查看此方向的差异</div>';
+    $('#mergeBody').innerHTML = '<div class="empty" role="status">方向已切换，点击“重新比较”查看此方向的差异</div>';
 }
 
 function mergeResetComparison() {
     mergeView.page = null;
     mergeView.rows = [];
     $('#mergeSubmit').disabled = true;
-    $('#mergeCompare').disabled = !$('#mergeTrackerSelect').value;
+    $('#mergeCompare').disabled = !mergeView.peers.length;
     $('#mergeHint').textContent = '';
     mergeUpdateDirectionLabel();
-    $('#mergeBody').innerHTML = '<div class="empty">请选择比较对象和方向</div>';
+    $('#mergeBody').innerHTML = '<div class="empty">点击“重新比较”查看当前方向的差异</div>';
 }
 
 async function mergeStartComparison() {
-    const selection = $('#mergeTrackerSelect').value;
-    if (selection === '' || mergeView.submitting || mergeView.poller) return;
-    const peer = mergeView.peers[Number(selection)];
+    if (!mergeView.peers.length || mergeView.submitting || mergeView.poller) return;
+    const peer = mergeView.peers[0];
     const anchorIsSource = $('#mergeDirection').value === 'source';
     const source = anchorIsSource ? mergeView.anchor : peer;
     const target = anchorIsSource ? peer : mergeView.anchor;
@@ -177,10 +165,8 @@ async function loadMergePage() {
     const body = $('#mergeBody');
     const submit = $('#mergeSubmit');
     const compareButton = $('#mergeCompare');
-    const trackerSelect = $('#mergeTrackerSelect');
     const directionSelect = $('#mergeDirection');
     compareButton.disabled = true;
-    trackerSelect.disabled = true;
     directionSelect.disabled = true;
     submit.disabled = true;
     mergeView.rows = [];
@@ -208,7 +194,6 @@ async function loadMergePage() {
         body.innerHTML = `<div class="empty">比较失败：${escapeHtml(error.message)}</div>`;
     } finally {
         compareButton.disabled = false;
-        trackerSelect.disabled = false;
         directionSelect.disabled = false;
     }
 }
@@ -349,6 +334,7 @@ async function submitMerge() {
                 decisions: mergeDecisions()
             })
         });
+        addMergeTask(round);
         if (body !== $('#mergeBody')) return;
         mergeView.round = round;
         $('#mergeHint').textContent = '决策已受理，正在执行…';
@@ -365,7 +351,7 @@ async function submitMerge() {
 }
 
 function setMergePickerDisabled(disabled) {
-    for (const id of ['mergeTrackerSelect', 'mergeDirection', 'mergeCompare']) {
+    for (const id of ['mergeDirection', 'mergeCompare']) {
         $('#' + id).disabled = disabled;
     }
 }

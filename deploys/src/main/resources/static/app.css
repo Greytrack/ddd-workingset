@@ -439,6 +439,15 @@ body {
     resize: vertical;
 }
 
+.field input:disabled {
+    background: #f1f4f7;
+    color: #68788a;
+    border-color: #dce4eb;
+    cursor: not-allowed;
+    opacity: 1;
+    -webkit-text-fill-color: #68788a;
+}
+
 .field input:focus, .field select:focus, .field textarea:focus {
     outline: 2px solid var(--accent-soft);
     border-color: var(--accent);
@@ -724,6 +733,18 @@ body {
     gap: 10px;
 }
 
+.task-type-tabs { display: flex; gap: 8px; padding: 12px 20px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.task-type-tabs button { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.task-type-tabs button:hover { background: #f1f6fc; color: #315f9d; }
+.task-type-tabs button[aria-selected="true"] { border-bottom-color: #426fa6; color: #315f9d; background: #f1f6fc; }
+.task-type-tabs button span { border-radius: 12px; padding: 1px 7px; background: #e7edf4; font-size: 12px; }
+.task-scope-hint { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+.task-route { margin: 8px 0 12px; color: #365f94; font-size: 13px; }
+.task-route > span { padding-inline: 8px; }
+.merge-task-entry { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line-soft); }
+.merge-task-entry p { flex-basis: 100%; margin: 0; }
+.task-card details > summary { cursor: pointer; color: #315f9d; padding-block: 8px; }
+
 .task-card {
     border: 1px solid var(--line);
     border-radius: 11px;
@@ -916,6 +937,23 @@ body {
     flex-direction: column;
     min-height: 0;
 }
+
+.drawer-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; padding: 12px 16px; border: 0; background: #f5f8fc; color: #365f94; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.drawer-heading:hover:not(:disabled) { background: #e7f0fd; }
+.drawer-heading:disabled { color: var(--muted); cursor: not-allowed; }
+.folder-drawer { flex: none; margin-top: auto; border-top: 1px solid var(--line); }
+.folder-instance-tree { flex: 1; min-height: 0; overflow: auto; background: #fff; }
+.folder-scope-label { padding: 12px 16px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line-soft); }
+.folder-expanded #trackerPaneContent > .tracker-tools,
+.folder-expanded #trackerPaneContent > #selectedSpace,
+.folder-expanded #trackerList { display: none; }
+.folder-expanded .folder-drawer { display: flex; flex: 1; min-height: 0; flex-direction: column; margin-top: 0; }
+.folder-expanded #folderDrawerToggle { background: #e7f0fd; }
+.folder-expanded #createTrackerBtn { display: none; }
+.folder-view > :not(#folderContentPlaceholder) { display: none !important; }
+.folder-content-placeholder { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px; text-align: center; color: var(--muted); }
+.folder-content-placeholder strong { font-size: 17px; color: var(--text); }
+.folder-content-placeholder p { max-width: 36em; margin: 0; }
 
 .tracker-tools {
     padding: 10px 12px;

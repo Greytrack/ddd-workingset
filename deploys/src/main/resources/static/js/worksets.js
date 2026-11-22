@@ -149,9 +149,11 @@ async function selectWorkset(id, {autoSelect = true} = {}) {
     state.bindings = {spaces: [], trackers: []};
     state.trackers = [];
     $('#activeWorkset').textContent = worksetLabel(id);
-    $('#createWorksetBtn').classList.toggle('hidden', id !== '1');
+    $('#createWorksetBtn').classList.remove('hidden');
+    $('#createWorksetBtn').textContent = id === '1' ? '＋ 创建工作集' : '＋ 创建子工作集';
     $('#editWorksetBtn').disabled = false;
     $('#extendWorksetBtn').classList.toggle('hidden', !findNode(state.worksets, id)?.ws?.parentWorkingSetId);
+    $('#extendWorksetBtn').textContent = '＋ 扩展当前工作集';
     renderWorksetTree();
     renderSpaces();
     renderSpaceTrackers();
@@ -252,13 +254,15 @@ function renderSpaceTrackers() {
     create.title = space?.bound ? '新建跟踪分类' : '请先选择已绑定的产品空间';
     const heading = $('#selectedSpace');
     const list = $('#trackerList');
+    foldersRenderScope(space);
     heading.classList.toggle('hidden', !space);
     if (!space) {
         list.innerHTML = '<div class="empty item-empty"><strong>尚未选择产品空间</strong><span>选择产品空间后查看当前工作集下的 跟踪分类。</span></div>';
         $('#trackerCount').textContent = '';
         return;
     }
-    const trackers = state.trackers.filter((tracker) => tracker.productSpaceId === space.productSpaceId);
+    const trackers = state.trackers.filter((tracker) => tracker.productSpaceId === space.productSpaceId
+        && tracker.classificationId !== FOLDER_CLASSIFICATION_ID);
     const boundIds = new Set((state.bindings?.trackers || []).map((item) => item.trackerId));
     heading.innerHTML = `<div class="ws-title">${escapeHtml(space.name || space.productSpaceId)}</div>
     <div class="ws-meta">${escapeHtml(worksetLabel(state.selectedWs))}</div>`;

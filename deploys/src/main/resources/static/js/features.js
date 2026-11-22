@@ -84,9 +84,44 @@ function addTask(creation, meta) {
     const index = state.tasks.findIndex((item) => item.id === task.id);
     if (index >= 0) state.tasks[index] = {...state.tasks[index], ...task};
     else state.tasks.unshift(task);
+    taskCenterTab = taskType(task);
     saveTasks();
     updateTaskBadge();
     startTaskPolling();
+}
+
+let taskCenterTab = 'CREATE';
+const TASK_TYPE_LABELS = {CREATE: '创建工作集任务', EXTEND: '拓展工作集任务', MERGE: '合并分支任务'};
+
+function taskType(task) { return task.mode || 'CREATE'; }
+
+function addMergeTask(round) {
+    addTask({creationId: round.id, status: round.result?.state || round.state, round}, {
+        mode: 'MERGE', targetId: mergeView.target,
+        targetName: worksetLabel(mergeView.target, '接收工作集'),
+        sourceName: worksetLabel(mergeView.source, '来源工作集'),
+        trackerName: mergeView.anchor?.name || '未命名分类'
+    });
+}
+
+async function queryTask(task) {
+    if (taskType(task) === 'MERGE') {
+        const round = await api('/api/merge-rounds/' + encodeURIComponent(task.id));
+        return {status: round.result?.state || round.state, round};
+    }
+    return api('/api/working-set-creations/' + encodeURIComponent(task.id));
+}
+
+async function selectTaskCenterTab(mode) {
+    taskCenterTab = mode;
+    renderTaskCenter();
+    await Promise.all(state.tasks.filter((task) => taskType(task) === mode).map(async (task) => {
+        try { Object.assign(task, await queryTask(task), {lastError: null}); }
+        catch (error) { task.lastError = reasonText(error.body) || error.message; }
+    }));
+    saveTasks();
+    updateTaskBadge();
+    if (taskCenterOpen && taskCenterTab === mode) renderTaskCenter();
 }
 
 function startTaskPolling() {
@@ -110,9 +145,10 @@ async function pollTasks() {
     try {
         await Promise.all(active.map(async (task) => {
             try {
-                const view = await api('/api/working-set-creations/' + encodeURIComponent(task.id));
+                const view = await queryTask(task);
                 const wasTerminal = isTerminal(task.status);
                 task.status = view.status;
+                if (view.round) task.round = view.round;
                 task.stage = view.stage;
                 task.progress = view.progress;
                 task.stageProgress = view.stageProgress;
@@ -130,7 +166,7 @@ async function pollTasks() {
         saveTasks();
         updateTaskBadge();
         if (taskCenterOpen) renderTaskCenter();
-        if (completed.some((task) => task.mode !== 'EXTEND')) await loadWorksetTree();
+        if (completed.some((task) => taskType(task) === 'CREATE')) await loadWorksetTree();
         if (completed.some((task) => task.mode === 'EXTEND' && task.targetId === state.selectedWs)) {
             await refreshSelectedRange();
         }
@@ -145,18 +181,34 @@ async function pollTasks() {
 
 function openTaskCenter() {
     taskCenterOpen = true;
-    renderTaskCenter();
+    selectTaskCenterTab(taskCenterTab);
     startTaskPolling();
 }
 
 function renderTaskCenter() {
-    const body = state.tasks.length
-        ? `<div class="task-list">${state.tasks.map(renderTaskCard).join('')}</div>`
-        : '<div class="empty">暂无工作集任务。</div>';
+    const tasks = state.tasks.filter((task) => taskType(task) === taskCenterTab);
+    const body = tasks.length
+        ? `<div class="task-list">${tasks.map((task) => taskType(task) === 'MERGE' ? renderMergeTaskCard(task) : renderTaskCard(task)).join('')}</div>`
+        : '<div class="empty item-empty">暂无此类型任务</div>';
+    const tabs = Object.entries(TASK_TYPE_LABELS).map(([mode, label]) => `<button type="button" role="tab" id="taskTab${mode}" aria-selected="${mode === taskCenterTab}" aria-controls="taskTabPanel" data-task-type="${mode}">${label}<span>${state.tasks.filter((task) => taskType(task) === mode).length}</span></button>`).join('');
     openModal(`${modalHeader('任务中心')}
-    <div class="modal-body">${body}</div>
+    <div class="task-type-tabs" role="tablist" aria-label="任务类型">${tabs}</div>
+    <div class="modal-body"><p class="task-scope-hint">当前浏览器记录的任务 · 切换类型时刷新对应任务</p><div role="tabpanel" id="taskTabPanel" aria-labelledby="taskTab${taskCenterTab}">${body}</div></div>
     <div class="modal-foot"><button type="button" class="btn" data-close-modal>关闭</button></div>`, true);
     taskCenterOpen = true;
+}
+
+function renderMergeTaskCard(task) {
+    const round = task.round || {};
+    const summary = round.result?.summary;
+    const status = task.status || 'Preparing';
+    const labels = {...STATUS_LABELS, Preparing: '准备中'};
+    const cls = status === 'Failed' ? 'failed' : isTerminal(status) ? 'succeeded' : 'running';
+    const rows = (round.entries || []).map((entry) => `<div class="merge-task-entry"><span>${escapeHtml(mergeItemName(entry.evidence || {}))}</span><span>${escapeHtml(({Applied: '已执行', Confirmed: '已确认', Rejected: '已拒绝', Conflict: '有冲突', StaleEvidence: '证据过期'})[entry.result?.outcome] || '等待结果')}</span>${entry.result?.failure ? `<p class="error-text">${escapeHtml(reasonText(entry.result.failure) || String(entry.result.failure))}</p>` : ''}</div>`).join('');
+    return `<article class="task-card ${cls}"><div class="task-top"><div><div class="task-title">合并分支任务 · ${escapeHtml(task.trackerName)}</div><p class="task-route">${escapeHtml(task.sourceName)} <span aria-label="合并到">→</span> ${escapeHtml(task.targetName)}</p></div><span class="task-status ${cls}">${escapeHtml(labels[status] || status)}</span></div>
+      ${summary ? `<div class="merge-summary"><span>已执行 ${summary.applied}</span><span>已确认 ${summary.confirmed}</span><span>拒绝 ${summary.rejected}</span><span>冲突 ${summary.conflict}</span><span>证据过期 ${summary.staleEvidence}</span></div>` : '<p class="muted">正在执行，结果自动更新</p>'}
+      <details><summary>查看条目结果</summary>${rows || '<p class="muted">暂无条目结果</p>'}</details>
+      ${infoDisclosure('技术信息', [['任务 ID', task.id]])}${task.lastError ? `<p class="error-text">${escapeHtml(task.lastError)}</p>` : ''}</article>`;
 }
 
 function renderTaskCard(task) {
@@ -191,8 +243,8 @@ function renderTaskCard(task) {
     return `<div class="task-card ${statusClass}">
     <div class="task-top">
       <div>
-        <div class="task-title">${task.mode === 'EXTEND' ? '扩展' : '新建'} · ${escapeHtml(task.targetName || task.targetId || '工作集')}</div>
-        <div class="task-sub">父级 ${escapeHtml(task.parentName || task.parentId || '—')} · 任务 ${escapeHtml(shortId(task.id))}</div>
+        <div class="task-title">${TASK_TYPE_LABELS[taskType(task)]} · ${escapeHtml(task.targetName || '工作集')}</div>
+        <div class="task-sub">父级 ${escapeHtml(task.parentName || '未命名工作集')} · ${infoDisclosure('技术信息', [['任务 ID', task.id]])}</div>
       </div>
       <span class="task-status ${statusClass}">${escapeHtml(STATUS_LABELS[status] || status)}</span>
     </div>
@@ -270,18 +322,15 @@ function flattenWorksets(nodes, out = [], depth = 0) {
 
 async function openCreateWorkset() {
     if (!state.worksets.length) await loadWorksetTree();
-    const flat = flattenWorksets(state.worksets);
     const selected = state.selectedWs || '1';
-    const options = flat.map(({node, depth}) => {
-        const label = node.ws?.name || (node.id === '1' ? '默认工作集' : shortId(node.id));
-        return `<option value="${escapeHtml(node.id)}"${node.id === selected ? ' selected' : ''}>${'　'.repeat(Math.min(depth, 6))}${escapeHtml(label)}</option>`;
-    }).join('');
-    openModal(`${modalHeader('创建工作集', '选择父工作集范围，提交后进入 LRO 任务中心')}
+    const parentName = worksetLabel(selected, '当前工作集');
+    openModal(`${modalHeader(selected === '1' ? '创建工作集' : '创建子工作集', '仅可选择当前父工作集已绑定的产品空间和跟踪分类')}
     <form id="createWorksetForm">
       <div class="modal-body">
         <div class="field">
           <label for="createParent">父工作集</label>
-          <select id="createParent" name="parentWorkingSetId">${options}</select>
+          <input value="${escapeHtml(parentName)}" disabled aria-label="父工作集">
+          <input id="createParent" type="hidden" name="parentWorkingSetId" value="${escapeHtml(selected)}">
         </div>
         <div class="field">
           <label for="createName">工作集名称</label>
@@ -409,6 +458,7 @@ async function submitCreateWorkset(form) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 parentWorkingSetId: parentId,
+                mode: 'CREATE',
                 requestId,
                 name: workspaceName,
                 color: color.hex,
@@ -539,7 +589,7 @@ async function openExtendWorkset() {
             const task = await api('/api/worksets/' + encodeURIComponent(targetId) + '/extensions', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({requestId, trackerIds})
+                body: JSON.stringify({requestId, trackerIds, mode: 'EXTEND'})
             });
             addTask(task, {mode: 'EXTEND', targetId, targetName, parentId, parentName});
             if (form.isConnected) {
@@ -1009,6 +1059,8 @@ function bindEvents() {
     });
 
     $('#modalContent').addEventListener('click', (event) => {
+        const taskTab = event.target.closest('[data-task-type]');
+        if (taskTab) { selectTaskCenterTab(taskTab.dataset.taskType); return; }
         if (event.target.closest('[data-close-modal]')) {
             closeModal();
             return;
