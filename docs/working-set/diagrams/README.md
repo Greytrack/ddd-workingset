@@ -4,6 +4,14 @@
 
 图表只保留当前阅读所需的最小集合。候选图与历史图单独标注，不作为当前模型入口。每幅图链接其依据，视觉约定见 [AGENTS.md §4.1](../../../AGENTS.md)。
 
+## 视觉摘要与权威关系
+
+图是正文的视觉摘要，不另立规则；图文冲突以正文契约/BASELINE 为准。
+
+- [Context Map](../domain/context-map.md) 是战略文本候选；[企业 Shared Kernel 图](shared-kernel-context-map.md) 只表达 AC-001 的企业外框，不重定义 Working Set 内部聚合或部署单元。
+- [跨 BC 契约图](cross-bc-contract.md) 是 [T4](../domain/cross-bc-contract-v1.md) 的视觉摘要；[MergeEntry 生命周期](merge-entry-lifecycle.md) 是 [T1](../domain/merge-execution-contract-v1.md) 的摘要；[创建/扩展 LRO](working-set-creation-lro.md) 是 [T7](../domain/working-set-creation-lro-design.md) 的摘要。
+- 图不重复完整规则字段；图中未画的失败语义、版本治理和实现差距仍以正文/实现边界为准。
+
 ## 当前阅读图
 
 | 主题             | 图                                                                                                                                                             | 状态                 |

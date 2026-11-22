@@ -1,6 +1,6 @@
 # 当前实现边界与设计差距
 
-**状态：Reviewed（2026-11-20 静态核对；实现证据，不是新增基线裁定）**
+**状态：Reviewed（2026-11-22 静态核对；实现证据，不是新增基线裁定）**
 
 依据：用户 2026-11-19 移除单方法 Port 和文档对齐的要求；当前实现改为只读使用共享聚合，该读取边界在本页登记为
 Reviewed，不扩大既有契约接受范围；`2c50900`、`543cc07`、`15f0399`、`d5d0f3b`、`0805c93`、`5e52952`、`594dcaa`、`6d4b567`、
@@ -20,7 +20,7 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 | `alm.requirement`      | Requirement 参考实现、Merge 执行适配、物化请求消费、继承编辑查询回退                            | 业务 BC 参考实现；只读使用 SK 共享聚合/仓储，写入通过事件协作。                                                                           |
 
 `sk.businessframework.domain` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
-`com.airedgesoft.sharekernel.workingset.domain.TrackerItem`
+`sk.workingset.domain.TrackerItem`
 的公共工作集契约不是同一概念；不得因为命名相近而把二者互相替代。
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
@@ -32,6 +32,9 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
   的身份和来源解析供系统内部使用，业务内容由相应 BC 的 API 提供。
 - 不再为单个查询方法新增专用同步 Port；`TrackerItemLifecyclePort` 及其 `findInheritedTarget` 已移除。集合读取和读模型查询使用
   `application/query/provider` 下的 Provider。
+- 共享 Tracker 的 Item 列表按 Tracker 读取：共享 Tracker 通过 `TrackerBinding` 对其绑定工作集可见；非共享 Tracker 仅在所属工作集可见（`RequirementQueryService.findByTracker`）。不能再用 `requirements.working_set_id` 过滤共享 Tracker 的 Item。
+- LightTrackerItem 自带 `classificationId` / `numericProductSpaceId`，分别写入索引的 `sub_class_id` / `work_space_id`；LTI 仓储不再 join `air_inst_common`，也不再从公共摘要推断子类。
+- 多业务对象类型通过 `BusinessObjectTypeRegistry` / `BusinessObjectTypeAdapter` 按 Tracker 分类路由；一个 Tracker 只承载一种对象类型。当前只注册 Requirement 类型，新增 BC 只加 Adapter。
 - 直接读取不等于获得写入权：业务 BC **不得**调用 SK 聚合仓储的 `save`、`delete`、`remove` 或修改 SK
   聚合状态；跨聚合状态变化仍必须通过可靠事件和各自独立事务完成（TC-002）。
 - 直接读取的外部状态不能满足跨聚合原子校验；需要“先校验后写入”的规则仍由目标 BC 或事件消费方在本地事务中重新校验。
@@ -71,6 +74,9 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 
 - `TrackerItemLifecyclePort`、`InheritedEditTarget`、`Caller` 值对象及其占位授权；
 - `RequirementWritePort` 及同步 ALM 物化/合并写端口；
+- `BusinessTrackerItems`、`RequirementAdapter`、`DerivedItemSummaryWriter`、`TrackerItemReadPortFactory`；
+- `WorkingSetQueryService.resolve`、`TrackerItemQueryProvider.revision()` 及 `Capabilities` 中未使用的能力字段；
+- Merge `requestId` 的 PostgreSQL advisory lock；当前由 `MergeRepository.claim` 使用 `ON CONFLICT (request_id) DO NOTHING` 原子认领；
 - LightTrackerItem Redis 缓存装饰器及 `workingset.item-cache` 配置；
 - “ALM 直接读取 SK 仓储一定违规”的笼统表述；当前只禁止直接写入，读取边界见 §2。
 
@@ -80,6 +86,7 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
   聚合携带，应用层在构造或修改时注入；`sk.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
 - 2026-11-22 全量测试：sharedkernel 33、alm 16、ArchitectureTest 14 通过；deploys 154 项中 21 failures + 10 errors，集中在
   Merge、Binding、Tracker、Requirement 与 Snowflake 的既有语义/夹具问题。时间类型统一为 epoch 毫秒、仓储审计解耦相关的测试均通过。
+- 2026-11-22 针对性回归：共享 Tracker 列表可见/非共享隔离、Requirement 读侧、Merge `claim`/`save` 约定的编译与局部测试通过；不能替代全量集成回归。
 - 本页不把代码现状反向确认为业务政策；产品空间、Tracker、LTI 和 Merge 的业务语义仍以 BASELINE、ADR 和 T1～T4 契约为准。
 
 ## 7. 追溯

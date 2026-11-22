@@ -32,6 +32,8 @@ alm.requirement.application.query
       ID；仅继承路径读取来源，仍校验来源版次。
     - Requirement 活跃身份目录由 ALM 查询 Provider 直接读取，供比较与派生索引使用；不经聚合仓储。Tracker 展示列表仅由
       Working Set 查询 Provider 提供。
+    - Requirement 列表按 Tracker 读取：共享 Tracker 通过绑定对所有绑定工作集可见，非共享 Tracker 仅所属工作集可见；
+      `workingSetId` 用于可见性校验，不再作为 `requirements.working_set_id` 过滤条件。
 - Controller 暂未拆分，`WorkingSetController` 与 `RequirementController` 同时注入 command/query 服务。
 - 跨聚合事务的实现差距见 [实现边界](current-boundaries.md)。
 
@@ -41,7 +43,7 @@ alm.requirement.application.query
   `shown` 修改均经聚合；空间绑定仍由 Folder Tracker 关系表示，未变更关系不重写。
 - Tracker 与创建任务也统一用 `save`，保存分支由实现处理。产品空间当前无更新命令；`save` 只写新对象，重复身份不覆盖。跨工作集的
   Tracker 删除清理仍由删除用例协调。
-- MergeRound 仓储原子写入轮次及条目确认；MergeCheckpointQuery 直接从旧表只读查询跨轮次最新基准。LTI 原子家族占位不以普通保存替代。
+- MergeRound 仓储已拆分 `claim`（按 requestId 原子认领新轮次）与 `save`（更新已有轮次状态）；MergeCheckpointQuery 直接从旧表只读查询跨轮次最新基准。LTI 原子家族占位不以普通保存替代。
 - 产品空间、Tracker 与 Working Set 各有聚合仓储；入口及初始化的事务差距见 [实现边界](current-boundaries.md)。
 
 ## 后续
@@ -55,6 +57,6 @@ alm.requirement.application.query
 
 ## 验证
 
-2026-11-19 的完整测试记录为 **160 项通过**；2026-11-20 后的改动尚未完成全量回归，最新本地报告仅覆盖 32 项局部测试。ArchUnit
+2026-11-19 的完整测试记录为 **160 项通过**；2026-11-20 后的改动尚未完成全量回归，最新本地报告仅覆盖局部测试。ArchUnit
 规则覆盖 query→command、command→query、application→MyBatis 和
-domain→持久化框架边界。测试状态与未验证项见 [当前实现边界](current-boundaries.md)。
+domain→持久化框架边界。2026-11-22 针对性回归覆盖共享 Tracker 列表可见/非共享隔离、Requirement 读侧与 Merge claim/save；测试状态与未验证项见 [当前实现边界](current-boundaries.md)。

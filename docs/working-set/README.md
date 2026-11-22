@@ -10,6 +10,30 @@
 4. 按主题读取 [T1～T4、T7 契约](#当前契约)；
 5. 需要追溯原因时再读 [ADR](adr/README.md) 与 [评审](reviews/README.md)。
 
+## 单一权威与去重规则
+
+同一主题只保留一处权威声明；其他文档用链接引用，不复制规则。发现冲突时先回到权威页，不在下游文档自行裁定。
+
+| 主题 | 权威页 | 其他页面的写法 |
+| --- | --- | --- |
+| 当前接受范围 | [BASELINE](BASELINE.md) | 只链接，不复述接受范围 |
+| 业务事实与政策 | [事实与政策主题基线 v1](domain/facts-policy-baseline-v1.md) | `facts.md` 只保留候选、证据与待确认项 |
+| 聚合边界 | [聚合边界](domain/aggregate-model.md) | 图和提案只链接，不另立聚合规则 |
+| Shared Kernel 定位 | [Shared Kernel 边界](domain/shared-kernel-boundary.md) + `AC-001` | Context Map 只表达关系，不重定义定位 |
+| 跨 BC 协作 | [T4](domain/cross-bc-contract-v1.md) | [当前实现边界](implementation/current-boundaries.md) 只记录实现差距 |
+| LTI 物化 | [T3](domain/lighttrackeritem-materialization-contract-v1.md) | 实施验收只记录证据 |
+| Merge 执行 | [T1](domain/merge-execution-contract-v1.md) + [ADR-0005](adr/0005-merge-execution-model.md) | 评审只记录过程与异议 |
+| 绑定与删除 | [T2](domain/binding-deletion-contract-v1.md) | 场景页只描述可观察行为 |
+| 创建/扩展 | [T7](domain/working-set-creation-lro-design.md) | 实施记录只记录阶段和结果 |
+| 代码现状 | [当前实现边界](implementation/current-boundaries.md) | 不得用代码现状反推业务规则 |
+| 图表 | [图表索引](diagrams/README.md) | 图是正文的视觉摘要，不另立规则 |
+
+## 文档状态与历史
+
+- `Draft` / `Reviewed` 不等于 `Accepted`；只有 BASELINE 列出的接受范围才是当前基线。
+- T5-S0～S7、D2/D4、旧 T7-D 属于历史实施证据；从[实施索引的历史验收](implementation/README.md#历史验收)进入，不从这些文档复制当前规则。
+- 旧同步写 Port、`WorkingSetApplicationService`、`RequirementAdapter` 等名称只保留在历史记录中；当前入口见[已移除的旧声明](implementation/current-boundaries.md#5-已移除的旧声明)。
+
 ## 当前权威文档
 
 ### 领域与边界

@@ -257,10 +257,10 @@ LocalId。见 [T1 §8](merge-execution-contract-v1.md#8-轮次终态与结果表
 3. 业务 BC 的内部错误码不得直接暴露；Adapter 必须映射到本契约的公共码或已登记的 BC 专用码段。
 4. HTTP 状态码按用例/端点映射，不替代 `code`/`reason`；客户端不得仅凭状态码推断具体失败。
 5. 实现见 [
-   `WorkingsetResultCode`](../../../sharedkernel/src/main/java/com/airedgesoft/sharekernel/workingset/error/WorkingsetResultCode.java)、[
-   `BindingResCode`](../../../sharedkernel/src/main/java/com/airedgesoft/sharekernel/workingset/error/BindingResCode.java)
+   `WorkingsetResultCode`](../../../sharedkernel/src/main/java/sk/workingset/error/WorkingsetResultCode.java)、[
+   `BindingResCode`](../../../sharedkernel/src/main/java/sk/workingset/error/BindingResCode.java)
    和 [
-   `MergeResCode`](../../../sharedkernel/src/main/java/com/airedgesoft/sharekernel/workingset/error/MergeResCode.java)
+   `MergeResCode`](../../../sharedkernel/src/main/java/sk/workingset/error/MergeResCode.java)
    。新增或修改公开结果码须同步本表并经
    T4 评审。
 6. 数值码不进入领域不变量、聚合状态或事件载荷；它们只描述对外失败语义。
