@@ -73,7 +73,7 @@ Save。字段/方法的精确签名留实现契约，不从两层接口推导新
 **明确不属于 `TrackerItemQueryProvider`**：整体校验、保存/提交、删除、状态机推进——这些是**业务 BC 的职责**（见
 §3.3），不是只读契约的方法。
 
-**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `sk.workingset.domain` 内声明，`TrackerItem` 继承它；
+**2026-11-12 D14 用户裁定（已落地）**：`BusinessObject` 在 `com.airedgesoft.sharekernel.workingset.domain` 内声明，`TrackerItem` 继承它；
 `BusinessObject` 声明 `delete`/`undelete`/`delete2` 三个生命周期能力，`delete2` 是 guard/decision，实际永久删除由各 BC
 应用服务编排。`LifecycleCommand` 只承载期望并发版本与业务原因，不携带调用者上下文（D11 暂不接权限）；`LifecycleResult` 区分
 Applied/Rejected/Conflict 并携带变换后的对象。`TrackerItemQueryProvider` 仍保持只读；写入由各 BC 自管，跨聚合协作使用事件。
@@ -94,7 +94,6 @@ Port。跨聚合写入继续通过事件协作。业务对象永久删除后由 
   `MergeAppliedEvent` 切换 LTI。
 - 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectUpdateEvent` 触发
   SK 的 `TrackerItemLocalizedListener` 在独立事务切换 LTI；不修改来源，不保证两边原子可见。
--
 
 每个写事务最多修改一个聚合（TC-002）。事件交付、失败与实现差距见 [实现边界](../implementation/current-boundaries.md)、[T1](merge-execution-contract-v1.md)、[T3](lighttrackeritem-materialization-contract-v1.md)
 和 [跨 BC 图](../diagrams/cross-bc-contract.md)。
@@ -116,7 +115,7 @@ D4。
 SK 不实现上述职责，也不通过任何通用字段写入绕过它们。
 
 **2026-11-13 实施边界（用户确认）**：当前 `alm.requirement` 是**占位/参考实现**，只用于验证 SK 契约；本项目交付物是
-`sk.workingset` 的契约、规范与约束。各业务 BC 由专门团队按专业领域实现，但必须遵守本契约的只读/写入
+`com.airedgesoft.sharekernel.workingset` 的契约、规范与约束。各业务 BC 由专门团队按专业领域实现，但必须遵守本契约的只读/写入
 Port、失败语义、事件、身份与跨聚合事务约束。参考实现不覆盖全部业务规则（例如具体业务 Guard），不得以其细节反推 SK 契约。
 
 ### 3.4 能力声明与协作范围
@@ -256,13 +255,7 @@ LocalId。见 [T1 §8](merge-execution-contract-v1.md#8-轮次终态与结果表
 2. 同一 `reason` 的语义变化属于破坏性变更，必须新建/升级契约版本，不能只改消息。
 3. 业务 BC 的内部错误码不得直接暴露；Adapter 必须映射到本契约的公共码或已登记的 BC 专用码段。
 4. HTTP 状态码按用例/端点映射，不替代 `code`/`reason`；客户端不得仅凭状态码推断具体失败。
-5. 实现见 [
-   `WorkingsetResultCode`](../../../sharedkernel/src/main/java/sk/workingset/error/WorkingsetResultCode.java)、[
-   `BindingResCode`](../../../sharedkernel/src/main/java/sk/workingset/error/BindingResCode.java)
-   和 [
-   `MergeResCode`](../../../sharedkernel/src/main/java/sk/workingset/error/MergeResCode.java)
-   。新增或修改公开结果码须同步本表并经
-   T4 评审。
+5. 实现见 [`WorkingsetResultCode`](../../../shared-kernel/src/main/java/com/airedgesoft/sharekernel/workingset/error/WorkingsetResultCode.java)、[`BindingResCode`](../../../shared-kernel/src/main/java/com/airedgesoft/sharekernel/workingset/error/BindingResCode.java) 和 [`MergeResCode`](../../../shared-kernel/src/main/java/com/airedgesoft/sharekernel/workingset/error/MergeResCode.java)。新增或修改公开结果码须同步本表并经 T4 评审。
 6. 数值码不进入领域不变量、聚合状态或事件载荷；它们只描述对外失败语义。
 
 **归属**：Shared Kernel 维护公共码表与响应结构；各业务 BC 维护自身内部错误到公共码的映射；跨 BC 新增码段需四 BC 共同评审（与
@@ -311,8 +304,6 @@ K3″ 版本治理衔接）。
 | K3″  | §6：版本治理候选与团队待办 | **Open（未裁定）** |
 
 ## 10. 追溯与下一步
-
--
 
 追溯：AC-001、D-007、FACT-011/012、QUESTION-013/014、POL-002/003/004/007/008/014/016、INV-001/009/011/012/030、[Shared Kernel 边界](shared-kernel-boundary.md)、[Context Map](context-map.md)
 、B01～B12、SCN-069～071。

@@ -19,7 +19,7 @@ flowchart LR
     WS -->|"SpaceBinding（关系实体）"| PS
     WS -->|"TrackerBinding（关系实体）"| TR
     TR -->|"productSpaceId（属于一个 ProductSpace）"| PS
-    CL -->|"classificationId（投影）"| TR
+    TR -->|"classificationId（ID 引用共享分类）"| CL
     LTI -->|"TrackerId"| TR
     LTI -->|"WorkingSetId"| WS
 ```

@@ -1,6 +1,6 @@
 # 规模压测与保留专题
 
-**状态：Draft（阈值待 [QUESTION-012](../domain/open-questions.md) 采样后确定）**。
+**状态：Draft（阈值待 [QUESTION-012](../domain/open-questions.md) 采样后确定）**
 
 本专题统一承载 Working Set 各切片的规模、并发与保留验证。各实现切片只登记待测项，不再为此阻塞；实测数据与阈值结论只写在本页，避免在
 T6/T7 文档中重复声明。

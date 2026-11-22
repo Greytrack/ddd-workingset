@@ -3,24 +3,24 @@
 **状态：Reviewed（2026-11-22 静态核对；实现证据，不是新增基线裁定）**
 
 依据：用户 2026-11-19 移除单方法 Port 和文档对齐的要求；当前实现改为只读使用共享聚合，该读取边界在本页登记为
-Reviewed，不扩大既有契约接受范围；`2c50900`、`543cc07`、`15f0399`、`d5d0f3b`、`0805c93`、`5e52952`、`594dcaa`、`6d4b567`、
-`a21926b`、`3e1e2bb`、`70772f5`、`da8685b` 及当前工作区。已确认的规范仍以 [BASELINE](../BASELINE.md) 为准；本页不把当前代码反推为新的业务规则。
+Reviewed，不扩大既有契约接受范围。核对范围为 2026-11-19 之后的实现提交与当前工作区；已确认的规范仍以 [BASELINE](../BASELINE.md)
+为准，本页不把当前代码反推为新的业务规则。
 
 ## 1. 模块与上下文边界
 
-当前 `sharedkernel` 已从单一 `sk.workingset` 包扩展为以下模块。它们**不是**四个企业业务 BC 之外的四个新
+当前 `shared-kernel` 模块已从单一 `sk.workingset` 包（迁移前的旧命名）扩展为以下包。它们**不是**四个企业业务 BC 之外的四个新
 BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证据裁定。
 
-| 模块                   | 当前拥有的职责                                                                                  | 依赖/边界                                                                                                                                 |
-|------------------------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| `sk.businessframework` | 通用业务对象、属性、版次、排序和轻量只读投影能力；`BusinessObject`/`Revisionable` 等共享契约    | 属于 Shared Kernel 的通用能力，不是 Working Set 业务模型；不得反向依赖各 BC。`validation` 子包存在迁移期旧栈依赖例外，见其包说明。        |
-| `sk.tracker`           | Tracker 聚合根、创建/改名命令、Tracker 只读 Provider、创建后绑定事件                            | Tracker 是独立聚合。当前仍直接使用 `sk.workingset` 的 `WorkingSet`、`Classification` 类型；这是同进程实现依赖，不等于已冻结的跨 BC 合同。 |
-| `sk.productspace`      | ProductSpace 聚合根、创建/删除命令、ProductSpace 仓储                                           | ProductSpace 是独立聚合；创建后通过事件推进默认 Tracker 与绑定，剩余差距见 §4。                                                           |
-| `sk.workingset`        | WorkingSet/绑定、LightTrackerItem、COW、WorkingSet 创建 LRO、Compare/Merge、关系和查询 Provider | Working Set 核心能力；命令侧聚合仓储与查询侧 Provider 分离。                                                                              |
-| `alm.requirement`      | Requirement 参考实现、Merge 执行适配、物化请求消费、继承编辑查询回退                            | 业务 BC 参考实现；只读使用 SK 共享聚合/仓储，写入通过事件协作。                                                                           |
+| 包                                              | 当前拥有的职责                                                                                  | 依赖/边界                                                                                                                                 |
+|-------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| `com.airedgesoft.sharekernel.businessframework` | 通用业务对象、属性、版次、排序和轻量只读投影能力；`BusinessObject`/`Revisionable` 等共享契约    | 属于 Shared Kernel 的通用能力，不是 Working Set 业务模型；不得反向依赖各 BC。`validation` 子包存在迁移期旧栈依赖例外，见其包说明。        |
+| `com.airedgesoft.sharekernel.tracker`           | Tracker 聚合根、创建/改名命令、Tracker 只读 Provider、创建后绑定事件                            | Tracker 是独立聚合。当前仍直接使用 `workingset` 包的 `WorkingSet`、`Classification` 类型；这是同进程实现依赖，不等于已冻结的跨 BC 合同。 |
+| `com.airedgesoft.sharekernel.productspace`      | ProductSpace 聚合根、创建/删除命令、ProductSpace 仓储                                            | ProductSpace 是独立聚合；创建后通过事件推进默认 Tracker 与绑定，剩余差距见 §4。                                                          |
+| `com.airedgesoft.sharekernel.workingset`        | WorkingSet/绑定、LightTrackerItem、COW、WorkingSet 创建 LRO、Compare/Merge、关系和查询 Provider | Working Set 核心能力；命令侧聚合仓储与查询侧 Provider 分离。                                                                              |
+| `com.airedgesoft.alm.requirement`               | Requirement 参考实现、Merge 执行适配、物化请求消费、继承编辑查询回退                            | 业务 BC 参考实现；只读使用 SK 共享聚合/仓储，写入通过事件协作。                                                                           |
 
-`sk.businessframework.domain` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
-`sk.workingset.domain.TrackerItem`
+`com.airedgesoft.sharekernel.businessframework.domain` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
+`com.airedgesoft.sharekernel.workingset.domain.TrackerItem`
 的公共工作集契约不是同一概念；不得因为命名相近而把二者互相替代。
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
@@ -83,8 +83,8 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 ## 6. 未验证与阻塞
 
 - `RequestThreadHolder` 已在写侧仓储中移除：审计事实由 WorkingSet/`LightTrackerItem`/Requirement/Tracker
-  聚合携带，应用层在构造或修改时注入；`sk.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
-- 2026-11-22 全量测试：sharedkernel 33、alm 16、ArchitectureTest 14 通过；deploys 154 项中 21 failures + 10 errors，集中在
+  聚合携带，应用层在构造或修改时注入；`com.airedgesoft.sharekernel.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
+- 2026-11-22 全量测试：shared-kernel 33、alm 16、ArchitectureTest 14 通过；deploys 154 项中 21 failures + 10 errors，集中在
   Merge、Binding、Tracker、Requirement 与 Snowflake 的既有语义/夹具问题。时间类型统一为 epoch 毫秒、仓储审计解耦相关的测试均通过。
 - 2026-11-22 针对性回归：共享 Tracker 列表可见/非共享隔离、Requirement 读侧、Merge `claim`/`save` 约定的编译与局部测试通过；不能替代全量集成回归。
 - 本页不把代码现状反向确认为业务政策；产品空间、Tracker、LTI 和 Merge 的业务语义仍以 BASELINE、ADR 和 T1～T4 契约为准。

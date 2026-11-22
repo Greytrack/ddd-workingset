@@ -1,6 +1,6 @@
 # D-007/D-008/D-010：TrackerItem 公共契约、LightTrackerItem 权威聚合与业务 BC 聚合（最小模型）
 
-**状态：Draft / Candidate；领域责任由 D-007/D-008 确认，属性与物化协议见已冻结 T3；图未纳入正式基线。**
+**状态：Draft / Candidate（领域责任由 D-007/D-008 确认；属性与物化协议见已冻结 T3；图未纳入正式基线）**
 
 目的：表达 TrackerItem 公共契约、LightTrackerItem 权威聚合、各业务 BC 聚合与 Working Set 的关系。范围：跨 BC 的公共 Item
 能力契约、身份/来源/定位权威与聚合边界。依据：[D-007](../reviews/2026-11-09-stage-3-architecture-review.md#d-007)、[D-008](../reviews/2026-11-09-stage-3-architecture-review.md#d-008)、[术语](../domain/glossary.md)、[聚合分析](../domain/aggregate-model.md)。

@@ -3,7 +3,6 @@
 - **状态**：Accepted（2026-11-20，用户明确确认按此方案实施）。
 - **替代范围**：替代 [ADR-0005](0005-merge-execution-model.md) 与 D-019 关于「Checkpoint 独立聚合」的部分决定。保留
   MergeEntry 归轮次、已有证据要求及业务 BC 和 LightTrackerItem 的独立提交。
--
 
 **关联**：[执行契约 §6](../domain/merge-execution-contract-v1.md#6-合并确认与跨轮次查询)、[设计图](../diagrams/merge-entry-lifecycle.md)、[SCN-058](../scenarios/core-scenarios.md)。
 

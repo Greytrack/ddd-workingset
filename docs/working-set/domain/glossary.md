@@ -35,9 +35,9 @@
 | `CONCEPT-027` | **MergeRound／合并轮次**                     | 一页合并决策的执行载体聚合；记录本轮参数、条目、进度与唯一终态结果。                                                                                                                                                                         | 不是三类核心聚合之一；终态不可重开。                                                                                     |
 | `CONCEPT-028` | **MergeCheckpoint／合并检查点**              | 跨轮次查询用的当前确认；确认记录归产生它的 MergeEntry，不证明内容相等。                                                                                                                                                                      | 不等同 Apply Result；不按 Working Set 定位。                                                                             |
 | `CONCEPT-029` | **WorkingSetCreation／工作集创建任务**       | 按用户选择范围创建子工作集的异步执行记录；保存范围、进度与结果。                                                                                                                                                                             | 不拥有 Working Set/Tracker/LTI；不是创建入口本身。                                                                       |
-| `CONCEPT-030` | **Shared Kernel 内部模块**                   | `sharedkernel` 内的代码组织单元，如 `businessframework`、`tracker`、`productspace`、`workingset`；用于承载不同模型区域。                                                                                                                     | 不自动等于独立限界上下文、微服务或已批准部署单元。                                                                       |
+| `CONCEPT-030` | **Shared Kernel 内部模块**                   | `shared-kernel` 内的代码组织单元，如 `businessframework`、`tracker`、`productspace`、`workingset`；用于承载不同模型区域。                                                                                                                     | 不自动等于独立限界上下文、微服务或已批准部署单元。                                                                       |
 | `CONCEPT-031` | **只读共享聚合访问**                         | 业务 BC 以只读方式使用 SK 共享聚合/仓储完成身份、来源和就绪校验；不得保存、删除或修改 SK 聚合状态。                                                                                                                                          | 不等于获得 SK 写入权；不替代跨聚合原子校验或事件协作。                                                                   |
-| `CONCEPT-032` | **Business Object Framework／业务对象框架**  | `sk.businessframework` 提供的通用业务对象、属性、版次和排序能力，供多个 BC 复用。                                                                                                                                                            | 不是 Working Set 业务模型；其 `BusinessObject` 与 `TrackerItem` 公共工作集契约不是同一概念。                             |
+| `CONCEPT-032` | **Business Object Framework／业务对象框架**  | `com.airedgesoft.sharekernel.businessframework` 提供的通用业务对象、属性、版次和排序能力，供多个 BC 复用。                                                                                                                                                            | 不是 Working Set 业务模型；其 `BusinessObject` 与 `TrackerItem` 公共工作集契约不是同一概念。                             |
 | `CONCEPT-033` | **Folder Tracker／文件夹 Tracker**           | 承载 Folder 业务对象的 Tracker，应用编排默认纳入。                                                                                                                                                                                           | 业务行为见 [ADR-0008](../adr/0008-tracker-third-level-container.md)。                                                    |
 | `CONCEPT-034` | **Folder／文件夹**                           | Folder Tracker 下的单版次业务对象，可编辑、可删除，并可通过父子关系形成树。                                                                                                                                                                  | 不是 Tracker；不等同文件夹容器；不参与 Compare/Merge。                                                                   |
 
@@ -78,6 +78,14 @@
 5. **Working Set 谱系**（`parentWorkingSetId`）与 Tracker 派生链也是不同维度；Compare/Merge 只允许直属父子工作集。
 6. **Source-backed** 表达“未物化但存在”；不得把无本地内容行当作不存在。
 7. **分类共享特性**是分类出厂设定，**Tracker 共享特性**是创建时确定的协作方式。允许的组合见 [POL-003](facts.md)。
+
+## 书写约定
+
+- 领域概念在中文行文中写作 **Working Set（工作集）**；指代代码类型时写作 `WorkingSet`、`LightTrackerItem`、`MergeRound`、`ProductSpace`。
+- `LightTrackerItem` 在同一文档首次出现后可使用缩写 `LTI`；`TrackerItem`、`Tracker`、`MergeEntry` 不使用缩写。
+- `产品空间` 是 `ProductSpace` 的中文表述，同一段落内二者择一，不交替使用。
+- 文档状态统一写作 `**状态：<Draft|Reviewed|Accepted|Historical|Superseded>（说明）**`；ADR 使用 [ADR 模板](../adr/ADR-TEMPLATE.md) 的元信息列表。
+- 引用使用稳定编号（`FACT-` / `POL-` / `INV-` / `QUESTION-` / `SCN-` / `ADR-`），不使用“上文所述”等相对指代。
 
 ## 历史术语（仅追溯，不作为当前模型）
 

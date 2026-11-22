@@ -1,6 +1,6 @@
 # DDD 反模式扫描与事务约束修正
 
-状态：Reviewed；TC-002 限定裁定为 Confirmed，整改方案细节仍 Draft。
+**状态：Reviewed（TC-002 限定裁定为 Confirmed；整改方案细节仍 Draft）**
 
 ## 依据和范围
 

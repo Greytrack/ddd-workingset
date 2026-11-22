@@ -53,7 +53,7 @@ flowchart LR
     subgraph R["WorkingSet 聚合"]
         Root["AR WorkingSet"]
         Value["Binding"]
-        Root --- Value
+        Root -->|"聚合内 Entity"| Value
     end
     subgraph T["Tracker 独立聚合 D-001"]
         Other["Tracker AR"]
@@ -91,8 +91,9 @@ flowchart LR
         TR["AR Tracker"]
     end
     WS -->|"范围关联 - 身份映射待定"| TR
-    Q["Item 归属与来源证据责任待确认 - 此节点非聚合"]
 ```
+
+Item 归属与来源证据的责任划分在该图绘制时待确认（D-007 已关闭），故本图不再保留悬浮节点。
 
 ## AP-003：Manifest 发布指针（当前不采用，D-010）
 

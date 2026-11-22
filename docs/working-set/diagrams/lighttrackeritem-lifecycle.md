@@ -29,7 +29,7 @@ flowchart LR
     R0["R0（WS0）已物化"]
     R1["R1（WS1）已物化"]
     R2["R2（WS2）<br/>SourceLocalId=R1"]
-    R0 -->|"派生"| R1
+    R0 -.->|"派生层级"| R1
     R1 -->|"有效来源定位"| R2
 ```
 

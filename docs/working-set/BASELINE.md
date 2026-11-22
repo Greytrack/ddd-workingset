@@ -88,6 +88,6 @@ T5 验收、旧 T7-D 冻结清单、旧 V4 迁移脚本和旧同步写 Port 均�
 | 2026-11-21 | ADR-0009 冻结值分发；ADR-0010 基线时间派生；产品空间删除拒绝与 Tracker 可见性                                                                                  |
 | 2026-11-21 | V3 审计列对齐（`created_by`/`created_time` 取代 `created_at`）；`light_tracker_items` 退出生产与测试主路径；Checkpoint 承载表统一为 `air_ws_items_merge_index` |
 | 2026-11-22 | 时间类型统一为 epoch 毫秒（`long`/`Long`）；`RequestThreadHolder` 移出写侧仓储、审计事实由聚合携带；创建/扩展快照表移除并统一按 Tracker 基线时间派生           |
-| 2026-11-22 | 文档治理与实现同步：单一权威导航、断链修复、历史/现行分离；补充共享 Tracker 列表可见性、Merge `requestId` 原子认领与 LTI 分类列口径。**不改变接受范围**。       |
+| 2026-11-22 | 文档治理与实现同步：单一权威导航、断链与锚点修复、历史/现行分离、跨文件整表去重、Mermaid 状态与关系线修正、术语与状态标记统一；补充共享 Tracker 列表可见性、Merge `requestId` 原子认领与 LTI 分类列口径。**不改变接受范围**。       |
 
 完整过程、异议与旧结论见 [评审索引](reviews/README.md) 与 Git 历史。

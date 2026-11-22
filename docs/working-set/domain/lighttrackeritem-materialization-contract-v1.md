@@ -4,7 +4,6 @@
 
 - 日期：2026-11-11
 - 阶段：阶段 5 契约层 T3（[阶段 5 契约层计划](../reviews/2026-11-10-stage-5-contract-plan.md)）
--
 
 已确认依据：D-007～D-019、FACT-014～023/027、INV-024～052/061～063/069～071、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)
 、SCN-019～049
@@ -198,13 +197,10 @@ K1′～K3′ 的接受范围对应 INV-069～071，见 [不变量登记](invari
 
 ## 11. 追溯与下一步
 
--
-
 追溯：D-007～D-019、FACT-014～023/027、INV-024～052/061～063/069～071、SCN-019～049、SCN-066～068、[ADR-0002](../adr/0002-lighttrackeritem-authoritative-aggregate.md)、[ADR-0003](../adr/0003-cow-event-driven-final-consistency.md)。
--
+
 图：[LightTrackerItem 生命周期](../diagrams/lighttrackeritem-lifecycle.md)、[物化状态与首次物化时序](../diagrams/lighttrackeritem-materialization.md)。
 
-- 评审：[T3 评审记录](../reviews/2026-11-11-t3-materialization-review.md)。
--
+评审：[T3 评审记录](../reviews/2026-11-11-t3-materialization-review.md)。
 
 实施与恢复：[S3 首次物化](../implementation/t5-s3-verification-result.md)、[S4 恢复](../implementation/t5-s4-verification-result.md)。

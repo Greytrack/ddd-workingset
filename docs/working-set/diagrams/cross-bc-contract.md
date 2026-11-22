@@ -37,26 +37,13 @@ Port。该补充不改变 K1″/K2″。
 
 ## 2. 能力声明
 
-| 标记              | Part / DQA | ALM / GateFlow | 不支持时的契约行为                         |
-|-------------------|------------|----------------|--------------------------------------------|
-| `comparable`      | false      | true           | `CapabilityNotSupported`，不得报「无差异」 |
-| `mergeable`       | false      | true           | `CapabilityNotSupported`，不得假装已合并   |
-| `derivable`       | false      | true           | `CapabilityNotSupported`，不得走派生路径   |
-| `creatable`       | 按 BC 合同 | 按 BC 合同     | 共享 Tracker 下实际归默认工作集（POL-007） |
-| `historyReadable` | 按对象     | 按对象         | `HistoryUnavailable`，不得用当前值代替     |
+五个能力标记（`comparable` / `mergeable` / `derivable` / `creatable` / `historyReadable`）的取值与"不支持时的契约行为"以
+[T4 §3.4](../domain/cross-bc-contract-v1.md#34-能力声明与协作范围) 为唯一权威；本图不复述取值表。
 
 ## 3. 九分类适用矩阵（K2″）
 
-| 用例              | NotFound | NotIncluded | Denied | Deleted | HistoryUnavailable | Preparing | CapabilityNotSupported | DependencyUnavailable | Unknown |
-|-------------------|----------|-------------|--------|---------|--------------------|-----------|------------------------|-----------------------|---------|
-| create 范围       | —        | —           | ✔     | —       | —                  | ✔        | —                      | ✔                    | ✔      |
-| create 对象并纳入 | —        | ✔          | ✔     | —       | —                  | ✔        | ✔                     | ✔                    | ✔      |
-| extend            | —        | ✔          | ✔     | —       | ✔                 | ✔        | ✔                     | ✔                    | ✔      |
-| resolve           | ✔       | ✔          | ✔     | ✔      | ✔                 | ✔        | ✔                     | ✔                    | —       |
-| diff              | —        | —           | ✔     | —       | ✔                 | ✔        | ✔                     | —                     | ✔      |
-| merge             | —        | —           | ✔     | ✔      | ✔                 | ✔        | ✔                     | ✔                    | ✔      |
-
-`—` 表示该用例不应以该分类表达；**不要求每个接口统一返回九类**。
+九分类词汇表与各用例适用子集见 [T4 §5.2](../domain/cross-bc-contract-v1.md#52-各用例适用矩阵)；`—` 表示该用例不应以该分类表达，
+**不要求每个接口统一返回九类**。
 
 ### 3.1 `resolve` 的判定顺序
 

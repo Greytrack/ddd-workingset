@@ -19,7 +19,7 @@
 | **MergeEntry**                         | MergeRound 内 Entity                           | 轮次内 `Entry.id`；双侧业务定位保存在证据中                                                    | 证据与决定绑定；终态后不可重执行                                                                                                                   | 引用 Difference 证据                                            |
 | **合并确认**                           | MergeEntry 持有的值对象                        | 无独立身份；保存时沿用条目 ID                                                                  | 与轮次结果同事务；确认不证明内容相等                                                                                                               | 跨轮次只读查询按规范化 Tracker 对、家族和双侧版次命中           |
 | **TrackerItem**                        | 公共契约（非聚合）                             | 无                                                                                             | 公共身份、Revision 与生命周期能力声明                                                                                                              | 业务 BC 聚合实现                                                |
-| **BusinessObject（Working Set 契约）** | 公共能力接口（非聚合）                         | 无                                                                                             | `delete/undelete/delete2` 能力声明；实际规则由 BC 拥有。与 `sk.businessframework` 的同名通用接口不是同一概念                                       | `TrackerItem` 继承                                              |
+| **BusinessObject（Working Set 契约）** | 公共能力接口（非聚合）                         | 无                                                                                             | `delete/undelete/delete2` 能力声明；实际规则由 BC 拥有。与 `com.airedgesoft.sharekernel.businessframework` 的同名通用接口不是同一概念                                       | `TrackerItem` 继承                                              |
 | **Reference／Association**             | SK 关系聚合（WorkingSet 不拥有；本轮只发事件） | 业务关系聚合 ID                                                                                | 端点意图、钉版、有效性、修复；不参与 Compare/Merge                                                                                                 | 关系服务消费事件；引用业务对象/变体                             |
 | **WorkingSetCreation**                 | LRO 载体聚合                                   | `creationId`；`requestId` 幂等                                                                 | 任务状态机、范围快照、部分成功明细；不拥有 WorkingSet/Tracker/LTI                                                                                  | ID 引用父/目标 WS                                               |
 
@@ -31,7 +31,7 @@
 
 ## 非聚合的共享能力
 
-`sk.businessframework` 是 Shared Kernel 的通用业务对象、版次、属性与排序能力，不是 Working Set 聚合，也不自动拥有 Working
+`com.airedgesoft.sharekernel.businessframework` 是 Shared Kernel 的通用业务对象、版次、属性与排序能力，不是 Working Set 聚合，也不自动拥有 Working
 Set 的身份或范围语义。它是一个可被多个 BC 复用的能力模块；其 `BusinessObject`/`Revisionable` 契约与
 `com.airedgesoft.sharekernel.workingset.domain.TrackerItem` 的公共工作集契约不是同一概念，不能互相替代。
 

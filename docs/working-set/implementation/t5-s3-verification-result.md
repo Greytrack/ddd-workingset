@@ -2,7 +2,7 @@
 
 # T5-S3 首次 COW 验证结果
 
-**状态：Reviewed。2026-11-12 在本机 PostgreSQL、Redis 与内嵌 Tomcat 上验证。**
+**状态：Reviewed（2026-11-12 在本机 PostgreSQL、Redis 与内嵌 Tomcat 上验证）**
 
 依据：[T3 物化契约](../domain/lighttrackeritem-materialization-contract-v1.md)、[运行时证据](t5-runtime-verification.md)、[验收映射](t5-s0-scenario-test-mapping.md)
 。范围为 AT-03、AT-04、AT-05 的失败前置，以及 INV-037/039/044/050/051/069～071。原任务说明见

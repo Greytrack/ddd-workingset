@@ -18,12 +18,6 @@
 | P2     | `QUESTION-017` | **T7 创建任务的取消、补齐与结果保留**                     | A 不提供取消/补齐，失败后人工按 T2 删除叶子 WS；B 提供取消；C 提供基于已有子 WS 的补齐任务；结果保留期另定                                                                                                                   | 决定任务表生命周期、失败明细保留与恢复入口；当前只支持终态轮询            | 以长任务中断、部分成功、终态后清理验证                   |
 | P2     | `QUESTION-018` | **T7-E 关系构建失败后的重试与修复边界**                   | A 只记录失败明细，人工修复；B 自动重投；C 定时对账修复                                                                                                                                                                       | 决定 Reference/Association 的最终一致责任与幂等键                         | 与 `QUESTION-010` 六类场景合并验证                       |
 
-`QUESTION-002.k`
-已关闭，见 [Shared 默认与删除补位裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)。
-
-`QUESTION-008.b`
-已关闭：取消延期；新增/删除行级接受或忽略，更新逐字段接受或忽略。软删恢复与确认规则见[执行契约 §7](merge-execution-contract-v1.md#7-接收忽略与行级确认)。
-
 ## 已关闭问题索引
 
 以下问题已经用户裁定或由后续契约关闭；保留一行结论和依据，不再作为当前待裁定项。历史论证见对应评审与契约。
@@ -43,11 +37,13 @@
 | `QUESTION-002.i`  | 原“批量派生整批原子”；已由 `QUESTION-002.l` 取代为 T7 创建/扩展部分成功                                                               | T6-F（2026-11-16）、T7-G（2026-11-17）                                                                                                                |
 | `QUESTION-002.j`  | Compare/Merge 候选对按 Tracker 的直接 `sourceId` 派生关系确定：只允许直属派生父子，不允许跨级，不允许派生兄弟节点互配，不做同槽全组合 | 2026-11-17 用户裁定                                                                                                                                   |
 | `QUESTION-002.l`  | 创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO，独立批量派生入口另行定义      | 2026-11-17 用户裁定                                                                                                                                   |
+| `QUESTION-002.k`  | Shared 默认资格与删除补位                                                                                                              | [T6-F 裁定](../reviews/2026-11-16-t6-f-lineage-constraints.md#43-shared-默认与删除补位question-002k2026-11-17-用户确认)                              |
 | `QUESTION-003`    | 现阶段不接入权限；`Caller`/`authorize` 占位已于 2026-11-19 移除，待权限模型完成后重新设计接入边界                                     | D11（2026-11-12）；2026-11-19 实现清理                                                                                                                |
 | `QUESTION-006`    | 软删保留首次物化所需快照并触发派生；永久删除须先软删，并等待仍依赖该来源的索引切换到本地，再清除来源历史                              | [T3 删除与来源保留](lighttrackeritem-materialization-contract-v1.md#删除与来源保留question-006)                                                       |
 | `QUESTION-005`    | 原生新建 Item 由服务端分配身份；回并经直属父子 Merge CREATE 承载                                                                      | D10、T6-C、T6-D                                                                                                                                       |
 | `QUESTION-007`    | Compare/Merge 只允许直属父子双向，兄弟/跨代拒绝                                                                                       | POL-004、FACT-007                                                                                                                                     |
 | `QUESTION-008`    | 字段级 Merge 的执行部分已由 S7 落地；剩余并发恢复转 `QUESTION-008.a`                                                                  | [S7 验证](../implementation/t5-s7-verification-result.md)                                                                                             |
+| `QUESTION-008.b`  | 取消延期；新增/删除行级接受或忽略，更新逐字段接受或忽略；软删恢复与确认规则见执行契约 §7                                             | [T1 §7](merge-execution-contract-v1.md#7-接收忽略与行级确认)                                                                                          |
 | `QUESTION-008.c`  | Checkpoint 按双方变体自身业务版次命中；继承内容按来源版次回读                                                                         | [T1 §6](merge-execution-contract-v1.md#6-合并确认与跨轮次查询)                                                                                        |
 | `QUESTION-008.a`  | 执行中断后接续原轮次；并发 Apply 返回 `RoundInProgress`；业务提交凭据恢复                                                             | T6-B、T1 §8.1                                                                                                                                         |
 | `QUESTION-009`    | 仅支持不可恢复的领域删除；软删/归档/恢复不纳入 T2 本版；绑定移除与聚合删除分开                                                        | T2 K1～K3、POL-016                                                                                                                                    |
@@ -64,8 +60,7 @@
 - D-001～D-018 的逐项裁定与反例：[阶段 3 评审](../reviews/2026-11-09-stage-3-architecture-review.md)。
 - D-019、ProductSpace/Classification、Diff/Merge
   衔接：[阶段 4 评审](../reviews/2026-11-10-stage-4-productspace-classification-review.md)。
--
 
 不变量证据与接受范围：[不变量审查](../reviews/2026-11-10-invariant-evidence-review.md)、[事实与政策基线](facts-policy-baseline-v1.md)。
 
-- GateFlow/DQA/Part 的接入范围：[Shared Kernel 边界](shared-kernel-boundary.md)。
+GateFlow/DQA/Part 的接入范围：[Shared Kernel 边界](shared-kernel-boundary.md)。

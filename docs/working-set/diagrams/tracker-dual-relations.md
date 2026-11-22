@@ -1,6 +1,6 @@
 # Tracker 双维关系：组织树与派生链
 
-**状态：Draft；图中业务语义由 D-003/D-004 确认，图本身未纳入正式基线。**
+**状态：Draft（图中业务语义由 D-003/D-004 确认；图本身未纳入正式基线）**
 
 目的：展示 parentId 和 sourceId 两维共存。范围：非共享 Tracker
 的多级派生与同工作集结构关系。依据：[术语](../domain/glossary.md)、[事实](../domain/facts.md)、[约束分类](../domain/invariants.md)、[D-003](../reviews/2026-11-09-stage-3-architecture-review.md#d-003)、[SCN-014](../scenarios/core-scenarios.md#scn-014-tracker-双维关系)。

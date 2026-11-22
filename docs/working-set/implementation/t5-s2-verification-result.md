@@ -4,7 +4,6 @@
 
 - 范围：来源 Requirement 普通修改 → 修改前不可变快照 → 来源事件发布（AT-03 前半），以及 Spring Boot、Spring Event、雪花 ID
   三项工程前置
--
 
 依据：[T5-S0 设计](t5-s0-minimal-slice-design.md)、[场景-测试映射](t5-s0-scenario-test-mapping.md)、[S1 验证结果](t5-s1-verification-result.md)
 

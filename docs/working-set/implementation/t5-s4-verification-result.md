@@ -2,7 +2,7 @@
 
 # T5-S4 一致性恢复与回归
 
-**状态：Reviewed。2026-11-12，本机 PostgreSQL、Redis 与内嵌 Tomcat。**
+**状态：Reviewed（2026-11-12，本机 PostgreSQL、Redis 与内嵌 Tomcat 验证）**
 
 依据为 [S3 验证](t5-s3-verification-result.md)、[场景映射](t5-s0-scenario-test-mapping.md)
 与 [T3 §6～§7](../domain/lighttrackeritem-materialization-contract-v1.md)。对应

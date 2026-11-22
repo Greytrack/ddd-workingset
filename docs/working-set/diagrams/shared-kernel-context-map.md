@@ -1,11 +1,10 @@
 # Shared Kernel 与四个业务 Bounded Context
 
-- **文档状态**：Reviewed
-- **约束状态**：`AC-001 Confirmed`
-- **设计阶段**：阶段 3.0 企业架构外框
-- **依据**：`USER-ARCH-2026-11-09` 的明确说明及两张原始架构示意图
-- **相关文档**：[Shared Kernel 边界](../domain/shared-kernel-boundary.md)、[候选 Context Map](../domain/context-map.md)
-- **范围**：实线表达已确认的依赖方向；虚线只表达待设计的局部协作，不表示部署、聚合包含或共同事务。
+**状态：Reviewed（AC-001 已确认；阶段 3.0 企业架构外框）**
+
+- 依据：`USER-ARCH-2026-11-09` 的明确说明及两张原始架构示意图
+- 相关文档：[Shared Kernel 边界](../domain/shared-kernel-boundary.md)、[候选 Context Map](../domain/context-map.md)
+- 范围：实线表达已确认的依赖方向；虚线只表达待设计的局部协作，不表示部署、聚合包含或共同事务。
 
 ```mermaid
 flowchart TB

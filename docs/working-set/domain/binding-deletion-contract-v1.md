@@ -177,10 +177,8 @@ WorkingSet 绑定时返回 `409 SpaceStillBound`。每次消费复核准入，�
 
 ## 10. 追溯与下一步
 
--
-
 追溯：FACT-024～026、POL-012～016、INV-053～060、INV-064～068、SCN-050～054、SCN-061～065、[ADR-0004](../adr/0004-productspace-independent-aggregate.md)。
--
+
 图：[ProductSpace/Tracker/WorkingSet 关系](../diagrams/productspace-tracker-workingset.md)、[绑定与删除生命周期](../diagrams/binding-lifecycle.md)。
 
 - 评审：[T2 评审记录](../reviews/2026-11-11-t2-binding-deletion-review.md)。

@@ -2,7 +2,7 @@
 
 **状态：Draft（目录用途；不接受具体领域结论）**
 
-领域知识按 [BASELINE](../BASELINE.md) 的接受范围读取。当前规则与历史候选分开登记，本目录不把候选资料自动升级为 Accepted。
+领域知识按 [BASELINE](../BASELINE.md) 的接受范围读取。当前规则与历史候选分开登记，本目录不把候选资料自动升级为 Accepted；同一主题只在一处声明，分工见[单一权威与去重规则](../README.md#单一权威与去重规则)。
 
 ## 当前阅读
 
@@ -13,9 +13,8 @@
 - [事实与政策主题基线 v1](facts-policy-baseline-v1.md)（Accepted）
 - [不变量](invariants.md)（当前陈述；已接受子集以事实政策基线为准）
 - [开放问题](open-questions.md)
--
 
-契约：[T1 Merge](merge-execution-contract-v1.md) · [T2 绑定与删除](binding-deletion-contract-v1.md) · [T3 物化](lighttrackeritem-materialization-contract-v1.md) · [T4 跨 BC](cross-bc-contract-v1.md) · [T7 创建 LRO](working-set-creation-lro-design.md)
+当前契约：[T1 Merge](merge-execution-contract-v1.md) · [T2 绑定与删除](binding-deletion-contract-v1.md) · [T3 物化](lighttrackeritem-materialization-contract-v1.md) · [T4 跨 BC](cross-bc-contract-v1.md) · [T7 创建 LRO](working-set-creation-lro-design.md)
 
 ## 历史与候选
 

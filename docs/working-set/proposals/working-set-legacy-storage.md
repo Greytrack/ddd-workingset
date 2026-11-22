@@ -1,6 +1,6 @@
 # Working Set 旧表存储迁移方案
 
-**Status: Draft**
+**状态：Historical（Working Set 聚合根旧表迁移方案；存量切换需单独对账与演练）**
 
 本方案基于 [当前设计基线](../BASELINE.md) 与 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)。Working Set
 聚合根改用旧表 `air_inst_workingset`，保留工作集身份、不可变父级、默认工作集保护、创建任务可见性以及绑定语义。现行映射见 [

@@ -2,8 +2,6 @@
 
 **状态：Historical（2026-11-12 记录；公共生命周期能力已并入 [T4](cross-bc-contract-v1.md)，当前以 T4 为准）**
 
--
-
 依据：[T4 跨 BC 公共契约](cross-bc-contract-v1.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[S7 验证](../implementation/t5-s7-verification-result.md)
 
 - 范围：`BusinessObject` / `TrackerItem` 的公共生命周期能力声明
@@ -27,7 +25,7 @@ BusinessObject（SK 顶级公共能力）
        └─ 业务聚合实现（Requirement、Part、GateFlow 对象、DQA 对象）
 ```
 
-候选签名（D14 已按此落地到 `sk.workingset.domain`）：
+候选签名（D14 已按此落地到 `com.airedgesoft.sharekernel.workingset.domain`）：
 
 ```java
 public interface BusinessObject {
@@ -75,7 +73,7 @@ public interface TrackerItem extends BusinessObject {
 
 - ALM 现有 `delete`/`undelete`/`delete2` 验收作为首个实现证据；不代表其他 BC 已实现。
 - 其他 BC 接入时必须补齐自身删除规则、guard、失败语义和测试。
-- D14 已把 `BusinessObject` 与 `TrackerItem` 继承加入生产接口（`sk.workingset.domain`），`Requirement` 实现三个能力；
+- D14 已把 `BusinessObject` 与 `TrackerItem` 继承加入生产接口（`com.airedgesoft.sharekernel.workingset.domain`），`Requirement` 实现三个能力；
   `RequirementLifecycleService.delete2` 先调用聚合 guard 再永久删除。`mvn -B test` 78 项通过。
 
 ## 6. 开放问题

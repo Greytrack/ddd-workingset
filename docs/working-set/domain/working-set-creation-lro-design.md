@@ -3,12 +3,9 @@
 **状态：Reviewed（T7-A；§2 保留已确认决策，接口与运行细节见 [T7-A 评审](../reviews/2026-11-13-t7-a-creation-lro-review.md)
 ，未发布）**
 
--
-
 依据：[FACT-028](../domain/facts.md)、[多级 WorkingSet 谱系](working-set-lineage-design.md)、[T2 绑定与删除](binding-deletion-contract-v1.md)、[T3 物化](lighttrackeritem-materialization-contract-v1.md)、[T4 跨 BC](cross-bc-contract-v1.md)、[T1 Merge 执行](merge-execution-contract-v1.md)、[ADR-0005](../adr/0005-merge-execution-model.md)
 
 - 范围：创建工作集的异步长流程（LRO）；区别于现有的原子操作入口
--
 
 追溯：[状态图](../diagrams/working-set-creation-lro.md)、[SCN-075](../scenarios/core-scenarios.md#scn-075-按范围异步创建工作集)
 

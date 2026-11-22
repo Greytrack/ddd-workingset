@@ -36,7 +36,7 @@ sequenceDiagram
     U->>R: submitDecisions requestId + 1..50 条 evidence/decision
     R->>R: 校验证据、同一 Tracker 对、活跃轮次
     R-->>U: MergeRoundId 状态 Preparing
-    R-)R: 发布 MergeRoundSubmittedEvent（提交后异步）
+    R--)R: 发布 MergeRoundSubmittedEvent（提交后异步）
 
     R->>R: apply 取得执行权，状态 Running
     loop 每个未完成条目
@@ -79,11 +79,13 @@ stateDiagram-v2
     Applying --> Applied: BC 接受
     Applying --> Rejected: BC 拒绝
     Applying --> Conflict: 目标并发修改
+    Applying --> StaleEvidence: 提交依据已过期
     Applied --> Confirmed: 符合确认规则，随轮次同事务持久化
     Applied --> [*]: 无需确认
     Confirmed --> [*]
     Rejected --> [*]: 重做须新建 MergeRound
     Conflict --> [*]: 重新 compare 后新建轮次
+    StaleEvidence --> [*]: 重新 compare 后新建轮次
 ```
 
 状态定义与责任边界见 [T1 §5、§8](../domain/merge-execution-contract-v1.md)

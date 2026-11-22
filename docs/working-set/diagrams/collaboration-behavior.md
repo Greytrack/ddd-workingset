@@ -1,6 +1,6 @@
 # Checkpoint 适用性与 GateFlow 内容切换
 
-**状态：Draft / Candidate。** 业务结果与候选实施范围分别见下节。
+**状态：Draft / Candidate（业务结果已确认；实施范围候选）**
 
 早期 Merge Session 与 VIRTUAL 固定来源图已退出本页。当前合并时序见 [T1 MergeEntry 生命周期](merge-entry-lifecycle.md)，首次
 COW 见 [T3 物化图](lighttrackeritem-materialization.md)

@@ -1,6 +1,6 @@
 # 旧表绑定兼容
 
-**Status: Draft**
+**状态：Historical（2026-11-19 实施约束记录；不代表当前空库 schema）**
 。2026-11-19，团队确认使用旧表这一项实施约束；本文不替代正式设计基线或 [ADR-0004](../adr/0004-productspace-independent-aggregate.md)。
 
 | 术语           | 实施口径                                                                                                                                                                                  |

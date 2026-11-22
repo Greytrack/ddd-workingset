@@ -35,4 +35,4 @@ T7-E 和 T7-F。
 `mvn -B clean test` 在 PostgreSQL、Redis 和内嵌 Tomcat 环境通过 105 项，含 ArchUnit。失败、错误、跳过均为
 0。批次恢复验收覆盖提交后阻塞与并发重投，未模拟进程强制退出。
 
-目标已有同族时先认已提交索引，来源随后软删或不可读仍计为跳过；回归测试见 [WorkingSetItemIndexerTest](../../../deploys/src/test/java/sk/workingset/application/WorkingSetItemIndexerTest.java)。
+目标已有同族时先认已提交索引，来源随后软删或不可读仍计为跳过；回归测试见 [WorkingSetItemIndexerTest](../../../deploys/src/test/java/com/airedgesoft/sharekernel/workingset/application/WorkingSetItemIndexerTest.java)。

@@ -8,5 +8,11 @@
 
 ## 当前提案
 
+暂无待裁定提案。
+
+## 历史提案
+
 - [aggregate-boundary-options.md](aggregate-boundary-options.md)：**Historical**。Working Set 主导、原 AP-002（Branch 根不兼容
   D-001，附修订建议）、版本化 Manifest 的方案比较；D-010 已收敛为最小模型。
+- [legacy-binding-storage.md](legacy-binding-storage.md)：**Historical**。旧表绑定兼容口径：空间挂载、Folder Tracker、解绑与隐藏。
+- [working-set-legacy-storage.md](working-set-legacy-storage.md)：**Historical**。Working Set 聚合根旧表迁移方案与存量对账步骤。

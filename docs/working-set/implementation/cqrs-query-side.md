@@ -9,10 +9,10 @@
 ## 已落地
 
 ```text
-sk.workingset.application.command
-sk.workingset.application.query
-alm.requirement.application.command
-alm.requirement.application.query
+com.airedgesoft.sharekernel.workingset.application.command
+com.airedgesoft.sharekernel.workingset.application.query
+com.airedgesoft.alm.requirement.application.command
+com.airedgesoft.alm.requirement.application.query
 ```
 
 - 命令服务：`WorkingSetCommandService`、`WorkingSetCreationService`、`WorkingSetDeletionService`、`MergeExecutionService`

@@ -1,6 +1,6 @@
 # Working Set 候选 Context Map
 
-**状态：Draft — Candidate Strategic Design**
+**状态：Draft / Candidate（战略设计；企业外框以 AC-001 为准）**
 
 本页区分业务能力、子域、限界上下文和部署。它不是微服务拆分建议，也不把每个名词机械变成上下文。依据见 [证据登记](evidence-register.md)
 ，关键不确定性见 [开放问题](open-questions.md)
