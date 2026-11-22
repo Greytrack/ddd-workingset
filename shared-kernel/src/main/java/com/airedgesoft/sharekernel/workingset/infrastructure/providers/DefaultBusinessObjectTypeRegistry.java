@@ -2,14 +2,11 @@ package com.airedgesoft.sharekernel.workingset.infrastructure.providers;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectType;
 import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -41,17 +38,14 @@ public class DefaultBusinessObjectTypeRegistry implements BusinessObjectTypeRegi
     private static Map<Long, BusinessObjectTypeAdapter> index(List<BusinessObjectTypeAdapter> adapters) {
         Map<Long, BusinessObjectTypeAdapter> byType = new HashMap<>();
         for (BusinessObjectTypeAdapter adapter : adapters) {
-            Set<BusinessObjectType> types = adapter.types();
+            Set<Long> types = adapter.types();
             if (adapter.catalog() == null) {
                 throw new IllegalStateException("Business object type lacks catalog: " + types);
             }
-            if (adapter.sourceLock() == null) {
-                throw new IllegalStateException("Business object type lacks source lock: " + types);
-            }
-            for (BusinessObjectType type : types) {
-                BusinessObjectTypeAdapter previous = byType.putIfAbsent(type.value(), adapter);
+            for (Long type : types) {
+                BusinessObjectTypeAdapter previous = byType.putIfAbsent(type, adapter);
                 if (previous != null) {
-                    throw new IllegalStateException("Duplicate business object type: " + type.value());
+                    throw new IllegalStateException("Duplicate business object type: " + type);
                 }
             }
         }
@@ -59,27 +53,27 @@ public class DefaultBusinessObjectTypeRegistry implements BusinessObjectTypeRegi
     }
 
     @Override
-    public BusinessObjectTypeAdapter forTracker(TrackerId trackerId) {
+    public BusinessObjectTypeAdapter forTracker(Long trackerId) {
         Tracker tracker = tracker(trackerId);
         BusinessObjectTypeAdapter adapter = byType.get(tracker.numericClassificationId());
         if (adapter == null) {
             throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED,
                     "No business object adapter for tracker classification "
-                            + tracker.numericClassificationId() + " (tracker " + trackerId.value() + ")");
+                            + tracker.numericClassificationId() + " (tracker " + Long.toString(trackerId) + ")");
         }
         return adapter;
     }
 
     @Override
-    public BusinessObjectTypeAdapter forItem(LocalId localId) {
+    public BusinessObjectTypeAdapter forItem(Long localId) {
         return items.findById(localId)
                 .map(item -> forTracker(item.trackerId()))
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "item index not found: " + localId.value()));
+                        "item index not found: " + localId));
     }
 
-    private Tracker tracker(TrackerId trackerId) {
+    private Tracker tracker(Long trackerId) {
         return trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, trackerId.value()));
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
     }
 }

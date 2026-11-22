@@ -1,16 +1,12 @@
 package com.airedgesoft.sharekernel.workingset.infrastructure.repositories;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.SharedKernelResultCode;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRevisionEntity;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,15 +49,15 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             """;
 
     private static final RowMapper<LightTrackerItem> MAPPER = (rs, rowNum) -> LightTrackerItem.restore(
-            LocalId.of(rs.getLong("local_id")),
-            CommonId.of(rs.getLong("common_id")),
-            TrackerId.of(rs.getLong("branch_id")),
-            WorkingSetId.of(rs.getLong("workingset_id")),
-            Revision.of(rs.getInt("revision")),
-            LocalId.of(rs.getLong("source_local_id")),
-            Revision.of(rs.getInt("source_revision")),
+            rs.getLong("local_id"),
+            rs.getLong("common_id"),
+            rs.getLong("branch_id"),
+            rs.getLong("workingset_id"),
+            rs.getInt("revision"),
+            rs.getLong("source_local_id"),
+            rs.getInt("source_revision"),
             rs.getBoolean("materialized"), rs.getBoolean("deleted"),
-            Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).map(Revision::of).toList(),
+            Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).toList(),
             new ItemClassification(rs.getLong("work_space_id"), rs.getLong("sub_class_id")),
             rs.getString("created_by"));
 
@@ -92,7 +88,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
         if (affected == 0) {
             boolean occupied = Boolean.TRUE.equals(jdbc.queryForObject("""
                     SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?)
-                    """, Boolean.class, item.workingSetId().numericValue(), item.commonId().numericValue()));
+                    """, Boolean.class, item.workingSetId(), item.commonId()));
             if (!occupied) {
                 throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
                         "Could not claim item index " + item.localId());
@@ -111,11 +107,11 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                     "LightTrackerItem write requires an actor: " + item.localId());
         }
         return jdbc.update(INSERT + onConflict,
-                ids.nextId(null).longValue(), item.localId().numericValue(), item.commonId().numericValue(),
-                item.revision().value(), item.sourceLocalId().numericValue(), item.sourceRevision().value(),
+                ids.nextId(null).longValue(), item.localId(), item.commonId(),
+                item.revision(), item.sourceLocalId(), item.sourceRevision(),
                 (short) (item.materialized() ? 1 : 0), item.deleted() ? 1 : 0,
                 actor, now,
-                item.trackerId().numericValue(), item.workingSetId().numericValue(),
+                item.trackerId(), item.workingSetId(),
                 item.numericProductSpaceId(), item.classificationId());
     }
 
@@ -127,38 +123,38 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                     SELECT ?, work_space_id, workingset_id, master_id, branch_id, common_id, local_id, ?, sub_class_id
                     FROM air_ws_items_index WHERE local_id = ?
                     ON CONFLICT (local_id, revision) DO NOTHING
-                """, ids.nextId(null).longValue(), member.revision().value(), item.localId().numericValue());
+                """, ids.nextId(null).longValue(), member.revision(), item.localId());
     }
 
     @Override
-    public Optional<LightTrackerItem> findByIdForUpdate(LocalId localId) {
+    public Optional<LightTrackerItem> findByIdForUpdate(Long localId) {
         if (jdbc.queryForList("SELECT local_id FROM air_ws_items_index WHERE local_id = ? FOR UPDATE",
-                Long.class, localId.numericValue()).isEmpty()) {
+                Long.class, localId).isEmpty()) {
             return Optional.empty();
         }
         return findById(localId);
     }
 
     @Override
-    public Optional<LightTrackerItem> findById(LocalId localId) {
+    public Optional<LightTrackerItem> findById(Long localId) {
         return jdbc.query(
                 "SELECT " + COLUMNS + " FROM air_ws_items_index i WHERE i.local_id = ?",
                 MAPPER,
-                localId.numericValue()).stream().findFirst();
+                localId).stream().findFirst();
     }
 
     @Override
-    public void remove(LocalId id) {
-        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", id.numericValue());
+    public void remove(Long id) {
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", id);
     }
 
     @Override
-    public List<LightTrackerItem> findSourceBackedTargets(LocalId sourceLocalId, Revision sourceRevision) {
+    public List<LightTrackerItem> findSourceBackedTargets(Long sourceLocalId, Integer sourceRevision) {
         return jdbc.query(
                 "SELECT " + COLUMNS + " FROM air_ws_items_index i "
                         + "WHERE i.source_local_id = ? AND i.source_revision = ? AND i.has_copied = 0",
                 MAPPER,
-                sourceLocalId.numericValue(),
-                sourceRevision.value());
+                sourceLocalId,
+                sourceRevision);
     }
 }

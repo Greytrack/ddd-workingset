@@ -1,12 +1,12 @@
 package com.airedgesoft.sharekernel.workingset.adapters;
 
+
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetDeletionService;
 import com.airedgesoft.sharekernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharekernel.workingset.application.query.model.*;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,25 +32,25 @@ public class WorkingSetController {
 
     @DeleteMapping("/{workingSetId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteWorkingSet(@PathVariable String workingSetId) {
-        deletions.deleteWorkingSet(WorkingSetId.of(workingSetId));
+    public void deleteWorkingSet(@PathVariable Long workingSetId) {
+        deletions.deleteWorkingSet(workingSetId);
     }
 
     /**
      * 按 id 查询工作集；创建中的目标工作集返回 Preparing（任务上下文读取见 {@link WorkingSetCreationController#findTarget}）。
      */
     @GetMapping("/{workingSetId}")
-    public WorkingSetView find(@PathVariable String workingSetId) {
-        return WorkingSetView.from(queries.find(WorkingSetId.of(workingSetId)));
+    public WorkingSetView find(@PathVariable Long workingSetId) {
+        return WorkingSetView.from(queries.find(workingSetId));
     }
 
     /**
      * 编辑工作集显示名称与主题色；请求中缺失的字段保持不变。
      */
     @PatchMapping("/{workingSetId}")
-    public WorkingSetView updatePresentation(@PathVariable String workingSetId,
+    public WorkingSetView updatePresentation(@PathVariable Long workingSetId,
                                              @RequestBody UpdateWorkingSetRequest request) {
-        return WorkingSetView.from(commands.updatePresentation(WorkingSetId.of(workingSetId),
+        return WorkingSetView.from(commands.updatePresentation(workingSetId,
                 request.name(), request.color()));
     }
 
@@ -59,8 +59,8 @@ public class WorkingSetController {
      */
     @PostMapping("/{workingSetId}/children")
     @ResponseStatus(HttpStatus.CREATED)
-    public WorkingSetView createChild(@PathVariable String workingSetId, @RequestBody CreateChildRequest request) {
-        return WorkingSetView.from(commands.createChildWorkingSet(WorkingSetId.of(workingSetId),
+    public WorkingSetView createChild(@PathVariable Long workingSetId, @RequestBody CreateChildRequest request) {
+        return WorkingSetView.from(commands.createChildWorkingSet(workingSetId,
                 request.name(), request.color()));
     }
 
@@ -68,24 +68,24 @@ public class WorkingSetController {
      * 查询直接子工作集的 id 列表。
      */
     @GetMapping("/{workingSetId}/children")
-    public List<String> findChildren(@PathVariable String workingSetId) {
-        return queries.findChildren(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
+    public List<String> findChildren(@PathVariable Long workingSetId) {
+        return queries.findChildren(workingSetId).stream().map(String::valueOf).toList();
     }
 
     /**
      * 查询祖先工作集的 id 列表。
      */
     @GetMapping("/{workingSetId}/ancestors")
-    public List<String> findAncestors(@PathVariable String workingSetId) {
-        return queries.findAncestors(WorkingSetId.of(workingSetId)).stream().map(String::valueOf).toList();
+    public List<String> findAncestors(@PathVariable Long workingSetId) {
+        return queries.findAncestors(workingSetId).stream().map(String::valueOf).toList();
     }
 
     /**
      * 界面只读列表：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。
      */
     @GetMapping("/{workingSetId}/trackers")
-    public List<TrackerView> findTrackers(@PathVariable String workingSetId) {
-        return queries.findTrackers(WorkingSetId.of(workingSetId)).stream().map(TrackerView::from).toList();
+    public List<TrackerView> findTrackers(@PathVariable Long workingSetId) {
+        return queries.findTrackers(workingSetId).stream().map(TrackerView::from).toList();
     }
 
     /**
@@ -100,17 +100,17 @@ public class WorkingSetController {
      * 查询工作集的空间绑定与 Tracker 绑定。
      */
     @GetMapping("/{workingSetId}/bindings")
-    public BindingsView listBindings(@PathVariable String workingSetId) {
-        return BindingsView.from(queries.findBindings(WorkingSetId.of(workingSetId)));
+    public BindingsView listBindings(@PathVariable Long workingSetId) {
+        return BindingsView.from(queries.findBindings(workingSetId));
     }
 
     public record WorkingSetView(String workingSetId, String name, boolean defaultWorkingSet,
                                  String parentWorkingSetId, String color) {
         static WorkingSetView from(WorkingSet workingSet) {
-            WorkingSetId parentId = workingSet.parentWorkingSetId();
-            return new WorkingSetView(workingSet.id().value(), workingSet.name(),
+            Long parentId = workingSet.parentWorkingSetId();
+            return new WorkingSetView(Long.toString(workingSet.id()), workingSet.name(),
                     WorkingSet.DEFAULT_ID.equals(workingSet.id()),
-                    parentId == null ? null : parentId.value(), workingSet.color());
+                    parentId == null ? null : Long.toString(parentId), workingSet.color());
         }
 
         static WorkingSetView from(WorkingSetSummary summary) {

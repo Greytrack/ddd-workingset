@@ -1,19 +1,17 @@
 package com.airedgesoft.alm.requirement.application;
 
+
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
@@ -33,8 +31,8 @@ import static org.mockito.Mockito.*;
  */
 class RequirementCreateScopeTest {
 
-    private static final TrackerId TRACKER = TrackerId.of("265625955250112");
-    private static final Revision REVISION = Revision.of(3);
+    private static final Long TRACKER = Long.valueOf("265625955250112");
+    private static final Integer REVISION = 3;
 
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final TrackerRepository trackers = mock(TrackerRepository.class);
@@ -46,7 +44,7 @@ class RequirementCreateScopeTest {
 
     private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
         Tracker tracker = mock(Tracker.class);
-        when(tracker.workingSetId()).thenReturn(WorkingSetId.of(workingSetId));
+        when(tracker.workingSetId()).thenReturn(Long.valueOf(workingSetId));
         when(tracker.sharingMode()).thenReturn(sharingMode);
         return tracker;
     }
@@ -54,8 +52,8 @@ class RequirementCreateScopeTest {
     @BeforeEach
     void stubIdentifiers() {
         when(ids.nextId(null)).thenReturn(100L, 200L, 300L, 400L);
-        WorkingSetId root = WorkingSet.DEFAULT_ID;
-        WorkingSetId child = WorkingSetId.of("259712159403968");
+        Long root = WorkingSet.DEFAULT_ID;
+        Long child = Long.valueOf("259712159403968");
         when(workingSets.findById(root)).thenReturn(Optional.of(new WorkingSet(root, null, List.of(), List.of())));
         when(workingSets.findById(child)).thenReturn(Optional.of(WorkingSet.child(child, root)));
     }
@@ -65,9 +63,9 @@ class RequirementCreateScopeTest {
         Tracker tracker = tracker("1", SharingMode.UNSHARED);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
-        Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, Long.valueOf("1"), "A", "d", REVISION);
 
-        assertEquals(created.localId().value(), created.commonId().value());
+        assertEquals(Long.toString(created.localId()), Long.toString(created.commonId()));
     }
 
     @Test
@@ -75,9 +73,9 @@ class RequirementCreateScopeTest {
         Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
-        Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, Long.valueOf("259712159403968"), "A", "d", REVISION);
 
-        assertNotEquals(created.localId().value(), created.commonId().value());
+        assertNotEquals(Long.toString(created.localId()), Long.toString(created.commonId()));
     }
 
     @Test
@@ -86,7 +84,7 @@ class RequirementCreateScopeTest {
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         DomainException failure = assertThrows(DomainException.class,
-                () -> service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION));
+                () -> service.create(TRACKER, Long.valueOf("1"), "A", "d", REVISION));
         assertSame(FailureReason.NOT_INCLUDED, FailureReason.of(failure));
         verify(repository, never()).save(any());
     }
@@ -96,16 +94,16 @@ class RequirementCreateScopeTest {
         Tracker tracker = tracker("1", SharingMode.SHARED);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
-        Requirement created = service.create(TRACKER, WorkingSetId.of("259712159403968"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, Long.valueOf("259712159403968"), "A", "d", REVISION);
 
-        assertEquals(created.localId().value(), created.commonId().value());
+        assertEquals(Long.toString(created.localId()), Long.toString(created.commonId()));
         verify(repository).save(any());
     }
 
     @Test
     void missing_requested_working_set_rejects_creation() {
         DomainException failure = assertThrows(DomainException.class,
-                () -> service.create(TRACKER, WorkingSetId.of("42"), "A", "d", REVISION));
+                () -> service.create(TRACKER, Long.valueOf("42"), "A", "d", REVISION));
 
         assertSame(BindingResCode.WORKING_SET_NOT_EXISTS, failure.getResCode());
         verify(repository, never()).save(any());
@@ -115,9 +113,9 @@ class RequirementCreateScopeTest {
     void unknown_tracker_is_left_to_persistence_validation() {
         when(trackers.findById(TRACKER)).thenReturn(Optional.empty());
 
-        Requirement created = service.create(TRACKER, WorkingSetId.of("1"), "A", "d", REVISION);
+        Requirement created = service.create(TRACKER, Long.valueOf("1"), "A", "d", REVISION);
 
-        assertNotEquals(created.localId().value(), created.commonId().value());
+        assertNotEquals(Long.toString(created.localId()), Long.toString(created.commonId()));
         verify(repository).save(any());
     }
 }

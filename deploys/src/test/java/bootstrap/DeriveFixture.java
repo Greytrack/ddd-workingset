@@ -1,13 +1,9 @@
 package bootstrap;
 
+
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -28,7 +24,7 @@ final class DeriveFixture {
     }
 
     static Result derive(JdbcTemplate jdbc, String targetWorkingSet, String sourceTrackerId,
-                         String sourceLocalId, Revision revision, CommonId commonId) {
+                         String sourceLocalId, Integer revision, Long commonId) {
         Map<String, Object> source = tracker(jdbc, sourceTrackerId);
         String targetParent = jdbc.queryForObject(
                 "SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?",
@@ -76,11 +72,11 @@ final class DeriveFixture {
 
         Content content = content(jdbc, sourceTrackerId, sourceLocalId, commonId, revision);
         String localId = fixtureId("DERIVED-L-" + UUID.randomUUID());
-        ItemIndexFixture.insert(jdbc, localId, commonId.value(), trackerId, targetWorkingSet, revision.value(),
-                content.localId(), content.revision().value(), false);
+        ItemIndexFixture.insert(jdbc, localId, Long.toString(commonId), trackerId, targetWorkingSet, revision,
+                content.localId(), content.revision(), false);
 
-        LightTrackerItem item = LightTrackerItem.restore(LocalId.of(localId), commonId, TrackerId.of(trackerId),
-                WorkingSetId.of(targetWorkingSet), revision, LocalId.of(content.localId()),
+        LightTrackerItem item = LightTrackerItem.restore(Long.valueOf(localId), commonId, Long.valueOf(trackerId),
+                Long.valueOf(targetWorkingSet), revision, Long.valueOf(content.localId()),
                 content.revision(), false, new ItemClassification(
                         ((Number) source.get("product_space_id")).longValue(),
                         ((Number) source.get("classification_id")).longValue()));
@@ -99,7 +95,7 @@ final class DeriveFixture {
     }
 
     private static Content content(JdbcTemplate jdbc, String sourceTrackerId, String sourceLocalId,
-                                   CommonId commonId, Revision revision) {
+                                   Long commonId, Integer revision) {
         boolean derived = jdbc.queryForObject("SELECT source_id IS NOT NULL FROM trackers WHERE tracker_id = ?",
                 Boolean.class, Long.valueOf(sourceTrackerId));
         if (derived) {
@@ -113,13 +109,13 @@ final class DeriveFixture {
             }
             Map<String, Object> row = rows.getFirst();
             if (!sourceTrackerId.equals(row.get("tracker_id").toString())
-                    || !commonId.value().equals(row.get("common_id").toString())
-                    || revision.value() != ((Number) row.get("revision")).intValue()) {
+                    || !Long.toString(commonId).equals(row.get("common_id").toString())
+                    || revision != ((Number) row.get("revision")).intValue()) {
                 throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
             }
             boolean materialized = (Boolean) row.get("materialized");
             return new Content(materialized ? sourceLocalId : row.get("source_local_id").toString(),
-                    Revision.of(((Number) (materialized ? row.get("revision") : row.get("source_revision"))).intValue()));
+                    ((Number) (materialized ? row.get("revision") : row.get("source_revision"))).intValue());
         }
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT tracker_id, common_id FROM requirements WHERE local_id = ?
@@ -129,7 +125,7 @@ final class DeriveFixture {
         }
         Map<String, Object> row = rows.getFirst();
         if (!sourceTrackerId.equals(row.get("tracker_id").toString())
-                || !commonId.value().equals(row.get("common_id").toString())) {
+                || !Long.toString(commonId).equals(row.get("common_id").toString())) {
             throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
         }
         return new Content(sourceLocalId, revision);
@@ -142,6 +138,6 @@ final class DeriveFixture {
     record Result(String trackerId, String sourceTrackerId, LightTrackerItem item) {
     }
 
-    private record Content(String localId, Revision revision) {
+    private record Content(String localId, Integer revision) {
     }
 }

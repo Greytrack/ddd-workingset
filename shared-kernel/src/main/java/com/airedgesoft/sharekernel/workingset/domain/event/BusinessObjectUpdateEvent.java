@@ -1,8 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Objects;
 
@@ -23,12 +21,12 @@ import java.util.Objects;
  * @param occurredAt        事件发生时间
  */
 public record BusinessObjectUpdateEvent(long eventId,
-                                        LocalId requirementId,
-                                        LocalId sourceLocalId,
-                                        Revision beforeRevision,
-                                        Revision afterRevision,
-                                        LockVersion beforeLockVersion,
-                                        LockVersion afterLockVersion,
+                                        @JsonFormat(shape = JsonFormat.Shape.STRING) Long requirementId,
+                                        @JsonFormat(shape = JsonFormat.Shape.STRING) Long sourceLocalId,
+                                        Integer beforeRevision,
+                                        Integer afterRevision,
+                                        Long beforeLockVersion,
+                                        Long afterLockVersion,
                                         SnapshotRefEvent snapshotRef,
                                         long occurredAt) {
 

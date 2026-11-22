@@ -1,14 +1,9 @@
 package com.airedgesoft.sharekernel.workingset.application.query;
 
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.MergeEvidenceReader;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.*;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.MergeResCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -38,19 +33,19 @@ public class MergeComparisonService {
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public Comparison compare(WorkingSetId source, WorkingSetId target, TrackerId sourceTracker,
-                              TrackerId targetTracker) {
+    public Comparison compare(Long source, Long target, Long sourceTracker,
+                              Long targetTracker) {
         TrackerPair pair = new TrackerPair(source, sourceTracker, target, targetTracker);
         if (!evidence.candidates(source, target).contains(pair)) {
             throw DomainException.withMessage(MergeResCode.NOT_ALLOWED, "trackers must form a direct derivation pair in the supplied working sets");
         }
         ArrayList<Difference> differences = new ArrayList<Difference>();
-        Map<CommonId, LocalId> sources = evidence.familyIds(pair.source());
-        Map<CommonId, LocalId> targets = evidence.familyIds(pair.target());
-        TreeSet<CommonId> families = new TreeSet<>(Comparator.comparing(CommonId::value));
+        Map<Long, Long> sources = evidence.familyIds(pair.source());
+        Map<Long, Long> targets = evidence.familyIds(pair.target());
+        TreeSet<Long> families = new TreeSet<>(Comparator.comparing(Object::toString));
         families.addAll(sources.keySet());
         families.addAll(targets.keySet());
-        for (CommonId family : families) {
+        for (Long family : families) {
             Side left = evidence.read(sources.get(family));
             Side right = evidence.read(targets.get(family));
             if (handled(pair, family, left, right)) {
@@ -72,14 +67,14 @@ public class MergeComparisonService {
         return new Comparison(source, target, System.currentTimeMillis(), List.of(pair), differences);
     }
 
-    private boolean handled(TrackerPair trackers, CommonId family, Side left, Side right) {
+    private boolean handled(TrackerPair trackers, Long family, Side left, Side right) {
         if (left.presence() != Presence.PRESENT || right.presence() != Presence.PRESENT) {
             return false;
         }
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(trackers.source(), trackers.target(), family);
         boolean leftIsA = key.a().equals(trackers.source());
-        Revision aRevision = leftIsA ? left.revision() : right.revision();
-        Revision bRevision = leftIsA ? right.revision() : left.revision();
+        Integer aRevision = leftIsA ? left.revision() : right.revision();
+        Integer bRevision = leftIsA ? right.revision() : left.revision();
         return checkpoints.findLatest(key)
                 .filter(checkpoint -> !checkpoint.revoked())
                 .filter(checkpoint -> Objects.equals(checkpoint.revisionA(), aRevision)

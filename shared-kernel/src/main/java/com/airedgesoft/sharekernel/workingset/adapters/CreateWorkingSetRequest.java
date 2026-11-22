@@ -5,14 +5,15 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreati
 import java.util.List;
 import java.util.Map;
 
-public record CreateWorkingSetRequest(String parentWorkingSetId, String requestId,
-                                      List<String> productSpaceIds, List<String> sharedTrackerIds,
-                                      List<String> unsharedParentTrackerIds, String name,
+public record CreateWorkingSetRequest(Long parentWorkingSetId, String requestId,
+                                      List<Long> productSpaceIds, List<Long> sharedTrackerIds,
+                                      List<Long> unsharedParentTrackerIds, String name,
                                       WorkingSetCreation.Mode mode, String color,
                                       Map<Long, Long> baselineAtByTracker) {
-    WorkingSetCreation.Request toDomainRequest(String newWorkingSetId) {
+    WorkingSetCreation.Request toDomainRequest(Long newWorkingSetId) {
         WorkingSetCreation.Mode creationMode = mode == null ? WorkingSetCreation.Mode.CREATE : mode;
         return new WorkingSetCreation.Request(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds,
-                sharedTrackerIds, unsharedParentTrackerIds, name, creationMode, color, baselineAtByTracker);
+                sharedTrackerIds, unsharedParentTrackerIds, name, creationMode, color, baselineAtByTracker,
+                List.of(), List.of());
     }
 }

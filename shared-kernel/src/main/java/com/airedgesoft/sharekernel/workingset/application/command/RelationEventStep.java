@@ -1,7 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.application.command;
 
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
@@ -10,7 +9,6 @@ import com.airedgesoft.sharekernel.workingset.domain.event.AssociationEndpointEv
 import com.airedgesoft.sharekernel.workingset.domain.event.ReferenceEndpointEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +34,7 @@ public final class RelationEventStep {
     /**
      * 对已索引的派生 Tracker 发布关系创建/修复事件；失败累计，不自动重试。
      */
-    public StepResult publish(WorkingSetId target, TrackerId parent, OriginType originType, String originId) {
+    public StepResult publish(Long target, Long parent, OriginType originType, String originId) {
         try {
             Tracker child = trackers.findDerivedTracker(target, parent).orElse(null);
             WorkingSet targetSet = workingSets.findByIdForCreation(target).orElse(null);
@@ -49,7 +47,7 @@ public final class RelationEventStep {
         }
     }
 
-    private StepResult publishIndexed(WorkingSetId target, Tracker child, List<LightTrackerItemSummary> indexed,
+    private StepResult publishIndexed(Long target, Tracker child, List<LightTrackerItemSummary> indexed,
                                       OriginType originType, String originId) {
         int published = 0;
         int failed = 0;

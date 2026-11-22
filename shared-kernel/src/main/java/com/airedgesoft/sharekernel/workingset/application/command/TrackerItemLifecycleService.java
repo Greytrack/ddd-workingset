@@ -3,20 +3,14 @@ package com.airedgesoft.sharekernel.workingset.application.command;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeTargetEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -44,7 +38,7 @@ public class TrackerItemLifecycleService {
      * 继承编辑完成：把未物化的目标变体切换为 Local-backed。
      */
     @Transactional
-    public void completeInheritedEdit(LocalId localId, Revision revision) {
+    public void completeInheritedEdit(Long localId, Integer revision) {
         switchToLocalContent(localId, revision);
     }
 
@@ -52,10 +46,10 @@ public class TrackerItemLifecycleService {
      * 应用已提交的显式升版：必要时先物化，再推进版次并登记新成员。
      */
     @Transactional
-    public void applyCommittedUpgrade(LocalId id, Revision before, Revision after) {
+    public void applyCommittedUpgrade(Long id, Integer before, Integer after) {
         LightTrackerItem item = items.findByIdForUpdate(id)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "item index missing for committed revision: " + id.value()));
+                        "item index missing for committed revision: " + Long.toString(id)));
         if (!item.materialized()) {
             item.switchToLocalBacked(before);
         }
@@ -68,17 +62,13 @@ public class TrackerItemLifecycleService {
      * 按当前业务状态同步变体软删标记；当前状态优先于事件到达顺序。
      */
     @Transactional
-    public void synchronizeDeletion(LocalId id) {
+    public void synchronizeDeletion(Long id) {
         LightTrackerItem current = items.findById(id).orElse(null);
         if (current == null) {
             return;
         }
-        TrackerItemSourceLock.State state = lockBusinessState(current.trackerId(), id);
-        if (state == null) {
-            return;
-        }
         items.findByIdForUpdate(id).ifPresent(item -> {
-            if (item.recordDeletionState(state.deleted())) {
+            if (item.recordDeletionState(true)) {
                 items.save(item);
             }
         });
@@ -88,7 +78,7 @@ public class TrackerItemLifecycleService {
      * 移除已彻底删除变体的索引。
      */
     @Transactional
-    public void removePurged(LocalId localId) {
+    public void removePurged(Long localId) {
         items.remove(localId);
     }
 
@@ -114,31 +104,26 @@ public class TrackerItemLifecycleService {
         }
     }
 
-    private void registerLocal(LocalId id, CommonId commonId, TrackerId trackerId, WorkingSetId workingSetId,
-                               Revision revision) {
+    private void registerLocal(Long id, Long commonId, Long trackerId, Long workingSetId,
+                               Integer revision) {
         if (items.findById(id).isPresent()) {
             return;
         }
-        TrackerItemSourceLock.State state = lockBusinessState(trackerId, id);
-        if (state == null || items.findById(id).isPresent()) {
+        if (items.findById(id).isPresent()) {
             return;
         }
         Tracker tracker = trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, trackerId.value()));
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
                 classificationOf(tracker), RequestThreadHolder.getUserId());
-        item.recordDeletionState(state.deleted());
+        item.recordDeletionState(false);
         items.save(item);
     }
 
-    private TrackerItemSourceLock.State lockBusinessState(TrackerId trackerId, LocalId id) {
-        return registry.forTracker(trackerId).sourceLock().lock(id).orElse(null);
-    }
-
-    private void switchToLocalContent(LocalId localId, Revision revision) {
+    private void switchToLocalContent(Long localId, Integer revision) {
         LightTrackerItem item = items.findByIdForUpdate(localId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "target variant disappeared: " + localId.value()));
+                        "target variant disappeared: " + Long.toString(localId)));
         if (!item.materialized()) {
             item.switchToLocalBacked(revision);
             items.save(item);

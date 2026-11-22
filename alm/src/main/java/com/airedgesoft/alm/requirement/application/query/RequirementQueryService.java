@@ -6,14 +6,11 @@ import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import lombok.RequiredArgsConstructor;
@@ -38,19 +35,19 @@ public class RequirementQueryService {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
 
-    private static DomainException notFound(LocalId localId) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value());
+    private static DomainException notFound(Long localId) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + Long.toString(localId));
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public RequirementDetail find(LocalId localId) {
-        Optional<RequirementDetail> persisted = query.find(localId.numericValue());
+    public RequirementDetail find(Long localId) {
+        Optional<RequirementDetail> persisted = query.find(localId);
         if (persisted.isEmpty()) {
             return findInherited(localId);
         }
         RequirementDetail detail = persisted.get();
         if (detail.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, localId.value());
+            throw DomainException.withMessage(FailureReason.DELETED, Long.toString(localId));
         }
         return detail;
     }
@@ -60,16 +57,16 @@ public class RequirementQueryService {
      * 非共享 Tracker 的 Item 属于单一工作集。工作集参数用于可见性校验，列表按 Tracker 读取。
      */
     @Transactional(readOnly = true)
-    public List<RequirementDetail> findByTracker(WorkingSetId workingSetId, TrackerId trackerId) {
+    public List<RequirementDetail> findByTracker(Long workingSetId, Long trackerId) {
         Tracker tracker = trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, trackerId.value()));
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         if (!visibleIn(tracker, workingSetId)) {
             return List.of();
         }
-        return query.findByTracker(trackerId.numericValue());
+        return query.findByTracker(trackerId);
     }
 
-    private boolean visibleIn(Tracker tracker, WorkingSetId workingSetId) {
+    private boolean visibleIn(Tracker tracker, Long workingSetId) {
         if (tracker.workingSetId().equals(workingSetId)) {
             return true;
         }
@@ -81,27 +78,27 @@ public class RequirementQueryService {
                 .orElse(false);
     }
 
-    private RequirementDetail findInherited(LocalId localId) {
+    private RequirementDetail findInherited(Long localId) {
         LightTrackerItem target = items.findById(localId)
                 .filter(item -> !item.materialized())
                 .orElseThrow(() -> notFound(localId));
-        WorkingSetId workingSetId = target.workingSetId();
+        Long workingSetId = target.workingSetId();
         workingSets.findById(workingSetId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, workingSetId.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(workingSetId)));
         Requirement source = repository.findById(target.sourceLocalId())
                 .orElseThrow(() -> notFound(target.sourceLocalId()));
         if (source.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, source.localId().value());
+            throw DomainException.withMessage(FailureReason.DELETED, Long.toString(source.localId()));
         }
         if (!source.revision().equals(target.sourceRevision())) {
-            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
+            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
         }
         Requirement requirement = Requirement.inherited(target.localId(), target.commonId(), target.trackerId(),
                 source.title(), source.description(), target.revision(), source.version());
         return new RequirementDetail(
-                requirement.localId().numericValue(), requirement.commonId().numericValue(),
-                requirement.trackerId().numericValue(), requirement.number(), requirement.title(),
-                requirement.description(), requirement.revision().value(), requirement.version().value(),
-                requirement.lockVersion().value(), requirement.deleted(), requirement.hasMaterialized());
+                requirement.localId(), requirement.commonId(),
+                requirement.trackerId(), requirement.number(), requirement.title(),
+                requirement.description(), requirement.revision(), requirement.version(),
+                requirement.lockVersion(), requirement.deleted(), requirement.hasMaterialized());
     }
 }

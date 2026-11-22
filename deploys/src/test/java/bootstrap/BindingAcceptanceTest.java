@@ -1,12 +1,11 @@
 package bootstrap;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import org.junit.jupiter.api.AfterEach;
@@ -270,7 +269,7 @@ class BindingAcceptanceTest {
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE tracker_id = ?", tracker));
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
 
-        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", target.item().localId().value());
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", Long.toString(target.item().localId()));
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasDerivedChildren");
@@ -486,8 +485,8 @@ class BindingAcceptanceTest {
     }
 
     private DeriveFixture.Result derive(String target, String sourceTracker, String sourceLocalId) {
-        return DeriveFixture.derive(jdbc, target, sourceTracker, sourceLocalId, Revision.of(3),
-                CommonId.of(fixtureId("family-" + sourceLocalId)));
+        return DeriveFixture.derive(jdbc, target, sourceTracker, sourceLocalId, 3,
+                Long.valueOf(fixtureId("family-" + sourceLocalId)));
     }
 
     private String spacePath(String id) {

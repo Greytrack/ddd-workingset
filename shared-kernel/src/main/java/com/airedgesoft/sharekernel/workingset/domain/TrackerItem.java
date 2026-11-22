@@ -7,7 +7,7 @@ package com.airedgesoft.sharekernel.workingset.domain;
  */
 public interface TrackerItem extends BusinessObject {
 
-    Revision revision();
+    Integer revision();
 
     boolean hasMaterialized();
 

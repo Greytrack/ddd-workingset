@@ -1,11 +1,8 @@
 package bootstrap;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+
 import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemLifecycleService;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
@@ -88,7 +85,7 @@ class RequirementAcceptanceTest {
             indexing.countDown();
             if (!release.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Indexing gate timed out");
             return call.callRealMethod();
-        }).when(items).save(argThat(item -> item != null && item.trackerId().equals(TrackerId.of(trackerId))));
+        }).when(items).save(argThat(item -> item != null && item.trackerId().equals(Long.valueOf(trackerId))));
 
         try {
             ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId,
@@ -111,8 +108,8 @@ class RequirementAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 1);
         assertEquals(1, indexedRows());
         assertEquals(List.of(3), indexedRevisions());
-        TrackerItemCreatedEvent event = new TrackerItemCreatedEvent(LocalId.of(localId), CommonId.of(localId), TrackerId.of(trackerId),
-                WorkingSet.DEFAULT_ID, Revision.of(3));
+        TrackerItemCreatedEvent event = new TrackerItemCreatedEvent(Long.valueOf(localId), Long.valueOf(localId), Long.valueOf(trackerId),
+                WorkingSet.DEFAULT_ID, 3);
         transaction.executeWithoutResult(status -> events.publishEvent(event));
         await().atMost(Duration.ofSeconds(8)).until(() -> completedPublications("TrackerItemCreatedEvent") == 2);
         assertEquals(1, indexedRows());
@@ -134,15 +131,15 @@ class RequirementAcceptanceTest {
 
     @Test
     void legacyIndexTracksSoftDeleteAndRestoreWithoutReplayingStaleState() {
-        TrackerId trackerId = TrackerId.of(fixtureId("T-" + UUID.randomUUID()));
-        fixture = new RootTrackerFixture(jdbc, trackerId.value());
+        Long trackerId = Long.valueOf(fixtureId("T-" + UUID.randomUUID()));
+        fixture = new RootTrackerFixture(jdbc, Long.toString(trackerId));
         fixture.provision();
-        ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of("trackerId", trackerId.value(),
+        ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of("trackerId", Long.toString(trackerId),
                 "title", "Index lifecycle", "description", "", "revision", 3), Map.class);
         assertEquals(HttpStatus.CREATED, created.getStatusCode(), String.valueOf(created.getBody()));
         localId = String.valueOf(created.getBody().get("localId"));
         String path = "/api/requirements/" + localId;
-        LocalId id = LocalId.of(localId);
+        Long id = Long.valueOf(localId);
         await().atMost(Duration.ofSeconds(8)).until(() -> indexedRows() == 1);
         assertEquals(0, indexFlags());
 
@@ -152,7 +149,7 @@ class RequirementAcceptanceTest {
         assertTrue(items.findById(id).orElseThrow().deleted());
         assertTrue(indexQueries.findInTracker(trackerId).isEmpty());
         assertTrue(indexQueries.pageInTracker(trackerId, "", 10).isEmpty());
-        assertTrue(indexQueries.hasFamily(WorkingSet.DEFAULT_ID, CommonId.of(localId)));
+        assertTrue(indexQueries.hasFamily(WorkingSet.DEFAULT_ID, Long.valueOf(localId)));
         assertEquals(List.of(3), indexedRevisions());
 
         assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/undelete", null, Void.class).getStatusCode());
@@ -178,21 +175,21 @@ class RequirementAcceptanceTest {
     void committedUpgradeUpdatesBothLegacyIndexesAndPreservesPreviousRevision() {
         String trackerId = fixtureId("revision-tracker-" + UUID.randomUUID());
         new RootTrackerFixture(jdbc, trackerId).provision();
-        LocalId id = LocalId.of(fixtureId("revision-item-" + UUID.randomUUID()));
-        items.save(LightTrackerItem.local(id, CommonId.of(id.value()),
-                TrackerId.of(trackerId), WorkingSet.DEFAULT_ID, Revision.of(3),
+        Long id = Long.valueOf(fixtureId("revision-item-" + UUID.randomUUID()));
+        items.save(LightTrackerItem.local(id, Long.valueOf(Long.toString(id)),
+                Long.valueOf(trackerId), WorkingSet.DEFAULT_ID, 3,
                 new ItemClassification(Long.parseLong(fixtureId(trackerId + "-s")), 14010101L), "test"));
 
-        indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));
-        indexLifecycle.applyCommittedUpgrade(id, Revision.of(3), Revision.of(4));
+        indexLifecycle.applyCommittedUpgrade(id, 3, 4);
+        indexLifecycle.applyCommittedUpgrade(id, 3, 4);
 
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*) FROM air_ws_items_index WHERE local_id = ? AND revision = 4
                     AND source_local_id = local_id AND source_revision = 4 AND has_copied = 1
-                """, Integer.class, id.numericValue()));
+                """, Integer.class, id));
         assertEquals(List.of(3, 4), jdbc.queryForList("""
                 SELECT revision FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision
-                """, Integer.class, id.numericValue()));
+                """, Integer.class, id));
     }
 
     private List<Integer> indexedRevisions() {

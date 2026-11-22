@@ -1,14 +1,12 @@
 package bootstrap;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCreationService;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
@@ -493,12 +491,12 @@ class WorkingSetCreationAcceptanceTest {
         for (int index = 0; index < families.size(); index++) {
             String family = families.get(index);
             String localId = indexed.get(index);
-            LightTrackerItem item = items.findById(LocalId.of(localId)).orElseThrow();
-            assertEquals(family, item.commonId().value());
-            assertFalse(family.equals(item.localId().value()));
-            assertEquals(3, item.revision().value());
-            assertEquals(family, item.sourceLocalId().value());
-            assertEquals(3, item.sourceRevision().value());
+            LightTrackerItem item = items.findById(Long.valueOf(localId)).orElseThrow();
+            assertEquals(family, Long.toString(item.commonId()));
+            assertFalse(family.equals(Long.toString(item.localId())));
+            assertEquals(3, item.revision());
+            assertEquals(family, Long.toString(item.sourceLocalId()));
+            assertEquals(3, item.sourceRevision());
             assertFalse(item.materialized());
         }
     }
@@ -510,7 +508,7 @@ class WorkingSetCreationAcceptanceTest {
         FixtureIds.extendWithRootFolder(rest, jdbc, parent, space);
         String nativeId = fixtureId("root-" + child);
         seedItem(unshared, nativeId, nativeId, false);
-        DeriveFixture.Result derive = DeriveFixture.derive(jdbc, parent, unshared, nativeId, Revision.of(3), CommonId.of(nativeId));
+        DeriveFixture.Result derive = DeriveFixture.derive(jdbc, parent, unshared, nativeId, 3, Long.valueOf(nativeId));
         String parentTracker = derive.trackerId();
         String overlap = fixtureId("overlap-" + child);
         seedItem(parentTracker, overlap, overlap, false);
@@ -554,10 +552,10 @@ class WorkingSetCreationAcceptanceTest {
         });
         String local = jdbc.queryForObject("SELECT local_id FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?",
                 String.class, child, nativeId);
-        LightTrackerItem item = items.findById(LocalId.of(local)).orElseThrow();
+        LightTrackerItem item = items.findById(Long.valueOf(local)).orElseThrow();
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child + "/items/" + local, Map.class).getStatusCode());
-        assertEquals(nativeId, item.sourceLocalId().value());
-        assertEquals(3, item.sourceRevision().value());
+        assertEquals(nativeId, Long.toString(item.sourceLocalId()));
+        assertEquals(3, item.sourceRevision());
     }
 
     @Test

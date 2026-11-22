@@ -41,8 +41,8 @@ public class ApiExceptionHandler {
                 "code", conflict.getCode(),
                 "reason", "LOCK_VERSION_CONFLICT",
                 "message", conflict.getMessage(),
-                "expectedLockVersion", conflict.expected().value(),
-                "actualLockVersion", conflict.actual().value()));
+                "expectedLockVersion", conflict.expected(),
+                "actualLockVersion", conflict.actual()));
     }
 
     @ExceptionHandler(DomainException.class)

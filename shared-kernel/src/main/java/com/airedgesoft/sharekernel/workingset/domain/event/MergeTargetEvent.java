@@ -1,10 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+
 
 /**
  * Merge 业务写入完成后的目标变体事实（D15-B）。
@@ -17,7 +15,7 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
  * @param inherited    目标原本是继承变体，需要切换为本地物化
  * @param create       需要在目标工作集新建本地 LightTrackerItem
  */
-public record MergeTargetEvent(LocalId localId, CommonId commonId, TrackerId trackerId,
-                               WorkingSetId workingSetId, Revision revision,
+public record MergeTargetEvent(@JsonFormat(shape = JsonFormat.Shape.STRING) Long localId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long commonId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long trackerId,
+                               @JsonFormat(shape = JsonFormat.Shape.STRING) Long workingSetId, Integer revision,
                                boolean inherited, boolean create) {
 }

@@ -1,8 +1,8 @@
 package com.airedgesoft.alm.requirement.application.eventhandler;
 
+
 import com.airedgesoft.alm.requirement.application.RequirementTypes;
 import com.airedgesoft.alm.requirement.application.command.RequirementMergeWriter;
-import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectType;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryApprovedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,7 +26,7 @@ public class RequirementMergeApprovedListener {
 
     @ApplicationModuleListener(id = "bootstrap.RequirementMergeApprovedListener.on(sk.workingset.domain.event.MergeEntryApprovedEvent)")
     public void on(MergeEntryApprovedEvent event) {
-        if (!RequirementTypes.SUPPORTED.contains(new BusinessObjectType(event.targetClassificationId()))) {
+        if (!RequirementTypes.SUPPORTED.contains(event.targetClassificationId())) {
             return;
         }
         MergeEntryResolvedEvent result = writer.apply(event);

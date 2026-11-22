@@ -7,15 +7,15 @@ import org.jmolecules.ddd.annotation.Entity;
  */
 @Entity
 public final class TrackerCompatibility {
-    private final TrackerId trackerId;
+    private final Long trackerId;
     private final long originalClassificationId;
 
-    TrackerCompatibility(TrackerId trackerId, long originalClassificationId) {
+    TrackerCompatibility(Long trackerId, long originalClassificationId) {
         this.trackerId = trackerId;
         this.originalClassificationId = originalClassificationId;
     }
 
-    public TrackerId trackerId() {
+    public Long trackerId() {
         return trackerId;
     }
 

@@ -1,15 +1,16 @@
 package com.airedgesoft.sharekernel.tracker.adapters;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.application.command.TrackerCommandService;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Objects;
 
 /**
  * Tracker 的 HTTP 入口：创建业务原生 Tracker、重命名与删除。
@@ -33,19 +34,19 @@ public class TrackerController {
      */
     @PostMapping("/worksets/{workingSetId}/trackers")
     @ResponseStatus(HttpStatus.CREATED)
-    public TrackerView create(@PathVariable String workingSetId, @RequestBody CreateTrackerRequest request) {
+    public TrackerView create(@PathVariable Long workingSetId, @RequestBody CreateTrackerRequest request) {
         SharingMode mode = SharingMode.valueOf(required(request.sharingMode(), "sharingMode"));
-        return TrackerView.from(commands.create(WorkingSetId.of(workingSetId),
-                required(request.productSpaceId(), "productSpaceId"), required(request.name(), "name"),
-                required(request.classificationId(), "classificationId"), mode));
+        return TrackerView.from(commands.create(workingSetId,
+                Long.toString(Objects.requireNonNull(request.productSpaceId(), "productSpaceId")), required(request.name(), "name"),
+                Long.toString(Objects.requireNonNull(request.classificationId(), "classificationId")), mode));
     }
 
     /**
      * 重命名 Tracker；名称去首尾空白后须为 1–255 字符。
      */
     @PatchMapping("/trackers/{trackerId}")
-    public TrackerView rename(@PathVariable String trackerId, @RequestBody RenameTrackerRequest request) {
-        return TrackerView.from(commands.rename(TrackerId.of(trackerId), request.name()));
+    public TrackerView rename(@PathVariable Long trackerId, @RequestBody RenameTrackerRequest request) {
+        return TrackerView.from(commands.rename(trackerId, request.name()));
     }
 
     /**
@@ -53,11 +54,11 @@ public class TrackerController {
      */
     @DeleteMapping("/trackers/{trackerId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String trackerId) {
-        commands.delete(TrackerId.of(trackerId));
+    public void delete(@PathVariable Long trackerId) {
+        commands.delete(trackerId);
     }
 
-    public record CreateTrackerRequest(String productSpaceId, String name, String classificationId,
+    public record CreateTrackerRequest(Long productSpaceId, String name, Long classificationId,
                                        String sharingMode) {
     }
 
@@ -67,9 +68,9 @@ public class TrackerController {
     public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
                               String classificationId, String sharingMode, boolean isDefault) {
         static TrackerView from(Tracker tracker) {
-            return new TrackerView(tracker.trackerId().value(), tracker.name(),
-                    tracker.parentId() == null ? null : tracker.parentId().value(),
-                    tracker.sourceId() == null ? null : tracker.sourceId().value(),
+            return new TrackerView(Long.toString(tracker.trackerId()), tracker.name(),
+                    tracker.parentId() == null ? null : Long.toString(tracker.parentId()),
+                    tracker.sourceId() == null ? null : Long.toString(tracker.sourceId()),
                     tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name(),
                     tracker.isDefault());
         }

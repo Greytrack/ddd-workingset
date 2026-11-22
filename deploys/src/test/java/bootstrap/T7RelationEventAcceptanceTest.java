@@ -1,11 +1,8 @@
 package bootstrap;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
@@ -122,18 +119,18 @@ class T7RelationEventAcceptanceTest {
             return new RelationSourceQueryProvider() {
                 @Override
                 public List<ReferenceFact> upstreamReferences(ReferenceEndpointEvent source) {
-                    return List.of(new ReferenceFact("reference-" + source.commonId().value(), source, target()));
+                    return List.of(new ReferenceFact("reference-" + Long.toString(source.commonId()), source, target()));
                 }
 
                 @Override
                 public List<AssociationFact> upstreamAssociations(AssociationEndpointEvent source) {
-                    return List.of(new AssociationFact("association-" + source.commonId().value(), source,
+                    return List.of(new AssociationFact("association-" + Long.toString(source.commonId()), source,
                             associationTarget()));
                 }
 
                 @Override
                 public List<ReferenceFact> referencesTargeting(ReferenceEndpointEvent target) {
-                    return List.of(new ReferenceFact("repair-" + target.commonId().value(),
+                    return List.of(new ReferenceFact("repair-" + Long.toString(target.commonId()),
                             referenceSource(), target));
                 }
 
@@ -143,18 +140,18 @@ class T7RelationEventAcceptanceTest {
                 }
 
                 private ReferenceEndpointEvent target() {
-                    return new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
-                            CommonId.of("263710506950592"), TrackerId.of("263244057497536"), Revision.of(4));
+                    return new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, Long.valueOf("262422876747712"),
+                            Long.valueOf("263710506950592"), Long.valueOf("263244057497536"), 4);
                 }
 
                 private AssociationEndpointEvent associationTarget() {
-                    return new AssociationEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("262422876747712"),
-                            CommonId.of("263710506950592"), TrackerId.of("263244057497536"));
+                    return new AssociationEndpointEvent(WorkingSet.DEFAULT_ID, Long.valueOf("262422876747712"),
+                            Long.valueOf("263710506950592"), Long.valueOf("263244057497536"));
                 }
 
                 private ReferenceEndpointEvent referenceSource() {
-                    return new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, LocalId.of("267169595373504"),
-                            CommonId.of("260782703683520"), TrackerId.of("266102343897024"), Revision.of(1));
+                    return new ReferenceEndpointEvent(WorkingSet.DEFAULT_ID, Long.valueOf("267169595373504"),
+                            Long.valueOf("260782703683520"), Long.valueOf("266102343897024"), 1);
                 }
             };
         }

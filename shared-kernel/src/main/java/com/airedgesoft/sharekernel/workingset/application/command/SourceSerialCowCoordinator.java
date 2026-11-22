@@ -1,7 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.application.command;
 
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -18,9 +17,9 @@ public final class SourceSerialCowCoordinator {
 
     private static final int RECENT_SOURCE_LIMIT = 1024;
 
-    private final Map<LocalId, PriorityQueue<Task>> queues = new HashMap<>();
+    private final Map<Long, PriorityQueue<Task>> queues = new HashMap<>();
 
-    private final LinkedHashMap<LocalId, Long> lastExecuted = new LinkedHashMap<>(16, 0.75f, true);
+    private final LinkedHashMap<Long, Long> lastExecuted = new LinkedHashMap<>(16, 0.75f, true);
 
     private final long gapWaitNanos;
 
@@ -42,7 +41,7 @@ public final class SourceSerialCowCoordinator {
     /**
      * 按来源串行执行任务；同一来源的事件按 sequence 顺序处理，缺口等待 {@code gapWait} 后告警继续。
      */
-    public void runSerial(LocalId sourceLocalId, long sequence, Runnable task) {
+    public void runSerial(Long sourceLocalId, long sequence, Runnable task) {
         CompletableFuture<Void> completion = new CompletableFuture<Void>();
         boolean drain;
         synchronized (queues) {
@@ -68,7 +67,7 @@ public final class SourceSerialCowCoordinator {
         }
     }
 
-    private void drain(LocalId source) {
+    private void drain(Long source) {
         while (true) {
             Task task;
             long previous;
@@ -98,7 +97,7 @@ public final class SourceSerialCowCoordinator {
             }
             if (isGap(task.sequence(), previous)) {
                 log.warn("ORDER_GAP sourceLocalId={} expected={} actual={}",
-                        source.value(), previous + 1, task.sequence());
+                        Long.toString(source), previous + 1, task.sequence());
             }
             try {
                 task.work().run();

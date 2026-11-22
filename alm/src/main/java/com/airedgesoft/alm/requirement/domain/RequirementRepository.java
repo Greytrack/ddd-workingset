@@ -1,6 +1,5 @@
 package com.airedgesoft.alm.requirement.domain;
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 
 import java.util.Optional;
 
@@ -17,5 +16,5 @@ public interface RequirementRepository {
     /**
      * 按 LocalId 重建聚合。
      */
-    Optional<Requirement> findById(LocalId localId);
+    Optional<Requirement> findById(Long localId);
 }

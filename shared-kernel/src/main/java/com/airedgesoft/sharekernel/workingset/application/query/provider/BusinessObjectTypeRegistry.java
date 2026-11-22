@@ -1,8 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.application.query.provider;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 
 /**
  * SK 内唯一的“业务对象类型 → Adapter”路由点。
@@ -12,7 +10,7 @@ import com.airedgesoft.sharekernel.workingset.domain.LocalId;
  */
 public interface BusinessObjectTypeRegistry {
 
-    BusinessObjectTypeAdapter forTracker(TrackerId trackerId);
+    BusinessObjectTypeAdapter forTracker(Long trackerId);
 
-    BusinessObjectTypeAdapter forItem(LocalId localId);
+    BusinessObjectTypeAdapter forItem(Long localId);
 }

@@ -1,15 +1,13 @@
 package com.airedgesoft.alm.requirement.infrastructure.repositories;
 
+
 import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
-import com.airedgesoft.sharekernel.workingset.domain.*;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,14 +44,14 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             """;
 
     private static final RowMapper<Requirement> MAPPER = (rs, rowNum) -> Requirement.restore(
-            LocalId.of(rs.getLong("local_id")),
-            CommonId.of(rs.getLong("common_id")),
-            TrackerId.of(rs.getLong("tracker_id")),
+            rs.getLong("local_id"),
+            rs.getLong("common_id"),
+            rs.getLong("tracker_id"),
             rs.getString("title"),
             rs.getString("description"),
-            Revision.of(rs.getInt("revision")),
-            rs.getString("version") == null ? Version.none() : Version.of(rs.getString("version")),
-            LockVersion.of(rs.getLong("lock_version")), true, rs.getBoolean("delete_flag"),
+            rs.getInt("revision"),
+            rs.getString("version"),
+            rs.getLong("lock_version"), true, rs.getBoolean("delete_flag"),
             rs.getString("created_by"));
 
     private final JdbcTemplate jdbc;
@@ -62,66 +60,58 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
     @Override
     public void save(Requirement requirement) {
-        long lockVersion = requirement.lockVersion().value();
+        long lockVersion = requirement.lockVersion();
         if (lockVersion == 0) {
             String actor = requirement.createdBy();
             if (actor == null || actor.isBlank()) {
                 throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
             }
-            jdbc.update(INSERT, requirement.localId().numericValue(), requirement.commonId().numericValue(),
-                    requirement.trackerId().numericValue(), requirement.title(), requirement.title(), requirement.description(),
-                    requirement.revision().value(), requirement.version().value(), lockVersion, requirement.deleted(),
+            jdbc.update(INSERT, requirement.localId(), requirement.commonId(),
+                    requirement.trackerId(), requirement.title(), requirement.title(), requirement.description(),
+                    requirement.revision(), requirement.version(), lockVersion, requirement.deleted(),
                     actor, System.currentTimeMillis(),
-                    requirement.trackerId().numericValue());
-            saveCommonInstance(requirement.localId().numericValue());
+                    requirement.trackerId());
+            saveCommonInstance(requirement.localId());
             return;
         }
         long expected = lockVersion - 1;
         int affected = jdbc.update(UPDATE, requirement.title(), requirement.title(), requirement.description(),
-                requirement.revision().value(), requirement.version().value(), requirement.deleted(), lockVersion,
-                requirement.localId().numericValue(), expected);
+                requirement.revision(), requirement.version(), requirement.deleted(), lockVersion,
+                requirement.localId(), expected);
         if (affected == 0) {
-            throw new LockVersionConflictException(LockVersion.of(expected), currentLockVersion(requirement.localId()));
+            throw new LockVersionConflictException(expected, currentLockVersion(requirement.localId()));
         }
-        saveCommonInstance(requirement.localId().numericValue());
+        saveCommonInstance(requirement.localId());
     }
 
     @Override
-    public Optional<Requirement> findById(LocalId localId) {
+    public Optional<Requirement> findById(Long localId) {
         return jdbc.query(
                 "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag, created_by "
                         + "FROM requirements WHERE local_id = ?",
                 MAPPER,
-                localId.numericValue()).stream().findFirst();
+                localId).stream().findFirst();
     }
 
     @Override
-    public Optional<Requirement> lockById(LocalId id) {
+    public Optional<Requirement> lockById(Long id) {
         return jdbc.query("SELECT * FROM requirements WHERE local_id = ? FOR UPDATE",
-                MAPPER, id.numericValue()).stream().findFirst();
+                MAPPER, id).stream().findFirst();
     }
 
     @Override
-    public Optional<TrackerItemSourceLock.State> lockSourceState(LocalId id) {
-        return jdbc.query("SELECT revision, delete_flag FROM requirements WHERE local_id = ? FOR UPDATE",
-                (row, rowNumber) -> new TrackerItemSourceLock.State(
-                        Revision.of(row.getInt("revision")), row.getBoolean("delete_flag")),
-                id.numericValue()).stream().findFirst();
-    }
-
-    @Override
-    public Optional<Requirement> lockFamilyInWorkingSet(TrackerId trackerId, CommonId commonId) {
+    public Optional<Requirement> lockFamilyInWorkingSet(Long trackerId, Long commonId) {
         return jdbc.query("""
                 SELECT r.* FROM requirements r
                 WHERE r.working_set_id = (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ? AND delete_flag = 0)
                   AND r.common_id = ?
                 FOR UPDATE
-                """, MAPPER, trackerId.numericValue(), commonId.numericValue()).stream().findFirst();
+                """, MAPPER, trackerId, commonId).stream().findFirst();
     }
 
     @Override
     public void purge(Requirement requirement) {
-        long id = requirement.localId().numericValue();
+        long id = requirement.localId();
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", id);
         if (jdbc.update("DELETE FROM requirements WHERE local_id = ?", id) == 1) {
             commonInstances.remove(id);
@@ -142,14 +132,14 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         commonInstances.save(common);
     }
 
-    private LockVersion currentLockVersion(LocalId localId) {
+    private Long currentLockVersion(Long localId) {
         Long value = jdbc.query(
                 "SELECT lock_version FROM requirements WHERE local_id = ?",
                 rs -> rs.next() ? rs.getLong(1) : null,
-                localId.numericValue());
+                localId);
         if (value == null) {
-            throw DomainException.withMessage(FailureReason.NOT_FOUND, "Requirement no longer exists: " + localId.numericValue());
+            throw DomainException.withMessage(FailureReason.NOT_FOUND, "Requirement no longer exists: " + localId);
         }
-        return LockVersion.of(value);
+        return value;
     }
 }

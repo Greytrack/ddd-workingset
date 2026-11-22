@@ -2,20 +2,15 @@ package com.airedgesoft.sharekernel.workingset.application.query.provider;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.TrackerItemContent;
 import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.Difference;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.Presence;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.Side;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.TrackerPair;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetLineageDomainService;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.MergeResCode;
@@ -44,14 +39,14 @@ public class MergeEvidenceReader {
         this.registry = registry;
     }
 
-    private static void putFamily(Map<CommonId, LocalId> families, CommonId family, LocalId id) {
-        LocalId previous = families.putIfAbsent(family, id);
+    private static void putFamily(Map<Long, Long> families, Long family, Long id) {
+        Long previous = families.putIfAbsent(family, id);
         if (previous != null && !previous.equals(id)) {
-            throw DomainException.withMessage(MergeResCode.CONFLICT, "multiple variants in family " + family.value());
+            throw DomainException.withMessage(MergeResCode.CONFLICT, "multiple variants in family " + Long.toString(family));
         }
     }
 
-    private static Side unreadable(LocalId id, FailureReason reason) {
+    private static Side unreadable(Long id, FailureReason reason) {
         return new Side(id, null, null, null, null, null, Presence.UNREADABLE, reason.name(), Map.of());
     }
 
@@ -68,7 +63,7 @@ public class MergeEvidenceReader {
     /**
      * 可比较的直属父子 Tracker 对；不可比较或未注册的类型不进入候选。
      */
-    public List<TrackerPair> candidates(WorkingSetId source, WorkingSetId target) {
+    public List<TrackerPair> candidates(Long source, Long target) {
         WorkingSet left = workingSet(source);
         WorkingSet right = workingSet(target);
         WorkingSet child = WorkingSetLineageDomainService.childOf(left, right);
@@ -87,26 +82,26 @@ public class MergeEvidenceReader {
 
     public Difference current(Difference original) {
         TrackerPair pair = original.trackers();
-        CommonId family = original.family();
+        Long family = original.family();
         Side source = read(familyIds(pair.source()).get(family));
         Side target = read(familyIds(pair.target()).get(family));
         return new Difference(family, pair, source, target, differingFields(source, target));
     }
 
-    public Map<CommonId, LocalId> familyIds(TrackerId tracker) {
-        Map<CommonId, LocalId> families = new LinkedHashMap<>();
+    public Map<Long, Long> familyIds(Long tracker) {
+        Map<Long, Long> families = new LinkedHashMap<>();
         BusinessObjectTypeAdapter adapter = registry.forTracker(tracker);
         adapter.catalog().identitiesForMerge(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
         itemQueries.findInTracker(tracker).forEach(item -> putFamily(families, item.commonId(), item.localId()));
         return families;
     }
 
-    public Side read(LocalId id) {
+    public Side read(Long id) {
         if (id == null) {
             return Side.absent();
         }
         LightTrackerItemSummary variant = itemQueries.findById(id).orElse(null);
-        LocalId contentId = variant == null ? id : variant.effectiveContentSource();
+        Long contentId = variant == null ? id : variant.effectiveContentSource();
         boolean inherited = variant != null && !variant.materialized();
         TrackerItemQueryProvider port;
         try {
@@ -119,8 +114,8 @@ public class MergeEvidenceReader {
         }
         try {
             TrackerItemQueryProvider.ContentEvidence stamp = port.evidence();
-            Revision revision = variant == null || !inherited ? stamp.revision() : variant.revision();
-            Revision contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
+            Integer revision = variant == null || !inherited ? stamp.revision() : variant.revision();
+            Integer contentRevision = inherited ? variant.effectiveContentRevision() : stamp.revision();
             if (!inherited && stamp.deleted()) {
                 return new Side(id, contentId, revision, contentRevision, stamp.version(), stamp.lockVersion(),
                         Presence.DELETED, null, Map.of());
@@ -138,7 +133,7 @@ public class MergeEvidenceReader {
         }
     }
 
-    private boolean comparable(TrackerId trackerId) {
+    private boolean comparable(Long trackerId) {
         try {
             return registry.forTracker(trackerId).capabilities().comparable();
         } catch (DomainException failure) {
@@ -162,7 +157,7 @@ public class MergeEvidenceReader {
                 .isPresent();
     }
 
-    private WorkingSet workingSet(WorkingSetId id) {
-        return workingSets.findById(id).orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, id.value()));
+    private WorkingSet workingSet(Long id) {
+        return workingSets.findById(id).orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(id)));
     }
 }

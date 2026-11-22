@@ -1,10 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.merge;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.jmolecules.ddd.annotation.ValueObject;
 
 import java.util.List;
@@ -15,7 +11,7 @@ import java.util.Objects;
  * 瞬时比较结果：双侧工作集、候选 Tracker 对与差异清单；不作为持久化事实。
  */
 @ValueObject
-public record Comparison(WorkingSetId source, WorkingSetId target, long comparedAt,
+public record Comparison(@JsonFormat(shape = JsonFormat.Shape.STRING) Long source, @JsonFormat(shape = JsonFormat.Shape.STRING) Long target, long comparedAt,
                          List<TrackerPair> candidates, List<Difference> differences) {
     public Comparison {
         candidates = List.copyOf(candidates);
@@ -34,21 +30,31 @@ public record Comparison(WorkingSetId source, WorkingSetId target, long compared
      * TrackerId 与 WorkingSetId 一起构成可审计的候选对/差异身份；Checkpoint 仍只使用 TrackerId。
      */
     @ValueObject
-    public record TrackerPair(WorkingSetId sourceWorkingSetId, TrackerId source,
-                              WorkingSetId targetWorkingSetId, TrackerId target) {
+    public record TrackerPair(@JsonFormat(shape = JsonFormat.Shape.STRING) Long sourceWorkingSetId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long source,
+                              @JsonFormat(shape = JsonFormat.Shape.STRING) Long targetWorkingSetId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long target) {
         public TrackerPair {
             Objects.requireNonNull(sourceWorkingSetId, "sourceWorkingSetId");
             Objects.requireNonNull(source, "source");
             Objects.requireNonNull(targetWorkingSetId, "targetWorkingSetId");
             Objects.requireNonNull(target, "target");
+            if (sourceWorkingSetId <= 0 || source <= 0 || targetWorkingSetId <= 0 || target <= 0) {
+                throw new IllegalArgumentException("Tracker pair IDs must be positive");
+            }
         }
     }
 
     @ValueObject
-    public record Side(LocalId localId, LocalId contentId, Revision revision, Revision contentRevision,
+    public record Side(@JsonFormat(shape = JsonFormat.Shape.STRING) Long localId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long contentId, Integer revision, Integer contentRevision,
                        String version, Long lockVersion, Presence presence, String failure,
                        Map<String, Object> fields) {
         public Side {
+            if ((localId != null && localId <= 0) || (contentId != null && contentId <= 0)) {
+                throw new IllegalArgumentException("Evidence IDs must be positive");
+            }
+            if ((revision != null && revision < 0) || (contentRevision != null && contentRevision < 0)
+                    || (lockVersion != null && lockVersion < 0)) {
+                throw new IllegalArgumentException("Evidence revisions and lock version must not be negative");
+            }
             fields = Map.copyOf(fields);
         }
 
@@ -63,13 +69,16 @@ public record Comparison(WorkingSetId source, WorkingSetId target, long compared
      * 本对象只描述“哪一对 Tracker、哪个家族、双侧证据和差异字段”。
      */
     @ValueObject
-    public record Difference(ChangeKind kind, CommonId family, TrackerPair trackers,
+    public record Difference(ChangeKind kind, @JsonFormat(shape = JsonFormat.Shape.STRING) Long family, TrackerPair trackers,
                              Side source, Side target, List<String> fields) {
         public Difference {
+            if (Objects.requireNonNull(family, "family") <= 0) {
+                throw new IllegalArgumentException("Family ID must be positive");
+            }
             fields = List.copyOf(fields);
         }
 
-        public Difference(CommonId family, TrackerPair trackers, Side source, Side target,
+        public Difference(Long family, TrackerPair trackers, Side source, Side target,
                           List<String> fields) {
             this(classify(source, target), family, trackers, source, target, fields);
         }

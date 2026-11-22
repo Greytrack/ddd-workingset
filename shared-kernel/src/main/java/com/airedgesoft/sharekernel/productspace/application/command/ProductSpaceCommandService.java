@@ -6,7 +6,6 @@ import com.airedgesoft.sharekernel.productspace.domain.event.ProductSpaceCreated
 import com.airedgesoft.sharekernel.productspace.domain.event.ProductSpaceDeletionRequested;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerQueryProvider;
@@ -67,7 +66,7 @@ public class ProductSpaceCommandService {
         if (space == null) {
             return;
         }
-        List<TrackerId> inSpace = trackerQueries.findTrackerIdsInSpace(id);
+        List<Long> inSpace = trackerQueries.findTrackerIdsInSpace(id);
         requireEmpty(space, inSpace);
 
         if (!inSpace.isEmpty()) {
@@ -79,7 +78,7 @@ public class ProductSpaceCommandService {
         events.publishEvent(event.nextStep());
     }
 
-    private void requireEmpty(ProductSpace space, List<TrackerId> inSpace) {
+    private void requireEmpty(ProductSpace space, List<Long> inSpace) {
         if (queries.hasWorkingSetBinding(space.id())) {
             throw DomainException.withMessage(BindingResCode.SPACE_STILL_BOUND, space.id());
         }
@@ -91,17 +90,17 @@ public class ProductSpaceCommandService {
         }
     }
 
-    private boolean hasItems(TrackerId id) {
+    private boolean hasItems(Long id) {
         return itemQueries.existsInTracker(id);
     }
 
-    private void deleteLeafTracker(List<TrackerId> inSpace, String spaceId) {
-        TrackerId id = inSpace.stream()
+    private void deleteLeafTracker(List<Long> inSpace, String spaceId) {
+        Long id = inSpace.stream()
                 .filter(tracker -> !trackerQueries.hasOrgChildren(tracker) && !trackerQueries.hasDerivedChildren(tracker))
                 .findFirst()
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId));
         Tracker tracker = trackers.lockTracker(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, Long.toString(id)));
         tracker.requireDeletable(hasItems(id), trackerQueries.hasOrgChildren(id), trackerQueries.hasDerivedChildren(id));
         trackers.deleteTracker(id);
     }

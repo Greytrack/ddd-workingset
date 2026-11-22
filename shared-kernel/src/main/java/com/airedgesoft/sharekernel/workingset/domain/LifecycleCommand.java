@@ -1,5 +1,7 @@
 package com.airedgesoft.sharekernel.workingset.domain;
 
+import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import org.jmolecules.ddd.annotation.ValueObject;
 
 import java.util.Objects;
@@ -13,9 +15,12 @@ import java.util.Objects;
  * @param reason              业务原因，可为空
  */
 @ValueObject
-public record LifecycleCommand(LockVersion expectedLockVersion, String reason) {
+public record LifecycleCommand(Long expectedLockVersion, String reason) {
 
     public LifecycleCommand {
+        if (expectedLockVersion != null && expectedLockVersion < 0) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "lockVersion must not be negative");
+        }
         reason = reason == null ? "" : reason;
     }
 
@@ -26,7 +31,7 @@ public record LifecycleCommand(LockVersion expectedLockVersion, String reason) {
         return new LifecycleCommand(null, reason);
     }
 
-    public static LifecycleCommand of(LockVersion expectedLockVersion) {
+    public static LifecycleCommand of(Long expectedLockVersion) {
         return new LifecycleCommand(Objects.requireNonNull(expectedLockVersion, "expectedLockVersion"), "");
     }
 }

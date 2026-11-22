@@ -1,7 +1,6 @@
 package com.airedgesoft.alm.requirement.domain;
 
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
 
 /**
  * 乐观锁冲突：写入时携带的 {@code expectedLockVersion} 与聚合当前 {@code lockVersion} 不一致。
@@ -11,20 +10,20 @@ import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
  */
 public class LockVersionConflictException extends DomainException {
 
-    private final LockVersion expected;
-    private final LockVersion actual;
+    private final Long expected;
+    private final Long actual;
 
-    public LockVersionConflictException(LockVersion expected, LockVersion actual) {
-        super(RequirementResultCode.LOCK_VERSION_CONFLICT, "lock_version conflict: expected " + expected.value() + " but actual is " + actual.value(), null);
+    public LockVersionConflictException(Long expected, Long actual) {
+        super(RequirementResultCode.LOCK_VERSION_CONFLICT, "lock_version conflict: expected " + expected + " but actual is " + actual, null);
         this.expected = expected;
         this.actual = actual;
     }
 
-    public LockVersion expected() {
+    public Long expected() {
         return expected;
     }
 
-    public LockVersion actual() {
+    public Long actual() {
         return actual;
     }
 }

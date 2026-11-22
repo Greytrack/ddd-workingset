@@ -1,7 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Objects;
 
@@ -11,9 +10,9 @@ import java.util.Objects;
 public record MergeEntryResolvedEvent(String roundId,
                                       String entryId,
                                       Outcome outcome,
-                                      LocalId businessRef,
-                                      Revision sourceRevision,
-                                      Revision targetRevision,
+                                      @JsonFormat(shape = JsonFormat.Shape.STRING) Long businessRef,
+                                      Integer sourceRevision,
+                                      Integer targetRevision,
                                       boolean created,
                                       boolean inherited,
                                       String failure) {

@@ -1,12 +1,11 @@
 package com.airedgesoft.alm.requirement.application.command;
 
+
 import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Version;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryApprovedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
@@ -42,7 +41,7 @@ public final class RequirementMergeWriter {
         return Requirement.create(command.localId(), command.commonId(), command.trackerId(),
                 text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),
                 text(command.acceptedFields(), "description", text(command.baseFields(), "description", null)),
-                command.targetRevision(), command.version() == null ? Version.none() : Version.of(command.version()),
+                command.targetRevision(), command.version(),
                 RequestThreadHolder.getUserId());
     }
 
@@ -105,7 +104,7 @@ public final class RequirementMergeWriter {
         if (!current.trackerId().equals(command.trackerId()) || !current.commonId().equals(command.commonId())) {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "target identity changed");
         }
-        LockVersion expected = LockVersion.of(command.expectedLockVersion());
+        Long expected = command.expectedLockVersion();
         Requirement changed = switch (command.operation()) {
             case UPDATE -> current.changeContent(
                     text(command.acceptedFields(), "title", current.title()),

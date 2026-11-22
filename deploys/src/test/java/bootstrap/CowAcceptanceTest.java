@@ -1,13 +1,10 @@
 package bootstrap;
 
+
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.CowFailureLogQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -97,7 +94,7 @@ class CowAcceptanceTest {
         assertLocalContent(first, "A");
         assertLocalContent(second, "A");
         assertEquals("C", rest.getForObject("/api/requirements/" + source, RequirementView.class).title());
-        assertTrue(failures.findBySource(LocalId.of(source)).isEmpty());
+        assertTrue(failures.findBySource(Long.valueOf(source)).isEmpty());
         System.out.printf("AT-03/04 HTTP B→C source=%s target=%s; DB=%s; completed=%d%n", source, first.id(),
                 jdbc.queryForMap("""
                         SELECT r.title, l.has_copied = 1 AS materialized, l.source_local_id, l.source_revision
@@ -238,7 +235,7 @@ class CowAcceptanceTest {
         change("B", 0);
 
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() ->
-                assertEquals("MATERIALIZE", failures.findBySource(LocalId.of(source)).getFirst().stage()));
+                assertEquals("MATERIALIZE", failures.findBySource(Long.valueOf(source)).getFirst().stage()));
         assertFalse(read(invalid).materialized());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
                 Integer.class, invalid.id()));
@@ -250,9 +247,9 @@ class CowAcceptanceTest {
         createSource();
         Target target = derive();
         ItemIndexFixture.updateRevision(jdbc, target.id(), 1);
-        Requirement upgraded = requirements.upgradeRevision(LocalId.of(source), LockVersion.of(0));
-        assertEquals(Revision.of(4), upgraded.revision());
-        assertEquals(LockVersion.of(1), upgraded.lockVersion());
+        Requirement upgraded = requirements.upgradeRevision(Long.valueOf(source), Long.valueOf(0));
+        assertEquals(4, upgraded.revision());
+        assertEquals(Long.valueOf(1), upgraded.lockVersion());
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
         assertLocalContent(target, "A");
         assertEquals(1, read(target).contentRevision());
@@ -274,7 +271,7 @@ class CowAcceptanceTest {
             }
             return invocation.callRealMethod();
         }).when(items).save(argThat(item -> item != null && item.materialized()
-                && item.localId().value().equals(target.id())));
+                && Long.toString(item.localId()).equals(target.id())));
 
         String path = "/api/requirements/" + source;
         assertEquals(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class).getStatusCode());
@@ -298,9 +295,9 @@ class CowAcceptanceTest {
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class).getStatusCode());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
                 Integer.class, source));
-        Requirement edited = requirements.changeTitle(LocalId.of(target.id()), "editable after purge", LockVersion.of(0));
+        Requirement edited = requirements.changeTitle(Long.valueOf(target.id()), "editable after purge", Long.valueOf(0));
         assertEquals("editable after purge", edited.title());
-        assertEquals(Revision.of(1), edited.revision());
+        assertEquals(1, edited.revision());
     }
 
     private void failNextSwitch(Target target) {
@@ -312,7 +309,7 @@ class CowAcceptanceTest {
             }
             return null;
         }).when(items).save(argThat(item -> item != null && item.materialized()
-                && item.localId().value().equals(target.id())));
+                && Long.toString(item.localId()).equals(target.id())));
     }
 
     private String receiptStatus(Target target) {
@@ -360,8 +357,8 @@ class CowAcceptanceTest {
         FixtureIds.insertWorkingSet(jdbc, parent, ws);
         worksets.add(ws);
         mountSpaceWithLocalFolder(ws);
-        DeriveFixture.Result result = DeriveFixture.derive(jdbc, ws, sourceTracker, sourceLocalId, Revision.of(3), CommonId.of(common));
-        String id = result.item().localId().value();
+        DeriveFixture.Result result = DeriveFixture.derive(jdbc, ws, sourceTracker, sourceLocalId, 3, Long.valueOf(common));
+        String id = Long.toString(result.item().localId());
         targets.add(id);
         return new Target(ws, id, result.trackerId());
     }
@@ -388,12 +385,12 @@ class CowAcceptanceTest {
 
     private ReadContent read(Target target) {
         RequirementView requirement = rest.getForObject("/api/requirements/" + target.id(), RequirementView.class);
-        LightTrackerItem item = items.findById(LocalId.of(target.id())).orElseThrow();
+        LightTrackerItem item = items.findById(Long.valueOf(target.id())).orElseThrow();
         boolean materialized = item.materialized();
         return new ReadContent(
                 Map.<String, Object>of("title", requirement.title(), "description", requirement.description()),
-                materialized ? item.revision().value() : item.sourceRevision().value(),
-                materialized ? target.id() : item.sourceLocalId().value(),
+                materialized ? item.revision() : item.sourceRevision(),
+                materialized ? target.id() : Long.toString(item.sourceLocalId()),
                 materialized);
     }
 

@@ -1,11 +1,11 @@
 package com.airedgesoft.sharekernel.tracker.application.command;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
@@ -47,24 +47,24 @@ public class DefaultTrackerInitCommandService {
      * 调用方事务登记绑定事件。重投时复用已在独立事务提交的默认 Tracker。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public List<TrackerId> provisionAll(Long productSpaceId) {
+    public List<Long> provisionAll(Long productSpaceId) {
         String spaceId = productSpaceId.toString();
         TransactionTemplate trackerTransaction = new TransactionTemplate(transactionManager);
         trackerTransaction.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
-        List<TrackerId> provisioned = new ArrayList<>();
+        List<Long> provisioned = new ArrayList<>();
         for (Classification classification : classifications.findClassifications()) {
             if (INSTANCE_CLASSIFICATIONS.contains(classification.numericId())) {
                 continue;
             }
-            TrackerId trackerId = trackerTransaction.execute(status -> provisionDefault(spaceId, classification));
+            Long trackerId = trackerTransaction.execute(status -> provisionDefault(spaceId, classification));
             provisioned.add(Objects.requireNonNull(trackerId));
         }
-        List<TrackerId> trackerIds = List.copyOf(provisioned);
+        List<Long> trackerIds = List.copyOf(provisioned);
         events.publishEvent(new DefaultTrackersProvisionedEvent(productSpaceId, trackerIds));
         return trackerIds;
     }
 
-    private TrackerId provisionDefault(String spaceId, Classification classification) {
+    private Long provisionDefault(String spaceId, Classification classification) {
         // The ProductSpace lookup locks its row. Keep that lock with the Tracker insert and its foreign-key check.
         ProductSpace space = spaces.findById(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
@@ -73,8 +73,8 @@ public class DefaultTrackerInitCommandService {
                 .orElseGet(() -> saveDefault(space, classification));
     }
 
-    private TrackerId saveDefault(ProductSpace space, Classification classification) {
-        Tracker tracker = Tracker.original(TrackerId.of(ids.nextId(null).longValue()),
+    private Long saveDefault(ProductSpace space, Classification classification) {
+        Tracker tracker = Tracker.original(ids.nextId(null).longValue(),
                 space, classification, null, true, RequestThreadHolder.getLongUserId());
         trackers.save(tracker);
         return tracker.trackerId();

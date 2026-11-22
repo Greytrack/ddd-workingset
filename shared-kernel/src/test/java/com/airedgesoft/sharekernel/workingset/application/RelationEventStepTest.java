@@ -1,8 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.application;
 
+
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.command.RelationEventPublisher;
 import com.airedgesoft.sharekernel.workingset.application.command.RelationEventStep;
@@ -13,9 +13,6 @@ import com.airedgesoft.sharekernel.workingset.application.query.provider.Relatio
 import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
@@ -23,7 +20,6 @@ import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrack
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet.TrackerBinding;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet.TrackerOrigin;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import org.junit.jupiter.api.Test;
 
@@ -37,9 +33,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class RelationEventStepTest {
-    private final WorkingSetId target = WorkingSetId.of("259712159403968");
-    private final TrackerId parentId = TrackerId.of("265625955250112");
-    private final TrackerId childId = TrackerId.of("261538396602304");
+    private final Long target = Long.valueOf("259712159403968");
+    private final Long parentId = Long.valueOf("265625955250112");
+    private final Long childId = Long.valueOf("261538396602304");
 
     @Test
     void publishesCreationAssociationAndRepairForEveryIndexedItem() {
@@ -49,8 +45,8 @@ class RelationEventStepTest {
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
-        LightTrackerItem item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
-                LocalId.of("260574482192320"), Revision.of(3), new ItemClassification(42L, 14010101L));
+        LightTrackerItem item = LightTrackerItem.derive(Long.valueOf("261158455371712"), Long.valueOf("265506033508288"), childId, target, 3,
+                Long.valueOf("260574482192320"), 3, new ItemClassification(42L, 14010101L));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
@@ -59,15 +55,15 @@ class RelationEventStepTest {
         when(trackers.findDerivedTracker(target, parentId)).thenReturn(Optional.of(child));
         when(workingSets.findByIdForCreation(target)).thenReturn(Optional.of(workingSet));
         when(itemQueries.findInTracker(childId)).thenReturn(List.of(LightTrackerItemSummary.from(item)));
-        ReferenceEndpointEvent targetEndpoint = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
-                CommonId.of("261349487529920"), TrackerId.of("259649290751936"), Revision.of(4));
+        ReferenceEndpointEvent targetEndpoint = new ReferenceEndpointEvent(Long.valueOf("260634912653248"), Long.valueOf("265864557082560"),
+                Long.valueOf("261349487529920"), Long.valueOf("259649290751936"), 4);
         ReferenceEndpointEvent sourceEndpoint = new ReferenceEndpointEvent(target, item.localId(), item.commonId(), childId, item.revision());
         when(source.upstreamReferences(any())).thenReturn(List.of(new ReferenceFact("reference-1", sourceEndpoint,
                 targetEndpoint)));
         when(source.upstreamAssociations(any())).thenReturn(List.of(new AssociationFact("association-1",
                 new AssociationEndpointEvent(target, item.localId(), item.commonId(), childId),
-                new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"),
-                        CommonId.of("261349487529920"), TrackerId.of("259649290751936")))));
+                new AssociationEndpointEvent(Long.valueOf("260634912653248"), Long.valueOf("265864557082560"),
+                        Long.valueOf("261349487529920"), Long.valueOf("259649290751936")))));
         when(source.referencesTargeting(any())).thenReturn(List.of(new ReferenceFact("reference-2", sourceEndpoint,
                 targetEndpoint)));
 
@@ -93,8 +89,8 @@ class RelationEventStepTest {
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
-        LightTrackerItem item = LightTrackerItem.derive(LocalId.of("261158455371712"), CommonId.of("265506033508288"), childId, target, Revision.of(3),
-                LocalId.of("260574482192320"), Revision.of(3), new ItemClassification(42L, 14010101L));
+        LightTrackerItem item = LightTrackerItem.derive(Long.valueOf("261158455371712"), Long.valueOf("265506033508288"), childId, target, 3,
+                Long.valueOf("260574482192320"), 3, new ItemClassification(42L, 14010101L));
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);

@@ -1,7 +1,7 @@
 package com.airedgesoft.sharekernel.workingset.application.command;
 
+
 import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import com.airedgesoft.sharekernel.workingset.domain.event.ReferenceEndpointEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound;
@@ -59,15 +59,15 @@ public final class MergeRelationRepairStep {
             if (result == null || !result.succeeded() || !changesTarget(result.operation())) {
                 continue;
             }
-            LocalId localId = result.businessRef() == null
+            Long localId = result.businessRef() == null
                     ? entry.evidence().target().localId()
-                    : LocalId.of(result.businessRef());
+                    : Long.valueOf(result.businessRef());
             if (localId == null) {
                 continue;
             }
             ReferenceEndpointEvent target = new ReferenceEndpointEvent(round.target(), localId, entry.evidence().family(),
                     entry.evidence().trackers().target(), entry.evidence().target().revision());
-            targets.put(localId.value(), target);
+            targets.put(Long.toString(localId), target);
         }
         return targets;
     }

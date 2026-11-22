@@ -137,7 +137,6 @@ Requirement 是业务 BC 参考实现。
 ### 7.2 端口
 
 - `LightTrackerItemQueryProvider` 提供按登记时间与 LocalId 分页，`LightTrackerItemRepository` 提供按工作集和家族认领。
-- `TrackerItemSourceLock` 返回受业务来源行锁保护的版次和删除状态。
 - 关系事件：WorkingSet 不定义 Reference/Association 仓储或写入
   Port；只定义关系事件契约与发布器。字段、事件类、失败明细见 [T7-E 事件契约](../reviews/2026-11-17-t7-e-relation-guards-decision.md)。
 

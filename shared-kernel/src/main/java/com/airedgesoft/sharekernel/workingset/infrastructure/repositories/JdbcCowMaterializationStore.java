@@ -1,9 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.infrastructure.repositories;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.SharedKernelResultCode;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.cow.CowMaterializationStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,15 +22,15 @@ import java.util.Optional;
 public class JdbcCowMaterializationStore implements CowMaterializationStore {
     private static final String FIND = "SELECT * FROM cow_materializations WHERE event_id = ? AND target_local_id = ?";
     private static final RowMapper<Entry> ENTRY = (row, number) -> new Entry(row.getLong("event_id"),
-            LocalId.of(row.getLong("target_local_id")), LocalId.of(row.getLong("source_local_id")),
-            Revision.of(row.getInt("source_revision")), Status.valueOf(row.getString("status")),
+            row.getLong("target_local_id"), row.getLong("source_local_id"),
+            row.getInt("source_revision"), Status.valueOf(row.getString("status")),
             row.getInt("attempts"), row.getBoolean("business_saved"), row.getString("last_error"));
 
     private final JdbcTemplate jdbc;
 
 
     @Override
-    public Entry markPending(long eventId, LocalId target, LocalId source, Revision revision) {
+    public Entry markPending(long eventId, Long target, Long source, Integer revision) {
         return jdbc.queryForObject("""
                 INSERT INTO cow_materializations AS m
                     (event_id, target_local_id, source_local_id, source_revision, status, attempts)
@@ -43,11 +42,11 @@ public class JdbcCowMaterializationStore implements CowMaterializationStore {
                         updated_at = now()
                 WHERE m.source_local_id = EXCLUDED.source_local_id AND m.source_revision = EXCLUDED.source_revision
                 RETURNING *
-                """, ENTRY, eventId, target.numericValue(), source.numericValue(), revision.value());
+                """, ENTRY, eventId, target, source, revision);
     }
 
     @Override
-    public void markMaterialized(long eventId, LocalId target) {
+    public void markMaterialized(long eventId, Long target) {
         update("""
                 UPDATE cow_materializations SET business_saved = true, status = 'MATERIALIZED',
                     last_error = NULL, updated_at = now()
@@ -56,7 +55,7 @@ public class JdbcCowMaterializationStore implements CowMaterializationStore {
     }
 
     @Override
-    public void markSwitched(long eventId, LocalId target) {
+    public void markSwitched(long eventId, Long target) {
         update("""
                 UPDATE cow_materializations SET status = 'SWITCHED', last_error = NULL, updated_at = now()
                 WHERE event_id = ? AND target_local_id = ? AND business_saved
@@ -64,21 +63,21 @@ public class JdbcCowMaterializationStore implements CowMaterializationStore {
     }
 
     @Override
-    public void markFailed(long eventId, LocalId target, String error) {
+    public void markFailed(long eventId, Long target, String error) {
         jdbc.update("""
                 UPDATE cow_materializations SET status = 'FAILED', last_error = ?, updated_at = now()
                 WHERE event_id = ? AND target_local_id = ? AND status <> 'SWITCHED'
-                """, error, eventId, target.numericValue());
+                """, error, eventId, target);
     }
 
     @Override
-    public Optional<Entry> findByEventAndTarget(long eventId, LocalId target) {
-        return jdbc.query(FIND, ENTRY, eventId, target.numericValue()).stream().findFirst();
+    public Optional<Entry> findByEventAndTarget(long eventId, Long target) {
+        return jdbc.query(FIND, ENTRY, eventId, target).stream().findFirst();
     }
 
     @Override
-    public Optional<Entry> lockByEventAndTarget(long eventId, LocalId target) {
-        return jdbc.query(FIND + " FOR UPDATE", ENTRY, eventId, target.numericValue()).stream().findFirst();
+    public Optional<Entry> lockByEventAndTarget(long eventId, Long target) {
+        return jdbc.query(FIND + " FOR UPDATE", ENTRY, eventId, target).stream().findFirst();
     }
 
     @Override
@@ -88,14 +87,14 @@ public class JdbcCowMaterializationStore implements CowMaterializationStore {
     }
 
     @Override
-    public List<Entry> findBySource(LocalId source) {
+    public List<Entry> findBySource(Long source) {
         return jdbc.query("SELECT * FROM cow_materializations WHERE source_local_id = ? ORDER BY event_id, target_local_id",
-                ENTRY, source.numericValue());
+                ENTRY, source);
     }
 
-    private void update(String sql, long eventId, LocalId target) {
-        if (jdbc.update(sql, eventId, target.numericValue()) != 1) {
-            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID, "Unexpected COW receipt state for " + eventId + "/" + target.numericValue());
+    private void update(String sql, long eventId, Long target) {
+        if (jdbc.update(sql, eventId, target) != 1) {
+            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID, "Unexpected COW receipt state for " + eventId + "/" + target);
         }
     }
 }

@@ -1,11 +1,11 @@
 package com.airedgesoft.sharekernel.tracker.application.command;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
@@ -15,7 +15,6 @@ import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerCreatedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerDeletionRequestedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
@@ -43,18 +42,18 @@ public class TrackerCommandService {
      * 在默认工作集创建业务原生 Tracker。
      */
     @Transactional
-    public Tracker create(WorkingSetId id, String spaceId, String name, String classificationId,
+    public Tracker create(Long id, String spaceId, String name, String classificationId,
                           SharingMode sharingMode) {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "只允许在默认工作集新建跟踪分类");
         }
         Classification classification = classifications.requireClassification(classificationId);
         WorkingSet workingSet = workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
         ProductSpace space = spaces.findById(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
         workingSet.requireSpaceBinding(spaceId);
-        Tracker tracker = Tracker.original(TrackerId.of(ids.nextId(null).longValue()), name, space,
+        Tracker tracker = Tracker.original(ids.nextId(null).longValue(), name, space,
                 classification, sharingMode, RequestThreadHolder.getLongUserId());
         workingSet.bindTracker(tracker, classification, sharingMode);
         trackers.save(tracker);
@@ -67,9 +66,9 @@ public class TrackerCommandService {
      * 重命名 Tracker；名称去首尾空白后 1–255 字符。
      */
     @Transactional
-    public Tracker rename(TrackerId id, String name) {
+    public Tracker rename(Long id, String name) {
         Tracker tracker = trackers.lockTracker(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, Long.toString(id)));
         requireOwningWorkingSet(tracker.workingSetId());
         if (tracker.rename(name)) {
             tracker.touch(RequestThreadHolder.getLongUserId());
@@ -82,9 +81,9 @@ public class TrackerCommandService {
      * 删除 Tracker；须通过无 Item/组织子级/派生子级三项检查，随后发布删除请求事件。
      */
     @Transactional
-    public void delete(TrackerId id) {
+    public void delete(Long id) {
         Tracker tracker = trackers.lockTracker(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, Long.toString(id)));
         requireOwningWorkingSet(tracker.workingSetId());
         tracker.requireDeletable(
                 itemQueries.existsInTracker(id),
@@ -94,8 +93,8 @@ public class TrackerCommandService {
         events.publishEvent(new TrackerDeletionRequestedEvent(id));
     }
 
-    private void requireOwningWorkingSet(WorkingSetId id) {
+    private void requireOwningWorkingSet(Long id) {
         workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 }

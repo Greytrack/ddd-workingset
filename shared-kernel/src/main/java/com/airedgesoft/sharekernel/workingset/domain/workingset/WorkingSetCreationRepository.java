@@ -32,7 +32,7 @@ public interface WorkingSetCreationRepository {
     /**
      * 按目标工作集定位创建任务。
      */
-    Optional<WorkingSetCreation> findByTarget(WorkingSetId target);
+    Optional<WorkingSetCreation> findByTarget(Long target);
 
     /**
      * 按请求幂等键定位任务。
@@ -42,6 +42,6 @@ public interface WorkingSetCreationRepository {
     /**
      * 按目标工作集定位活动中的扩展任务。
      */
-    Optional<WorkingSetCreation> findActiveExtension(WorkingSetId target);
+    Optional<WorkingSetCreation> findActiveExtension(Long target);
 
 }

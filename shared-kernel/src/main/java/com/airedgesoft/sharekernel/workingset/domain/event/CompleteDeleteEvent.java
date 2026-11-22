@@ -1,7 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Objects;
 
@@ -15,7 +14,7 @@ import java.util.Objects;
  * @param trackerId     删除时所属 Tracker
  * @param occurredAt    事件发生时间
  */
-public record CompleteDeleteEvent(LocalId requirementId, TrackerId trackerId, long occurredAt) {
+public record CompleteDeleteEvent(@JsonFormat(shape = JsonFormat.Shape.STRING) Long requirementId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long trackerId, long occurredAt) {
 
     public CompleteDeleteEvent {
         Objects.requireNonNull(requirementId, "requirementId");

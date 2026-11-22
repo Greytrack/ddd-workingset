@@ -22,7 +22,7 @@ public class TrackerItemChangedListener {
 
     @ApplicationModuleListener(id = "bootstrap.RequirementChangedListener.on(sk.workingset.domain.event.BusinessObjectUpdateEvent)")
     public void on(BusinessObjectUpdateEvent event) {
-        coordinator.runSerial(event.sourceLocalId(), event.afterLockVersion().value(),
+        coordinator.runSerial(event.sourceLocalId(), event.afterLockVersion(),
                 () -> handler.onTrackerItemChanged(event));
     }
 }

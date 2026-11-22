@@ -1,6 +1,5 @@
 package com.airedgesoft.sharekernel.tracker.infrastructure.repositories;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LocalTrackerNumberGenerator implements TrackerNumberGenerator {
     @Override
-    public String generate(TrackerId trackerId) {
-        return "TRK-" + trackerId.value();
+    public String generate(Long trackerId) {
+        return "TRK-" + Long.toString(trackerId);
     }
 }

@@ -1,16 +1,12 @@
 package bootstrap;
 
+
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.domain.Requirement;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
 import com.airedgesoft.sharekernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectUpdateEvent;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;
@@ -34,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ApplicationContextTest {
 
-    private static final Revision R3 = Revision.of(3);
+    private static final Integer R3 = 3;
 
     @Test
     void context_loads_without_web_and_exposes_composition_root_beans() {
@@ -56,25 +52,25 @@ class ApplicationContextTest {
                         if (event.getPayload() instanceof BusinessObjectUpdateEvent changed) received.add(changed);
                     });
             RequirementCommandService service = context.getBean(RequirementCommandService.class);
-            TrackerId trackerId = TrackerId.of(fixtureId("tracker-" + UUID.randomUUID()));
+            Long trackerId = Long.valueOf(fixtureId("tracker-" + UUID.randomUUID()));
 
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            RootTrackerFixture fixture = new RootTrackerFixture(jdbc, trackerId.value());
+            RootTrackerFixture fixture = new RootTrackerFixture(jdbc, Long.toString(trackerId));
             fixture.provision();
-            LocalId created = null;
+            Long created = null;
             try {
-                Requirement requirement = service.create(trackerId, WorkingSetId.of("1"), "A", "source description", R3);
+                Requirement requirement = service.create(trackerId, Long.valueOf("1"), "A", "source description", R3);
                 created = requirement.localId();
                 await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject("""
                         SELECT EXISTS (SELECT 1 FROM event_publication WHERE event_type LIKE '%.TrackerItemCreatedEvent'
                         AND serialized_event LIKE ? AND completion_date IS NOT NULL)
-                        """, Boolean.class, "%" + requirement.localId().value() + "%")));
-                assertEquals(created.value(), requirement.commonId().value(),
+                        """, Boolean.class, "%" + Long.toString(requirement.localId()) + "%")));
+                assertEquals(Long.toString(created), Long.toString(requirement.commonId()),
                         "默认工作集创建时 CommonId 与 LocalId 必须相等");
                 verifyPublishedChange(service, received, created);
             } finally {
                 if (created != null) {
-                    fixture.removeRequirement(created.value());
+                    fixture.removeRequirement(Long.toString(created));
                 }
                 fixture.remove();
             }
@@ -82,8 +78,8 @@ class ApplicationContextTest {
     }
 
     private void verifyPublishedChange(RequirementCommandService service, List<BusinessObjectUpdateEvent> received,
-                                       LocalId localId) {
-        service.changeTitle(localId, "B", LockVersion.of(0));
+                                       Long localId) {
+        service.changeTitle(localId, "B", Long.valueOf(0));
 
         assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
         BusinessObjectUpdateEvent event = received.getFirst();
@@ -91,8 +87,8 @@ class ApplicationContextTest {
         assertEquals(localId, event.sourceLocalId());
         assertEquals(R3, event.beforeRevision());
         assertEquals(R3, event.afterRevision());
-        assertEquals(0L, event.beforeLockVersion().value());
-        assertEquals(1L, event.afterLockVersion().value());
+        assertEquals(0L, event.beforeLockVersion());
+        assertEquals(1L, event.afterLockVersion());
         assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
         assertNotNull(event.snapshotRef());
         assertNotNull(event.occurredAt());

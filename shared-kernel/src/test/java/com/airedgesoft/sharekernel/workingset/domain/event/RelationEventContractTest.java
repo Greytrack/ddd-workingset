@@ -1,10 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,10 +12,10 @@ class RelationEventContractTest {
 
     @Test
     void referenceEventCarriesBothEndpointsAndAllowsDanglingTarget() {
-        ReferenceEndpointEvent source = new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
-                TrackerId.of("265625955250112"), Revision.of(3));
-        ReferenceEndpointEvent target = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
-                TrackerId.of("261538396602304"), null);
+        ReferenceEndpointEvent source = new ReferenceEndpointEvent(Long.valueOf("259712159403968"), Long.valueOf("261158455371712"), Long.valueOf("265506033508288"),
+                Long.valueOf("265625955250112"), 3);
+        ReferenceEndpointEvent target = new ReferenceEndpointEvent(Long.valueOf("260634912653248"), null, Long.valueOf("261349487529920"),
+                Long.valueOf("261538396602304"), null);
 
         ReferenceCreationRequestedEvent event = new ReferenceCreationRequestedEvent(metadata, source, target);
 
@@ -31,10 +27,10 @@ class RelationEventContractTest {
 
     @Test
     void referenceSourceMustBeFullyResolved() {
-        ReferenceEndpointEvent source = new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), null, CommonId.of("265506033508288"), TrackerId.of("265625955250112"),
-                Revision.of(3));
-        ReferenceEndpointEvent target = new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), null, CommonId.of("261349487529920"),
-                TrackerId.of("261538396602304"), null);
+        ReferenceEndpointEvent source = new ReferenceEndpointEvent(Long.valueOf("259712159403968"), null, Long.valueOf("265506033508288"), Long.valueOf("265625955250112"),
+                3);
+        ReferenceEndpointEvent target = new ReferenceEndpointEvent(Long.valueOf("260634912653248"), null, Long.valueOf("261349487529920"),
+                Long.valueOf("261538396602304"), null);
 
         assertThrows(IllegalArgumentException.class,
                 () -> new ReferenceCreationRequestedEvent(metadata, source, target));
@@ -42,21 +38,21 @@ class RelationEventContractTest {
 
     @Test
     void associationEventHasNoRevisionFields() {
-        AssociationEndpointEvent source = new AssociationEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
-                TrackerId.of("265625955250112"));
-        AssociationEndpointEvent target = new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
-                TrackerId.of("261538396602304"));
+        AssociationEndpointEvent source = new AssociationEndpointEvent(Long.valueOf("259712159403968"), Long.valueOf("261158455371712"), Long.valueOf("265506033508288"),
+                Long.valueOf("265625955250112"));
+        AssociationEndpointEvent target = new AssociationEndpointEvent(Long.valueOf("260634912653248"), Long.valueOf("265864557082560"), Long.valueOf("261349487529920"),
+                Long.valueOf("261538396602304"));
 
         AssociationCreationRequestedEvent event = new AssociationCreationRequestedEvent(metadata, source, target);
 
-        assertEquals("265625955250112", event.source().trackerId().value());
-        assertEquals("265864557082560", event.target().localId().value());
+        assertEquals("265625955250112", Long.toString(event.source().trackerId()));
+        assertEquals("265864557082560", Long.toString(event.target().localId()));
     }
 
     @Test
     void referenceEndpointRequiresWorkingSetEvenWhenTargetLocalIsMissing() {
         assertThrows(NullPointerException.class,
-                () -> new ReferenceEndpointEvent(null, null, CommonId.of("265506033508288"), TrackerId.of("265625955250112"), null));
+                () -> new ReferenceEndpointEvent(null, null, Long.valueOf("265506033508288"), Long.valueOf("265625955250112"), null));
     }
 
     @Test

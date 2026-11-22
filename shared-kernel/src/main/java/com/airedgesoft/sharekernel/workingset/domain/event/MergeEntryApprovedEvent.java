@@ -1,9 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Map;
 import java.util.Objects;
@@ -17,11 +14,11 @@ public record MergeEntryApprovedEvent(String roundId,
                                       String entryId,
                                       String token,
                                       Operation operation,
-                                      TrackerId trackerId,
-                                      CommonId commonId,
-                                      LocalId localId,
-                                      Revision sourceRevision,
-                                      Revision targetRevision,
+                                      @JsonFormat(shape = JsonFormat.Shape.STRING) Long trackerId,
+                                      @JsonFormat(shape = JsonFormat.Shape.STRING) Long commonId,
+                                      @JsonFormat(shape = JsonFormat.Shape.STRING) Long localId,
+                                      Integer sourceRevision,
+                                      Integer targetRevision,
                                       Long expectedLockVersion,
                                       String version,
                                       Map<String, Object> baseFields,

@@ -1,22 +1,16 @@
 package bootstrap;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectType;
 import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
 import com.airedgesoft.sharekernel.workingset.application.port.Capabilities;
-import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.infrastructure.providers.DefaultBusinessObjectTypeRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +28,7 @@ import static org.mockito.Mockito.when;
  */
 class BusinessObjectTypeRegistryTest {
 
-    private static final TrackerId TRACKER = TrackerId.of(1L);
+    private static final Long TRACKER = 1L;
 
     private static DefaultBusinessObjectTypeRegistry registry(BusinessObjectTypeAdapter adapter, Tracker tracker,
                                                               LightTrackerItemQueryProvider items) {
@@ -44,15 +38,14 @@ class BusinessObjectTypeRegistryTest {
     }
 
     private static Tracker tracker(long classificationId, long baseClassId, long classId) {
-        return Tracker.reconstitute(TRACKER, TRACKER, "tracker", null, WorkingSetId.of("1"), 10L,
+        return Tracker.reconstitute(TRACKER, TRACKER, "tracker", null, Long.valueOf("1"), 10L,
                 classificationId, baseClassId, classId, SharingMode.UNSHARED, null, false);
     }
 
     private static BusinessObjectTypeAdapter requirementAdapter() {
         BusinessObjectTypeAdapter adapter = mock(BusinessObjectTypeAdapter.class);
-        when(adapter.types()).thenReturn(Set.of(new BusinessObjectType(14010101L)));
+        when(adapter.types()).thenReturn(Set.of(14010101L));
         when(adapter.capabilities()).thenReturn(new Capabilities(true, true));
-        when(adapter.sourceLock()).thenReturn(mock(TrackerItemSourceLock.class));
         TrackerItemCatalogQueryProvider catalog = mock(TrackerItemCatalogQueryProvider.class);
         when(catalog.hasAnyItem(any())).thenReturn(true);
         when(adapter.catalog()).thenReturn(catalog);
@@ -73,9 +66,9 @@ class BusinessObjectTypeRegistryTest {
         BusinessObjectTypeAdapter adapter = requirementAdapter();
         LightTrackerItemQueryProvider items = mock(LightTrackerItemQueryProvider.class);
         DefaultBusinessObjectTypeRegistry registry = registry(adapter, tracker(14010101L, 1401L, 140101L), items);
-        LocalId id = LocalId.of("99");
+        Long id = Long.valueOf("99");
         when(items.findById(id)).thenReturn(Optional.of(new LightTrackerItemSummary(
-                id, CommonId.of("99"), TRACKER, WorkingSetId.of("1"), Revision.of(1), id, Revision.of(1), true)));
+                id, Long.valueOf("99"), TRACKER, Long.valueOf("1"), 1, id, 1, true)));
 
         assertSame(adapter, registry.forItem(id));
     }

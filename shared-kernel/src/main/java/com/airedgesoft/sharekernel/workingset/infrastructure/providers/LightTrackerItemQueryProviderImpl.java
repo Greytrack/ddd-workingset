@@ -1,12 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.infrastructure.providers;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -24,62 +20,62 @@ public class LightTrackerItemQueryProviderImpl implements LightTrackerItemQueryP
     private static final String COLUMNS =
             "local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, (has_copied = 1) AS materialized";
     private static final RowMapper<LightTrackerItemSummary> MAPPER = (rs, rowNum) -> new LightTrackerItemSummary(
-            LocalId.of(rs.getLong("local_id")),
-            CommonId.of(rs.getLong("common_id")),
-            TrackerId.of(rs.getLong("branch_id")),
-            WorkingSetId.of(rs.getLong("workingset_id")),
-            Revision.of(rs.getInt("revision")),
-            LocalId.of(rs.getLong("source_local_id")),
-            Revision.of(rs.getInt("source_revision")),
+            rs.getLong("local_id"),
+            rs.getLong("common_id"),
+            rs.getLong("branch_id"),
+            rs.getLong("workingset_id"),
+            rs.getInt("revision"),
+            rs.getLong("source_local_id"),
+            rs.getInt("source_revision"),
             rs.getBoolean("materialized"));
 
     private final JdbcTemplate jdbc;
 
     @Override
-    public Optional<LightTrackerItemSummary> findById(LocalId localId) {
+    public Optional<LightTrackerItemSummary> findById(Long localId) {
         return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE local_id = ?",
-                MAPPER, localId.numericValue()).stream().findFirst();
+                MAPPER, localId).stream().findFirst();
     }
 
     @Override
-    public List<LightTrackerItemSummary> findInTracker(TrackerId trackerId) {
+    public List<LightTrackerItemSummary> findInTracker(Long trackerId) {
         return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? AND flags IS DISTINCT FROM 1 ORDER BY local_id",
-                MAPPER, trackerId.numericValue());
+                MAPPER, trackerId);
     }
 
     @Override
-    public List<LightTrackerItemSummary> pageInTracker(TrackerId trackerId, String afterLocalId, int limit) {
+    public List<LightTrackerItemSummary> pageInTracker(Long trackerId, String afterLocalId, int limit) {
         return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? "
                         + "AND flags IS DISTINCT FROM 1 AND local_id > ? ORDER BY local_id LIMIT ?",
-                MAPPER, trackerId.numericValue(), afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
+                MAPPER, trackerId, afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 
     @Override
-    public List<LightTrackerItemSummary> pageInTracker(TrackerId trackerId, long baselineAt, String afterLocalId, int limit) {
+    public List<LightTrackerItemSummary> pageInTracker(Long trackerId, long baselineAt, String afterLocalId, int limit) {
         return jdbc.query("SELECT " + COLUMNS + " FROM air_ws_items_index WHERE branch_id = ? "
                         + "AND flags IS DISTINCT FROM 1 AND created_time <= ? AND local_id > ? ORDER BY local_id LIMIT ?",
-                MAPPER, trackerId.numericValue(), baselineAt,
+                MAPPER, trackerId, baselineAt,
                 afterLocalId.isEmpty() ? 0L : Long.parseLong(afterLocalId), limit);
     }
 
     @Override
-    public boolean existsInTracker(TrackerId trackerId) {
+    public boolean existsInTracker(Long trackerId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE branch_id = ?)",
-                Boolean.class, trackerId.numericValue()));
+                Boolean.class, trackerId));
     }
 
     @Override
-    public boolean hasFamily(WorkingSetId workingSetId, CommonId commonId) {
+    public boolean hasFamily(Long workingSetId, Long commonId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?)",
-                Boolean.class, workingSetId.numericValue(), commonId.numericValue()));
+                Boolean.class, workingSetId, commonId));
     }
 
     @Override
-    public boolean hasSourceBackedDependents(LocalId localId) {
+    public boolean hasSourceBackedDependents(Long localId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE source_local_id = ? AND has_copied = 0)",
-                Boolean.class, localId.numericValue()));
+                Boolean.class, localId));
     }
 }

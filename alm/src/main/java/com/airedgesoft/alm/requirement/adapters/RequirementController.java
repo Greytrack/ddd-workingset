@@ -1,16 +1,12 @@
 package com.airedgesoft.alm.requirement.adapters;
 
+
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.application.command.RequirementLifecycleService;
 import com.airedgesoft.alm.requirement.application.query.RequirementQueryService;
 import com.airedgesoft.alm.requirement.application.query.model.RequirementDetail;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -51,15 +47,15 @@ public class RequirementController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RequirementView create(@RequestBody CreateRequirementRequest request) {
-        String requested = request.workingSetId();
-        WorkingSetId requestedWorkingSetId = requested == null || requested.isBlank()
-                ? null : WorkingSetId.of(requested);
+        Long requested = request.workingSetId();
+        Long requestedWorkingSetId = requested == null
+                ? null : requested;
         Requirement created = commands.create(
-                TrackerId.of(requireText(request.trackerId(), "trackerId")),
+                Objects.requireNonNull(request.trackerId(), "trackerId"),
                 requestedWorkingSetId,
                 requireText(request.title(), "title"),
                 Objects.requireNonNull(request.description(), "description"),
-                Revision.of(request.revision()));
+                (request.revision() == null ? 0 : request.revision()));
         return RequirementView.from(created);
     }
 
@@ -67,9 +63,9 @@ public class RequirementController {
      * ALM 场景查询需求列表；工作集只通过 LightTrackerItem 列表与本接口组合展示。
      */
     @GetMapping
-    public List<RequirementView> list(@RequestParam String trackerId,
-                                      @RequestParam String workingSetId) {
-        return queries.findByTracker(WorkingSetId.of(workingSetId), TrackerId.of(trackerId)).stream()
+    public List<RequirementView> list(@RequestParam Long trackerId,
+                                      @RequestParam Long workingSetId) {
+        return queries.findByTracker(workingSetId, trackerId).stream()
                 .map(RequirementView::from).toList();
     }
 
@@ -77,12 +73,12 @@ public class RequirementController {
      * 修改需求标题，需携带期望乐观锁版本。
      */
     @PutMapping("/{localId}/title")
-    public RequirementView changeTitle(@PathVariable("localId") String localId,
+    public RequirementView changeTitle(@PathVariable("localId") Long localId,
                                        @RequestBody ChangeTitleRequest request) {
         Requirement changed = commands.changeTitle(
-                LocalId.of(localId),
+                localId,
                 requireText(request.title(), "title"),
-                LockVersion.of(request.expectedLockVersion()));
+                request.expectedLockVersion());
         return RequirementView.from(changed);
     }
 
@@ -90,13 +86,13 @@ public class RequirementController {
      * 编辑单个需求的标题和描述。
      */
     @PutMapping("/{localId}")
-    public RequirementView changeContent(@PathVariable("localId") String localId,
+    public RequirementView changeContent(@PathVariable("localId") Long localId,
                                          @RequestBody ChangeRequirementRequest request) {
         Requirement changed = commands.changeContent(
-                LocalId.of(localId),
+                localId,
                 requireText(request.title(), "title"),
                 Objects.requireNonNull(request.description(), "description"),
-                LockVersion.of(request.expectedLockVersion()));
+                request.expectedLockVersion());
         return RequirementView.from(changed);
     }
 
@@ -105,8 +101,8 @@ public class RequirementController {
      */
     @DeleteMapping("/{localId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteOne(@PathVariable String localId) {
-        commands.delete(LocalId.of(localId));
+    public void deleteOne(@PathVariable Long localId) {
+        commands.delete(localId);
     }
 
     /**
@@ -114,8 +110,8 @@ public class RequirementController {
      */
     @PostMapping("/{localId}/delete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String localId) {
-        commands.delete(LocalId.of(localId));
+    public void delete(@PathVariable Long localId) {
+        commands.delete(localId);
     }
 
     /**
@@ -123,8 +119,8 @@ public class RequirementController {
      */
     @PostMapping("/{localId}/delete2")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete2(@PathVariable String localId) {
-        lifecycle.delete2(LocalId.of(localId));
+    public void delete2(@PathVariable Long localId) {
+        lifecycle.delete2(localId);
     }
 
     /**
@@ -132,16 +128,16 @@ public class RequirementController {
      */
     @PostMapping("/{localId}/undelete")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void undelete(@PathVariable String localId) {
-        commands.undelete(LocalId.of(localId));
+    public void undelete(@PathVariable Long localId) {
+        commands.undelete(localId);
     }
 
     /**
      * 按 LocalId 查询需求详情。
      */
     @GetMapping("/{localId}")
-    public RequirementView find(@PathVariable("localId") String localId) {
-        RequirementDetail detail = queries.find(LocalId.of(localId));
+    public RequirementView find(@PathVariable("localId") Long localId) {
+        RequirementDetail detail = queries.find(localId);
         return RequirementView.from(detail);
     }
 }

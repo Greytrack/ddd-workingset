@@ -18,15 +18,15 @@ public record RequirementView(String localId,
 
     public static RequirementView from(Requirement requirement) {
         return new RequirementView(
-                requirement.localId().value(),
-                requirement.commonId().value(),
-                requirement.trackerId().value(),
+                Long.toString(requirement.localId()),
+                Long.toString(requirement.commonId()),
+                Long.toString(requirement.trackerId()),
                 requirement.number(),
                 requirement.title(),
                 requirement.description(),
-                requirement.revision().value(),
-                requirement.version().value(),
-                requirement.lockVersion().value(), requirement.hasMaterialized());
+                requirement.revision(),
+                requirement.version(),
+                requirement.lockVersion(), requirement.hasMaterialized());
     }
 
     public static RequirementView from(RequirementDetail detail) {

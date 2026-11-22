@@ -8,9 +8,9 @@ package com.airedgesoft.sharekernel.workingset.domain;
  */
 public interface BusinessObject {
 
-    LocalId localId();
+    Long localId();
 
-    CommonId commonId();
+    Long commonId();
 
     /**
      * 软删：保留业务数据但从正常读取隐藏。

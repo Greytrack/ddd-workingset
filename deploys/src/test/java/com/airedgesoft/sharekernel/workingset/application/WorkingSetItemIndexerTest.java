@@ -1,12 +1,9 @@
 package com.airedgesoft.sharekernel.workingset.application;
 
+
 import bootstrap.ItemIndexFixture;
 import bootstrap.WorkingsetApplication;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetItemIndexer;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
@@ -14,7 +11,6 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreati
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Progress;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Stage;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,18 +93,18 @@ class WorkingSetItemIndexerTest {
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, source, family, sourceTracker, sourceTracker, System.currentTimeMillis());
         ItemIndexFixture.insert(jdbc, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, 3, source, 3, false);
-        LocalId winner = LocalId.of(fixtureId("existing-" + suffix));
-        LocalId contender = LocalId.of(fixtureId("contender-" + suffix));
+        Long winner = Long.valueOf(fixtureId("existing-" + suffix));
+        Long contender = Long.valueOf(fixtureId("contender-" + suffix));
         ItemClassification classification = new ItemClassification(Long.parseLong(space), 14010101L);
-        LightTrackerItem existing = LightTrackerItem.local(winner, CommonId.of(family), TrackerId.of(childTracker),
-                WorkingSetId.of(child), Revision.of(3), classification, "test");
-        LightTrackerItem duplicate = LightTrackerItem.local(contender, CommonId.of(family), TrackerId.of(childTracker),
-                WorkingSetId.of(child), Revision.of(3), classification, "test");
+        LightTrackerItem existing = LightTrackerItem.local(winner, Long.valueOf(family), Long.valueOf(childTracker),
+                Long.valueOf(child), 3, classification, "test");
+        LightTrackerItem duplicate = LightTrackerItem.local(contender, Long.valueOf(family), Long.valueOf(childTracker),
+                Long.valueOf(child), 3, classification, "test");
         transaction.executeWithoutResult(status -> {
             assertTrue(items.claimFamily(existing));
             assertFalse(items.claimFamily(duplicate));
         });
-        assertEquals(Revision.of(3), items.findById(winner).orElseThrow().currentRevisionIndex().revision());
+        assertEquals(3, items.findById(winner).orElseThrow().currentRevisionIndex().revision());
         assertTrue(items.findById(contender).isEmpty());
 
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parent, child, "request",

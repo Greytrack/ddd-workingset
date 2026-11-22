@@ -8,7 +8,6 @@ import com.airedgesoft.sharekernel.workingset.application.query.model.WorkingSet
 import com.airedgesoft.sharekernel.workingset.application.query.model.WorkingSetSummary;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,32 +27,32 @@ public class WorkingSetQueryService {
 
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public WorkingSetSummary find(WorkingSetId id) {
+    public WorkingSetSummary find(Long id) {
         requireReady(id);
-        return query.find(id.numericValue())
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+        return query.find(id)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public List<Long> findChildren(WorkingSetId id) {
+    public List<Long> findChildren(Long id) {
         find(id);
-        return query.findChildren(id.numericValue());
+        return query.findChildren(id);
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public List<Long> findAncestors(WorkingSetId id) {
+    public List<Long> findAncestors(Long id) {
         find(id);
-        List<Long> ancestors = query.findAncestors(id.numericValue());
-        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.numericValue().equals(ancestors.getLast())) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, id.value());
+        List<Long> ancestors = query.findAncestors(id);
+        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.equals(ancestors.getLast())) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
         }
         return ancestors;
     }
 
     @Transactional(readOnly = true)
-    public List<TrackerSummary> findTrackers(WorkingSetId id) {
+    public List<TrackerSummary> findTrackers(Long id) {
         find(id);
-        return query.findTrackers(id.numericValue());
+        return query.findTrackers(id);
     }
 
     @Transactional(readOnly = true)
@@ -62,15 +61,15 @@ public class WorkingSetQueryService {
     }
 
     @Transactional(readOnly = true)
-    public WorkingSetBindings findBindings(WorkingSetId id) {
+    public WorkingSetBindings findBindings(Long id) {
         find(id);
-        return query.findBindings(id.numericValue());
+        return query.findBindings(id);
     }
 
-    private void requireReady(WorkingSetId id) {
+    private void requireReady(Long id) {
         Objects.requireNonNull(id, "workingSetId");
-        if (query.isPreparing(id.numericValue())) {
-            throw DomainException.withMessage(FailureReason.PREPARING, id.value());
+        if (query.isPreparing(id)) {
+            throw DomainException.withMessage(FailureReason.PREPARING, Long.toString(id));
         }
     }
 }

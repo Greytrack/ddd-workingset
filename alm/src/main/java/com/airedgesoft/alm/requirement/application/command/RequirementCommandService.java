@@ -1,5 +1,6 @@
 package com.airedgesoft.alm.requirement.application.command;
 
+
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
@@ -7,11 +8,9 @@ import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.domain.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
@@ -19,7 +18,6 @@ import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEve
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
@@ -51,7 +49,7 @@ public class RequirementCommandService {
 
     private static void requireActive(Requirement requirement) {
         if (requirement.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, requirement.localId().value());
+            throw DomainException.withMessage(FailureReason.DELETED, Long.toString(requirement.localId()));
         }
     }
 
@@ -63,11 +61,11 @@ public class RequirementCommandService {
      * 显式指定非默认工作集时，非共享 Tracker 必须属于该工作集；Tracker 不存在时交由持久化层给出冲突。
      */
     @Transactional
-    public Requirement create(TrackerId trackerId,
-                              WorkingSetId requestedWorkingSetId,
+    public Requirement create(Long trackerId,
+                              Long requestedWorkingSetId,
                               String title,
                               String description,
-                              Revision revision) {
+                              Integer revision) {
         if (requestedWorkingSetId != null) {
             requireWorkingSet(requestedWorkingSetId);
         }
@@ -80,8 +78,8 @@ public class RequirementCommandService {
                 if (current.sharingMode() == SharingMode.UNSHARED
                         && !current.workingSetId().equals(requestedWorkingSetId)) {
                     throw DomainException.withMessage(FailureReason.NOT_INCLUDED,
-                            "tracker " + trackerId.value() + " is not included in working set "
-                                    + requestedWorkingSetId.value());
+                            "tracker " + Long.toString(trackerId) + " is not included in working set "
+                                    + Long.toString(requestedWorkingSetId));
                 }
             });
         }
@@ -92,8 +90,8 @@ public class RequirementCommandService {
         long local = identifierGenerator.nextId(null).longValue();
         long common = defaultWorkingSet ? local : nextDistinct(local);
         Requirement requirement = Requirement.create(
-                LocalId.of(String.valueOf(local)), CommonId.of(String.valueOf(common)),
-                trackerId, title, description, revision, Version.none(), RequestThreadHolder.getUserId());
+                Long.valueOf(String.valueOf(local)), Long.valueOf(String.valueOf(common)),
+                trackerId, title, description, revision, null, RequestThreadHolder.getUserId());
         repository.save(requirement);
         tracker.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
                 requirement.localId(), requirement.commonId(), trackerId,
@@ -116,7 +114,7 @@ public class RequirementCommandService {
      * <p>业务 {@code revision} 不升级；发布大版本 {@code version} 不变；仅乐观锁自动 +1。
      */
     @Transactional
-    public Requirement changeTitle(LocalId localId, String newTitle, LockVersion expectedLockVersion) {
+    public Requirement changeTitle(Long localId, String newTitle, Long expectedLockVersion) {
         return edit(localId, expectedLockVersion, current -> current.changeTitle(newTitle, expectedLockVersion));
     }
 
@@ -124,13 +122,13 @@ public class RequirementCommandService {
      * 普通修改标题和描述；业务 revision 不升级，仍按乐观锁写入并发布来源事件。
      */
     @Transactional
-    public Requirement changeContent(LocalId localId, String newTitle, String newDescription,
-                                     LockVersion expectedLockVersion) {
+    public Requirement changeContent(Long localId, String newTitle, String newDescription,
+                                     Long expectedLockVersion) {
         return edit(localId, expectedLockVersion,
                 current -> current.changeContent(newTitle, newDescription, expectedLockVersion));
     }
 
-    private Requirement edit(LocalId localId, LockVersion expectedLockVersion, UnaryOperator<Requirement> change) {
+    private Requirement edit(Long localId, Long expectedLockVersion, UnaryOperator<Requirement> change) {
         Optional<LightTrackerItem> inherited = items.findById(localId)
                 .filter(item -> !item.materialized());
         Requirement current = inherited.map(target -> {
@@ -141,20 +139,20 @@ public class RequirementCommandService {
         return saveChange(current, change.apply(current));
     }
 
-    private void requireWorkingSet(WorkingSetId id) {
+    private void requireWorkingSet(Long id) {
         workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
-    void requireTrackerWorkingSet(TrackerId trackerId) {
+    void requireTrackerWorkingSet(Long trackerId) {
         Tracker tracker = trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, trackerId.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, Long.toString(trackerId)));
         requireWorkingSet(tracker.workingSetId());
     }
 
-    private Requirement createEditBase(LightTrackerItem target, LockVersion expectedLockVersion) {
-        if (!LockVersion.initial().equals(expectedLockVersion)) {
-            throw new LockVersionConflictException(expectedLockVersion, LockVersion.initial());
+    private Requirement createEditBase(LightTrackerItem target, Long expectedLockVersion) {
+        if (!Long.valueOf(0L).equals(expectedLockVersion)) {
+            throw new LockVersionConflictException(expectedLockVersion, Long.valueOf(0L));
         }
         Requirement base = rebuildInherited(target);
         repository.save(base);
@@ -165,7 +163,7 @@ public class RequirementCommandService {
         Requirement source = load(target.sourceLocalId());
         requireActive(source);
         if (!source.revision().equals(target.sourceRevision())) {
-            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, target.sourceLocalId().value());
+            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
         }
         return Requirement.create(target.localId(), target.commonId(), target.trackerId(),
                 source.title(), source.description(), target.revision(), source.version(), RequestThreadHolder.getUserId());
@@ -175,7 +173,7 @@ public class RequirementCommandService {
      * 显式升级业务版次，触发依赖变体的 COW。
      */
     @Transactional
-    public Requirement upgradeRevision(LocalId localId, LockVersion expectedLockVersion) {
+    public Requirement upgradeRevision(Long localId, Long expectedLockVersion) {
         Requirement current = loadWritable(localId);
         requireActive(current);
         return saveChange(current, current.upgradeRevision(expectedLockVersion));
@@ -185,7 +183,7 @@ public class RequirementCommandService {
      * 软删除需求。
      */
     @Transactional
-    public void delete(LocalId id) {
+    public void delete(Long id) {
         Requirement current = loadWritable(id);
         requireActive(current);
         saveChange(current, current.delete(current.lockVersion()));
@@ -195,18 +193,18 @@ public class RequirementCommandService {
      * 恢复软删除的需求。
      */
     @Transactional
-    public void undelete(LocalId id) {
+    public void undelete(Long id) {
         Requirement current = loadWritable(id);
         saveChange(current, current.undelete(current.lockVersion()));
     }
 
-    private Requirement load(LocalId localId) {
+    private Requirement load(Long localId) {
         Objects.requireNonNull(localId, "localId");
         return repository.findById(localId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + localId.value()));
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + Long.toString(localId)));
     }
 
-    private Requirement loadWritable(LocalId localId) {
+    private Requirement loadWritable(Long localId) {
         Requirement requirement = load(localId);
         requireTrackerWorkingSet(requirement.trackerId());
         return requirement;

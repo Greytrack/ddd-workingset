@@ -3,13 +3,10 @@ package com.airedgesoft.alm.requirement.adapters.workingset;
 import com.airedgesoft.alm.requirement.application.RequirementTypes;
 import com.airedgesoft.alm.requirement.application.query.provider.RequirementQueryProvider;
 import com.airedgesoft.alm.requirement.infrastructure.providers.RequirementTrackerItemCatalogQueryProvider;
-import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectType;
 import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
 import com.airedgesoft.sharekernel.workingset.application.port.Capabilities;
-import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -29,10 +26,9 @@ public class RequirementTypeAdapter implements BusinessObjectTypeAdapter {
 
     private final RequirementQueryProvider query;
     private final RequirementTrackerItemCatalogQueryProvider catalog;
-    private final RequirementSourceLockAdapter sourceLock;
 
     @Override
-    public Set<BusinessObjectType> types() {
+    public Set<Long> types() {
         return RequirementTypes.SUPPORTED;
     }
 
@@ -42,7 +38,7 @@ public class RequirementTypeAdapter implements BusinessObjectTypeAdapter {
     }
 
     @Override
-    public TrackerItemQueryProvider query(LocalId localId) {
+    public TrackerItemQueryProvider query(Long localId) {
         return new RequirementReadModelAdapter(query, localId);
     }
 
@@ -51,8 +47,4 @@ public class RequirementTypeAdapter implements BusinessObjectTypeAdapter {
         return catalog;
     }
 
-    @Override
-    public TrackerItemSourceLock sourceLock() {
-        return sourceLock;
-    }
 }

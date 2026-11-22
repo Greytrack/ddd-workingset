@@ -1,10 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.event;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Objects;
 
@@ -14,15 +10,15 @@ import java.util.Objects;
  * <p>事件只携带目标身份、来源切点和快照引用，不携带 SK 聚合。
  */
 public record TrackerItemMaterializationRequestedEvent(long eventId,
-                                                       LocalId targetLocalId,
-                                                       TrackerId targetTrackerId,
-                                                       CommonId commonId,
-                                                       LocalId sourceLocalId,
-                                                       Revision beforeRevision,
-                                                       Revision afterRevision,
-                                                       LockVersion beforeLockVersion,
-                                                       LockVersion afterLockVersion,
-                                                       Revision targetRevision,
+                                                       @JsonFormat(shape = JsonFormat.Shape.STRING) Long targetLocalId,
+                                                       @JsonFormat(shape = JsonFormat.Shape.STRING) Long targetTrackerId,
+                                                       @JsonFormat(shape = JsonFormat.Shape.STRING) Long commonId,
+                                                       @JsonFormat(shape = JsonFormat.Shape.STRING) Long sourceLocalId,
+                                                       Integer beforeRevision,
+                                                       Integer afterRevision,
+                                                       Long beforeLockVersion,
+                                                       Long afterLockVersion,
+                                                       Integer targetRevision,
                                                        SnapshotRefEvent snapshotRef) {
 
     public TrackerItemMaterializationRequestedEvent {

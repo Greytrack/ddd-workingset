@@ -4,7 +4,6 @@ import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.SharedKernelResultCode;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreationRepository;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -57,13 +56,13 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     }
 
     @Override
-    public Optional<WorkingSetCreation> findByTarget(WorkingSetId target) {
+    public Optional<WorkingSetCreation> findByTarget(Long target) {
         return load("""
                 SELECT result FROM working_set_creations
                 WHERE new_working_set_id = ?
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
-                """, target.numericValue());
+                """, target);
     }
 
     @Override
@@ -77,14 +76,14 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     }
 
     @Override
-    public Optional<WorkingSetCreation> findActiveExtension(WorkingSetId target) {
+    public Optional<WorkingSetCreation> findActiveExtension(Long target) {
         return load("""
                 SELECT result FROM working_set_creations
                 WHERE new_working_set_id = ? AND result->'request'->>'mode' = 'EXTEND'
                   AND status IN ('Pending', 'Running')
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
-                """, target.numericValue());
+                """, target);
     }
 
     private boolean update(WorkingSetCreation creation) {

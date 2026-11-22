@@ -28,7 +28,7 @@ public final class WorkingSetLineageDomainService {
         if (target.id().equals(source.parentWorkingSetId())) {
             return source;
         }
-        throw DomainException.withMessage(BindingResCode.WORKING_SETS_NOT_ADJACENT, source.id().value() + "/" + target.id().value());
+        throw DomainException.withMessage(BindingResCode.WORKING_SETS_NOT_ADJACENT, Long.toString(source.id()) + "/" + Long.toString(target.id()));
     }
 
     /**

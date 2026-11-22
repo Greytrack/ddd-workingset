@@ -1,8 +1,7 @@
 package com.airedgesoft.sharekernel.workingset.infrastructure.providers;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -19,27 +18,27 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     private final JdbcTemplate jdbc;
 
     @Override
-    public boolean hasOwnedTrackers(WorkingSetId workingSetId) {
+    public boolean hasOwnedTrackers(Long workingSetId) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM air_inst_tracker_rev WHERE workingset_id = ?)
-                """, Boolean.class, workingSetId.numericValue()));
+                """, Boolean.class, workingSetId));
     }
 
     @Override
-    public boolean hasOrgChildren(TrackerId id) {
-        return exists("parent_id = ?", id.numericValue());
+    public boolean hasOrgChildren(Long id) {
+        return exists("parent_id = ?", id);
     }
 
     @Override
-    public boolean hasDerivedChildren(TrackerId id) {
-        return exists("source_branch_id = ?", id.numericValue());
+    public boolean hasDerivedChildren(Long id) {
+        return exists("source_branch_id = ?", id);
     }
 
     @Override
-    public List<TrackerId> findTrackerIdsInSpace(String spaceId) {
+    public List<Long> findTrackerIdsInSpace(String spaceId) {
         return jdbc.queryForList("""
                 SELECT id FROM air_inst_tracker_rev WHERE work_space = ? ORDER BY id
-                """, Long.class, Long.valueOf(spaceId)).stream().map(TrackerId::of).toList();
+                """, Long.class, Long.valueOf(spaceId)).stream().toList();
     }
 
     @Override
@@ -55,21 +54,21 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     }
 
     @Override
-    public boolean existsDefaultTracker(WorkingSetId workingSetId, String spaceId, String classificationId) {
+    public boolean existsDefaultTracker(Long workingSetId, String spaceId, String classificationId) {
         return exists("workingset_id = ? AND work_space = ? AND tracker_class = ? AND is_default = 1",
-                workingSetId.numericValue(), Long.valueOf(spaceId), Long.valueOf(classificationId));
+                workingSetId, Long.valueOf(spaceId), Long.valueOf(classificationId));
     }
 
     @Override
-    public Optional<TrackerId> findDefaultTrackerId(WorkingSetId workingSetId, long spaceId,
+    public Optional<Long> findDefaultTrackerId(Long workingSetId, long spaceId,
                                                     long classificationId) {
         return jdbc.queryForList("""
                         SELECT id FROM air_inst_tracker_rev
                         WHERE delete_flag = 0 AND workingset_id = ? AND work_space = ?
                             AND tracker_class = ? AND is_default = 1
                         ORDER BY id
-                        """, Long.class, workingSetId.numericValue(), spaceId, classificationId).stream()
-                .findFirst().map(TrackerId::of);
+                        """, Long.class, workingSetId, spaceId, classificationId).stream()
+                .findFirst();
     }
 
     private boolean exists(String predicate, Object... args) {

@@ -1,15 +1,11 @@
 package com.airedgesoft.sharekernel.workingset.application;
 
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
+
 import com.airedgesoft.sharekernel.workingset.application.command.RelationEventPublisher;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -26,23 +22,23 @@ class RelationEventPublisherTest {
             entity -> sequence.incrementAndGet());
 
     private static ReferenceEndpointEvent source() {
-        return new ReferenceEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
-                TrackerId.of("265625955250112"), Revision.of(3));
+        return new ReferenceEndpointEvent(Long.valueOf("259712159403968"), Long.valueOf("261158455371712"), Long.valueOf("265506033508288"),
+                Long.valueOf("265625955250112"), 3);
     }
 
     private static ReferenceEndpointEvent target() {
-        return new ReferenceEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
-                TrackerId.of("261538396602304"), Revision.of(4));
+        return new ReferenceEndpointEvent(Long.valueOf("260634912653248"), Long.valueOf("265864557082560"), Long.valueOf("261349487529920"),
+                Long.valueOf("261538396602304"), 4);
     }
 
     private static AssociationEndpointEvent associationSource() {
-        return new AssociationEndpointEvent(WorkingSetId.of("259712159403968"), LocalId.of("261158455371712"), CommonId.of("265506033508288"),
-                TrackerId.of("265625955250112"));
+        return new AssociationEndpointEvent(Long.valueOf("259712159403968"), Long.valueOf("261158455371712"), Long.valueOf("265506033508288"),
+                Long.valueOf("265625955250112"));
     }
 
     private static AssociationEndpointEvent associationTarget() {
-        return new AssociationEndpointEvent(WorkingSetId.of("260634912653248"), LocalId.of("265864557082560"), CommonId.of("261349487529920"),
-                TrackerId.of("261538396602304"));
+        return new AssociationEndpointEvent(Long.valueOf("260634912653248"), Long.valueOf("265864557082560"), Long.valueOf("261349487529920"),
+                Long.valueOf("261538396602304"));
     }
 
     @Test
@@ -72,7 +68,7 @@ class RelationEventPublisherTest {
         assertEquals(1, published.size());
         assertTrue(published.getFirst() instanceof AssociationCreationRequestedEvent);
         assertEquals("association-7", created.getFirst().metadata().originalRelationId());
-        assertEquals("265625955250112", created.getFirst().source().trackerId().value());
-        assertEquals("261538396602304", created.getFirst().target().trackerId().value());
+        assertEquals("265625955250112", Long.toString(created.getFirst().source().trackerId()));
+        assertEquals("261538396602304", Long.toString(created.getFirst().target().trackerId()));
     }
 }

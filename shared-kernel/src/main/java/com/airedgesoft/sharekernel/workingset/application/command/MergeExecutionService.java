@@ -1,12 +1,11 @@
 package com.airedgesoft.sharekernel.workingset.application.command;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.MergeEvidenceReader;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.*;
 import com.airedgesoft.sharekernel.workingset.domain.merge.*;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.Difference;
@@ -18,7 +17,6 @@ import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound.ItemResult
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound.Outcome;
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound.State;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.MergeResCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
@@ -69,7 +67,7 @@ public class MergeExecutionService {
         return pair;
     }
 
-    private static MergeRound matching(MergeRound round, WorkingSetId source, WorkingSetId target) {
+    private static MergeRound matching(MergeRound round, Long source, Long target) {
         if (!round.source().equals(source) || !round.target().equals(target)) {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "requestId is already used by another merge round");
         }
@@ -122,7 +120,7 @@ public class MergeExecutionService {
      * 按 requestId 幂等登记一页合并决策并发布提交事件；同键返回原轮次，换方向返回冲突。
      */
     @Transactional
-    public MergeRound submit(WorkingSetId target, WorkingSetId source, String requestId,
+    public MergeRound submit(Long target, Long source, String requestId,
                              List<EntryRequest> decisions, String caller) {
         Optional<MergeRound> existing = mergeRepository.findByRequestId(requestId);
         if (existing.isPresent()) {
@@ -141,7 +139,7 @@ public class MergeExecutionService {
         try {
             registerDecisions(prepared, decisions);
         } catch (DataIntegrityViolationException conflict) {
-            throw DomainException.withMessage(MergeResCode.PAIR_MERGE_IN_PROGRESS, pair.source().value() + "/" + pair.target().value());
+            throw DomainException.withMessage(MergeResCode.PAIR_MERGE_IN_PROGRESS, Long.toString(pair.source()) + "/" + Long.toString(pair.target()));
         }
         events.publishEvent(new MergeRoundSubmittedEvent(prepared.id()));
         return round(prepared.id());
@@ -161,14 +159,14 @@ public class MergeExecutionService {
             Comparison.TrackerPair pair = frozen.trackers();
             if (!pair.sourceWorkingSetId().equals(round.source())
                     || !pair.targetWorkingSetId().equals(round.target())) {
-                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
+                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
             }
             if (!candidates.contains(pair)) {
-                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
+                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
             }
             Difference current = evidence.current(frozen);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
-                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, frozen.family().value());
+                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
             }
             if (request.decision() == null) {
                 throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "decision is required");
@@ -248,16 +246,16 @@ public class MergeExecutionService {
         Side target = frozen.target();
         Side source = frozen.source();
         MergeEntryApprovedEvent.Operation action = MergeEntryApprovedEvent.Operation.valueOf(operation);
-        LocalId localId = action == MergeEntryApprovedEvent.Operation.CREATE
+        Long localId = action == MergeEntryApprovedEvent.Operation.CREATE
                 ? (WorkingSet.DEFAULT_ID.equals(round.target())
-                ? LocalId.of(frozen.family().value())
-                : LocalId.of(Long.toString(ids.nextId(null).longValue())))
+                ? frozen.family()
+                : ids.nextId(null).longValue())
                 : target.localId();
         boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
         boolean create = action == MergeEntryApprovedEvent.Operation.CREATE;
-        Revision sourceRevision = source.revision() != null ? source.revision() : Revision.of(0);
-        Revision targetRevision = create ? sourceRevision
-                : target.revision() != null ? target.revision() : Revision.of(0);
+        Integer sourceRevision = source.revision() != null ? source.revision() : 0;
+        Integer targetRevision = create ? sourceRevision
+                : target.revision() != null ? target.revision() : 0;
         return new MergeEntryApprovedEvent(round.id(), entry.id(), round.token(), action,
                 tracker.trackerId(), frozen.family(), localId,
                 sourceRevision, targetRevision,

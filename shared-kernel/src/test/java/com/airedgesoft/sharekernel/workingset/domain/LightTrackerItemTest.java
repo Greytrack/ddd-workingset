@@ -1,10 +1,9 @@
 package com.airedgesoft.sharekernel.workingset.domain;
 
+
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -14,12 +13,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class LightTrackerItemTest {
     private static final ItemClassification CLASSIFICATION = new ItemClassification(42L, 14010101L);
 
-    private static final LocalId L0 = LocalId.of("260574482192320");
-    private static final LocalId L1 = LocalId.of("261158455371712");
-    private static final CommonId C1 = CommonId.of("265506033508288");
-    private static final TrackerId T1 = TrackerId.of("265625955250112");
-    private static final WorkingSetId WS1 = WorkingSetId.of("261508476721088");
-    private static final Revision R3 = Revision.of(3);
+    private static final Long L0 = Long.valueOf("260574482192320");
+    private static final Long L1 = Long.valueOf("261158455371712");
+    private static final Long C1 = Long.valueOf("265506033508288");
+    private static final Long T1 = Long.valueOf("265625955250112");
+    private static final Long WS1 = Long.valueOf("261508476721088");
+    private static final Integer R3 = 3;
 
     @Test
     void derive_creates_source_backed_variant() {
@@ -59,7 +58,7 @@ class LightTrackerItemTest {
     @Test
     void switchToLocalBacked_updates_three_fields_and_keeps_identity() {
         LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
-        LocalId before = item.localId();
+        Long before = item.localId();
 
         item.switchToLocalBacked(R3);
 
@@ -84,14 +83,14 @@ class LightTrackerItemTest {
     void switchToLocalBacked_rejects_revision_mismatch() {
         LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
 
-        assertThrows(DomainException.class, () -> item.switchToLocalBacked(Revision.of(4)));
+        assertThrows(DomainException.class, () -> item.switchToLocalBacked(4));
     }
 
     @Test
     void explicitUpgradeRetainsPreviousRevisionAndIgnoresReplay() {
         LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, CLASSIFICATION);
-        Revision r4 = Revision.of(4);
-        assertThrows(DomainException.class, () -> item.advanceRevision(r4, Revision.of(5)));
+        Integer r4 = 4;
+        assertThrows(DomainException.class, () -> item.advanceRevision(r4, 5));
         assertTrue(item.advanceRevision(R3, r4));
         assertFalse(item.advanceRevision(R3, r4));
         assertEquals(List.of(R3, r4), item.revisions().stream().map(member -> member.revision()).toList());

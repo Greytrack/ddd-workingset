@@ -1,8 +1,6 @@
 package com.airedgesoft.sharekernel.tracker.domain.repository;
 
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.jmolecules.ddd.annotation.Repository;
 
 import java.util.Optional;
@@ -12,18 +10,18 @@ import java.util.Optional;
  */
 @Repository
 public interface TrackerRepository {
-    Optional<Tracker> findById(TrackerId id);
+    Optional<Tracker> findById(Long id);
 
-    Optional<Tracker> lockTracker(TrackerId id);
+    Optional<Tracker> lockTracker(Long id);
 
-    Optional<Tracker> findDerivedTracker(WorkingSetId target, TrackerId source);
+    Optional<Tracker> findDerivedTracker(Long target, Long source);
 
-    Optional<Tracker> findDefaultTracker(WorkingSetId owner, String spaceId, long classificationId);
+    Optional<Tracker> findDefaultTracker(Long owner, String spaceId, long classificationId);
 
     /**
      * 保存聚合及其兼容数据。
      */
     void save(Tracker tracker);
 
-    void deleteTracker(TrackerId id);
+    void deleteTracker(Long id);
 }

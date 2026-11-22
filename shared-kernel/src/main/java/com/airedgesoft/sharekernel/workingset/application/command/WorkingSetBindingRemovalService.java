@@ -2,9 +2,7 @@ package com.airedgesoft.sharekernel.workingset.application.command;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +21,9 @@ public class WorkingSetBindingRemovalService {
      * 解除工作集与 Tracker 的绑定（幂等）；仅修改 WorkingSet 一个聚合。
      */
     @Transactional
-    public void remove(WorkingSetId workingSetId, TrackerId trackerId) {
+    public void remove(Long workingSetId, Long trackerId) {
         WorkingSet workingSet = workingSets.findById(workingSetId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, workingSetId.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(workingSetId)));
         if (!workingSet.hasTrackerBinding(trackerId)) {
             return;
         }

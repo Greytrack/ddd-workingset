@@ -1,8 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.adapters;
 
+
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCreationService;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,20 +28,20 @@ public class WorkingSetExtensionController {
      */
     @PostMapping("/{target}/extensions")
     public ResponseEntity<WorkingSetCreationController.CreationView> extend(
-            @PathVariable String target, @RequestBody ExtensionRequest request) {
+            @PathVariable Long target, @RequestBody ExtensionRequest request) {
         if (request.requestId() == null || request.requestId().isBlank()) {
             throw new IllegalArgumentException("requestId is required");
         }
         if (request.requestId().length() > MAX_REQUEST_ID) {
             throw new IllegalArgumentException("requestId must be at most " + MAX_REQUEST_ID + " characters");
         }
-        WorkingSetCreation creation = creations.submitExtension(WorkingSetId.of(target), request.requestId(),
+        WorkingSetCreation creation = creations.submitExtension(target, request.requestId(),
                 request.trackerIds(), request.baselineAtByTracker());
         return ResponseEntity.accepted()
                 .location(URI.create("/api/working-set-creations/" + creation.id()))
                 .body(WorkingSetCreationController.CreationView.from(creation));
     }
 
-    public record ExtensionRequest(String requestId, List<String> trackerIds, Map<Long, Long> baselineAtByTracker) {
+    public record ExtensionRequest(String requestId, List<Long> trackerIds, Map<Long, Long> baselineAtByTracker) {
     }
 }

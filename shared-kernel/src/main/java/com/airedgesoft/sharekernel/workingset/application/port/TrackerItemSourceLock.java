@@ -1,10 +1,5 @@
 package com.airedgesoft.sharekernel.workingset.application.port;
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-
-import java.util.Optional;
-
 /**
  * 锁定来源业务对象，并读取版次与删除状态。
  *
@@ -13,8 +8,4 @@ import java.util.Optional;
  */
 public interface TrackerItemSourceLock {
 
-    Optional<State> lock(LocalId sourceLocalId);
-
-    record State(Revision revision, boolean deleted) {
-    }
 }

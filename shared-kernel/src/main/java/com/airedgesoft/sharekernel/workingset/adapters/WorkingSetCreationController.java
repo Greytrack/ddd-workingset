@@ -36,16 +36,16 @@ public class WorkingSetCreationController {
      * 按 id 查询创建任务的状态、阶段、进度与失败明细。
      */
     @GetMapping("/{id}")
-    public CreationView find(@PathVariable String id) {
-        return CreationView.from(creations.find(id));
+    public CreationView find(@PathVariable Long id) {
+        return CreationView.from(creations.find(Long.toString(id)));
     }
 
     /**
      * 任务上下文读取创建中的目标工作集；普通 /api/worksets/{id} 仍返回 Preparing。
      */
     @GetMapping("/{id}/working-set")
-    public WorkingSetController.WorkingSetView findTarget(@PathVariable String id) {
-        return WorkingSetController.WorkingSetView.from(creations.findTarget(id));
+    public WorkingSetController.WorkingSetView findTarget(@PathVariable Long id) {
+        return WorkingSetController.WorkingSetView.from(creations.findTarget(Long.toString(id)));
     }
 
     public record CreationView(String creationId, String targetWorkingSetId, String mode,

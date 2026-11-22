@@ -6,7 +6,6 @@ import com.airedgesoft.sharekernel.SharedKernelResultCode;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
@@ -39,13 +38,13 @@ public class DefaultTrackersBindingListener {
                             "product space disappeared: " + spaceId));
             workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
         }
-        for (TrackerId trackerId : event.trackerIds()) {
+        for (Long trackerId : event.trackerIds()) {
             if (workingSet.hasTrackerBinding(trackerId)) {
                 continue;
             }
             Tracker tracker = trackers.findById(trackerId)
                     .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                            "tracker disappeared: " + trackerId.value()));
+                            "tracker disappeared: " + Long.toString(trackerId)));
             workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.sharingMode());
         }
         workingSet.audit(RequestThreadHolder.getUserId());

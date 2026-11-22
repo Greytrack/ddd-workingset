@@ -1,8 +1,5 @@
 package com.airedgesoft.sharekernel.workingset.application.query.provider;
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 
 import java.util.List;
 
@@ -12,11 +9,11 @@ import java.util.List;
 public interface CowFailureLogQueryProvider {
     void record(Failure failure);
 
-    List<Failure> findBySource(LocalId sourceLocalId);
+    List<Failure> findBySource(Long sourceLocalId);
 
-    record Failure(long eventId, LocalId targetLocalId, LocalId sourceLocalId,
-                   Revision beforeRevision, Revision afterRevision,
-                   LockVersion beforeLockVersion, LockVersion afterLockVersion,
+    record Failure(long eventId, Long targetLocalId, Long sourceLocalId,
+                   Integer beforeRevision, Integer afterRevision,
+                   Long beforeLockVersion, Long afterLockVersion,
                    int attempts,
                    String stage, String errorType, String message, long occurredAt) {
     }

@@ -2,7 +2,6 @@ package com.airedgesoft.sharekernel.tracker.application.eventhandler;
 
 import com.airedgesoft.sharekernel.productspace.domain.event.ProductSpaceCreatedEvent;
 import com.airedgesoft.sharekernel.tracker.application.command.DefaultTrackerInitCommandService;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -21,7 +20,7 @@ public class ProductSpaceCreatedEventListener {
 
     @ApplicationModuleListener(id = "bootstrap.ProductSpaceProvisioningListener.on(sk.productspace.domain.event.ProductSpaceCreatedEvent)")
     public void on(ProductSpaceCreatedEvent event) {
-        List<TrackerId> trackerIds = trackerInitCommandService.provisionAll(event.productSpaceId());
+        List<Long> trackerIds = trackerInitCommandService.provisionAll(event.productSpaceId());
         log.info("=================>初始化默认tracker完成，共初始化{}条", trackerIds.size());
     }
 }

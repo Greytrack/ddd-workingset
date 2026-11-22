@@ -1,14 +1,13 @@
 package com.airedgesoft.sharekernel.workingset.adapters;
 
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.MergeExecutionService;
 import com.airedgesoft.sharekernel.workingset.application.command.MergeExecutionService.EntryRequest;
 import com.airedgesoft.sharekernel.workingset.application.query.MergeComparisonService;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison;
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,15 +57,15 @@ public class MergeController {
      * 对直属父子工作集的 Tracker 对做只读瞬时比较，按 offset/limit 分页；不承诺跨请求冻结（ADR-0005 补充）。
      */
     @PostMapping("/worksets/{target}/compare/{source}")
-    public ComparisonPage compare(@PathVariable String target,
-                                  @PathVariable String source,
-                                  @RequestParam String sourceTrackerId,
-                                  @RequestParam String targetTrackerId,
+    public ComparisonPage compare(@PathVariable Long target,
+                                  @PathVariable Long source,
+                                  @RequestParam Long sourceTrackerId,
+                                  @RequestParam Long targetTrackerId,
                                   @RequestParam(defaultValue = "0") int offset,
                                   @RequestParam(defaultValue = "100") int limit) {
         checkPage(offset, limit);
-        Comparison result = comparisons.compare(WorkingSetId.of(source), WorkingSetId.of(target),
-                TrackerId.of(sourceTrackerId), TrackerId.of(targetTrackerId));
+        Comparison result = comparisons.compare(source, target,
+                sourceTrackerId, targetTrackerId);
         return page(result, offset, limit);
     }
 
@@ -75,8 +74,8 @@ public class MergeController {
      */
     @PostMapping("/worksets/{target}/merge-rounds")
     @ResponseStatus(HttpStatus.CREATED)
-    public MergeRound submit(@PathVariable String target, @RequestBody SubmitRequest request) {
-        if (request.sourceWorkingSetId() == null || request.sourceWorkingSetId().isBlank()) {
+    public MergeRound submit(@PathVariable Long target, @RequestBody SubmitRequest request) {
+        if (request.sourceWorkingSetId() == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "sourceWorkingSetId is required");
         }
         if (request.requestId() == null || request.requestId().isBlank()) {
@@ -91,7 +90,7 @@ public class MergeController {
         if (request.decisions().size() > MAX_DECISIONS) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "decisions must contain at most " + MAX_DECISIONS + " entries");
         }
-        return rounds.submit(WorkingSetId.of(target), WorkingSetId.of(request.sourceWorkingSetId()),
+        return rounds.submit(target, request.sourceWorkingSetId(),
                 request.requestId(), List.copyOf(request.decisions()), "web");
     }
 
@@ -100,22 +99,22 @@ public class MergeController {
      */
     @PostMapping("/merge-rounds/{id}/apply")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MergeRound apply(@PathVariable String id) {
-        return rounds.apply(id);
+    public MergeRound apply(@PathVariable Long id) {
+        return rounds.apply(Long.toString(id));
     }
 
     /**
      * 按 id 查询轮次状态、条目结果与唯一终态 ApplyResult。
      */
     @GetMapping("/merge-rounds/{id}")
-    public MergeRound get(@PathVariable String id) {
-        return rounds.get(id);
+    public MergeRound get(@PathVariable Long id) {
+        return rounds.get(Long.toString(id));
     }
 
-    public record SubmitRequest(String sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {
+    public record SubmitRequest(Long sourceWorkingSetId, String requestId, List<EntryRequest> decisions) {
     }
 
-    public record ComparisonPage(WorkingSetId source, WorkingSetId target, long comparedAt,
+    public record ComparisonPage(@JsonFormat(shape = JsonFormat.Shape.STRING) Long source, @JsonFormat(shape = JsonFormat.Shape.STRING) Long target, long comparedAt,
                                  List<Comparison.TrackerPair> candidates, List<Comparison.Difference> differences,
                                  Integer nextOffset) {
     }

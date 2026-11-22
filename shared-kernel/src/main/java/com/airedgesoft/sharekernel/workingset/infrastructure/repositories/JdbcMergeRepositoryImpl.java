@@ -2,8 +2,6 @@ package com.airedgesoft.sharekernel.workingset.infrastructure.repositories;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.SharedKernelResultCode;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison;
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRepository;
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound;
@@ -31,14 +29,6 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
 
-    private static Long numericId(LocalId id) {
-        return id == null ? null : id.numericValue();
-    }
-
-    private static Integer revision(Revision revision) {
-        return revision == null ? null : revision.value();
-    }
-
     /**
      * 活动轮次唯一索引按数值升序记录 Tracker 对；聚合内证据已保证整轮同属一对。
      */
@@ -48,8 +38,8 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
             return new Long[]{null, null};
         }
         Comparison.TrackerPair trackers = first.evidence().trackers();
-        long a = trackers.source().numericValue();
-        long b = trackers.target().numericValue();
+        long a = trackers.source();
+        long b = trackers.target();
         return a <= b ? new Long[]{a, b} : new Long[]{b, a};
     }
 
@@ -100,12 +90,12 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     private void insertConfirmation(MergeRound round, MergeRound.Entry entry) {
         Comparison.Difference evidence = entry.evidence();
         MergeRound.Confirmation confirmation = entry.confirmation();
-        long source = evidence.trackers().source().numericValue();
-        long target = evidence.trackers().target().numericValue();
+        long source = evidence.trackers().source();
+        long target = evidence.trackers().target();
         boolean sourceIsA = source <= target;
-        Long sourceLocal = numericId(evidence.source().localId());
+        Long sourceLocal = evidence.source().localId();
         Long targetLocal = entry.result().businessRef() != null
-                ? Long.valueOf(entry.result().businessRef()) : numericId(evidence.target().localId());
+                ? Long.valueOf(entry.result().businessRef()) : evidence.target().localId();
         String diffType = switch (evidence.kind()) {
             case ADDED -> "ADD";
             case MODIFIED -> "UPDATED";
@@ -120,9 +110,9 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
                             (extract(epoch FROM now()) * 1000)::bigint, ?, (extract(epoch FROM now()) * 1000)::bigint)
                         ON CONFLICT (id) DO NOTHING
                         """, entry.numericId(), round.numericId(), Math.min(source, target), Math.max(source, target),
-                evidence.family().numericValue(), sourceIsA ? sourceLocal : targetLocal, sourceIsA ? targetLocal : sourceLocal,
-                revision(sourceIsA ? confirmation.sourceRevision() : confirmation.targetRevision()),
-                revision(sourceIsA ? confirmation.targetRevision() : confirmation.sourceRevision()), diffType,
+                evidence.family(), sourceIsA ? sourceLocal : targetLocal, sourceIsA ? targetLocal : sourceLocal,
+                sourceIsA ? confirmation.sourceRevision() : confirmation.targetRevision(),
+                sourceIsA ? confirmation.targetRevision() : confirmation.sourceRevision(), diffType,
                 sourceIsA ? "A_TO_B" : "B_TO_A",
                 "IGNORED".equals(entry.result().operation()) ? "IGNORED" : "ACCEPTED",
                 round.caller(), round.caller(), round.caller());

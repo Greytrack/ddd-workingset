@@ -1,8 +1,7 @@
 package com.airedgesoft.alm.requirement.infrastructure.repositories;
 
+
 import com.airedgesoft.alm.requirement.application.command.RequirementMergeReceiptStore;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 import lombok.RequiredArgsConstructor;
@@ -27,8 +26,8 @@ public class JdbcRequirementMergeReceiptStore implements RequirementMergeReceipt
                         FROM requirement_merge_receipts WHERE round_id = ? AND entry_id = ?
                         """, (rs, row) -> new MergeEntryResolvedEvent(roundId, entryId,
                         Outcome.valueOf(rs.getString("outcome")),
-                        rs.getObject("business_ref", Long.class) == null ? null : LocalId.of(rs.getLong("business_ref")),
-                        Revision.of(rs.getInt("source_revision")), Revision.of(rs.getInt("target_revision")),
+                        rs.getObject("business_ref", Long.class) == null ? null : rs.getLong("business_ref"),
+                        rs.getInt("source_revision"), rs.getInt("target_revision"),
                         rs.getBoolean("created"), rs.getBoolean("inherited"), rs.getString("failure")),
                 Long.valueOf(roundId), Long.valueOf(entryId)).stream().findFirst();
     }
@@ -41,8 +40,8 @@ public class JdbcRequirementMergeReceiptStore implements RequirementMergeReceipt
                              created, inherited, failure)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, Long.valueOf(result.roundId()), Long.valueOf(result.entryId()), result.outcome().name(),
-                result.businessRef() == null ? null : result.businessRef().numericValue(),
-                result.sourceRevision().value(), result.targetRevision().value(),
+                result.businessRef() == null ? null : result.businessRef(),
+                result.sourceRevision(), result.targetRevision(),
                 result.created(), result.inherited(), result.failure());
     }
 }

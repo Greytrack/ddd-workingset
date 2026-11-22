@@ -22,7 +22,7 @@ public class TrackerBindingRemovalListener {
     @ApplicationModuleListener(id = "bootstrap.TrackerBindingRemovalListener.on(sk.workingset.domain.event.TrackerBindingRemovalRequestedEvent)")
     public void on(TrackerBindingRemovalRequestedEvent event) {
         removals.remove(event.workingSetId(), event.trackerId());
-        if (queries.findWorkingSetIdsBoundToTracker(event.trackerId().numericValue()).isEmpty()) {
+        if (queries.findWorkingSetIdsBoundToTracker(event.trackerId()).isEmpty()) {
             events.publishEvent(new TrackerDeletedEvent(event.trackerId()));
         }
     }

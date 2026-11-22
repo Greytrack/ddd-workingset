@@ -1,9 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.domain.merge;
 
+
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.Difference;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.MergeResCode;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,14 +22,14 @@ import java.util.UUID;
  */
 @AggregateRoot
 public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shape.STRING) Long numericId, String token,
-                         String requestId, WorkingSetId source, WorkingSetId target,
+                         String requestId, @JsonFormat(shape = JsonFormat.Shape.STRING) Long source, @JsonFormat(shape = JsonFormat.Shape.STRING) Long target,
                          String caller, State state, List<Entry> entries, ApplyResult result) {
     public MergeRound {
         Objects.requireNonNull(requestId, "requestId");
         entries = List.copyOf(entries);
     }
 
-    public static MergeRound prepare(String id, String requestId, WorkingSetId source, WorkingSetId target,
+    public static MergeRound prepare(String id, String requestId, Long source, Long target,
                                      String caller) {
         return new MergeRound(Long.valueOf(id), UUID.randomUUID().toString(), requestId, source, target, caller,
                 State.Preparing, List.of(), null);
@@ -71,7 +70,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         Entry entry = entries.stream().filter(candidate -> candidate.id().equals(entryId)).findFirst()
                 .orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, entryId));
         boolean confirm = entry.decision().confirmsOnSuccess(entry.evidence());
-        String businessRef = receipt.businessRef() == null ? null : receipt.businessRef().value();
+        String businessRef = receipt.businessRef() == null ? null : Long.toString(receipt.businessRef());
         ItemResult itemResult = new ItemResult(entryId, confirm ? Outcome.Confirmed : Outcome.Applied,
                 operation, businessRef, confirm ? "Confirmed" : null, null);
         return finishEntry(entryId, itemResult,
@@ -149,7 +148,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
      * Own business revisions of the compared variants, not the revisions used to read inherited content.
      */
     @ValueObject
-    public record Confirmation(Revision sourceRevision, Revision targetRevision) {
+    public record Confirmation(Integer sourceRevision, Integer targetRevision) {
         public Confirmation {
             Objects.requireNonNull(sourceRevision, "source variant revision");
             Objects.requireNonNull(targetRevision, "target variant revision");

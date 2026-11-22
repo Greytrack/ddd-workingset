@@ -1,22 +1,18 @@
 package bootstrap;
 
 
+
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.adapters.MergeController.ComparisonPage;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController;
 import com.airedgesoft.sharekernel.workingset.application.command.MergeExecutionService;
 import com.airedgesoft.sharekernel.workingset.application.command.MergeExecutionService.EntryRequest;
 import com.airedgesoft.sharekernel.workingset.application.query.MergeCheckpoint;
 import com.airedgesoft.sharekernel.workingset.application.query.MergeCheckpointQuery;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.LockVersion;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
@@ -32,7 +28,6 @@ import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound.ApplyResul
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound.Outcome;
 import com.airedgesoft.sharekernel.workingset.domain.merge.MergeRound.State;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,7 +108,7 @@ class MergeAcceptanceTest {
     }
 
     private static Difference diff(ComparisonPage page, String family) {
-        return page.differences().stream().filter(item -> family.equals(item.family().value())).findFirst().orElseThrow();
+        return page.differences().stream().filter(item -> family.equals(Long.toString(item.family()))).findFirst().orElseThrow();
     }
 
     private static String ws(String id) {
@@ -142,7 +137,7 @@ class MergeAcceptanceTest {
         String source = seed(rootTracker, anchor, "same");
         MergeAcceptanceTest.Derived derived = derive(child, rootTracker, source, anchor);
         childTracker = derived.trackerId();
-        childAnchor = derived.item().localId().value();
+        childAnchor = Long.toString(derived.item().localId());
     }
 
     @AfterEach
@@ -208,12 +203,12 @@ class MergeAcceptanceTest {
         assertEquals(ChangeKind.ADDED, diff(compared, add).kind());
         assertEquals(ChangeKind.DELETED, diff(compared, remove).kind());
         assertEquals(ChangeKind.MODIFIED, diff(compared, edit).kind());
-        assertEquals(WorkingSetId.of(source), diff(compared, add).trackers().sourceWorkingSetId());
-        assertEquals(WorkingSetId.of(target), diff(compared, add).trackers().targetWorkingSetId());
+        assertEquals(Long.valueOf(source), diff(compared, add).trackers().sourceWorkingSetId());
+        assertEquals(Long.valueOf(target), diff(compared, add).trackers().targetWorkingSetId());
         assertTrue(diff(compared, add).fields().isEmpty());
         assertTrue(diff(compared, remove).fields().isEmpty());
         assertTrue(diff(compared, edit).fields().contains("title"));
-        assertFalse(compared.differences().stream().anyMatch(item -> anchor.equals(item.family().value())));
+        assertFalse(compared.differences().stream().anyMatch(item -> anchor.equals(Long.toString(item.family()))));
         String round = submit(target, compared, existence(diff(compared, add), "ACCEPT"),
                 existence(diff(compared, remove), "ACCEPT"), field(diff(compared, edit), "ACCEPT", false));
         MergeRound.ApplyResult result = awaitResult(round);
@@ -274,7 +269,7 @@ class MergeAcceptanceTest {
         String confirmed = submit(child, next, field(diff(next, edited), "IGNORED", true));
         assertEquals(Outcome.Confirmed, awaitResult(confirmed).itemResults().getFirst().outcome());
         assertEquals(1, confirmations(confirmed, edited));
-        assertFalse(compare("1", child).differences().stream().anyMatch(item -> edited.equals(item.family().value())));
+        assertFalse(compare("1", child).differences().stream().anyMatch(item -> edited.equals(Long.toString(item.family()))));
     }
 
     @Test
@@ -445,11 +440,11 @@ class MergeAcceptanceTest {
         assertEquals(source.title(), target.title());
         assertEquals(created, apply(round));
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                assertTrue(items.findById(LocalId.of(parentLocal)).isPresent()));
+                assertTrue(items.findById(Long.valueOf(parentLocal)).isPresent()));
 
         change(source.localId(), "updated child", 0);
         assertTrue(compare(sourceWs, parent, sourceTracker, parentTracker).differences().stream()
-                .noneMatch(item -> source.commonId().equals(item.family().value())));
+                .noneMatch(item -> source.commonId().equals(Long.toString(item.family()))));
 
         assertStatus(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + parentLocal + "/delete", null, Void.class));
@@ -514,7 +509,7 @@ class MergeAcceptanceTest {
 
         change(source, "different", 2);
         ComparisonPage beforeRevision = compare("1", child);
-        requirements.upgradeRevision(LocalId.of(target), LockVersion.of(1));
+        requirements.upgradeRevision(Long.valueOf(target), Long.valueOf(1));
         assertEquals("StaleEvidence",
                 submitFailure(child, beforeRevision, field(diff(beforeRevision, edit), "ACCEPT", false)));
         assertEquals("latest source", requirement(target).title());
@@ -531,9 +526,9 @@ class MergeAcceptanceTest {
 
         // Publish the round submission only after the concurrent edit has committed.
         String round = transactions.execute(tx -> {
-            MergeRound submitted = mergeExecution.submit(WorkingSetId.of(child), WorkingSetId.of("1"),
+            MergeRound submitted = mergeExecution.submit(Long.valueOf(child), Long.valueOf("1"),
                     UUID.randomUUID().toString(), List.of(request), "1");
-            requirements.changeTitle(LocalId.of(editTarget ? target : source), "edited after approval", LockVersion.of(0));
+            requirements.changeTitle(Long.valueOf(editTarget ? target : source), "edited after approval", Long.valueOf(0));
             return submitted.id();
         });
         rounds.add(round);
@@ -568,18 +563,18 @@ class MergeAcceptanceTest {
         assertEquals(0, requirement(kept).lockVersion());
         assertEquals("target", requirement(rejectedTarget).title());
 
-        MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
-                CommonId.of(keep));
+        MergeCheckpoint.Key key = new MergeCheckpoint.Key(Long.valueOf(rootTracker), Long.valueOf(childTracker),
+                Long.valueOf(keep));
         MergeCheckpoint checkpoint = checkpoints.findLatest(key).orElseThrow();
         assertNotNull(checkpoint.localIdA());
         assertNotNull(checkpoint.localIdB());
-        assertTrue(kept.equals(checkpoint.localIdA().value()) || kept.equals(checkpoint.localIdB().value()));
+        assertTrue(kept.equals(Long.toString(checkpoint.localIdA())) || kept.equals(Long.toString(checkpoint.localIdB())));
         change(kept, "changed after checkpoint", 0);
         ComparisonPage afterCheckpointEdit = compare("1", child);
-        assertFalse(afterCheckpointEdit.differences().stream().anyMatch(item -> keep.equals(item.family().value())));
+        assertFalse(afterCheckpointEdit.differences().stream().anyMatch(item -> keep.equals(Long.toString(item.family()))));
         change(rejectedSource, "valid on retry", 1);
         ComparisonPage retryComparison = compare("1", child);
-        assertFalse(retryComparison.differences().stream().anyMatch(item -> keep.equals(item.family().value())));
+        assertFalse(retryComparison.differences().stream().anyMatch(item -> keep.equals(Long.toString(item.family()))));
         String retryRound = submit(child, retryComparison, field(diff(retryComparison, rejected), "ACCEPT", false));
         assertEquals(1, awaitResult(retryRound).summary().applied());
         assertEquals("valid on retry", requirement(rejectedTarget).title());
@@ -615,8 +610,8 @@ class MergeAcceptanceTest {
         assertEquals("later accepted", requirement(laterTarget).title());
 
         MergeCheckpoint checkpoint = checkpoints.findLatest(new MergeCheckpoint.Key(
-                TrackerId.of(rootTracker), TrackerId.of(childTracker), CommonId.of(family))).orElseThrow();
-        assertTrue(checkpoint.revisionA().value() == 3 || checkpoint.revisionB().value() == 3);
+                Long.valueOf(rootTracker), Long.valueOf(childTracker), Long.valueOf(family))).orElseThrow();
+        assertTrue(checkpoint.revisionA() == 3 || checkpoint.revisionB() == 3);
     }
 
     private int pendingMergePublications(String localId) {
@@ -636,7 +631,7 @@ class MergeAcceptanceTest {
         String parentLocal = jdbc.queryForObject("SELECT local_id FROM air_ws_items_index WHERE branch_id = ?",
                 String.class, parentItem);
         MergeAcceptanceTest.Derived grand = derive(grandchild, childTracker, parentLocal, anchor);
-        ItemIndexFixture.updateRevision(jdbc, grand.item().localId().value(), 1);
+        ItemIndexFixture.updateRevision(jdbc, Long.toString(grand.item().localId()), 1);
 
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
@@ -653,30 +648,30 @@ class MergeAcceptanceTest {
 
         ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
         Difference item = diff(compared, anchor);
-        assertEquals(grand.item().localId().value(), item.target().localId().value());
+        assertEquals(Long.toString(grand.item().localId()), Long.toString(item.target().localId()));
         assertFalse(item.target().localId().equals(item.target().contentId()));
-        assertEquals(Revision.of(1), item.target().revision());
-        assertEquals(Revision.of(3), item.target().contentRevision());
+        assertEquals(1, item.target().revision());
+        assertEquals(3, item.target().contentRevision());
         assertEquals("same", item.target().fields().get("title"));
         String round = submit(grandchild, compared, field(item, "ACCEPT", true));
         assertEquals(Outcome.Confirmed, awaitResult(round).itemResults().getFirst().outcome());
-        assertEquals("parent local", requirement(grand.item().localId().value()).title());
-        MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(childTracker), TrackerId.of(grand.trackerId()), CommonId.of(anchor));
+        assertEquals("parent local", requirement(Long.toString(grand.item().localId())).title());
+        MergeCheckpoint.Key key = new MergeCheckpoint.Key(Long.valueOf(childTracker), Long.valueOf(grand.trackerId()), Long.valueOf(anchor));
         MergeCheckpoint checkpoint = checkpoints.findLatest(key).orElseThrow();
-        boolean sourceIsA = key.a().equals(TrackerId.of(childTracker));
-        assertEquals(Revision.of(3), sourceIsA ? checkpoint.revisionA() : checkpoint.revisionB());
-        assertEquals(Revision.of(1), sourceIsA ? checkpoint.revisionB() : checkpoint.revisionA());
+        boolean sourceIsA = key.a().equals(Long.valueOf(childTracker));
+        assertEquals(3, sourceIsA ? checkpoint.revisionA() : checkpoint.revisionB());
+        assertEquals(1, sourceIsA ? checkpoint.revisionB() : checkpoint.revisionA());
         await().atMost(Duration.ofSeconds(8)).until(() -> Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT has_copied = 1 FROM air_ws_items_index WHERE local_id = ?",
-                Boolean.class, grand.item().localId().value())));
-        change(grand.item().localId().value(), "ordinary target edit", 0);
+                Boolean.class, Long.toString(grand.item().localId()))));
+        change(Long.toString(grand.item().localId()), "ordinary target edit", 0);
         assertTrue(compare(child, grandchild, childTracker, grand.trackerId()).differences().stream()
-                .noneMatch(candidate -> anchor.equals(candidate.family().value())));
-        requirements.upgradeRevision(LocalId.of(parentLocal), LockVersion.of(0));
+                .noneMatch(candidate -> anchor.equals(Long.toString(candidate.family()))));
+        requirements.upgradeRevision(Long.valueOf(parentLocal), Long.valueOf(0));
         assertNotNull(diff(compare(child, grandchild, childTracker, grand.trackerId()), anchor));
-        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity("/api/requirements/" + grand.item().localId().value()
+        assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity("/api/requirements/" + Long.toString(grand.item().localId())
                 + "/delete", null, Void.class));
-        assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + grand.item().localId().value(), Map.class));
+        assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + Long.toString(grand.item().localId()), Map.class));
     }
 
     @Test
@@ -697,7 +692,7 @@ class MergeAcceptanceTest {
         RequirementView sharedItem = createRequirement(child, shared, "shared child entry");
         assertEquals(sharedItem.localId(), sharedItem.commonId());
         assertTrue(compare(child, "1").differences().stream()
-                .noneMatch(item -> sharedItem.commonId().equals(item.family().value())));
+                .noneMatch(item -> sharedItem.commonId().equals(Long.toString(item.family()))));
         assertStatus(HttpStatus.CONFLICT,
                 rest.postForEntity(comparePath("1", child, shared, childTracker), null, Map.class));
         assertStatus(HttpStatus.CONFLICT,
@@ -720,7 +715,7 @@ class MergeAcceptanceTest {
         assertEquals(State.Succeeded, awaitResult(submit(child, forward,
                 field(diff(forward, family), "ACCEPT", false))).state());
         ComparisonPage backward = compare(child, "1");
-        assertFalse(backward.differences().stream().anyMatch(item -> family.equals(item.family().value())));
+        assertFalse(backward.differences().stream().anyMatch(item -> family.equals(Long.toString(item.family()))));
     }
 
     @Test
@@ -766,8 +761,8 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "source");
         Difference difference = diff(compare("1", child), family);
         Difference other = new Difference(difference.kind(), difference.family(),
-                new Comparison.TrackerPair(WorkingSetId.of("1"),
-                        TrackerId.of("265564874633152"), WorkingSetId.of(child), TrackerId.of("264912685293504")),
+                new Comparison.TrackerPair(Long.valueOf("1"),
+                        Long.valueOf("265564874633152"), Long.valueOf(child), Long.valueOf("264912685293504")),
                 difference.source(), difference.target(), difference.fields());
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-request"),
@@ -797,14 +792,14 @@ class MergeAcceptanceTest {
         String secondFamily = id("second-family");
         seed(rootTracker, firstFamily, "first");
         seed(secondRoot, secondFamily, "second");
-        TrackerPair first = new TrackerPair(WorkingSetId.of("1"), TrackerId.of(rootTracker),
-                WorkingSetId.of(child), TrackerId.of(childTracker));
-        TrackerPair second = new TrackerPair(WorkingSetId.of("1"), TrackerId.of(secondRoot),
-                WorkingSetId.of(child), TrackerId.of(secondChild));
+        TrackerPair first = new TrackerPair(Long.valueOf("1"), Long.valueOf(rootTracker),
+                Long.valueOf(child), Long.valueOf(childTracker));
+        TrackerPair second = new TrackerPair(Long.valueOf("1"), Long.valueOf(secondRoot),
+                Long.valueOf(child), Long.valueOf(secondChild));
 
         ComparisonPage page = compare("1", child);
         assertEquals(List.of(first), page.candidates());
-        assertEquals(List.of(firstFamily), page.differences().stream().map(d -> d.family().value()).toList());
+        assertEquals(List.of(firstFamily), page.differences().stream().map(d -> Long.toString(d.family())).toList());
         assertEquals(List.of(second), compare("1", child, secondRoot, secondChild).candidates());
         assertStatus(HttpStatus.CONFLICT,
                 rest.postForEntity(comparePath("1", child, secondRoot, childTracker), null, Map.class));
@@ -818,8 +813,8 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "source");
         Difference difference = diff(compare("1", child), family);
         Difference other = new Difference(difference.kind(), difference.family(),
-                new Comparison.TrackerPair(WorkingSetId.of(child),
-                        difference.trackers().source(), WorkingSetId.of("1"), difference.trackers().target()),
+                new Comparison.TrackerPair(Long.valueOf(child),
+                        difference.trackers().source(), Long.valueOf("1"), difference.trackers().target()),
                 difference.source(), difference.target(), difference.fields());
         assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-ws-request"),
@@ -840,15 +835,15 @@ class MergeAcceptanceTest {
                 + " CHECK (common_id <> " + Long.parseLong(family) + ") NOT VALID");
         String firstRound;
         MergeEntryResolvedEvent replay;
-        MergeCheckpoint.Key key = new MergeCheckpoint.Key(TrackerId.of(rootTracker), TrackerId.of(childTracker),
-                CommonId.of(family));
+        MergeCheckpoint.Key key = new MergeCheckpoint.Key(Long.valueOf(rootTracker), Long.valueOf(childTracker),
+                Long.valueOf(family));
         try {
             firstRound = submit(child, first, field(diff(first, family), "ACCEPT", true));
             await().atMost(Duration.ofSeconds(8)).until(() -> "source".equals(requirement(target).title()));
             MergeRound snapshot = roundState(firstRound);
             replay = new MergeEntryResolvedEvent(firstRound,
                     snapshot.entries().getFirst().id(), MergeEntryResolvedEvent.Outcome.APPLIED,
-                    LocalId.of(target), Revision.of(3), Revision.of(3), false, false, null);
+                    Long.valueOf(target), 3, 3, false, false, null);
             assertThrows(DomainException.class, () -> mergeExecution.recordResult(replay));
             assertEquals(State.Running, roundState(firstRound).state());
             Assertions.assertNull(roundState(firstRound).entries().getFirst().result());
@@ -887,8 +882,8 @@ class MergeAcceptanceTest {
         jdbc.update("""
                         INSERT INTO air_ws_items_merge_index (id, batch_id, branch_a_id, branch_b_id, common_id, merge_status)
                         VALUES (?, ?, ?, ?, ?, 'REVOKED')
-                        """, Long.valueOf(id("legacy-revoked")), Long.valueOf(secondRound), key.a().numericValue(),
-                key.b().numericValue(), key.family().numericValue());
+                        """, Long.valueOf(id("legacy-revoked")), Long.valueOf(secondRound), key.a(),
+                key.b(), key.family());
         assertTrue(checkpoints.findLatest(key).orElseThrow().revoked());
         assertNotNull(diff(compare("1", child), family));
     }
@@ -901,7 +896,7 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.GONE, rest.getForEntity(path, Map.class));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/undelete", null, Void.class));
         assertEquals("lifecycle", requirement(local).title());
-        Requirement staleUpdate = repository.findById(LocalId.of(local)).orElseThrow().changeTitle("stale", LockVersion.of(2));
+        Requirement staleUpdate = repository.findById(Long.valueOf(local)).orElseThrow().changeTitle("stale", Long.valueOf(2));
         assertStatus(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete", null, Void.class));
         assertStatus(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete2", null, Void.class));
@@ -923,7 +918,7 @@ class MergeAcceptanceTest {
     }
 
     private Derived derive(String target, String tracker, String source, String family) {
-        DeriveFixture.Result result = DeriveFixture.derive(jdbc, target, tracker, source, Revision.of(3), CommonId.of(family));
+        DeriveFixture.Result result = DeriveFixture.derive(jdbc, target, tracker, source, 3, Long.valueOf(family));
         return new Derived(result.trackerId(), result.sourceTrackerId(), result.item());
     }
 
@@ -988,7 +983,7 @@ class MergeAcceptanceTest {
     @SafeVarargs
     private final String submit(String target, ComparisonPage compared, Map<String, Object>... entries) {
         ResponseEntity<MergeRound> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
-                "sourceWorkingSetId", compared.source().value(),
+                "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
                 "decisions", List.of(entries)), MergeRound.class);
         assertStatus(HttpStatus.CREATED, response);
@@ -1010,7 +1005,7 @@ class MergeAcceptanceTest {
     @SafeVarargs
     private final boolean submitFails(String target, ComparisonPage compared, Map<String, Object>... entries) {
         ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
-                "sourceWorkingSetId", compared.source().value(),
+                "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
                 "decisions", List.of(entries)), Map.class);
         return response.getStatusCode().is4xxClientError();
@@ -1019,7 +1014,7 @@ class MergeAcceptanceTest {
     @SafeVarargs
     private final String submitFailure(String target, ComparisonPage compared, Map<String, Object>... entries) {
         ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
-                "sourceWorkingSetId", compared.source().value(),
+                "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
                 "decisions", List.of(entries)), Map.class);
         assertTrue(response.getStatusCode().is4xxClientError(), () -> String.valueOf(response.getBody()));

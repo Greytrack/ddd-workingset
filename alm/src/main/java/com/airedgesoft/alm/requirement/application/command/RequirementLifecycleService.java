@@ -8,7 +8,6 @@ import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.LifecycleCommand;
 import com.airedgesoft.sharekernel.workingset.domain.LifecycleResult;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 import com.airedgesoft.sharekernel.workingset.domain.event.CompleteDeleteEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,24 +28,24 @@ public class RequirementLifecycleService {
     private final ApplicationEventPublisher eventPublisher;
     private final RequirementCommandService commands;
 
-    private static DomainException missing(LocalId id) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, id.value());
+    private static DomainException missing(Long id) {
+        return DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(id));
     }
 
     /**
      * 永久删除：先通过 guard（须已软删），无来源依赖时清除对象并发布彻底删除事件。
      */
     @Transactional
-    public void delete2(LocalId id) {
+    public void delete2(Long id) {
         Requirement current = requirements.lockById(id).orElseThrow(() -> missing(id));
         commands.requireTrackerWorkingSet(current.trackerId());
         LifecycleResult decision = current.delete2(LifecycleCommand.locked("permanent delete"));
         if (!decision.succeeded()) {
-            throw DomainException.withMessage(RequirementResultCode.SOFT_DELETE_REQUIRED, id.value());
+            throw DomainException.withMessage(RequirementResultCode.SOFT_DELETE_REQUIRED, Long.toString(id));
         }
         // The same source row lock serializes a concurrent derivation; deleted sources cannot acquire new dependents.
         if (items.hasSourceBackedDependents(id)) {
-            throw DomainException.withMessage(FailureReason.PREPARING, "Derived items still depend on source " + id.value());
+            throw DomainException.withMessage(FailureReason.PREPARING, "Derived items still depend on source " + Long.toString(id));
         }
         requirements.purge(current);
         eventPublisher.publishEvent(new CompleteDeleteEvent(id, current.trackerId(), System.currentTimeMillis()));

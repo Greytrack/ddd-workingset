@@ -1,9 +1,8 @@
 package com.airedgesoft.alm.requirement.infrastructure.repositories;
 
+
 import com.airedgesoft.alm.requirement.application.command.RequirementSnapshot;
 import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
@@ -28,14 +27,14 @@ public class JdbcRequirementSnapshotStore implements RequirementSnapshotStore {
             """;
 
     private static final RowMapper<RequirementSnapshot> MAPPER = (rs, rowNum) -> new RequirementSnapshot(
-            LocalId.of(rs.getLong("local_id")),
-            CommonId.of(rs.getLong("common_id")),
-            TrackerId.of(rs.getLong("tracker_id")),
+            rs.getLong("local_id"),
+            rs.getLong("common_id"),
+            rs.getLong("tracker_id"),
             rs.getString("title"),
             rs.getString("description"),
-            Revision.of(rs.getInt("revision")),
-            rs.getString("version") == null ? Version.none() : Version.of(rs.getString("version")),
-            LockVersion.of(rs.getLong("lock_version")));
+            rs.getInt("revision"),
+            rs.getString("version"),
+            rs.getLong("lock_version"));
 
     private final JdbcTemplate jdbc;
     private final IdentifierGenerator identifierGenerator;
@@ -46,14 +45,14 @@ public class JdbcRequirementSnapshotStore implements RequirementSnapshotStore {
         SnapshotRefEvent ref = SnapshotRefEvent.of(String.valueOf(identifierGenerator.nextId(null).longValue()));
         jdbc.update(INSERT,
                 ref.numericId(),
-                snapshot.localId().numericValue(),
-                snapshot.commonId().numericValue(),
-                snapshot.trackerId().numericValue(),
+                snapshot.localId(),
+                snapshot.commonId(),
+                snapshot.trackerId(),
                 snapshot.title(),
                 snapshot.description(),
-                snapshot.revision().value(),
-                snapshot.version().value(),
-                snapshot.lockVersion().value());
+                snapshot.revision(),
+                snapshot.version(),
+                snapshot.lockVersion());
         return ref;
     }
 

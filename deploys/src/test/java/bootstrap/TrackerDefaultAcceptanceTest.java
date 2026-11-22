@@ -1,5 +1,6 @@
 package bootstrap;
 
+
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
@@ -8,7 +9,6 @@ import com.airedgesoft.sharekernel.businessframework.domain.litebusinessobject.L
 import com.airedgesoft.sharekernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
@@ -19,7 +19,6 @@ import com.airedgesoft.sharekernel.workingset.application.query.model.TrackerBin
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
 import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,7 +105,7 @@ class TrackerDefaultAcceptanceTest {
                     FROM public.classifications
                     """);
 
-            List<TrackerBindingSummary> bindings = workingSetQueries.findBindings(WorkingSetId.of("1")).trackers().stream()
+            List<TrackerBindingSummary> bindings = workingSetQueries.findBindings(Long.valueOf("1")).trackers().stream()
                     .filter(binding -> binding.productSpaceId().equals(Long.valueOf(space))).toList();
 
             TrackerBindingSummary folder = bindings.stream().filter(binding -> binding.classificationId().equals(10070101L))
@@ -115,7 +114,7 @@ class TrackerDefaultAcceptanceTest {
             assertEquals(10070101L, classifications.findClassification("10070101").orElseThrow().numericId());
 
             jdbc.update("DELETE FROM pg_temp.classifications WHERE classification_id = ?", 10070101L);
-            Tracker tracker = trackerRepository.lockTracker(TrackerId.of(folder.trackerId())).orElseThrow();
+            Tracker tracker = trackerRepository.lockTracker(folder.trackerId()).orElseThrow();
             assertEquals(10070101L, tracker.numericClassificationId());
             assertEquals(1007L, tracker.baseClassId());
             assertEquals(100701L, tracker.classId());
@@ -275,37 +274,37 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void commonIdentityCollisionRollsBackBothTrackerRows() {
         long space = Long.parseLong(createSpace("1"));
-        TrackerId id = TrackerId.of(fixtureId("COMMON-COLLISION-" + suffix));
+        Long id = Long.valueOf(fixtureId("COMMON-COLLISION-" + suffix));
         jdbc.update("INSERT INTO air_inst_common (id, base_class, class, type) VALUES (?, 1003, 100301, 10030101)",
-                id.numericValue());
+                id);
         try {
-            Tracker tracker = new Tracker(id, "projection collision", null, WorkingSetId.of(1L),
+            Tracker tracker = new Tracker(id, "projection collision", null, 1L,
                     space, classifications.findClassification("14010101").orElseThrow(),
                     Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
             assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
-                    Integer.class, id.numericValue()));
+                    Integer.class, id));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
-                    Integer.class, id.numericValue()));
-            assertEquals(10030101L, instanceSummaries.findById(id.numericValue()).orElseThrow().type());
+                    Integer.class, id));
+            assertEquals(10030101L, instanceSummaries.findById(id).orElseThrow().type());
         } finally {
-            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", id.numericValue());
+            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", id);
         }
     }
 
     @Test
     void rejectedCompatibilityRowRollsBackRootInsert() {
         long space = Long.parseLong(createSpace("1"));
-        TrackerId id = TrackerId.of(fixtureId("TRACKER-ROLLBACK-" + suffix));
-        Tracker tracker = new Tracker(id, "x".repeat(501), null, WorkingSetId.of(1L),
+        Long id = Long.valueOf(fixtureId("TRACKER-ROLLBACK-" + suffix));
+        Tracker tracker = new Tracker(id, "x".repeat(501), null, 1L,
                 space, classifications.findClassification("14010101").orElseThrow(),
                 Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
 
         assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
-                Integer.class, id.numericValue()));
+                Integer.class, id));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
-                Integer.class, id.numericValue()));
+                Integer.class, id));
     }
 
     @Test
@@ -450,8 +449,8 @@ class TrackerDefaultAcceptanceTest {
         Classification classification = new Classification(258831141156800L, Classification.SharingMode.UNSHARED,
                 "测试分类", 11L, 111L);
         assertThrows(DomainException.class, () -> new Tracker(
-                TrackerId.of(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
-                WorkingSetId.of(child), space.numericId(), classification, classification.sharingMode(), null, false));
+                Long.valueOf(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
+                Long.valueOf(child), space.numericId(), classification, classification.sharingMode(), null, false));
     }
 
     @Test
@@ -481,7 +480,7 @@ class TrackerDefaultAcceptanceTest {
         List<TrackerView> trackers = Arrays.asList(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class));
         for (String spaceId : List.of(firstSpace, secondSpace)) {
             String trackerId = fixtureId("T-NAME-" + spaceId);
-            assertEquals(spaceId, trackerRepository.findById(TrackerId.of(trackerId)).orElseThrow().productSpaceId());
+            assertEquals(spaceId, trackerRepository.findById(Long.valueOf(trackerId)).orElseThrow().productSpaceId());
             assertTrue(bindings.spaces().stream().anyMatch(binding -> spaceId.equals(binding.productSpaceId())));
             assertTrue(bindings.trackers().stream().anyMatch(binding -> trackerId.equals(binding.trackerId())));
             assertTrue(trackers.stream().anyMatch(tracker -> trackerId.equals(tracker.trackerId())));

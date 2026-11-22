@@ -1,15 +1,14 @@
 package com.airedgesoft.alm.requirement.adapters.workingset;
 
+
 import com.airedgesoft.alm.requirement.application.command.RequirementMaterializationService;
 import com.airedgesoft.alm.requirement.application.command.RequirementSnapshot;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.dto.MaterializeRequest;
 import com.airedgesoft.sharekernel.workingset.application.common.TargetIdentity;
-import com.airedgesoft.sharekernel.workingset.domain.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import org.junit.jupiter.api.Test;
 
@@ -27,8 +26,8 @@ class RequirementMaterializationAdapterTest {
             repository, snapshots);
 
     private final MaterializeRequest request = new MaterializeRequest(
-            LocalId.of("260939964213184"), TrackerId.of("263244057497536"), CommonId.of("264220103598016"), LocalId.of("261802623213504"),
-            Revision.of(3), Revision.of(4), LockVersion.of(1), LockVersion.of(2), Revision.of(1),
+            Long.valueOf("260939964213184"), Long.valueOf("263244057497536"), Long.valueOf("264220103598016"), Long.valueOf("261802623213504"),
+            3, 4, Long.valueOf(1), Long.valueOf(2), 1,
             10, SnapshotRefEvent.of("258519900000001"));
 
     private final TargetIdentity target = new TargetIdentity(request.targetLocalId(), request.targetTrackerId(),
@@ -56,7 +55,7 @@ class RequirementMaterializationAdapterTest {
     @Test
     void target_identity_must_match_the_request_evidence() {
         when(snapshots.find(request.snapshotRef())).thenReturn(Optional.of(snapshot("261802623213504", "264220103598016", 3, 1)));
-        TargetIdentity mismatched = new TargetIdentity(LocalId.of("265987761440704"), request.targetTrackerId(),
+        TargetIdentity mismatched = new TargetIdentity(Long.valueOf("265987761440704"), request.targetTrackerId(),
                 request.commonId(), request.targetRevision(), false);
         assertThrows(DomainException.class,
                 () -> adapter.materialize(request, mismatched));
@@ -79,12 +78,12 @@ class RequirementMaterializationAdapterTest {
 
     private Requirement existing(String title, String version) {
         return Requirement.create(request.targetLocalId(), request.commonId(), request.targetTrackerId(),
-                title, "description", request.targetRevision(), Version.of(version));
+                title, "description", request.targetRevision(), version);
     }
 
     private RequirementSnapshot snapshot(String source, String family, int revision, long lockVersion) {
-        return RequirementSnapshot.of(Requirement.restore(LocalId.of(source), CommonId.of(family),
-                TrackerId.of("258924796270528"), "A", "description", Revision.of(revision),
-                Version.of("v1"), LockVersion.of(lockVersion)));
+        return RequirementSnapshot.of(Requirement.restore(Long.valueOf(source), Long.valueOf(family),
+                Long.valueOf("258924796270528"), "A", "description", revision,
+                "v1", lockVersion));
     }
 }

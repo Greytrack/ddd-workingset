@@ -1,10 +1,10 @@
 package com.airedgesoft.sharekernel.workingset.application.eventhandler;
 
+
 import com.airedgesoft.sharekernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerBindingRemovalRequestedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerDeletionRequestedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -23,14 +23,14 @@ public class TrackerDeletedFanoutListener {
 
     @ApplicationModuleListener(id = "bootstrap.TrackerDeletedFanoutListener.on(sk.workingset.domain.event.TrackerDeletionRequestedEvent)")
     public void on(TrackerDeletionRequestedEvent event) {
-        List<Long> bound = queries.findWorkingSetIdsBoundToTracker(event.trackerId().numericValue());
+        List<Long> bound = queries.findWorkingSetIdsBoundToTracker(event.trackerId());
         if (bound.isEmpty()) {
             events.publishEvent(new TrackerDeletedEvent(event.trackerId()));
             return;
         }
         for (Long workingSetId : bound) {
             events.publishEvent(new TrackerBindingRemovalRequestedEvent(
-                    WorkingSetId.of(workingSetId), event.trackerId()));
+                    workingSetId, event.trackerId()));
         }
     }
 }

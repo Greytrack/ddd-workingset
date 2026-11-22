@@ -1,9 +1,9 @@
 package com.airedgesoft.sharekernel.workingset.domain.workingset;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
@@ -21,48 +21,51 @@ import java.util.regex.Pattern;
 @AggregateRoot
 public final class WorkingSet {
 
-    public static final WorkingSetId DEFAULT_ID = WorkingSetId.of("1");
+    public static final Long DEFAULT_ID = Long.valueOf("1");
     public static final String DEFAULT_COLOR = "#FFFF";
     private static final Pattern HEX_COLOR =
             Pattern.compile("#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
-    private final WorkingSetId id;
-    private final WorkingSetId parentWorkingSetId;
+    private final Long id;
+    private final Long parentWorkingSetId;
     private final boolean newAggregate;
     private final Map<String, SpaceBinding> spaces = new LinkedHashMap<>();
-    private final Map<TrackerId, TrackerBinding> trackers = new LinkedHashMap<>();
-    private final Map<TrackerId, TrackerBinding> originalTrackers;
+    private final Map<Long, TrackerBinding> trackers = new LinkedHashMap<>();
+    private final Map<Long, TrackerBinding> originalTrackers;
     private final Long owner;
     private String name;
     private String color;
     private String actor;
 
-    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId,
+    public WorkingSet(Long id, Long parentWorkingSetId,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this(id, parentWorkingSetId, null, spaces, trackers);
     }
 
-    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name,
+    public WorkingSet(Long id, Long parentWorkingSetId, String name,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this(id, parentWorkingSetId, name, DEFAULT_COLOR, spaces, trackers);
     }
 
-    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
+    public WorkingSet(Long id, Long parentWorkingSetId, String name, String color,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
         this(id, parentWorkingSetId, name, color, spaces, trackers, null, null);
     }
 
-    public WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
+    public WorkingSet(Long id, Long parentWorkingSetId, String name, String color,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers,
                       Long owner, String actor) {
         this(id, parentWorkingSetId, name, color, spaces, trackers, false, owner, actor);
     }
 
-    private WorkingSet(WorkingSetId id, WorkingSetId parentWorkingSetId, String name, String color,
+    private WorkingSet(Long id, Long parentWorkingSetId, String name, String color,
                        Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers,
                        boolean newAggregate, Long owner, String actor) {
         this.id = Objects.requireNonNull(id, "id");
+        if (id <= 0 || (parentWorkingSetId != null && parentWorkingSetId <= 0)) {
+            throw new IllegalArgumentException("Working set IDs must be positive");
+        }
         if (id.equals(parentWorkingSetId)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, id.value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
         }
         if (DEFAULT_ID.equals(id) != (parentWorkingSetId == null)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "only the default Working Set has no parent");
@@ -78,19 +81,19 @@ public final class WorkingSet {
         originalTrackers = Map.copyOf(this.trackers);
     }
 
-    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId) {
+    public static WorkingSet child(Long id, Long parentId) {
         return child(id, parentId, null);
     }
 
-    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name) {
+    public static WorkingSet child(Long id, Long parentId, String name) {
         return child(id, parentId, name, null);
     }
 
-    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name, String color) {
+    public static WorkingSet child(Long id, Long parentId, String name, String color) {
         return child(id, parentId, name, color, null, null);
     }
 
-    public static WorkingSet child(WorkingSetId id, WorkingSetId parentId, String name, String color,
+    public static WorkingSet child(Long id, Long parentId, String name, String color,
                                    Long owner, String actor) {
         return new WorkingSet(id, Objects.requireNonNull(parentId, "parentId"), name,
                 normalizeColor(color), List.of(), List.of(), true, owner, actor);
@@ -121,9 +124,9 @@ public final class WorkingSet {
         return trimmed;
     }
 
-    public static void requireDeletable(WorkingSetId id) {
+    public static void requireDeletable(Long id) {
         if (DEFAULT_ID.equals(id)) {
-            throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, id.value());
+            throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, Long.toString(id));
         }
     }
 
@@ -147,7 +150,7 @@ public final class WorkingSet {
         this.color = normalizeColor(newColor);
     }
 
-    public WorkingSetId id() {
+    public Long id() {
         return id;
     }
 
@@ -170,7 +173,7 @@ public final class WorkingSet {
         return actor;
     }
 
-    public WorkingSetId parentWorkingSetId() {
+    public Long parentWorkingSetId() {
         return parentWorkingSetId;
     }
 
@@ -196,10 +199,10 @@ public final class WorkingSet {
                 .toList();
     }
 
-    public List<TrackerId> removedTrackerBindings() {
+    public List<Long> removedTrackerBindings() {
         return originalTrackers.keySet().stream()
                 .filter(trackerId -> !trackers.containsKey(trackerId))
-                .sorted(Comparator.comparing(TrackerId::numericValue))
+                .sorted(Comparator.comparing(Long::longValue))
                 .toList();
     }
 
@@ -212,10 +215,10 @@ public final class WorkingSet {
                 .toList();
     }
 
-    public void setTrackerShown(long spaceId, TrackerId trackerId, boolean shown) {
+    public void setTrackerShown(long spaceId, Long trackerId, boolean shown) {
         TrackerBinding binding = trackerBinding(trackerId);
         if (binding.numericProductSpaceId() != spaceId) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, trackerId.value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
         }
         trackers.put(trackerId, new TrackerBinding(id, trackerId, binding.numericProductSpaceId(),
                 binding.numericClassificationId(), binding.sharingMode(), binding.origin(), shown));
@@ -233,15 +236,15 @@ public final class WorkingSet {
         return binding;
     }
 
-    public TrackerBinding trackerBinding(TrackerId trackerId) {
+    public TrackerBinding trackerBinding(Long trackerId) {
         WorkingSet.TrackerBinding binding = trackers.get(trackerId);
         if (binding == null) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, trackerId.value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
         }
         return binding;
     }
 
-    public void unbindTracker(TrackerId trackerId) {
+    public void unbindTracker(Long trackerId) {
         trackerBinding(trackerId);
         trackers.remove(trackerId);
     }
@@ -255,14 +258,14 @@ public final class WorkingSet {
         }
     }
 
-    public WorkingSetId requireParentId() {
+    public Long requireParentId() {
         if (parentWorkingSetId == null) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "default Working Set cannot bind upstream Trackers");
         }
         return parentWorkingSetId;
     }
 
-    public boolean hasTrackerBinding(TrackerId trackerId) {
+    public boolean hasTrackerBinding(Long trackerId) {
         return trackers.containsKey(trackerId);
     }
 
@@ -277,12 +280,12 @@ public final class WorkingSet {
     }
 
     public void requireDirectParent(Tracker source, boolean boundInParent) {
-        WorkingSetId parentId = requireParentId();
+        Long parentId = requireParentId();
         boolean ownedByParent = parentId.equals(source.workingSetId());
         // 默认根的原生 Tracker 直接来自平台投影。子工作集的有效范围由绑定定义。
         boolean inParentRange = DEFAULT_ID.equals(parentId) ? ownedByParent : boundInParent;
         if (!inParentRange || (source.sharingMode() == SharingMode.UNSHARED && !ownedByParent)) {
-            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, source.trackerId().value());
+            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(source.trackerId()));
         }
     }
 
@@ -293,7 +296,7 @@ public final class WorkingSet {
             throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
         }
         if (trackers.containsKey(tracker.trackerId())) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, tracker.trackerId().value());
+            throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
         }
         WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
         WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.id(),
@@ -309,14 +312,14 @@ public final class WorkingSet {
     public enum TrackerOrigin {SHARED_REUSE, UNSHARED_DERIVATION}
 
     @Entity
-    public record SpaceBinding(WorkingSetId workingSetId, Long numericProductSpaceId, String name,
+    public record SpaceBinding(Long workingSetId, Long numericProductSpaceId, String name,
                                SpaceOrigin origin, SpaceState state) {
-        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId, String name,
+        public SpaceBinding(Long workingSetId, String productSpaceId, String name,
                             SpaceOrigin origin, SpaceState state) {
             this(workingSetId, Long.valueOf(productSpaceId), name, origin, state);
         }
 
-        public SpaceBinding(WorkingSetId workingSetId, String productSpaceId,
+        public SpaceBinding(Long workingSetId, String productSpaceId,
                             SpaceOrigin origin, SpaceState state) {
             this(workingSetId, productSpaceId, null, origin, state);
         }
@@ -327,15 +330,15 @@ public final class WorkingSet {
     }
 
     @Entity
-    public record TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
+    public record TrackerBinding(Long workingSetId, Long trackerId, Long numericProductSpaceId,
                                  Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin,
                                  boolean shown) {
-        public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, Long numericProductSpaceId,
+        public TrackerBinding(Long workingSetId, Long trackerId, Long numericProductSpaceId,
                               Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
             this(workingSetId, trackerId, numericProductSpaceId, numericClassificationId, sharingMode, origin, true);
         }
 
-        public TrackerBinding(WorkingSetId workingSetId, TrackerId trackerId, String productSpaceId,
+        public TrackerBinding(Long workingSetId, Long trackerId, String productSpaceId,
                               String classificationId, SharingMode sharingMode, TrackerOrigin origin) {
             this(workingSetId, trackerId, Long.valueOf(productSpaceId), Long.valueOf(classificationId),
                     sharingMode, origin);

@@ -1,11 +1,11 @@
 package com.airedgesoft.sharekernel.workingset.application.command;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
@@ -17,7 +17,6 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Failure;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Request;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Stage;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
@@ -77,7 +76,7 @@ public class WorkingSetCommandService {
      * 在任务上下文按指定 ID 创建子工作集；该 ID 可尚不存在。
      */
     @Transactional
-    public WorkingSet createChildWorkingSet(WorkingSetId parentId, WorkingSetId newId) {
+    public WorkingSet createChildWorkingSet(Long parentId, Long newId) {
         // 新 ID 可以不存在，普通查询仍会拒绝创建任务正在占用的 ID。
         workingSets.findById(newId);
         return createChildForTask(parentId, newId, null, null, null);
@@ -87,19 +86,19 @@ public class WorkingSetCommandService {
      * 创建子工作集并分配新雪花 ID。
      */
     @Transactional
-    public WorkingSet createChildWorkingSet(WorkingSetId parentId, String name, String color) {
-        return createChildForTask(parentId, WorkingSetId.of(identifierGenerator.nextId(null).longValue()), name, color,
+    public WorkingSet createChildWorkingSet(Long parentId, String name, String color) {
+        return createChildForTask(parentId, identifierGenerator.nextId(null).longValue(), name, color,
                 RequestThreadHolder.getLongUserId());
     }
 
     // Called by the creation runner with the user-supplied display name.
-    WorkingSet createChildForTask(WorkingSetId parentId, WorkingSetId newId, String name, String color, Long actor) {
+    WorkingSet createChildForTask(Long parentId, Long newId, String name, String color, Long actor) {
         if (newId.equals(parentId)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, newId.value());
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
         writable(parentId);
-        if (queries.findAncestors(parentId.numericValue()).contains(newId.numericValue())) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, newId.value());
+        if (queries.findAncestors(parentId).contains(newId)) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
         Long owner = actor == null ? RequestThreadHolder.getLongUserId() : actor;
         WorkingSet child = WorkingSet.child(newId, parentId, name, color, owner, String.valueOf(owner));
@@ -109,10 +108,10 @@ public class WorkingSetCommandService {
             if (conflict.getResCode() != BindingResCode.WORKING_SET_ALREADY_EXISTS) {
                 throw conflict;
             }
-            List<WorkingSetId> existing = queries.findAncestors(newId.numericValue()).stream().map(WorkingSetId::of).toList();
+            List<Long> existing = queries.findAncestors(newId).stream().toList();
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             BindingResCode reason = differentParent ? BindingResCode.WORKING_SET_PARENT_IMMUTABLE : BindingResCode.WORKING_SET_ALREADY_EXISTS;
-            throw DomainException.withMessage(reason, newId.value());
+            throw DomainException.withMessage(reason, Long.toString(newId));
         }
         return child;
     }
@@ -121,7 +120,7 @@ public class WorkingSetCommandService {
      * 编辑工作集显示名称与主题色；缺失字段保持不变。
      */
     @Transactional
-    public WorkingSet updatePresentation(WorkingSetId id, String name, String color) {
+    public WorkingSet updatePresentation(Long id, String name, String color) {
         if (name == null && color == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name or color is required");
         }
@@ -150,7 +149,7 @@ public class WorkingSetCommandService {
      * 切换 Tracker 在工作集的显示状态。
      */
     @Transactional
-    public void setTrackerShown(WorkingSetId workingSet, long spaceId, TrackerId tracker, boolean shown) {
+    public void setTrackerShown(Long workingSet, long spaceId, Long tracker, boolean shown) {
         WorkingSet target = writable(workingSet);
         target.setTrackerShown(spaceId, tracker, shown);
         target.audit(RequestThreadHolder.getUserId());
@@ -158,7 +157,7 @@ public class WorkingSetCommandService {
     }
 
     // These methods run only under the creation task row lock and the item transaction.
-    BindingResult bindProductAndTrackersForTask(WorkingSetId id, Request request, Set<String> failedCopies,
+    BindingResult bindProductAndTrackersForTask(Long id, Request request, Set<String> failedCopies,
                                                 List<Long> requiredClassifications) {
         WorkingSet target = lockTaskTarget(id);
         WorkingSet parent = writable(target.requireParentId());
@@ -209,7 +208,7 @@ public class WorkingSetCommandService {
 
     private void collectBinding(WorkingSet target, String sourceId, SharingMode mode,
                                 Map<String, List<TrackerToBind>> bySpace, List<Failure> failures) {
-        TrackerId id = TrackerId.of(sourceId);
+        Long id = Long.valueOf(sourceId);
         String spaceId = null;
         try {
             Tracker source = directParentTracker(target, id);
@@ -230,7 +229,7 @@ public class WorkingSetCommandService {
         }
     }
 
-    boolean deriveUnsharedTrackerForTask(WorkingSetId id, TrackerId parentTrackerId,
+    boolean deriveUnsharedTrackerForTask(Long id, Long parentTrackerId,
                                          List<String> selectedSpaces, long actor) {
         WorkingSet target = lockTaskTarget(id);
         Tracker source = directParentTracker(target, parentTrackerId);
@@ -246,26 +245,26 @@ public class WorkingSetCommandService {
         return true;
     }
 
-    String trackerSpaceForTask(TrackerId id) {
+    String trackerSpaceForTask(Long id) {
         return trackers.findById(id).map(Tracker::productSpaceId).orElse(null);
     }
 
-    private WorkingSet lockTaskTarget(WorkingSetId id) {
+    private WorkingSet lockTaskTarget(Long id) {
         return workingSets.findByIdForCreation(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
-    private WorkingSet writable(WorkingSetId id) {
+    private WorkingSet writable(Long id) {
         return workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
-    private Tracker directParentTracker(WorkingSet target, TrackerId id) {
-        WorkingSetId parentId = target.requireParentId();
+    private Tracker directParentTracker(WorkingSet target, Long id) {
+        Long parentId = target.requireParentId();
         // 非根父级锁定绑定范围，串行化解绑与新纳入。根原生 Tracker 由 Tracker 行锁保护。
         boolean boundInParent = !WorkingSet.DEFAULT_ID.equals(parentId) && writable(parentId).hasTrackerBinding(id);
         Tracker source = trackers.lockTracker(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, id.value()));
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(id)));
         target.requireDirectParent(source, boundInParent);
         return source;
     }
@@ -273,7 +272,7 @@ public class WorkingSetCommandService {
     private Tracker derivedTracker(WorkingSet target, Tracker source, long actor) {
         boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId(),
                 source.classificationId());
-        return Tracker.derived(TrackerId.of(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
+        return Tracker.derived(Long.valueOf(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
                 isDefault, actor);
     }
 

@@ -1,5 +1,6 @@
 package bootstrap;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
@@ -7,7 +8,6 @@ import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.Bind
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetLineageDomainService;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
@@ -106,8 +106,8 @@ class WorkingSetLineageAcceptanceTest {
 
     @Test
     void persistedEmptyChildHasNoComparableTrackerCandidatesInEitherDirection() {
-        WorkingSet child = workingSets.findById(WorkingSetId.of(create("1", "empty"))).orElseThrow();
-        WorkingSet root = workingSets.findById(WorkingSetId.of("1")).orElseThrow();
+        WorkingSet child = workingSets.findById(Long.valueOf(create("1", "empty"))).orElseThrow();
+        WorkingSet root = workingSets.findById(Long.valueOf("1")).orElseThrow();
 
         assertTrue(WorkingSetLineageDomainService.comparableBindings(root, child).isEmpty());
         assertTrue(WorkingSetLineageDomainService.comparableBindings(child, root).isEmpty());
@@ -244,7 +244,7 @@ class WorkingSetLineageAcceptanceTest {
 
     private void assertCreateFailure(String parent, String child, String reason) {
         DomainException failure = Assertions.assertThrows(DomainException.class,
-                () -> commands.createChildWorkingSet(WorkingSetId.of(parent), WorkingSetId.of(child)));
+                () -> commands.createChildWorkingSet(Long.valueOf(parent), Long.valueOf(child)));
         assertEquals(reason, ((BindingResCode) failure.getResCode()).reason());
     }
 }

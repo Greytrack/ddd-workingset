@@ -1,8 +1,7 @@
 package com.airedgesoft.alm.requirement.application.command;
 
 import com.airedgesoft.alm.requirement.domain.Requirement;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
-import com.airedgesoft.sharekernel.workingset.domain.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Objects;
 
@@ -11,14 +10,14 @@ import java.util.Objects;
  *
  * <p>字段集与首切片 P5 一致：身份、标题、描述、业务版次、发布大版本与乐观锁。
  */
-public record RequirementSnapshot(LocalId localId,
-                                  CommonId commonId,
-                                  TrackerId trackerId,
+public record RequirementSnapshot(@JsonFormat(shape = JsonFormat.Shape.STRING) Long localId,
+                                  @JsonFormat(shape = JsonFormat.Shape.STRING) Long commonId,
+                                  @JsonFormat(shape = JsonFormat.Shape.STRING) Long trackerId,
                                   String title,
                                   String description,
-                                  Revision revision,
-                                  Version version,
-                                  LockVersion lockVersion) {
+                                  Integer revision,
+                                  String version,
+                                  Long lockVersion) {
 
     public RequirementSnapshot {
         Objects.requireNonNull(localId, "localId");
@@ -27,7 +26,6 @@ public record RequirementSnapshot(LocalId localId,
         Objects.requireNonNull(title, "title");
         Objects.requireNonNull(description, "description");
         Objects.requireNonNull(revision, "revision");
-        Objects.requireNonNull(version, "version");
         Objects.requireNonNull(lockVersion, "lockVersion");
     }
 

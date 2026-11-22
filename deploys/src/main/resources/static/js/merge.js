@@ -248,7 +248,7 @@ function mergePresenceInfo(evidence, role) {
     const labels = {PRESENT: '查看条目', ABSENT: '无对应条目', UNREADABLE: '内容不可读', DELETED: '条目已删除'};
     return infoDisclosure(labels[evidence.presence] || evidence.presence || '状态未知',
         [['角色', role], ['所属工作集', worksetLabel(role === '源' ? mergeView.source : mergeView.target, '未命名工作集')],
-            ['对象 ID', evidence.localId?.value], ['状态', labels[evidence.presence] || evidence.presence]]);
+            ['对象 ID', evidence.localId], ['状态', labels[evidence.presence] || evidence.presence]]);
 }
 
 function mergeItemName(difference) {
@@ -256,7 +256,7 @@ function mergeItemName(difference) {
         if (side?.presence !== 'PRESENT') continue;
         const title = side.fields?.title;
         if (typeof title === 'string' && title.trim()) return title;
-        const item = state.items.find((candidate) => candidate.localId === side.localId?.value);
+        const item = state.items.find((candidate) => candidate.localId === side.localId);
         if (item?.name) return item.name;
     }
     return '名称不可用';
@@ -286,7 +286,7 @@ function mergeRowHtml(row, index) {
     const kind = {ADDED: '新增', MODIFIED: '更新', DELETED: '删除'}[difference.kind] || difference.kind;
     return `
     <tr>
-      <td>${infoDisclosure(mergeItemName(difference), [['家族 ID', difference.family?.value]])}</td>
+      <td>${infoDisclosure(mergeItemName(difference), [['家族 ID', difference.family]])}</td>
       <td><span class="merge-kind merge-kind-${difference.kind === 'MODIFIED' ? 'updated' : difference.kind === 'ADDED' ? 'added' : difference.kind === 'DELETED' ? 'deleted' : 'other'}">${escapeHtml(kind)}</span></td>
       <td>${mergePresenceInfo(source, '源')}</td>
       <td>${mergePresenceInfo(target, '目标')}</td>
@@ -428,7 +428,7 @@ function renderMergeRound(round) {
         })[field] || field}：${action === 'ACCEPT' ? '接收' : action === 'IGNORED' ? '忽略' : action}`).join(' · ') || '字段决策';
         return `
     <tr>
-      <td>${infoDisclosure(mergeItemName(evidence), [['家族 ID', evidence.family?.value]])}</td>
+      <td>${infoDisclosure(mergeItemName(evidence), [['家族 ID', evidence.family]])}</td>
       <td><div>${escapeHtml(operation)}</div>${decision.markAsMerged ? '<span class="muted">标记已处理</span>' : ''}</td>
       <td><span class="merge-outcome ${outcome[1]}">${outcome[0]}</span></td>
       <td>${entry.result?.failure ? escapeHtml(reasonText(entry.result.failure) || String(entry.result.failure)) : ''}</td>

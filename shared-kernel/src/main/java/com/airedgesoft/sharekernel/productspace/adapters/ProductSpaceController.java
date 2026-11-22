@@ -1,11 +1,10 @@
 package com.airedgesoft.sharekernel.productspace.adapters;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.productspace.application.command.ProductSpaceCommandService;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -40,8 +39,8 @@ public class ProductSpaceController {
      */
     @DeleteMapping("/worksets/1/product-spaces/{spaceId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void delete(@PathVariable String spaceId) {
-        commands.delete(spaceId);
+    public void delete(@PathVariable Long spaceId) {
+        commands.delete(Long.toString(spaceId));
     }
 
     /**
@@ -49,12 +48,12 @@ public class ProductSpaceController {
      */
     @PatchMapping("/worksets/{workingSetId}/product-spaces/{spaceId}/trackers/{trackerId}/visibility")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void setTrackerShown(@PathVariable String workingSetId, @PathVariable long spaceId,
-                                @PathVariable String trackerId, @RequestBody TrackerVisibilityRequest request) {
+    public void setTrackerShown(@PathVariable Long workingSetId, @PathVariable long spaceId,
+                                @PathVariable Long trackerId, @RequestBody TrackerVisibilityRequest request) {
         if (request.shown() == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "shown is required");
         }
-        workingSets.setTrackerShown(WorkingSetId.of(workingSetId), spaceId, TrackerId.of(trackerId), request.shown());
+        workingSets.setTrackerShown(workingSetId, spaceId, trackerId, request.shown());
     }
 
     public record TrackerVisibilityRequest(Boolean shown) {

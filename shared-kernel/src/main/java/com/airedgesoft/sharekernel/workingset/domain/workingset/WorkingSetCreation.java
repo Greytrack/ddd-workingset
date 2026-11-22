@@ -1,5 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.domain.workingset;
 
+
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -192,7 +193,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
                        List<String> productSpaceIds, List<String> sharedTrackerIds,
                        List<String> unsharedParentTrackerIds, String name, Mode mode, String color,
                        Map<Long, Long> baselineOverrides) {
-            this(WorkingSetId.of(parentWorkingSetId).numericValue(), WorkingSetId.of(newWorkingSetId).numericValue(),
+            this(Long.valueOf(parentWorkingSetId), Long.valueOf(newWorkingSetId),
                     requestId, parseIds(productSpaceIds), parseIds(sharedTrackerIds),
                     parseIds(unsharedParentTrackerIds), name, mode, color, baselineOverrides, List.of(), List.of());
         }
@@ -226,8 +227,10 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         }
 
         public Request {
-            WorkingSetId.of(numericParentWorkingSetId);
-            WorkingSetId.of(numericTargetWorkingSetId);
+            if (Objects.requireNonNull(numericParentWorkingSetId, "parentWorkingSetId") <= 0
+                    || Objects.requireNonNull(numericTargetWorkingSetId, "newWorkingSetId") <= 0) {
+                throw new IllegalArgumentException("Working set IDs must be positive");
+            }
             validateId(requestId, "requestId");
             numericProductSpaceIds = normalize(numericProductSpaceIds);
             numericSharedTrackerIds = normalize(numericSharedTrackerIds);

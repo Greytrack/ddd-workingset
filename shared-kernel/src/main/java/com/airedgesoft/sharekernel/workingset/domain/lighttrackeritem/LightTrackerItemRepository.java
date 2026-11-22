@@ -1,7 +1,5 @@
 package com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem;
 
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import org.jmolecules.ddd.annotation.Repository;
 
 import java.util.List;
@@ -27,20 +25,20 @@ public interface LightTrackerItemRepository {
     /**
      * 按 LocalId 重建聚合；读模型查询使用 {@code LightTrackerItemQueryProvider}。
      */
-    Optional<LightTrackerItem> findById(LocalId localId);
+    Optional<LightTrackerItem> findById(Long localId);
 
     /**
      * 按 LocalId 加锁重建聚合，供并发写命令（COW 切换、软删、升版）。
      */
-    Optional<LightTrackerItem> findByIdForUpdate(LocalId localId);
+    Optional<LightTrackerItem> findByIdForUpdate(Long localId);
 
     /**
      * COW 命令侧领域 finder：按来源切点定位尚未物化的目标聚合。
      */
-    List<LightTrackerItem> findSourceBackedTargets(LocalId sourceLocalId, Revision sourceRevision);
+    List<LightTrackerItem> findSourceBackedTargets(Long sourceLocalId, Integer sourceRevision);
 
     /**
      * 永久移除聚合及其版次成员。
      */
-    void remove(LocalId id);
+    void remove(Long id);
 }

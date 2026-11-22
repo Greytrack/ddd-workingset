@@ -1,9 +1,8 @@
 package com.airedgesoft.sharekernel.workingset.infrastructure.providers;
 
+
 import com.airedgesoft.sharekernel.workingset.application.query.MergeCheckpoint;
 import com.airedgesoft.sharekernel.workingset.application.query.MergeCheckpointQuery;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
 import com.airedgesoft.sharekernel.workingset.domain.merge.Comparison.ChangeKind;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,12 +28,12 @@ public class JdbcMergeCheckpointQuery implements MergeCheckpointQuery {
         return value == null ? null : Enum.valueOf(type, value);
     }
 
-    private static Revision revision(Integer revision) {
-        return revision == null ? null : Revision.of(revision);
+    private static Integer revision(Integer revision) {
+        return revision == null ? null : revision;
     }
 
-    private static LocalId localId(String localId) {
-        return localId == null ? null : LocalId.of(localId);
+    private static Long localId(String localId) {
+        return localId == null ? null : Long.valueOf(localId);
     }
 
     @Override
@@ -52,6 +51,6 @@ public class JdbcMergeCheckpointQuery implements MergeCheckpointQuery {
                         enumValue(MergeCheckpoint.Direction.class, rs.getString("merge_direction")),
                         enumValue(MergeCheckpoint.Action.class, rs.getString("merge_action")),
                         !"MERGED".equals(rs.getString("merge_status")), rs.getString("operator")),
-                key.a().numericValue(), key.b().numericValue(), key.family().numericValue()).stream().findFirst();
+                key.a(), key.b(), key.family()).stream().findFirst();
     }
 }

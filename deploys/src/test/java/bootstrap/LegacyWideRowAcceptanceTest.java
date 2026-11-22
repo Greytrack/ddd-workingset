@@ -1,11 +1,10 @@
 package bootstrap;
 
+
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.JdbcTrackerRepository;
 import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.TrackerCompatibilityRow;
 import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.TrackerRow;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetId;
 import com.airedgesoft.sharekernel.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.infrastructure.repositories.WorkingSetRow;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,7 @@ class LegacyWideRowAcceptanceTest {
                     'legacy', 1234, 9, '{"enabled": true}'::jsonb, '', 'three-digit', 1700000000123)
                 """, id, id, id, id);
 
-        WorkingSetRow row = workingSets.findLegacyRow(WorkingSetId.of(id)).orElseThrow();
+        WorkingSetRow row = workingSets.findLegacyRow(id).orElseThrow();
         assertEquals(9L, row.workingSetScope());
         assertEquals("{\"enabled\": true}", row.attributes());
         assertEquals(150, row.customFields().size());
@@ -55,7 +54,7 @@ class LegacyWideRowAcceptanceTest {
     void trackerRenamePreservesLegacyValuesAndCompatibilityReadIsScopedToProductSpace() {
         long spaceId = 990002;
         long id = 990003;
-        TrackerId trackerId = TrackerId.of(id);
+        Long trackerId = id;
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, 'legacy-test')", spaceId);
         jdbc.update("""
                 INSERT INTO air_inst_tracker_rev (id, instance_id, common_id, workingset_id, work_space,

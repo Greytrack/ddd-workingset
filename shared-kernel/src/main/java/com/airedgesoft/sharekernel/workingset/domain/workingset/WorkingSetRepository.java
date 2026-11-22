@@ -13,12 +13,12 @@ public interface WorkingSetRepository {
     /**
      * 命令侧重建普通入口可访问的聚合；创建任务使用专用查询。
      */
-    Optional<WorkingSet> findById(WorkingSetId id);
+    Optional<WorkingSet> findById(Long id);
 
     /**
      * 创建任务上下文重建：不检查 Preparing。
      */
-    Optional<WorkingSet> findByIdForCreation(WorkingSetId id);
+    Optional<WorkingSet> findByIdForCreation(Long id);
 
     /**
      * 保存聚合（新增或更新）；绑定变更随根一次保存。

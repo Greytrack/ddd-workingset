@@ -2,7 +2,6 @@ package com.airedgesoft.sharekernel.workingset.application.port;
 
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
 
 import java.util.Set;
 
@@ -20,22 +19,18 @@ public interface BusinessObjectTypeAdapter {
      * <p>一个业务对象类型可以对应多个分类实例（例如共享/非共享、租户自定义分类），
      * 但一个具体分类只能属于一个 Adapter。
      */
-    Set<BusinessObjectType> types();
+    Set<Long> types();
 
     Capabilities capabilities();
 
     /**
      * 按变体读取内容与生命周期证据；只读，不提供保存、整体校验或删除。
      */
-    TrackerItemQueryProvider query(LocalId localId);
+    TrackerItemQueryProvider query(Long localId);
 
     /**
      * 按 Tracker 读取目录、存在性与家族信息。
      */
     TrackerItemCatalogQueryProvider catalog();
 
-    /**
-     * 来源行锁租约；所有会在 Working Set 中登记 Item 的类型都必须提供。
-     */
-    TrackerItemSourceLock sourceLock();
 }

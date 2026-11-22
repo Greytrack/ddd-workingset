@@ -1,13 +1,9 @@
 package bootstrap;
 
+
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
-import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.CommonId;
-import com.airedgesoft.sharekernel.workingset.domain.LocalId;
-import com.airedgesoft.sharekernel.workingset.domain.Revision;
-import com.airedgesoft.sharekernel.workingset.domain.Version;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -102,7 +98,7 @@ class RequirementFamilyScopeTest {
     @Test
     void deleted_requirements_are_excluded_from_tracker_catalog() {
         Requirement saved = requirement("L1-", t1);
-        TrackerId trackerId = TrackerId.of(t1);
+        Long trackerId = Long.valueOf(t1);
         TrackerItemCatalogQueryProvider.Identity identity =
                 new TrackerItemCatalogQueryProvider.Identity(saved.localId(), saved.commonId(), saved.revision());
         save(saved);
@@ -130,7 +126,7 @@ class RequirementFamilyScopeTest {
     }
 
     private Requirement requirement(String prefix, String tracker) {
-        return Requirement.create(LocalId.of(fixtureId(prefix + suffix)), CommonId.of(family), TrackerId.of(tracker),
-                "A", "description", Revision.of(3), Version.none(), "test");
+        return Requirement.create(Long.valueOf(fixtureId(prefix + suffix)), Long.valueOf(family), Long.valueOf(tracker),
+                "A", "description", 3, null, "test");
     }
 }
