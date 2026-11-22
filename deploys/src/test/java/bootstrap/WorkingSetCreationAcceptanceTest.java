@@ -230,6 +230,33 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     @Test
+    void createsGrandchildFromItsDirectParentsBindingsWithoutMode() {
+        seedRange();
+        FixtureIds.insertWorkingSet(jdbc, "1", parent);
+        ResponseEntity<CreationView> extended = rest.postForEntity("/api/worksets/" + parent + "/extensions",
+                Map.of("requestId", "extend-parent-" + child, "trackerIds", List.of(shared, unshared)), CreationView.class);
+        assertEquals(HttpStatus.ACCEPTED, extended.getStatusCode());
+        awaitStatus(extended.getBody().creationId(), Status.Succeeded);
+        BindingsView parentScope = rest.getForObject("/api/worksets/" + parent + "/bindings", BindingsView.class);
+        String parentTracker = parentScope.trackers().stream()
+                .filter(binding -> UNSHARED_CLASSIFICATION.equals(binding.classificationId()))
+                .findFirst().orElseThrow().trackerId();
+
+        ResponseEntity<CreationView> created = rest.postForEntity(CREATIONS,
+                Map.of("parentWorkingSetId", parent, "requestId", "grandchild-" + child, "name", "Grandchild",
+                        "productSpaceIds", List.of(space), "sharedTrackerIds", List.of(shared),
+                        "unsharedParentTrackerIds", List.of(parentTracker)), CreationView.class);
+        assertEquals(HttpStatus.ACCEPTED, created.getStatusCode());
+        child = created.getBody().targetWorkingSetId();
+        CreationView completed = awaitStatus(created.getBody().creationId(), Status.Succeeded);
+        assertEquals("CREATE", completed.mode());
+        assertEquals(List.of(space), bindings().spaces().stream().map(binding -> binding.productSpaceId()).toList());
+        assertTrue(bindings().trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
+        assertTrue(Arrays.stream(rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class))
+                .anyMatch(tracker -> parentTracker.equals(tracker.sourceId())));
+    }
+
+    @Test
     void rejectsSpaceAndSharedTrackerOutsideTheDirectParentsBindings() {
         seedRange();
         FixtureIds.insertWorkingSet(jdbc, "1", parent);

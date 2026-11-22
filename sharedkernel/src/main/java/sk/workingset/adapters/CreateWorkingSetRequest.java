@@ -11,7 +11,8 @@ public record CreateWorkingSetRequest(String parentWorkingSetId, String requestI
                                       WorkingSetCreation.Mode mode, String color,
                                       Map<Long, Long> baselineAtByTracker) {
     WorkingSetCreation.Request toDomainRequest(String newWorkingSetId) {
+        WorkingSetCreation.Mode creationMode = mode == null ? WorkingSetCreation.Mode.CREATE : mode;
         return new WorkingSetCreation.Request(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds,
-                sharedTrackerIds, unsharedParentTrackerIds, name, mode, color, baselineAtByTracker);
+                sharedTrackerIds, unsharedParentTrackerIds, name, creationMode, color, baselineAtByTracker);
     }
 }
