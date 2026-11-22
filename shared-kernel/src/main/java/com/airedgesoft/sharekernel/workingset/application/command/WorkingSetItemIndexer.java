@@ -6,7 +6,6 @@ import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
@@ -20,8 +19,10 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreati
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Stage;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.SavepointManager;
 
 import java.util.ArrayList;
@@ -33,35 +34,18 @@ import java.util.List;
  * <p>候选只来自父 Tracker 的 LTI；业务 BC 只负责提供受锁保护的来源状态。
  */
 @Slf4j
+@Component
+@AllArgsConstructor
 public final class WorkingSetItemIndexer {
 
-    static final long FOLDER_CLASSIFICATION_ID = 10070101L;
+
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final LightTrackerItemQueryProvider itemQueries;
     private final LightTrackerItemRepository items;
     private final IdentifierGenerator ids;
-    private final int batchSize;
 
-    public WorkingSetItemIndexer(WorkingSetRepository workingSets, TrackerRepository trackers,
-                                 LightTrackerItemQueryProvider itemQueries,
-                                 LightTrackerItemRepository items,
-                                 BusinessObjectTypeRegistry registry,
-                                 IdentifierGenerator ids, int batchSize) {
-        if (batchSize < 1) {
-            throw new IllegalArgumentException("Index batch size must be positive");
-        }
-        this.workingSets = workingSets;
-        this.trackers = trackers;
-        this.itemQueries = itemQueries;
-        this.items = items;
-        this.ids = ids;
-        this.batchSize = batchSize;
-    }
-
-    private static Outcome skipped(Long parent, Tracker child, LightTrackerItemSummary candidate, FailureReason reason) {
-        return new Outcome(IndexResult.Skipped, failure(parent, child, candidate.localId(), reason));
-    }
+    static final long FOLDER_CLASSIFICATION_ID = 10070101L;
 
     private static Failure failure(Long parent, Tracker child, Long localId, FailureReason reason) {
         return new Failure(Stage.INDEX_UNSHARED_TRACKERS, child.productSpaceId(), Long.toString(parent),
@@ -100,6 +84,7 @@ public final class WorkingSetItemIndexer {
         WorkingSetCreation.IndexProgress progress = creation.indexProgress().getOrDefault(Long.toString(parent), IndexProgress.initial());
         Object savepoint = transaction.createSavepoint();
         List<LightTrackerItemSummary> page;
+        int batchSize = 100;
         try {
             page = itemQueries.pageInTracker(parent, baselineAt, progress.afterLocalId(), batchSize);
         } catch (RuntimeException failure) {

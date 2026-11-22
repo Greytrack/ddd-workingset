@@ -5,7 +5,6 @@ import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeTargetEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
@@ -28,7 +27,6 @@ public class TrackerItemLifecycleService {
 
     private final TrackerRepository trackers;
     private final LightTrackerItemRepository items;
-    private final BusinessObjectTypeRegistry registry;
 
     private static ItemClassification classificationOf(Tracker tracker) {
         return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());

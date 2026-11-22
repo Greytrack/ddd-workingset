@@ -97,7 +97,7 @@ public final class SourceSerialCowCoordinator {
             }
             if (isGap(task.sequence(), previous)) {
                 log.warn("ORDER_GAP sourceLocalId={} expected={} actual={}",
-                        Long.toString(source), previous + 1, task.sequence());
+                        source, previous + 1, task.sequence());
             }
             try {
                 task.work().run();

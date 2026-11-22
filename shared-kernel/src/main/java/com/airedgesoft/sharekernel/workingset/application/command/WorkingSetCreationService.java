@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class WorkingSetCreationService {
-    private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(WorkingSetItemIndexer.FOLDER_CLASSIFICATION_ID);
+    private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(10070101L);
 
     private final WorkingSetCreationRepository workingSetCreationRepository;
     private final IdentifierGenerator ids;

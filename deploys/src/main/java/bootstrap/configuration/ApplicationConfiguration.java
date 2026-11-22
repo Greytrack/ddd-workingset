@@ -1,13 +1,6 @@
 package bootstrap.configuration;
 
-import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.command.SourceSerialCowCoordinator;
-import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetItemIndexer;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.BusinessObjectTypeRegistry;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,18 +31,5 @@ public class ApplicationConfiguration {
     public SourceSerialCowCoordinator sourceSerialCowCoordinator(
             @Value("${workingset.cow.order-gap-wait:1s}") Duration orderGapWait) {
         return new SourceSerialCowCoordinator(orderGapWait);
-    }
-
-    @Bean
-    public WorkingSetItemIndexer workingSetItemIndexer(
-            WorkingSetRepository bindings,
-            TrackerRepository trackers,
-            LightTrackerItemQueryProvider itemQueries,
-            LightTrackerItemRepository items,
-            BusinessObjectTypeRegistry registry,
-            IdentifierGenerator ids,
-            @Value("${workingset.creation.index-batch-size:100}") int batchSize) {
-        return new WorkingSetItemIndexer(bindings, trackers, itemQueries, items,
-                registry, ids, batchSize);
     }
 }
