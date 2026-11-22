@@ -22,6 +22,7 @@ function openModal(html, wide = false) {
     if (opening) modalTrigger = document.activeElement;
     $('#modalContent').innerHTML = html;
     $('#modalPanel').classList.toggle('wide', wide);
+    $('#modalPanel').classList.remove('task-center-modal');
     overlay.classList.remove('hidden');
     syncModalBackground();
     if (opening || restoreCloseFocus) {
@@ -195,6 +196,7 @@ function renderTaskCenter() {
     <div class="task-type-tabs" role="tablist" aria-label="任务类型">${tabs}</div>
     <div class="modal-body"><p class="task-scope-hint">当前浏览器记录的任务 · 切换类型时刷新对应任务</p><div role="tabpanel" id="taskTabPanel" aria-labelledby="taskTab${taskCenterTab}">${body}</div></div>
     <div class="modal-foot"><button type="button" class="btn" data-close-modal>关闭</button></div>`, true);
+    $('#modalPanel').classList.add('task-center-modal');
     taskCenterOpen = true;
 }
 

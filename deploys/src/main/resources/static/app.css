@@ -734,6 +734,11 @@ body {
 }
 
 .task-type-tabs { display: flex; gap: 8px; padding: 12px 20px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.modal.task-center-modal { height: 86dvh; max-height: 86dvh; overflow: hidden; }
+.task-center-modal > #modalContent { height: 100%; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.task-center-modal .modal-body { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.task-center-modal .modal-head, .task-center-modal .modal-foot { position: static; }
+.task-center-modal .task-type-tabs { margin: 0; }
 .task-type-tabs button { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
 .task-type-tabs button:hover { background: #f1f6fc; color: #315f9d; }
 .task-type-tabs button[aria-selected="true"] { border-bottom-color: #426fa6; color: #315f9d; background: #f1f6fc; }
