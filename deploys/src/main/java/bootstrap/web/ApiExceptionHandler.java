@@ -1,6 +1,6 @@
 package bootstrap.web;
 
-import alm.requirement.domain.LockVersionConflictException;
+import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.lib.execption.APIException;
 import com.airedgesoft.lib.execption.AppException;
 import com.airedgesoft.lib.execption.DomainException;

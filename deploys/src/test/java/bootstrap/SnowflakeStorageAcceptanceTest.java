@@ -1,6 +1,6 @@
 package bootstrap;
 
-import alm.requirement.adapters.RequirementView;
+import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.sharekernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;

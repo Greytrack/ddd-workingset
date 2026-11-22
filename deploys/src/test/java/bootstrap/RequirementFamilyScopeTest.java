@@ -1,7 +1,7 @@
 package bootstrap;
 
-import alm.requirement.domain.Requirement;
-import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
+import com.airedgesoft.alm.requirement.domain.Requirement;
+import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.CommonId;

@@ -20,7 +20,7 @@
 
 - `RequirementApplicationService.java`（当时路径）：创建入口按 `TrackerScopePort` 判定归属工作集，生成同一或两个不等雪花；显式指定非默认工作集时，非共享
   Tracker 必须属于该工作集。
-- [CreateRequirementRequest](../../../alm/src/main/java/alm/requirement/adapters/CreateRequirementRequest.java)：不再包含
+- [CreateRequirementRequest](../../../alm/src/main/java/com/airedgesoft/alm/requirement/adapters/CreateRequirementRequest.java)：不再包含
   `commonId`，身份由服务端分配。
 - `MergeExecutionService.java`（当时路径）：`CREATE` 到默认工作集时使用 CommonId 作为 LocalId，保证二者相等；非默认工作集使用新雪花。
 - `WorkingSetApplicationService.java`（当时路径）：派生生成新 LocalId，并确保与来源 CommonId 不等。
@@ -28,7 +28,7 @@
 
 ## 3. 验收
 
-- [RequirementCreateScopeTest](../../../alm/src/test/java/alm/requirement/application/RequirementCreateScopeTest.java)
+- [RequirementCreateScopeTest](../../../alm/src/test/java/com/airedgesoft/alm/requirement/application/RequirementCreateScopeTest.java)
   ：默认 WS 同一 ID、非默认 WS 两个不等 ID、共享 Tracker 任意工作集、非共享错误工作集 `NotIncluded`、Tracker 不存在交给持久化层（5
   项）。
 - [RequirementAcceptanceTest](../../../deploys/src/test/java/bootstrap/RequirementAcceptanceTest.java)：HTTP 创建默认工作集

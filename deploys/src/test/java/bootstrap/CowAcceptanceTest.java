@@ -1,8 +1,8 @@
 package bootstrap;
 
-import alm.requirement.adapters.RequirementView;
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.domain.Requirement;
+import com.airedgesoft.alm.requirement.adapters.RequirementView;
+import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
+import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.CowFailureLogQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.CommonId;
 import com.airedgesoft.sharekernel.workingset.domain.LocalId;

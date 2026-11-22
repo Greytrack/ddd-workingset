@@ -40,7 +40,7 @@ LocalId、业务及内容版次、发布版本、乐观锁与字段证据。分�
 - ALM Merge 写入（当时的 `RequirementMergeWriter.java`） 通过 RequirementWritePort
   接收操作身份、决定和证据，调用聚合行为并整体校验。未物化目标用目标原有有效内容构建聚合并保存，再沿用 LightTrackerItem
   的本地切换行为。轮次行锁与每条结果同事务落库提供 `mergeRoundId + entryId` 幂等边界。
-- [Requirement 生命周期](../../../alm/src/main/java/alm/requirement/adapters/RequirementController.java) 增加 `delete`、
+- [Requirement 生命周期](../../../alm/src/main/java/com/airedgesoft/alm/requirement/adapters/RequirementController.java) 增加 `delete`、
   `undelete`、`delete2`。标记删除用 `requirements.delete_flag` 保留业务行，正常读取返回 410。永久删除清除业务行、该对象的业务快照和对应
   LightTrackerItem；未物化依赖仍需要内容时返回 `PREPARING`。T1 已冻结的比较与结果证据作为执行审计保留。
 - [schema.sql](../../../deploys/src/main/resources/schema.sql) 新增 `merge_comparisons`、`merge_rounds`、Checkpoint 承载表

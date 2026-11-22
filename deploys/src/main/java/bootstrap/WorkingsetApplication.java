@@ -12,9 +12,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication(scanBasePackages = {
         "bootstrap",
         "com.airedgesoft.lib.jdbc",
-        "alm.requirement.adapters",
-        "alm.requirement.application",
-        "alm.requirement.infrastructure",
+        "com.airedgesoft.alm.requirement.adapters",
+        "com.airedgesoft.alm.requirement.application",
+        "com.airedgesoft.alm.requirement.infrastructure",
         "com.airedgesoft.sharekernel.workingset.adapters",
         "com.airedgesoft.sharekernel.workingset.application",
         "com.airedgesoft.sharekernel.workingset.infrastructure",
@@ -26,7 +26,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 })
 @MapperScan({
         "com.airedgesoft.sharekernel.workingset.infrastructure.providers",
-        "alm.requirement.infrastructure.providers"
+        "com.airedgesoft.alm.requirement.infrastructure.providers"
 })
 public class WorkingsetApplication {
 

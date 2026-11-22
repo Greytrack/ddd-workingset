@@ -1,6 +1,6 @@
 package bootstrap;
 
-import alm.requirement.adapters.RequirementView;
+import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.businessframework.domain.litebusinessobject.LiteBusinessObject;

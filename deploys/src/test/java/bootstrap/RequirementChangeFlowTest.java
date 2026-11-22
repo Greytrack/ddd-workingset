@@ -1,11 +1,11 @@
 package bootstrap;
 
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.application.command.RequirementSnapshot;
-import alm.requirement.domain.LockVersionConflictException;
-import alm.requirement.domain.Requirement;
-import alm.requirement.domain.RequirementRepository;
-import alm.requirement.domain.RequirementSnapshotStore;
+import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
+import com.airedgesoft.alm.requirement.application.command.RequirementSnapshot;
+import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
+import com.airedgesoft.alm.requirement.domain.Requirement;
+import com.airedgesoft.alm.requirement.domain.RequirementRepository;
+import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.TrackerId;

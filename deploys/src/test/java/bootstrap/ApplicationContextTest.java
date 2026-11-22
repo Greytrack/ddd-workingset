@@ -1,7 +1,7 @@
 package bootstrap;
 
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.domain.Requirement;
+import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
+import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
 import com.airedgesoft.sharekernel.workingset.application.query.WorkingSetQueryService;

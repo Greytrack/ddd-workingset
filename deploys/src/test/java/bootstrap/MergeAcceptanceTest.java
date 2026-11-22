@@ -1,10 +1,10 @@
 package bootstrap;
 
 
-import alm.requirement.adapters.RequirementView;
-import alm.requirement.application.command.RequirementCommandService;
-import alm.requirement.domain.Requirement;
-import alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
+import com.airedgesoft.alm.requirement.adapters.RequirementView;
+import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
+import com.airedgesoft.alm.requirement.domain.Requirement;
+import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.tracker.domain.TrackerId;
 import com.airedgesoft.sharekernel.workingset.adapters.MergeController.ComparisonPage;
