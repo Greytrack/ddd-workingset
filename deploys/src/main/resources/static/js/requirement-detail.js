@@ -38,7 +38,8 @@ function renderRequirementPage() {
         <span class="muted">${page.busy ? '正在处理…' : data?.checkedOut ? '保存修改后签入；取消签出会恢复签出前内容。' : '签出后才可编辑需求。'}</span>
       </div>
       <p class="form-error" role="alert">${escapeHtml(page.error)}</p>
-      ${data ? `<div class="requirement-page-meta"><span>编号 ${escapeHtml(data.number || '未编号')}</span><span>版次 ${escapeHtml(String(data.revision))}</span>${infoDisclosure('技术信息', [['对象 ID', data.localId], ['家族 ID', data.commonId], ['并发版本', data.lockVersion]])}</div>
+      ${data ? `<div class="requirement-page-meta"><span>编号 ${escapeHtml(data.number || '未编号')}</span>${infoDisclosure('技术信息', [['对象 ID', data.localId], ['家族 ID', data.commonId], ['并发版本', data.lockVersion]])}</div>
+      <dl class="requirement-audit"><div><dt>版次</dt><dd>${escapeHtml(String(data.revision))}</dd></div><div><dt>签入签出状态</dt><dd>${data.checkedOut ? '已签出' : '已签入'}</dd></div><div><dt>创建人</dt><dd>${escapeHtml(data.createdBy || '—')}</dd></div><div><dt>创建时间</dt><dd>${escapeHtml(formatAuditTime(data.createdTime))}</dd></div><div><dt>更新人</dt><dd>${escapeHtml(data.updatedBy || '—')}</dd></div><div><dt>更新时间</dt><dd>${escapeHtml(formatAuditTime(data.updatedTime))}</dd></div></dl>
       <form id="requirementDetailForm"><div class="field"><label for="detailReqTitle">标题</label><input id="detailReqTitle" name="title" value="${escapeHtml(data.title)}" required ${!editable ? 'disabled' : ''}></div>
       <div class="field"><label for="detailReqDescription">描述</label><textarea id="detailReqDescription" name="description" ${!editable ? 'disabled' : ''}>${escapeHtml(data.description || '')}</textarea></div>
       <div class="requirement-page-save"><button class="btn primary" type="submit" ${!editable ? 'disabled' : ''}>保存修改</button><span class="muted">保存仅更新草稿，签入后恢复只读。</span></div></form>` : `<div class="empty">${page.busy ? '正在加载需求…' : '需求加载失败，请返回列表重试。'}</div>`}
@@ -68,6 +69,8 @@ async function requirementPageMutate(command) {
         });
         if (requirementPage !== page) return;
         page.data = data;
+        try { page.data = await api('/api/requirements/' + encodeURIComponent(page.item.localId)); }
+        catch { page.error = '操作已完成，审计信息刷新失败，请返回列表后重新进入。'; }
     } catch (error) {
         page.error = reasonText(error.body) || error.message;
         page.busy = false;

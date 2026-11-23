@@ -1,5 +1,13 @@
 const $ = (selector) => document.querySelector(selector);
 
+function formatAuditTime(value) {
+    if (value === null || value === undefined || value === '') return '—';
+    const date = new Date(Number(value));
+    return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).format(date);
+}
+
 let infoCardSequence = 0;
 
 function infoDisclosure(label, entries) {

@@ -498,11 +498,13 @@ function renderItems() {
         return `
       <tr class="${selected}" data-local-id="${escapeHtml(item.localId)}" data-item-ws="${escapeHtml(item.workingSetId)}">
         <td class="item-number mono" title="${escapeHtml(item.number || '')}">${escapeHtml(item.number || '未编号')}</td>
-        <td class="item-name"><button type="button" class="item-open" aria-controls="itemDetail" aria-expanded="${Boolean(selected)}">${escapeHtml(item.name || '未命名条目')}</button></td>
+        <td class="item-name"><button type="button" class="item-open" aria-controls="requirementPage">${escapeHtml(item.name || '未命名条目')}</button></td>
         <td class="item-revision">${escapeHtml(item.revision)}</td>
+        <td class="item-checkout-status">${item.checkedOut === true ? '<span class="badge checked-out">已签出</span>' : item.checkedOut === false ? '<span class="badge checked-in">已签入</span>' : '<span class="muted">状态未知</span>'}</td>
         <td>${item.materialized ? '<span class="badge shared">本地物化</span>' : '<span class="badge source">来源继承</span>'}</td>
+        <td class="item-audit-time">${escapeHtml(formatAuditTime(item.createdTime))}</td>
+        <td class="item-audit-time">${escapeHtml(formatAuditTime(item.updatedTime))}</td>
         <td><div class="row-actions">
-          <button type="button" class="btn small" data-edit-requirement="${escapeHtml(item.localId)}">编辑</button>
           <button type="button" class="btn small danger" data-delete-requirement="${escapeHtml(item.localId)}">删除</button>
           </div>
         </td>
@@ -512,7 +514,7 @@ function renderItems() {
     area.innerHTML = `
     <table class="item-table">
       <thead>
-        <tr><th class="item-number">编号</th><th class="item-name">名称</th><th class="item-revision">版次</th><th>内容状态</th><th>操作</th></tr>
+        <tr><th class="item-number">编号</th><th class="item-name">名称</th><th class="item-revision">版次</th><th>签入状态</th><th>内容状态</th><th>创建时间</th><th>编辑时间</th><th>操作</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;

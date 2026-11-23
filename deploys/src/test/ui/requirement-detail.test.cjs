@@ -11,6 +11,7 @@ function render(checkedOut, busy = false) {
         $: () => page,
         escapeHtml: (value) => String(value),
         infoDisclosure: () => '',
+        formatAuditTime: () => '—',
         worksetLabel: () => '工作集',
         state: {selectedWs: '1', selectedTracker: {name: '需求'}}
     });
@@ -37,4 +38,22 @@ test('生命周期操作处理中不可编辑', () => {
     const html = render(true, true);
     assert.match(html, /id="detailReqTitle"[^>]*disabled/);
     assert.match(html, /data-req-command="checkin" disabled/);
+});
+
+test('审计信息以不可编辑的定义列表展示', () => {
+    const html = render(true);
+    const audit = html.match(/<dl class="requirement-audit">[\s\S]*?<\/dl>/)[0];
+    for (const label of ['版次', '签入签出状态', '创建人', '创建时间', '更新人', '更新时间']) {
+        assert.ok(audit.includes(`<dt>${label}</dt>`));
+    }
+    assert.doesNotMatch(audit, /<input|<textarea|<select/);
+});
+
+test('缺失或无效审计时间不编造时间', () => {
+    const context = vm.createContext({document: {querySelector() {}}});
+    vm.runInContext(fs.readFileSync(path.resolve(__dirname, '../../main/resources/static/js/core.js'), 'utf8'), context);
+    for (const value of [null, undefined, '', 'invalid']) {
+        assert.equal(context.formatAuditTime(value), '—');
+    }
+    assert.notEqual(context.formatAuditTime(1730000000000), '—');
 });

@@ -1791,6 +1791,15 @@ tbody td {
     width: 100%;
 }
 
+.item-checkout-status { white-space: nowrap; }
+.item-audit-time { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.requirement-audit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 24px; margin: 0 0 28px; padding: 20px; background: #f8fafc; border: 1px solid var(--line-soft); border-radius: 10px; }
+.requirement-audit dt { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.requirement-audit dd { margin: 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+@media(max-width: 700px) { .requirement-audit { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; } }
+.badge.checked-out { background: #fff3cc; color: #855400; }
+.badge.checked-in { background: #e4f5eb; color: #216a46; }
+
 .item-table td:last-child {
     width: 1%;
 }
