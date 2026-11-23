@@ -70,8 +70,6 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
         return load("""
                 SELECT result FROM working_set_creations
                 WHERE request_id = ?
-                ORDER BY created_at DESC, id DESC
-                LIMIT 1
                 """, requestId);
     }
 

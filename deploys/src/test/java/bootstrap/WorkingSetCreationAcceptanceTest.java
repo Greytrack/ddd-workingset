@@ -17,11 +17,13 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreati
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Request;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Stage;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
+import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreationRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,6 +47,10 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -53,6 +59,7 @@ import static bootstrap.FixtureIds.fixtureId;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 
@@ -88,6 +95,8 @@ class WorkingSetCreationAcceptanceTest {
     private LightTrackerItemRepository items;
     @SpyBean
     private LightTrackerItemQueryProvider itemQueries;
+    @SpyBean
+    private WorkingSetCreationRepository creationRepository;
     @Autowired
     private ObjectMapper mapper;
 
@@ -751,6 +760,66 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(1, completed.failures().size());
         assertEquals("SourceTrackerNotFound", completed.failures().getFirst().reason());
         assertEquals(2, rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, true", "true, false", "false, true"})
+    void concurrentExtensionsClaimRequestAndTargetAtomically(boolean sameTarget, boolean sameRequest) throws Exception {
+        seedRange();
+        createTarget();
+        String otherTarget = sameTarget ? child : parent;
+        if (!sameTarget) {
+            FixtureIds.insertWorkingSet(jdbc, "1", otherTarget);
+        }
+        String requestId = fixtureId("concurrent-request-" + child);
+        String otherRequestId = sameRequest ? requestId : fixtureId("other-request-" + child);
+        CyclicBarrier insertion = new CyclicBarrier(2);
+        doAnswer(call -> {
+            insertion.await(5, TimeUnit.SECONDS);
+            return call.callRealMethod();
+        }).when(creationRepository).save(argThat(creation -> creation != null
+                && creation.status() == Status.Pending
+                && (child.equals(creation.request().newWorkingSetId())
+                || otherTarget.equals(creation.request().newWorkingSetId()))));
+
+        String acceptedId;
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+             Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement lock = connection.prepareStatement(
+                    "SELECT id FROM air_inst_workingset WHERE id IN (?, ?) ORDER BY id FOR UPDATE")) {
+                lock.setLong(1, Long.parseLong(child));
+                lock.setLong(2, Long.parseLong(otherTarget));
+                lock.executeQuery().close();
+
+                Future<ResponseEntity<Map>> first = executor.submit(() -> submitExtension(child, requestId));
+                Future<ResponseEntity<Map>> second = executor.submit(() -> submitExtension(otherTarget, otherRequestId));
+                List<ResponseEntity<Map>> responses = List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS));
+                List<ResponseEntity<Map>> accepted = responses.stream()
+                        .filter(response -> response.getStatusCode() == HttpStatus.ACCEPTED).toList();
+                assertEquals(sameTarget && sameRequest ? 2 : 1, accepted.size(), responses::toString);
+                acceptedId = String.valueOf(accepted.getFirst().getBody().get("creationId"));
+                if (accepted.size() == 2) {
+                    assertEquals(acceptedId, accepted.getLast().getBody().get("creationId"));
+                } else {
+                    ResponseEntity<Map> rejected = responses.stream()
+                            .filter(response -> response.getStatusCode() != HttpStatus.ACCEPTED).findFirst().orElseThrow();
+                    assertEquals(HttpStatus.CONFLICT, rejected.getStatusCode());
+                    assertEquals(sameTarget ? "PREPARING" : "WorkingSetAlreadyExists", rejected.getBody().get("reason"));
+                }
+                assertEquals(1, jdbc.queryForObject("""
+                        SELECT count(*) FROM working_set_creations WHERE request_id IN (?, ?)
+                        """, Integer.class, requestId, otherRequestId));
+            } finally {
+                connection.rollback();
+            }
+        }
+        awaitStatus(acceptedId, Status.Succeeded);
+    }
+
+    private ResponseEntity<Map> submitExtension(String target, String requestId) {
+        return rest.postForEntity("/api/worksets/" + target + "/extensions",
+                Map.of("requestId", requestId, "trackerIds", List.of(unshared)), Map.class);
     }
 
     @Test

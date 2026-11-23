@@ -809,9 +809,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_target
     ON working_set_creations (new_working_set_id)
     WHERE result -> 'request' ->> 'mode' = 'CREATE';
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_request_id
-    ON working_set_creations (request_id)
-    WHERE result -> 'request' ->> 'mode' = 'CREATE';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_working_set_creation_request_id
+    ON working_set_creations (request_id);
+DROP INDEX IF EXISTS uq_creation_request_id;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_extension_target
     ON working_set_creations (new_working_set_id)

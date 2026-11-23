@@ -120,8 +120,7 @@ Requirement 是业务 BC 参考实现。
 
 ## 6. 幂等与并发
 
-- 创建和扩展请求以 `requestId` 判重。相同请求复用已有任务、目标 ID 和各 Tracker 的基线时间。同键改变请求范围或显式基线时间返回
-  HTTP 409。持久化约束见 [schema.sql](../../../deploys/src/main/resources/schema.sql)；扩展并发见 §12A。
+- `requestId` 在创建与扩展任务中全局唯一。相同请求复用已有任务、目标 ID 和各 Tracker 的基线时间；同键改变操作类型、目标、请求范围或显式基线时间返回 HTTP 409。持久化约束见 [schema.sql](../../../deploys/src/main/resources/schema.sql)。
 - 步骤内已存在的 Tracker/LTI（重入/重复执行）视为已完成并记录“skipped”，不重复创建；唯一索引兜底。
 - 不开放任务重试接口；失败后由人工查看明细并决定后续（删除子 WS 或手工补齐）。
 
@@ -193,7 +192,7 @@ Requirement 是业务 BC 参考实现。
   WorkingSet 由工作集就绪校验挡住普通查询与业务命令。已有 WorkingSet 在扩展期间继续可用。
 - 已有 Tracker 的 Item：不在扩展任务内直接覆盖；由普通 Merge 合并加入（扩展只负责新 Tracker）。
 - 原子性：创建新子工作集与扩展已有子工作集均允许部分成功；T6-F i 的“批量派生整批原子”不再适用于 T7 创建/扩展 LRO。
-- 并发：同一目标工作集同时只允许一个未终态扩展任务（`uq_active_extension_target`）；不同请求返回 `Preparing`。
+- 并发：同一目标工作集同时只允许一个 `Pending` 或 `Running` 扩展任务（`uq_active_extension_target`）。相同请求重放原任务；另一个新请求返回 `409 PREPARING`，已有任务进入终态后可受理新的扩展请求。
 - 事件与事务：复用 T7 LRO 的单聚合事务约束、事件与失败明细。
 - 单 Item `/api/worksets/{ws}/derive` 与按空间/分类的单 Item 派生入口已移除；批量派生统一走扩展任务。
 

@@ -77,7 +77,7 @@ public class WorkingSetCreationService {
     /**
      * 按 requestId 幂等受理创建请求；同键返回既有任务。
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public WorkingSetCreation submitNew(String requestId, Function<Long, WorkingSetCreation.Request> request) {
         Optional<WorkingSetCreation> existing = workingSetCreationRepository.findByRequest(requestId);
         if (existing.isPresent()) {
@@ -90,7 +90,7 @@ public class WorkingSetCreationService {
     /**
      * 受理创建请求；目标须非默认工作集且未被占用。
      */
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public WorkingSetCreation submit(WorkingSetCreation.Request request) {
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
@@ -124,7 +124,7 @@ public class WorkingSetCreationService {
     /**
      * 扩展已有子工作集：复用共享 Tracker 或派生非共享 Tracker，跳过已纳入的来源。
      */
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public WorkingSetCreation submitExtension(Long target, String requestId,
                                               List<Long> parentTrackerIds, Map<Long, Long> overrides) {
         Map<Long, Long> baselineOverrides = overrides == null ? Map.of() : Map.copyOf(overrides);
@@ -181,13 +181,7 @@ public class WorkingSetCreationService {
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
         }
-        Optional<WorkingSetCreation> concurrent = workingSetCreationRepository.findActiveExtension(target);
-        if (concurrent.isPresent()) {
-            if (concurrent.get().request().requestId().equals(requestId)) {
-                return replayExtension(concurrent.get(), target, submittedIds, baselineOverrides);
-            }
-            throw DomainException.withMessage(FailureReason.PREPARING, Long.toString(target));
-        }
+        // 冲突插入已等待获胜事务提交，重新读取该请求键以区分重放与目标正在扩展。
         return replayExtension(workingSetCreationRepository.findByRequest(requestId)
                         .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, Long.toString(target))),
                 target, submittedIds, baselineOverrides);
