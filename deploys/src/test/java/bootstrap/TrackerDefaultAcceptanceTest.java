@@ -69,7 +69,7 @@ class TrackerDefaultAcceptanceTest {
     void cleanup() {
         for (String space : testSpaces) {
             jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
-            jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
+            jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
             jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE work_space = ?", space);
             jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
             jdbc.update("DELETE FROM air_inst_tracker_rev WHERE work_space = ?", space);

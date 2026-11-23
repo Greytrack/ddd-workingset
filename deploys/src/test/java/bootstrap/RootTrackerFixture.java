@@ -32,6 +32,6 @@ record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
         jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + localId + "%");
 
         jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", localId);
-        jdbc.update("DELETE FROM requirements WHERE local_id = ?", localId);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", localId);
     }
 }

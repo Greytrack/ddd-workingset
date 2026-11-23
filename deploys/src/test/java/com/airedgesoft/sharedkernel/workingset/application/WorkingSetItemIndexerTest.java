@@ -56,7 +56,7 @@ class WorkingSetItemIndexerTest {
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", parent);
-        jdbc.update("DELETE FROM requirements WHERE tracker_id = ?", sourceTracker);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker = ?", sourceTracker);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", sourceTracker);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
@@ -86,9 +86,9 @@ class WorkingSetItemIndexerTest {
                        (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
                 """, parent, parentTracker, space, "14010101", child, childTracker, space, "14010101");
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision,
-                    lock_version, delete_flag, working_set_id, created_by, created_time)
-                VALUES (?, ?, ?, 'source', 'description', 3, 0, TRUE,
+                INSERT INTO air_inst_requirement_rev (instance_id, common_id, tracker, name, description, revision,
+                    lock_version, delete_flag, workingset_id, created_by, created_time)
+                VALUES (?, ?, ?, 'source', 'description', 3, 0, 1,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, source, family, sourceTracker, sourceTracker, System.currentTimeMillis());
         ItemIndexFixture.insert(jdbc, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, 3, source, 3, false);

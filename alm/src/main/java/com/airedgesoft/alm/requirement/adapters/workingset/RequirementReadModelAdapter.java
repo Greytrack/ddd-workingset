@@ -33,8 +33,13 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
 
     @Override
     public TrackerItemContent readAt(Integer revision) {
-        return content(query.find(localId)
-                .orElseThrow(() -> notFound(localId)), revision);
+        RequirementDetail current = find();
+        if (current.deleted() || current.revision() == revision) {
+            return content(current, revision);
+        }
+        return content(query.findRevision(localId, revision)
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE,
+                        "required revision is unavailable: " + revision)), revision);
     }
 
     @Override

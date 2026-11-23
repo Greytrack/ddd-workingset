@@ -93,7 +93,7 @@ class BindingAcceptanceTest {
     void cleanUp() {
         jdbc.update("DELETE FROM air_ws_items_index WHERE work_space_id = ?", space);
         jdbc.update("DELETE FROM air_inst_common WHERE work_space = ? AND base_class = 1401", space);
-        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (?, ?)", shared, unshared);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker IN (?, ?)", shared, unshared);
         for (String id : worksets.reversed()) {
             jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", id);
             jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE workingset_id = ?", id);
@@ -165,7 +165,7 @@ class BindingAcceptanceTest {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + localId + "%");
             jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", localId);
             jdbc.update("DELETE FROM air_inst_common WHERE id = ?", localId);
-            jdbc.update("DELETE FROM requirements WHERE local_id = ?", localId);
+            jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", localId);
         }
     }
 
@@ -279,7 +279,7 @@ class BindingAcceptanceTest {
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
         jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", sourceItem);
         jdbc.update("DELETE FROM air_inst_common WHERE id = ?", sourceItem);
-        jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", sourceItem);
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasDerivedChildren");
 
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(tracker)).getStatusCode());
@@ -319,13 +319,13 @@ class BindingAcceptanceTest {
         String endpoint = path("1") + "/product-spaces/" + space;
         assertEquals(HttpStatus.NOT_FOUND, delete("/api/product-spaces/" + space).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, delete(path(ws) + "/product-spaces/" + space).getStatusCode());
-        jdbc.update("UPDATE requirements SET delete_flag = true WHERE local_id = ?", sourceItem);
+        jdbc.update("UPDATE air_inst_requirement_rev SET delete_flag = 1 WHERE instance_id = ?", sourceItem);
         jdbc.update("UPDATE air_inst_common SET delete_flag = 1 WHERE id = ?", sourceItem);
         assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceHasBusinessReferences");
 
         jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", sourceItem);
         jdbc.update("DELETE FROM air_inst_common WHERE id = ?", sourceItem);
-        jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", sourceItem);
         long retainedReference = Long.parseLong(fixtureId("direct-reference-" + suffix));
         jdbc.update("INSERT INTO air_inst_common (id, base_class, work_space) VALUES (?, 1001, ?)",
                 retainedReference, space);

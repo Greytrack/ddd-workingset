@@ -28,10 +28,19 @@ public final class Requirement implements TrackerItem {
     private final boolean materialized;
     private boolean deleteFlag;
     private final String createdBy;
+    private final String flags;
+    private final boolean checkedOut;
 
     private Requirement(Long localId, Long commonId, Long trackerId, String title, String description,
                         Integer revision, String version, Long lockVersion, boolean materialized,
                         boolean deleteFlag, String createdBy) {
+        this(localId, commonId, trackerId, title, description, revision, version, lockVersion,
+                materialized, deleteFlag, createdBy, "1110000000", false);
+    }
+
+    private Requirement(Long localId, Long commonId, Long trackerId, String title, String description,
+                        Integer revision, String version, Long lockVersion, boolean materialized,
+                        boolean deleteFlag, String createdBy, String flags, boolean checkedOut) {
         this.localId = Objects.requireNonNull(localId, "localId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
@@ -53,6 +62,8 @@ public final class Requirement implements TrackerItem {
         this.materialized = materialized;
         this.deleteFlag = deleteFlag;
         this.createdBy = createdBy;
+        this.flags = flags;
+        this.checkedOut = checkedOut;
     }
 
     public static Requirement create(Long id, Long commonId, Long trackerId, String title,
@@ -96,6 +107,13 @@ public final class Requirement implements TrackerItem {
                                       String createdBy) {
         return new Requirement(id, commonId, trackerId, title, description, revision, version,
                 lockVersion, materialized, deleteFlag, createdBy);
+    }
+
+    public static Requirement restore(Long id, Long commonId, Long trackerId, String title, String description,
+                                      Integer revision, String version, Long lockVersion, boolean materialized,
+                                      boolean deleted, String createdBy, String flags, boolean checkedOut) {
+        return new Requirement(id, commonId, trackerId, title, description, revision, version,
+                lockVersion, materialized, deleted, createdBy, flags, checkedOut);
     }
 
     /**
@@ -172,6 +190,31 @@ public final class Requirement implements TrackerItem {
         return createdBy;
     }
 
+    public String flags() {
+        return flags;
+    }
+
+    public boolean checkedOut() {
+        return checkedOut;
+    }
+
+    public Requirement checkIn(Long expectedLockVersion, String effectiveFlags) {
+        requireCancellableCheckout(expectedLockVersion);
+        if (effectiveFlags == null || !effectiveFlags.matches("[01]{10}")) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Expected ten binary effective flags");
+        }
+        return new Requirement(localId, commonId, trackerId, title, description, revision, version,
+                Math.incrementExact(lockVersion), materialized, false, createdBy, effectiveFlags, false);
+    }
+
+    public void requireCancellableCheckout(Long expectedLockVersion) {
+        requireActive();
+        verifyLockVersion(expectedLockVersion);
+        if (!checkedOut) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Requirement is not checked out");
+        }
+    }
+
     public Requirement changeTitle(String title, Long expectedLockVersion) {
         return changeContent(title, description, expectedLockVersion);
     }
@@ -181,14 +224,18 @@ public final class Requirement implements TrackerItem {
         verifyLockVersion(expectedLockVersion);
         validateTitle(title);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                Math.incrementExact(lockVersion), materialized, false, createdBy);
+                Math.incrementExact(lockVersion), materialized, false, createdBy, flags, checkedOut);
     }
 
     public Requirement upgradeRevision(Long expectedLockVersion) {
         requireActive();
         verifyLockVersion(expectedLockVersion);
+        if (checkedOut) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Requirement is already checked out");
+        }
         return new Requirement(localId, commonId, trackerId, title, description,
-                Math.incrementExact(revision), version, Math.incrementExact(lockVersion), materialized, false, createdBy);
+                Math.incrementExact(revision), version, Math.incrementExact(lockVersion), materialized, false,
+                createdBy, "0010000000", true);
     }
 
     /**
@@ -213,7 +260,7 @@ public final class Requirement implements TrackerItem {
         }
         validateTitle(title);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                Math.incrementExact(lockVersion), materialized, false, createdBy);
+                Math.incrementExact(lockVersion), materialized, false, createdBy, flags, checkedOut);
     }
 
     @Override

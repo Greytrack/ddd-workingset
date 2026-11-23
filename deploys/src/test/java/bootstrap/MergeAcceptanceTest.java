@@ -166,7 +166,7 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", local);
 
             jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", local);
-            jdbc.update("DELETE FROM requirements WHERE local_id = ?", local);
+            jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", local);
         }
         for (String workset : worksets.reversed()) {
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", workset);
@@ -177,7 +177,7 @@ class MergeAcceptanceTest {
         }
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
-        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (?, ?)", rootTracker, childTracker);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker IN (?, ?)", rootTracker, childTracker);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
     }
 

@@ -27,7 +27,9 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
 
-- LightTrackerItem 的当前索引和版次成员分别写入两张旧索引表，由同一次聚合保存提交；已落地动作与未决撤销规则见
+- ALM 按版次写入 `air_inst_requirement_rev`。`id` 标识版次行，`instance_id` 对应稳定的 LocalId，`common_id` 对应跨工作集谱系。当前读模型按实例取最大的 `revision`，历史内容按实例与指定版次查询。
+  签出新增业务行，取消签出删除被撤销行并恢复前一版，签入在当前行保存有效状态位。业务事务提交对应事实事件，SK 在独立事务同步索引。当前 schema 和演示数据从空库重建。
+- LightTrackerItem 的当前索引和版次成员分别写入两张旧索引表，由同一次聚合保存提交；签出、取消签出和签入规则见
   [双表索引与版次成员](05-contracts/t3-lti-materialization.md#31-双表索引与版次成员)。
 - ALM 等业务 BC 可以**只读**使用 SK 的共享聚合和聚合仓储（如 `LightTrackerItemRepository.findById`、
   `WorkingSetRepository.findById`、`TrackerRepository` 读取），用于完成自身用例所需的身份和来源校验。LightTrackerItem
@@ -48,7 +50,9 @@ ALM 创建 Requirement 时普通读取 Tracker，并在插入时过滤已软删 
 | 事实                              | 发布方                                                                     | 消费者/后续动作                                                                                                                                                                |
 |-----------------------------------|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Requirement 创建后登记 LTI        | ALM `TrackerItemCreatedEvent`                                              | SK 按公共登记确认对象仍存在，再幂等登记 Local-backed LTI。已软删对象登记删除标记，永久删除后的重投跳过。                                                                       |
-| Requirement 普通修改/继承编辑保存 | ALM `BusinessObjectUpdateEvent`                                            | SK COW 请求；`TrackerItemLocalizedListener` 对首次继承编辑在独立事务切换 LTI                                                                                                   |
+| Requirement 来源内容改动           | ALM `BusinessObjectUpdateEvent` | SK 为依赖目标发布 COW 请求，各请求引用同一份修改前快照 |
+| Requirement 首次继承编辑           | ALM `BusinessObjectLocalizedEvent` | SK 独立事务切换该目标的 LTI |
+| Requirement 版次生命周期            | ALM 签出、取消签出与签入事件 | SK 独立事务按 [T3 契约](05-contracts/t3-lti-materialization.md#31-双表索引与版次成员) 同步索引 |
 | COW 业务保存                      | SK `TrackerItemMaterializationRequestedEvent`                              | ALM 保存 Requirement 并发布 `TrackerItemMaterializationCompletedEvent`                                                                                                         |
 | COW 完成                          | ALM `TrackerItemMaterializationCompletedEvent`                             | SK 在独立事务切换 Local-backed / 记录失败终态                                                                                                                                  |
 | Merge 条目批准                    | SK `MergeEntryApprovedEvent` 携带目标 Tracker 分类、冻结应用值及目标期望锁 | ALM 只处理 Requirement 分类，在自己的事务中校验并保存目标，发布 `MergeEntryResolvedEvent`。证据校验留在轮次登记阶段。[ADR-0009](06-decisions/adr-0009-merge-dispatch-frozen-evidence.md) |

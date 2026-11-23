@@ -60,7 +60,7 @@ class T7RelationEventAcceptanceTest {
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
-        jdbc.update("DELETE FROM requirements WHERE tracker_id = ?", parentTracker);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker = ?", parentTracker);
         jdbc.update("DELETE FROM air_inst_common WHERE id = ?", parentItem);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);

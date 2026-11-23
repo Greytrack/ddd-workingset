@@ -119,7 +119,7 @@ class SnowflakeStorageAcceptanceTest {
             String trackerFilter = "SELECT tracker_id FROM trackers WHERE product_space_id = ?";
             jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id IN (" + trackerFilter + ")", spaceId);
 
-            jdbc.update("DELETE FROM requirements WHERE tracker_id IN (" + trackerFilter + ")", spaceId);
+            jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker IN (" + trackerFilter + ")", spaceId);
             jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", spaceId);
             if (targetId != null) {
                 jdbc.update("DELETE FROM trackers WHERE product_space_id = ? AND working_set_id = ?", spaceId, targetId);

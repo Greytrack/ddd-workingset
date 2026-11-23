@@ -71,7 +71,7 @@ class RequirementFamilyScopeTest {
     void cleanup() {
         jdbc.update("DELETE FROM air_inst_common WHERE common_id = ?", family);
         jdbc.update("DELETE FROM air_ws_items_index WHERE common_id = ?", family);
-        jdbc.update("DELETE FROM requirements WHERE common_id = ?", family);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE common_id = ?", family);
         // Child trackers reference parents through source_id; remove them first.
         for (String tracker : new String[]{t3, t4, t2, t1}) {
             jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);

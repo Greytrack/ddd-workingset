@@ -18,6 +18,8 @@ public interface RequirementRepository {
      */
     void delete(Requirement requirement);
 
+    Requirement cancelCheckout(Requirement current);
+
     /**
      * 按 LocalId 重建聚合。
      */

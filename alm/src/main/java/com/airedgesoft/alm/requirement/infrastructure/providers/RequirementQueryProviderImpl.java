@@ -23,6 +23,11 @@ public class RequirementQueryProviderImpl implements RequirementQueryProvider {
     }
 
     @Override
+    public Optional<RequirementDetail> findRevision(long localId, int revision) {
+        return Optional.ofNullable(mapper.findRevision(localId, revision));
+    }
+
+    @Override
     public List<RequirementDetail> findByTracker(long trackerId) {
         return mapper.findByTracker(trackerId);
     }

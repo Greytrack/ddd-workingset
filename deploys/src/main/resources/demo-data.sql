@@ -210,22 +210,30 @@ SELECT pg_temp.demo_id(100000 + t.space * 1000 + t.slot * 100 + i)              
 FROM demo_trackers t
          CROSS JOIN generate_series(1, 20) AS i;
 
-INSERT INTO requirements (local_id, common_id, tracker_id, title, name, description, revision, version, lock_version,
-                          working_set_id, created_by, created_time)
-SELECT d.id,
+INSERT INTO air_inst_requirement_rev (id, instance_id, common_id, tracker, name, description, revision, version, lock_version,
+                                      workingset_id, work_space, type, owner, created_by, created_time, updated_by, updated_time)
+SELECT pg_temp.demo_id(9100000 + row_number() OVER (ORDER BY d.id)),
+       d.id,
        d.id,
        d.tracker,
-       d.title,
        d.title,
        '定义' || d.title || '的验收条件，记录预期结果和异常处理方式。',
        CASE WHEN d.i % 5 = 0 THEN 2 ELSE 1 END,
        '1.0',
        0,
-       t.workingset_id,
-       'demo',
-       1704067200000
+       t.workingset_id, t.work_space, t.tracker_class, t.owner,
+       'demo', 1704067200000, 'demo', 1704067200000
 FROM demo_items d
          JOIN air_inst_tracker_rev t ON t.id = d.tracker;
+
+-- Every historical index member has a corresponding business revision row.
+INSERT INTO air_inst_requirement_rev
+(id, instance_id, common_id, tracker, name, description, revision, version, lock_version, workingset_id,
+ work_space, type, owner, created_by, created_time, updated_by, updated_time)
+SELECT pg_temp.demo_id(9300000 + row_number() OVER (ORDER BY instance_id)), instance_id, common_id, tracker, name, '首次登记：' || name, 1, version, 0, workingset_id,
+       work_space, type, owner, created_by, created_time, updated_by, updated_time
+FROM air_inst_requirement_rev
+WHERE revision = 2;
 
 WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_local_id, source_revision, materialized)
          AS (SELECT local_id,
@@ -240,7 +248,8 @@ WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_
 INSERT
 INTO air_ws_items_index
 (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
- work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time)
+ work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time,
+ effective_revision, effective_checked_out, effective_flags, flag1, flag2, flag3, flag4, flag5, lock_version)
 SELECT d.local_id,
        d.local_id,
        d.common_id,
@@ -256,25 +265,25 @@ SELECT d.local_id,
        t.source_branch_id,
        14010101,
        'demo',
-       1704067200000
+       1704067200000,
+       d.revision, 0, '1110000000', TRUE, TRUE, TRUE, FALSE, FALSE, 0
 FROM indexed d
          JOIN air_inst_tracker_rev t ON t.id = d.tracker_id;
 
 -- A sample of edited V1 copies supports viewing differences and comparing materialized content.
-INSERT INTO requirements (local_id, common_id, tracker_id, title, name, description, revision, version, lock_version,
-                          working_set_id, created_by, created_time)
-SELECT pg_temp.demo_id(200000 + d.ws * 1000 + d.space * 100 + d.slot * 20 + i.i),
+INSERT INTO air_inst_requirement_rev (id, instance_id, common_id, tracker, name, description, revision, version, lock_version,
+                                      workingset_id, work_space, type, owner, created_by, created_time, updated_by, updated_time)
+SELECT pg_temp.demo_id(9200000 + row_number() OVER (ORDER BY d.ws, d.space, d.slot, i.i)),
+       pg_temp.demo_id(200000 + d.ws * 1000 + d.space * 100 + d.slot * 20 + i.i),
        i.id,
        pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot),
-       i.title || '（V1 修订）',
        i.title || '（V1 修订）',
        '新增回归验收条件，记录系统状态和边界场景。',
        1,
        '1.0',
        0,
-       t.workingset_id,
-       'demo',
-       1704067200000
+       t.workingset_id, t.work_space, t.tracker_class, t.owner,
+       'demo', 1704067200000, 'demo', 1704067200000
 FROM demo_derivations d
          JOIN demo_items i ON i.space = d.space AND i.slot = d.slot
          JOIN air_inst_tracker_rev t ON t.id = pg_temp.demo_id(d.ws * 10 + d.space * 10000 + d.slot)
@@ -298,7 +307,8 @@ WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_
 INSERT
 INTO air_ws_items_index
 (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
- work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time)
+ work_space_id, master_id, parent_branch_id, sub_class_id, created_by, created_time,
+ effective_revision, effective_checked_out, effective_flags, flag1, flag2, flag3, flag4, flag5, lock_version)
 SELECT d.local_id,
        d.local_id,
        d.common_id,
@@ -314,13 +324,15 @@ SELECT d.local_id,
        t.source_branch_id,
        14010101,
        'demo',
-       1704067200000
+       1704067200000,
+       1, 0, '1110000000', TRUE, TRUE, TRUE, FALSE, FALSE, 0
 FROM indexed d
          JOIN air_inst_tracker_rev t ON t.id = d.tracker_id;
 
 INSERT INTO air_ws_items_revision_index
-(id, work_space_id, workingset_id, master_id, branch_id, common_id, local_id, revision, sub_class_id)
-SELECT id,
+(id, work_space_id, workingset_id, master_id, branch_id, common_id, local_id, revision, sub_class_id,
+ flags, lock_version, created_by, created_time)
+SELECT pg_temp.demo_id(9400000 + row_number() OVER (ORDER BY local_id)),
        work_space_id,
        workingset_id,
        master_id,
@@ -328,7 +340,8 @@ SELECT id,
        common_id,
        local_id,
        revision,
-       sub_class_id
+       sub_class_id,
+       flags, 0, created_by, created_time
 FROM air_ws_items_index;
 
 -- Demo items currently at revision 2 also have a revision 1 index member.

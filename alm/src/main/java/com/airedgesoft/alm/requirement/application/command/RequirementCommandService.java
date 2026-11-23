@@ -12,6 +12,9 @@ import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectLocalizedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckedInEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckedOutEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckoutCancelledEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
@@ -186,7 +189,29 @@ public class RequirementCommandService {
     public Requirement upgradeRevision(Long localId, Long expectedLockVersion) {
         Requirement current = loadWritable(localId);
         requireActive(current);
-        return saveChange(current, current.upgradeRevision(expectedLockVersion));
+        Requirement changed = saveChange(current, current.upgradeRevision(expectedLockVersion));
+        eventPublisher.publishEvent(new BusinessObjectCheckedOutEvent(localId, current.revision(), changed.revision()));
+        return changed;
+    }
+
+    @Transactional
+    public Requirement checkIn(Long localId, Long expectedLockVersion, String effectiveFlags) {
+        Requirement current = loadWritable(localId);
+        Requirement checkedIn = current.checkIn(expectedLockVersion, effectiveFlags);
+        repository.save(checkedIn);
+        eventPublisher.publishEvent(new BusinessObjectCheckedInEvent(localId, checkedIn.revision(), checkedIn.flags()));
+        return checkedIn;
+    }
+
+    @Transactional
+    public Requirement cancelCheckout(Long localId, Long expectedLockVersion) {
+        Requirement current = loadWritable(localId);
+        current.requireCancellableCheckout(expectedLockVersion);
+        Requirement restored = repository.cancelCheckout(current);
+        publishSourceChange(RequirementSnapshot.of(current), restored, current.revision(), current.lockVersion());
+        eventPublisher.publishEvent(new BusinessObjectCheckoutCancelledEvent(
+                localId, current.revision(), restored.revision(), restored.flags()));
+        return restored;
     }
 
     /**
@@ -232,32 +257,15 @@ public class RequirementCommandService {
 
         repository.save(changed);
 
-        BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(
-                identifierGenerator.nextId(null).longValue(),
-                changed.localId(),
-                changed.localId(),
-                current.revision(),
-                changed.revision(),
-                current.lockVersion(),
-                changed.lockVersion(),
-                snapshotJson.valueToTree(snapshot),
-                System.currentTimeMillis());
-
-        // 发布记录随来源事务提交，监听器在提交后异步处理。
-        eventPublisher.publishEvent(event);
+        publishSourceChange(snapshot, changed, current.revision(), current.lockVersion());
         if (current.deleted() != changed.deleted()) {
             eventPublisher.publishEvent(new BusinessObjectDeleteEvent(changed.localId(), changed.deleted()));
         }
         return changed;
     }
 
-    /**
-     * 保存软删除：快照为删除前状态；删除事实由聚合的 delete 返回，随来源事务一并发布。
-     */
-    public void saveDeleted(RequirementSnapshot snapshot, Requirement changed,
-                            int beforeRevision, long beforeLockVersion,
-                            BusinessObjectDeleteEvent deletedEvent) {
-        repository.save(changed);
+    private void publishSourceChange(RequirementSnapshot snapshot, Requirement changed,
+                                     int beforeRevision, long beforeLockVersion) {
         eventPublisher.publishEvent(new BusinessObjectUpdateEvent(
                 identifierGenerator.nextId(null).longValue(),
                 changed.localId(),
@@ -268,6 +276,16 @@ public class RequirementCommandService {
                 changed.lockVersion(),
                 snapshotJson.valueToTree(snapshot),
                 System.currentTimeMillis()));
+    }
+
+    /**
+     * 保存软删除：快照为删除前状态；删除事实由聚合的 delete 返回，随来源事务一并发布。
+     */
+    public void saveDeleted(RequirementSnapshot snapshot, Requirement changed,
+                            int beforeRevision, long beforeLockVersion,
+                            BusinessObjectDeleteEvent deletedEvent) {
+        repository.save(changed);
+        publishSourceChange(snapshot, changed, beforeRevision, beforeLockVersion);
         eventPublisher.publishEvent(deletedEvent);
     }
 }

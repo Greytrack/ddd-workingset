@@ -92,8 +92,8 @@ Port。跨聚合写入继续通过事件协作。业务对象永久删除后由 
 - ALM 切片：Merge 使用 `MergeEntryApprovedEvent` / `MergeEntryResolvedEvent`；COW 使用
   `TrackerItemMaterializationRequestedEvent` / `TrackerItemMaterializationCompletedEvent`。Merge 结果由 SK 接收，适用时再经
   `MergeAppliedEvent` 切换 LTI。
-- 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectUpdateEvent` 触发
-  SK 的 `TrackerItemLocalizedListener` 在独立事务切换 LTI；不修改来源，不保证两边原子可见。
+- 证据、业务 Revision、乐观锁版本和操作身份不可混用。未物化子需求直接编辑由 ALM 保存，随后 `BusinessObjectLocalizedEvent` 触发
+  SK 的 `TrackerItemLocalizedListener` 在独立事务切换 LTI。来源变更事件用于 COW 扇出，版次状态按 [T3 双表索引契约](t3-lti-materialization.md#31-双表索引与版次成员) 的专用事件同步。
 
 每个写事务最多修改一个聚合（TC-002）。事件交付、失败与实现差距见 [实现边界](../07-implementation.md)、[T1](t1-merge-execution.md)、[T3](t3-lti-materialization.md)
 和 [跨 BC 图](../10-diagrams/cross-bc-contract.md)。

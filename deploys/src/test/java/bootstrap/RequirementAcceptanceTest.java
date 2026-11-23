@@ -1,5 +1,8 @@
 package bootstrap;
 
+import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
+import com.airedgesoft.alm.requirement.application.query.provider.RequirementQueryProvider;
+
 
 import com.airedgesoft.sharedkernel.workingset.application.command.LightTrackerItemCommandService;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckedInEvent;
@@ -62,6 +65,10 @@ class RequirementAcceptanceTest {
     private LightTrackerItemQueryProvider indexQueries;
     @Autowired
     private LightTrackerItemCommandService indexLifecycle;
+    @Autowired
+    private RequirementCommandService requirements;
+    @Autowired
+    private RequirementQueryProvider requirementQueries;
 
     private RootTrackerFixture fixture;
     private String localId;
@@ -165,6 +172,46 @@ class RequirementAcceptanceTest {
         assertEquals(List.of(id), indexQueries.findInTracker(trackerId).stream()
                 .map(item -> item.localId()).toList());
         assertEquals(List.of(3), indexedRevisions());
+    }
+
+    @Test
+    void businessRevisionRowsHaveIndependentIdsAndDriveWorkingSetLifecycle() {
+        String trackerId = fixtureId("requirement-revision-" + UUID.randomUUID());
+        fixture = new RootTrackerFixture(jdbc, trackerId);
+        fixture.provision();
+        ResponseEntity<Map> created = rest.postForEntity("/api/requirements", Map.of(
+                "trackerId", trackerId, "title", "Original", "description", "revision test", "revision", 3), Map.class);
+        assertEquals(HttpStatus.CREATED, created.getStatusCode());
+        localId = String.valueOf(created.getBody().get("localId"));
+        Long instanceId = Long.valueOf(localId);
+        await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).isPresent());
+
+        String rows = "SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision";
+        Long originalRow = jdbc.queryForObject(rows, Long.class, instanceId);
+        assertNotEquals(instanceId, originalRow);
+        requirements.upgradeRevision(instanceId, 0L);
+        await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 4);
+        List<Long> checkedOutRows = jdbc.queryForList(rows, Long.class, instanceId);
+        assertEquals(2, checkedOutRows.size());
+        assertEquals(originalRow, checkedOutRows.getFirst());
+        assertNotEquals(instanceId, checkedOutRows.getLast());
+
+        requirements.changeTitle(instanceId, "Edited draft", 1L);
+        assertEquals("Edited draft", requirementQueries.find(instanceId).orElseThrow().title());
+        assertEquals("Original", requirementQueries.findRevision(instanceId, 3).orElseThrow().title());
+        requirements.cancelCheckout(instanceId, 2L);
+        await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 3);
+        assertEquals(List.of(originalRow), jdbc.queryForList(rows, Long.class, instanceId));
+        assertEquals("Original", requirementQueries.find(instanceId).orElseThrow().title());
+
+        requirements.upgradeRevision(instanceId, 3L);
+        await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 4);
+        List<Long> beforeCheckin = jdbc.queryForList(rows, Long.class, instanceId);
+        assertNotEquals(checkedOutRows.getLast(), beforeCheckin.getLast());
+        requirements.checkIn(instanceId, 4L, "1110000000");
+        await().atMost(Duration.ofSeconds(8)).until(() -> "1110000000".equals(jdbc.queryForObject(
+                "SELECT effective_flags FROM air_ws_items_index WHERE local_id = ?", String.class, instanceId)));
+        assertEquals(beforeCheckin, jdbc.queryForList(rows, Long.class, instanceId));
     }
 
     private Integer indexFlags() {

@@ -107,7 +107,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", parent);
         jdbc.update("DELETE FROM air_ws_items_index WHERE work_space_id IN (?, ?)", space, otherSpace);
         jdbc.update("DELETE FROM air_inst_common WHERE work_space IN (?, ?) AND base_class = 1401", space, otherSpace);
-        jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id IN (?, ?))",
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker IN (SELECT tracker_id FROM trackers WHERE product_space_id IN (?, ?))",
                 space, otherSpace);
         jdbc.update("""
                 DELETE FROM event_publication WHERE serialized_event LIKE ANY (
@@ -876,11 +876,11 @@ class WorkingSetCreationAcceptanceTest {
 
     private void seedItem(String tracker, String localId, String commonId, boolean deleted) {
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    delete_flag, working_set_id, created_by, created_time)
+                INSERT INTO air_inst_requirement_rev (instance_id, common_id, tracker, name, description, revision, lock_version,
+                    delete_flag, workingset_id, created_by, created_time)
                 VALUES (?, ?, ?, 'source', 'description', 3, 0, ?,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
-                """, localId, commonId, tracker, deleted, tracker, System.currentTimeMillis());
+                """, localId, commonId, tracker, deleted ? 1 : 0, tracker, System.currentTimeMillis());
         String owner = jdbc.queryForObject("SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?", String.class, tracker);
         ItemIndexFixture.registerRequirementFacts(jdbc, localId);
         ItemIndexFixture.insert(jdbc, localId, commonId, tracker, owner, 3, localId, 3, true);

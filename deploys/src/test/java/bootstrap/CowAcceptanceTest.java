@@ -64,9 +64,9 @@ class CowAcceptanceTest {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + target + "%");
 
             jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", target);
-            jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
+            jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", target);
         }
-        jdbc.update("DELETE FROM requirements WHERE local_id = ?", source);
+        jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", source);
         for (String ws : worksets.reversed()) {
             jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", ws);
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
