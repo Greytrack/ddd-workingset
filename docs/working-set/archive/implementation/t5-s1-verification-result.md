@@ -23,7 +23,7 @@ BUILD SUCCESS
 | 失败语义：NotIncluded（不降级为 NotFound） | 同上 `#resolve_item_outside_workspace_is_not_included`                                                                                     | ✅         |
 | AC-02 LocalId 稳定且可定位同一变体         | 同上 `#AC02_local_id_is_stable_and_locates_the_same_variant`                                                                               | ✅         |
 | AC-01 编译依赖（sk 不依赖 alm）            | `architecture.ArchitectureTest#working_set_must_not_depend_on_alm`（ArchUnit）                                                             | ✅         |
-| LightTrackerItem 不变量与状态切换          | `com.airedgesoft.sharekernel.workingset.domain.LightTrackerItemTest`（6 项）                                                               | ✅         |
+| LightTrackerItem 不变量与状态切换          | `sharedkernel`（6 项）                                                               | ✅         |
 
 ## 3. 实现位置
 

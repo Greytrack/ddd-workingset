@@ -1,6 +1,6 @@
 package com.airedgesoft.alm.requirement.application.eventhandler;
 
-import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemsIndexedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;

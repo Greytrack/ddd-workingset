@@ -2,8 +2,8 @@ package com.airedgesoft.alm.requirement.infrastructure.repositories;
 
 
 import com.airedgesoft.alm.requirement.application.command.RequirementMergeReceiptStore;
-import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
+import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryResolvedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;

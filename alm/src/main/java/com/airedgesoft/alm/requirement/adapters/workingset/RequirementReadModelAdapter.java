@@ -3,10 +3,10 @@ package com.airedgesoft.alm.requirement.adapters.workingset;
 
 import com.airedgesoft.alm.requirement.application.query.model.RequirementDetail;
 import com.airedgesoft.alm.requirement.application.query.provider.RequirementQueryProvider;
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.TrackerItemContent;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemQueryProvider;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
+import com.airedgesoft.sharedkernel.workingset.application.TrackerItemContent;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerItemQueryProvider;
 
 import java.util.Map;
 import java.util.Objects;

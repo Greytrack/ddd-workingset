@@ -3,7 +3,7 @@ package com.airedgesoft.alm.requirement.infrastructure.repositories;
 
 import com.airedgesoft.alm.requirement.application.command.RequirementSnapshot;
 import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
-import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.SnapshotRefEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;

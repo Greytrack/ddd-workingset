@@ -3,8 +3,8 @@ package com.airedgesoft.alm.requirement.application.eventhandler;
 
 import com.airedgesoft.alm.requirement.application.RequirementTypes;
 import com.airedgesoft.alm.requirement.application.command.RequirementMergeWriter;
-import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryApprovedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryApprovedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryResolvedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;

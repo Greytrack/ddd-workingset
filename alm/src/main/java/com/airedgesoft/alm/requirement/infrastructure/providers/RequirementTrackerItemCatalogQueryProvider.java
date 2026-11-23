@@ -1,7 +1,7 @@
 package com.airedgesoft.alm.requirement.infrastructure.providers;
 
 
-import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;

@@ -1,10 +1,10 @@
 package bootstrap;
 
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
-import com.airedgesoft.sharekernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
+import com.airedgesoft.sharedkernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.TrackerView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.Status;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -6,8 +6,8 @@ import com.airedgesoft.alm.requirement.application.command.RequirementLifecycleS
 import com.airedgesoft.alm.requirement.application.query.RequirementQueryService;
 import com.airedgesoft.alm.requirement.application.query.model.RequirementDetail;
 import com.airedgesoft.alm.requirement.domain.Requirement;
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 

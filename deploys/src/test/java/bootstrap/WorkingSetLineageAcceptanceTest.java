@@ -1,16 +1,16 @@
 package bootstrap;
 
 
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
-import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
-import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetLineageDomainService;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
-import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
+import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.BindingsView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.WorkingSetView;
+import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCommandService;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetLineageDomainService;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
+import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

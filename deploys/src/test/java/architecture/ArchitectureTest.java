@@ -1,6 +1,6 @@
 package architecture;
 
-import com.airedgesoft.lib.execption.AppException;
+import com.airedgesoft.lib.exception.AppException;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;

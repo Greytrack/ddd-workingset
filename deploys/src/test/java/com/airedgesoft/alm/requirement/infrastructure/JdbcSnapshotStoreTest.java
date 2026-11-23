@@ -5,7 +5,7 @@ import bootstrap.WorkingsetApplication;
 import com.airedgesoft.alm.requirement.application.command.RequirementSnapshot;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementSnapshotStore;
-import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.SnapshotRefEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

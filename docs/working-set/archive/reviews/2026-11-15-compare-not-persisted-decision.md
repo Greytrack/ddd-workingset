@@ -43,6 +43,6 @@
 
 - [T1 Merge 执行契约 §3](../../05-contracts/t1-merge-execution.md#3-diff-查询能力与瞬时比较证据)
 - [T6-E 规划](../implementation/t6-next-stage-outline.md)
-- [MergeController](../../../../shared-kernel/src/main/java/com/airedgesoft/sharekernel/workingset/adapters/MergeController.java)
+- [MergeController](../../../../shared-kernel/src/main/java/com/airedgesoft/sharedkernel/workingset/adapters/MergeController.java)
 - `MergeExecutionService.java`（当时路径）
-- [MergeRepository](../../../../shared-kernel/src/main/java/com/airedgesoft/sharekernel/workingset/domain/merge/MergeRepository.java)
+- [MergeRepository](../../../../shared-kernel/src/main/java/com/airedgesoft/sharedkernel/workingset/domain/merge/MergeRepository.java)

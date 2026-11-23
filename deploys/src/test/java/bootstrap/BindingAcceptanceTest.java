@@ -1,13 +1,13 @@
 package bootstrap;
 
 
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.BindingsView;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.TrackerView;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Status;
-import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.BindingsView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.TrackerView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.WorkingSetView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.Status;
+import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;

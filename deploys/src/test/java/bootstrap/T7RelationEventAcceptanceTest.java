@@ -1,12 +1,12 @@
 package bootstrap;
 
 
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.RelationSourceQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.event.*;
-import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetCreationController.CreationView;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.RelationSourceQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.domain.event.*;
+import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

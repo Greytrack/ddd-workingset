@@ -1,17 +1,17 @@
 package bootstrap;
 
 
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharekernel.workingset.application.FailureReason;
-import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
-import com.airedgesoft.sharekernel.workingset.application.port.Capabilities;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
-import com.airedgesoft.sharekernel.workingset.infrastructure.providers.DefaultBusinessObjectTypeRegistry;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
+import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
+import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
+import com.airedgesoft.sharedkernel.workingset.application.port.BusinessObjectTypeAdapter;
+import com.airedgesoft.sharedkernel.workingset.application.port.Capabilities;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemSummary;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.infrastructure.providers.DefaultBusinessObjectTypeRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

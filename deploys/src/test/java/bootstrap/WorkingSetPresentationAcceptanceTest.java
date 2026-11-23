@@ -1,6 +1,6 @@
 package bootstrap;
 
-import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
+import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

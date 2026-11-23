@@ -1,6 +1,6 @@
 package bootstrap.configuration;
 
-import com.airedgesoft.sharekernel.workingset.application.command.SourceSerialCowCoordinator;
+import com.airedgesoft.sharedkernel.workingset.application.command.SourceSerialCowCoordinator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

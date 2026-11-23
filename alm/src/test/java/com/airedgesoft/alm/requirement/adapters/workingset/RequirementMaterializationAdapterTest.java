@@ -6,10 +6,10 @@ import com.airedgesoft.alm.requirement.application.command.RequirementSnapshot;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.application.command.dto.MaterializeRequest;
-import com.airedgesoft.sharekernel.workingset.application.common.TargetIdentity;
-import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.workingset.application.command.dto.MaterializeRequest;
+import com.airedgesoft.sharedkernel.workingset.application.common.TargetIdentity;
+import com.airedgesoft.sharedkernel.workingset.domain.event.SnapshotRefEvent;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

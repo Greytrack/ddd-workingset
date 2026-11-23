@@ -15,17 +15,17 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         "com.airedgesoft.alm.requirement.adapters",
         "com.airedgesoft.alm.requirement.application",
         "com.airedgesoft.alm.requirement.infrastructure",
-        "com.airedgesoft.sharekernel.workingset.adapters",
-        "com.airedgesoft.sharekernel.workingset.application",
-        "com.airedgesoft.sharekernel.workingset.infrastructure",
-        "com.airedgesoft.sharekernel.businessframework.infrastructure.projection",
-        "com.airedgesoft.sharekernel.tracker.adapters",
-        "com.airedgesoft.sharekernel.tracker.application",
-        "com.airedgesoft.sharekernel.tracker.infrastructure",
-        "com.airedgesoft.sharekernel.productspace"
+        "com.airedgesoft.sharedkernel.workingset.adapters",
+        "com.airedgesoft.sharedkernel.workingset.application",
+        "com.airedgesoft.sharedkernel.workingset.infrastructure",
+        "com.airedgesoft.sharedkernel.businessframework.infrastructure.projection",
+        "com.airedgesoft.sharedkernel.tracker.adapters",
+        "com.airedgesoft.sharedkernel.tracker.application",
+        "com.airedgesoft.sharedkernel.tracker.infrastructure",
+        "com.airedgesoft.sharedkernel.productspace"
 })
 @MapperScan({
-        "com.airedgesoft.sharekernel.workingset.infrastructure.providers",
+        "com.airedgesoft.sharedkernel.workingset.infrastructure.providers",
         "com.airedgesoft.alm.requirement.infrastructure.providers"
 })
 public class WorkingsetApplication {

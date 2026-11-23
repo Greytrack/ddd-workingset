@@ -3,9 +3,9 @@ package bootstrap;
 
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.domain.Requirement;
-import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCommandService;
-import com.airedgesoft.sharekernel.workingset.application.query.WorkingSetQueryService;
-import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectUpdateEvent;
+import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCommandService;
+import com.airedgesoft.sharedkernel.workingset.application.query.WorkingSetQueryService;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;

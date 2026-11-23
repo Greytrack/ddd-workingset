@@ -15,14 +15,14 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 
 | 包                                              | 当前拥有的职责                                                                                  | 依赖/边界                                                                                                                                 |
 |-------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| `com.airedgesoft.sharekernel.businessframework` | 通用业务对象、属性、版次、排序和轻量只读投影能力；`BusinessObject`/`Revisionable` 等共享契约    | 属于 Shared Kernel 的通用能力，不是 Working Set 业务模型；不得反向依赖各 BC。`validation` 子包存在迁移期旧栈依赖例外，见其包说明。        |
-| `com.airedgesoft.sharekernel.tracker`           | Tracker 聚合根、创建/改名命令、Tracker 只读 Provider、创建后绑定事件                            | Tracker 是独立聚合。当前仍直接使用 `workingset` 包的 `WorkingSet`、`Classification` 类型；这是同进程实现依赖，不等于已冻结的跨 BC 合同。 |
-| `com.airedgesoft.sharekernel.productspace`      | ProductSpace 聚合根、创建/删除命令、ProductSpace 仓储                                            | ProductSpace 是独立聚合；创建后通过事件推进默认 Tracker 与绑定，剩余差距见 §4。                                                          |
-| `com.airedgesoft.sharekernel.workingset`        | WorkingSet/绑定、LightTrackerItem、COW、WorkingSet 创建 LRO、Compare/Merge、关系和查询 Provider | Working Set 核心能力；命令侧聚合仓储与查询侧 Provider 分离。                                                                              |
+| `sharedkernel` | 通用业务对象、属性、版次、排序和轻量只读投影能力；`BusinessObject`/`Revisionable` 等共享契约    | 属于 Shared Kernel 的通用能力，不是 Working Set 业务模型；不得反向依赖各 BC。`validation` 子包存在迁移期旧栈依赖例外，见其包说明。        |
+| `sharedkernel`           | Tracker 聚合根、创建/改名命令、Tracker 只读 Provider、创建后绑定事件                            | Tracker 是独立聚合。当前仍直接使用 `workingset` 包的 `WorkingSet`、`Classification` 类型；这是同进程实现依赖，不等于已冻结的跨 BC 合同。 |
+| `sharedkernel`      | ProductSpace 聚合根、创建/删除命令、ProductSpace 仓储                                            | ProductSpace 是独立聚合；创建后通过事件推进默认 Tracker 与绑定，剩余差距见 §4。                                                          |
+| `sharedkernel`        | WorkingSet/绑定、LightTrackerItem、COW、WorkingSet 创建 LRO、Compare/Merge、关系和查询 Provider | Working Set 核心能力；命令侧聚合仓储与查询侧 Provider 分离。                                                                              |
 | `com.airedgesoft.alm.requirement`               | Requirement 参考实现、Merge 执行适配、物化请求消费、继承编辑查询回退                            | 业务 BC 参考实现；只读使用 SK 共享聚合/仓储，写入通过事件协作。                                                                           |
 
-`com.airedgesoft.sharekernel.businessframework.domain` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
-`com.airedgesoft.sharekernel.workingset.domain.TrackerItem`
+`sharedkernel` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
+`sharedkernel`
 的公共工作集契约不是同一概念；不得因为命名相近而把二者互相替代。
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
@@ -155,7 +155,7 @@ com.airedgesoft.alm.requirement.application.query
 ## 8. 未验证与阻塞
 
 - `RequestThreadHolder` 已在写侧仓储中移除：审计事实由 WorkingSet/`LightTrackerItem`/Requirement/Tracker
-  聚合携带，应用层在构造或修改时注入；`com.airedgesoft.sharekernel.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
+  聚合携带，应用层在构造或修改时注入；`sharedkernel` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
 - T7-F 规模、失败明细保留和关系消费仍待专题验证，见 [后续计划](08-plan.md)。
 
 ## 9. 追溯

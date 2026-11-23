@@ -1,6 +1,6 @@
 package com.airedgesoft.alm.requirement.application.command;
 
-import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryResolvedEvent;
 
 import java.util.Optional;
 

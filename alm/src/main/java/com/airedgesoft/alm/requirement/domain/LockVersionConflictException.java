@@ -1,6 +1,6 @@
 package com.airedgesoft.alm.requirement.domain;
 
-import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.lib.exception.DomainException;
 
 /**
  * 乐观锁冲突：写入时携带的 {@code expectedLockVersion} 与聚合当前 {@code lockVersion} 不一致。

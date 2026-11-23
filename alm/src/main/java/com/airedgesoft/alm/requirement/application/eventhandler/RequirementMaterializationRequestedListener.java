@@ -1,11 +1,11 @@
 package com.airedgesoft.alm.requirement.application.eventhandler;
 
 import com.airedgesoft.alm.requirement.application.command.RequirementMaterializationService;
-import com.airedgesoft.sharekernel.workingset.application.command.dto.MaterializeRequest;
-import com.airedgesoft.sharekernel.workingset.application.common.TargetIdentity;
-import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent.Outcome;
-import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
+import com.airedgesoft.sharedkernel.workingset.application.command.dto.MaterializeRequest;
+import com.airedgesoft.sharedkernel.workingset.application.common.TargetIdentity;
+import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent.Outcome;
+import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;

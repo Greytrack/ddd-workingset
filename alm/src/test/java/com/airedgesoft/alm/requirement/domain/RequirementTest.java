@@ -1,7 +1,7 @@
 package com.airedgesoft.alm.requirement.domain;
 
 
-import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.lib.exception.DomainException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

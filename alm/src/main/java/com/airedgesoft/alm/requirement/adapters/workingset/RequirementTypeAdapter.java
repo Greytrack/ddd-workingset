@@ -3,10 +3,10 @@ package com.airedgesoft.alm.requirement.adapters.workingset;
 import com.airedgesoft.alm.requirement.application.RequirementTypes;
 import com.airedgesoft.alm.requirement.application.query.provider.RequirementQueryProvider;
 import com.airedgesoft.alm.requirement.infrastructure.providers.RequirementTrackerItemCatalogQueryProvider;
-import com.airedgesoft.sharekernel.workingset.application.port.BusinessObjectTypeAdapter;
-import com.airedgesoft.sharekernel.workingset.application.port.Capabilities;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerItemQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.application.port.BusinessObjectTypeAdapter;
+import com.airedgesoft.sharedkernel.workingset.application.port.Capabilities;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerItemQueryProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

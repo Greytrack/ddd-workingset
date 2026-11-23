@@ -30,7 +30,7 @@ BUILD SUCCESS
 | 派生 LocalId/TrackerId 为雪花值（非 UUID）                                                   | Historical：原 `derived_local_id_is_a_snowflake_value_not_uuid` 已随单 Item 派生入口删除；雪花身份由现有 ID/存储测试覆盖                                          | ✅（当时） |
 | changeTitle 不可变、version 可空与 lock_version 自动递增                                     | `com.airedgesoft.alm.requirement.domain.RequirementTest`（6 项）                                                                                                                  | ✅         |
 | 快照完整性与修改隔离（含 version/lock_version）                                              | `alm.requirement.infrastructure.SnapshotStoreTest`（4 项）                                                                                                        | ✅         |
-| S1 回归（AT-01/AT-02、AC-01、AC-02）                                                         | `bootstrap.WorkingSetSliceIntegrationTest`（6 项）、`architecture.ArchitectureTest`、`com.airedgesoft.sharekernel.workingset.domain.LightTrackerItemTest`（6 项） | ✅         |
+| S1 回归（AT-01/AT-02、AC-01、AC-02）                                                         | `bootstrap.WorkingSetSliceIntegrationTest`（6 项）、`architecture.ArchitectureTest`、`sharedkernel`（6 项） | ✅         |
 
 ## 3. 实现位置
 

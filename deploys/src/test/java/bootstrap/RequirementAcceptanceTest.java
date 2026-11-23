@@ -1,17 +1,16 @@
 package bootstrap;
 
 
-import com.airedgesoft.sharekernel.workingset.application.command.LightTrackerItemCommandService;
-import com.airedgesoft.sharekernel.workingset.application.command.LightTrackerItemCommandService;
-import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckedInEvent;
-import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckedOutEvent;
-import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckoutCancelledEvent;
-import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
-import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
-import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
-import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
+import com.airedgesoft.sharedkernel.workingset.application.command.LightTrackerItemCommandService;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckedInEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckedOutEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckoutCancelledEvent;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectDeleteEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemCreatedEvent;
+import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
+import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
+import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -25,7 +25,7 @@ BusinessObject（SK 顶级公共能力）
        └─ 业务聚合实现（Requirement、Part、GateFlow 对象、DQA 对象）
 ```
 
-候选签名（D14 已按此落地到 `com.airedgesoft.sharekernel.workingset.domain`）：
+候选签名（D14 已按此落地到 `sharedkernel`）：
 
 ```java
 public interface BusinessObject {
@@ -73,7 +73,7 @@ public interface TrackerItem extends BusinessObject {
 
 - ALM 现有 `delete`/`undelete`/`delete2` 验收作为首个实现证据；不代表其他 BC 已实现。
 - 其他 BC 接入时必须补齐自身删除规则、guard、失败语义和测试。
-- D14 已把 `BusinessObject` 与 `TrackerItem` 继承加入生产接口（`com.airedgesoft.sharekernel.workingset.domain`），`Requirement` 实现三个能力；
+- D14 已把 `BusinessObject` 与 `TrackerItem` 继承加入生产接口（`sharedkernel`），`Requirement` 实现三个能力；
   `RequirementLifecycleService.delete2` 先调用聚合 guard 再永久删除。`mvn -B test` 78 项通过。
 
 ## 6. 开放问题

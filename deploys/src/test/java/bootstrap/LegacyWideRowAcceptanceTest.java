@@ -1,12 +1,12 @@
 package bootstrap;
 
 
-import com.airedgesoft.sharekernel.tracker.domain.Tracker;
-import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.JdbcTrackerRepository;
-import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.TrackerCompatibilityRow;
-import com.airedgesoft.sharekernel.tracker.infrastructure.repositories.TrackerRow;
-import com.airedgesoft.sharekernel.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
-import com.airedgesoft.sharekernel.workingset.infrastructure.repositories.WorkingSetRow;
+import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
+import com.airedgesoft.sharedkernel.tracker.infrastructure.repositories.JdbcTrackerRepository;
+import com.airedgesoft.sharedkernel.tracker.infrastructure.repositories.TrackerCompatibilityRow;
+import com.airedgesoft.sharedkernel.tracker.infrastructure.repositories.TrackerRow;
+import com.airedgesoft.sharedkernel.workingset.infrastructure.repositories.JdbcWorkingSetRepository;
+import com.airedgesoft.sharedkernel.workingset.infrastructure.repositories.WorkingSetRow;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

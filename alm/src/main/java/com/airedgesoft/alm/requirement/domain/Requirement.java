@@ -1,12 +1,12 @@
 package com.airedgesoft.alm.requirement.domain;
 
 
-import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.domain.LifecycleCommand;
-import com.airedgesoft.sharekernel.workingset.domain.LifecycleResult;
-import com.airedgesoft.sharekernel.workingset.domain.TrackerItem;
-import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
-import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
+import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.workingset.domain.LifecycleCommand;
+import com.airedgesoft.sharedkernel.workingset.domain.LifecycleResult;
+import com.airedgesoft.sharedkernel.workingset.domain.TrackerItem;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectDeleteEvent;
+import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 
 import java.util.Locale;
 import java.util.Objects;
