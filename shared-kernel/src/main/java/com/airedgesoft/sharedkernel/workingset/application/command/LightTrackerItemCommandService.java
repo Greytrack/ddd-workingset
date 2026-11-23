@@ -45,7 +45,7 @@ public class LightTrackerItemCommandService {
     @Transactional
     public void applyCheckout(BusinessObjectCheckedOutEvent event) {
         LightTrackerItem item = lockItemForRevisionChange(event.localId());
-        if (item.applyCheckout(event.beforeRevision(), event.afterRevision())) {
+        if (item.applyCheckout(event.beforeRevision(), event.afterRevision(), event.effectiveFlags())) {
             lightTrackerItemRepository.save(item);
         }
     }
@@ -100,7 +100,7 @@ public class LightTrackerItemCommandService {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void registerCreated(TrackerItemCreatedEvent event) {
-        registerLocal(event.localId(), event.commonId(), event.trackerId(), event.workingSetId(), event.revision());
+        registerLocal(event.localId(), event.commonId(), event.trackerId(), event.workingSetId(), event.revision(), event.effectiveFlags());
     }
 
     /**
@@ -113,12 +113,12 @@ public class LightTrackerItemCommandService {
             return;
         }
         if (target.create()) {
-            registerLocal(target.localId(), target.commonId(), target.trackerId(), target.workingSetId(), target.revision());
+            registerLocal(target.localId(), target.commonId(), target.trackerId(), target.workingSetId(), target.revision(), null);
         }
     }
 
     private void registerLocal(Long id, Long commonId, Long trackerId, Long workingSetId,
-                               Integer revision) {
+                               Integer revision, String effectiveFlags) {
         TrackerItemSourceLock.State current = sourceLock.lock(id).orElse(null);
         if (current == null) {
             return;
@@ -130,6 +130,9 @@ public class LightTrackerItemCommandService {
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
                 tracker.productSpaceId(), tracker.numericClassificationId(), tracker.classId(), RequestThreadHolder.getUserId());
+        if (effectiveFlags != null) {
+            item.initializeEffectiveFlags(effectiveFlags);
+        }
         if (current.deleted()) {
             item.delete();
         }

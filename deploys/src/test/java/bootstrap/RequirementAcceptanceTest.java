@@ -190,9 +190,19 @@ class RequirementAcceptanceTest {
         Long originalRow = jdbc.queryForObject(rows, Long.class, instanceId);
         assertNotEquals(instanceId, originalRow);
         requirements.upgradeRevision(instanceId, 0L);
+        assertEquals(1, jdbc.queryForObject("SELECT checked_out FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Integer.class, instanceId));
+        assertNotNull(jdbc.queryForObject("SELECT checkout_time FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId));
+        assertNotNull(jdbc.queryForObject("SELECT checkout_user FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId));
+        assertNull(jdbc.queryForObject("SELECT checkin_time FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId));
         await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 4);
         List<Long> checkedOutRows = jdbc.queryForList(rows, Long.class, instanceId);
         assertEquals(2, checkedOutRows.size());
+        assertEquals("0010000100", jdbc.queryForObject("""
+                SELECT i.effective_flags
+                FROM air_ws_items_index i
+                JOIN air_inst_requirement_rev r ON r.instance_id = i.local_id AND r.revision = i.revision
+                WHERE i.local_id = ? AND i.effective_flags = r.flags AND i.flags = 0
+                """, String.class, instanceId));
         assertEquals(originalRow, checkedOutRows.getFirst());
         assertNotEquals(instanceId, checkedOutRows.getLast());
 
@@ -200,6 +210,7 @@ class RequirementAcceptanceTest {
         assertEquals("Edited draft", requirementQueries.find(instanceId).orElseThrow().title());
         assertEquals("Original", requirementQueries.findRevision(instanceId, 3).orElseThrow().title());
         requirements.cancelCheckout(instanceId, 2L);
+        assertEquals(0, jdbc.queryForObject("SELECT checked_out FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Integer.class, instanceId));
         await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 3);
         assertEquals(List.of(originalRow), jdbc.queryForList(rows, Long.class, instanceId));
         assertEquals("Original", requirementQueries.find(instanceId).orElseThrow().title());
@@ -208,7 +219,14 @@ class RequirementAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 4);
         List<Long> beforeCheckin = jdbc.queryForList(rows, Long.class, instanceId);
         assertNotEquals(checkedOutRows.getLast(), beforeCheckin.getLast());
-        requirements.checkIn(instanceId, 4L, "1110000000");
+        requirements.checkIn(instanceId, 4L);
+        assertEquals(0, jdbc.queryForObject("SELECT checked_out FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Integer.class, instanceId));
+        Long checkinTime = jdbc.queryForObject("SELECT checkin_time FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId);
+        Long checkoutTime = jdbc.queryForObject("SELECT checkout_time FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId);
+        assertNotNull(checkinTime);
+        assertNotNull(checkoutTime);
+        assertTrue(checkinTime >= checkoutTime);
+        assertNotNull(jdbc.queryForObject("SELECT checkin_user FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId));
         await().atMost(Duration.ofSeconds(8)).until(() -> "1110000000".equals(jdbc.queryForObject(
                 "SELECT effective_flags FROM air_ws_items_index WHERE local_id = ?", String.class, instanceId)));
         assertEquals(beforeCheckin, jdbc.queryForList(rows, Long.class, instanceId));
@@ -247,7 +265,7 @@ class RequirementAcceptanceTest {
                 SELECT count(*) FROM air_ws_items_index WHERE local_id = ? AND revision = 3
                     AND source_local_id = local_id AND source_revision = 3 AND has_copied = 1
                     AND effective_revision = 3 AND effective_checked_out = 0
-                    AND effective_flags = '1010100001' AND flag1 AND NOT flag2 AND flag3
+                    AND effective_flags = '1000100001' AND flag1 AND NOT flag2 AND NOT flag3 AND NOT flag4 AND flag5
                 """, Integer.class, id));
         assertEquals(List.of(3), jdbc.queryForList("""
                 SELECT revision FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision

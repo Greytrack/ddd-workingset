@@ -160,7 +160,7 @@ public class RequirementController {
 
     public record CheckoutRequest(long expectedLockVersion) {}
 
-    public record CheckinRequest(long expectedLockVersion, String effectiveFlags) {}
+    public record CheckinRequest(long expectedLockVersion) {}
 
     private void requireCheckedOut(Long localId) {
         if (!queries.find(localId).checkedOut()) {

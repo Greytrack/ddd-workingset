@@ -104,7 +104,7 @@ public class RequirementCommandService {
         repository.save(requirement);
         tracker.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
                 requirement.localId(), requirement.commonId(), trackerId,
-                current.workingSetId(), requirement.revision())));
+                current.workingSetId(), requirement.revision(), requirement.flags())));
         return requirement;
     }
 
@@ -190,17 +190,8 @@ public class RequirementCommandService {
         Requirement current = loadWritable(localId);
         requireActive(current);
         Requirement changed = saveChange(current, current.upgradeRevision(expectedLockVersion));
-        eventPublisher.publishEvent(new BusinessObjectCheckedOutEvent(localId, current.revision(), changed.revision()));
+        eventPublisher.publishEvent(new BusinessObjectCheckedOutEvent(localId, current.revision(), changed.revision(), changed.flags()));
         return changed;
-    }
-
-    @Transactional
-    public Requirement checkIn(Long localId, Long expectedLockVersion, String effectiveFlags) {
-        Requirement current = loadWritable(localId);
-        Requirement checkedIn = current.checkIn(expectedLockVersion, effectiveFlags);
-        repository.save(checkedIn);
-        eventPublisher.publishEvent(new BusinessObjectCheckedInEvent(localId, checkedIn.revision(), checkedIn.flags()));
-        return checkedIn;
     }
 
     @Transactional

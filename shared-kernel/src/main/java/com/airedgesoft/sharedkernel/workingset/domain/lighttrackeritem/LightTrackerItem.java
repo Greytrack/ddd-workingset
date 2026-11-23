@@ -43,85 +43,9 @@ public final class LightTrackerItem {
     private DowngradeIndexStatus downgradeIndexStatus;
     private final Map<Integer, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
 
-    public void applyCheckin(int checkedInRevision, String effectiveFlags) {
-        requireCurrentRevision(checkedInRevision);
-        if (!materialized) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Check-in requires local content");
-        }
-        validateEffectiveFlags(effectiveFlags);
-        checkinIndexStatus = new EffectiveIndexStatus(checkedInRevision, 0, effectiveFlags,
-                effectiveFlags.charAt(0) == '1', effectiveFlags.charAt(1) == '1',
-                effectiveFlags.charAt(2) == '1', effectiveFlags.charAt(3) == '1', effectiveFlags.charAt(4) == '1');
-        upgradeIndexStatus = null;
-        downgradeIndexStatus = null;
-    }
-
-    public static LightTrackerItem restoreRevisionState(LightTrackerItem item, List<Integer> memberFlags) {
-        Iterator<Integer> flags = memberFlags.iterator();
-        item.revisions.replaceAll((revision, member) -> new LightTrackerItemRevisionEntity(revision, flags.next()));
-        return item;
-    }
-
-    public boolean applyCheckout(int before, int after) {
-        if (after != (long) before + 1) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step checkout upgrade");
-        }
-        if (revision == after) {
-            return false;
-        }
-        requireCurrentRevision(before);
-        if (!materialized) {
-            switchToLocalBacked(before);
-        }
-        advanceRevision(after);
-        return true;
-    }
-
-    public boolean applyCheckoutCancellation(int before, int after, String effectiveFlags) {
-        if (after <= 0 || before - 1 != after) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step checkout cancellation");
-        }
-        if (revision == after) {
-            return false;
-        }
-        requireCurrentRevision(before);
-        downgradeRevision(before, after, effectiveFlags);
-        return true;
-    }
-
-    private void requireCurrentRevision(int expectedRevision) {
-        if (revision != expectedRevision) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected revision is not current");
-        }
-    }
-
-    private static void validateEffectiveFlags(String effectiveFlags) {
-        if (effectiveFlags == null || !effectiveFlags.matches("[01]{10}")) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Expected ten binary effective flags");
-        }
-    }
-
-    private void downgradeRevision(int before, int after, String effectiveFlags) {
-        if (!materialized || !revisions.containsKey(after)) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Cannot roll back to the requested revision");
-        }
-        validateEffectiveFlags(effectiveFlags);
-        String restoredFlags = effectiveFlags.substring(0, 2) + "1" + effectiveFlags.substring(3);
-        checkinIndexStatus = null;
-        revisions.remove(before);
-        revision = after;
-        sourceRevision = after;
-        upgradeIndexStatus = null;
-        downgradeIndexStatus = new DowngradeIndexStatus(before, after, 0, restoredFlags,
-                restoredFlags.charAt(0) == '1', restoredFlags.charAt(1) == '1', true);
-        checkInvariants();
-    }
-
-
-    private static long knownClassId(long classificationId) {
-        return classificationId == 14010101L || classificationId == 14010102L ? 140101L : 0L;
-    }
-
+    /**
+     * 构造聚合根，校验身份和版次，并建立当前版次成员。
+     */
     private LightTrackerItem(Long localId,
                              Long commonId,
                              Long trackerId,
@@ -158,6 +82,125 @@ public final class LightTrackerItem {
     }
 
     /**
+     * 按已恢复的版次顺序补齐成员标记。调用方须按相同顺序提供每个成员的标记。
+     */
+    public static LightTrackerItem restoreRevisionState(LightTrackerItem item, List<Integer> memberFlags) {
+        Iterator<Integer> flags = memberFlags.iterator();
+        item.revisions.replaceAll((revision, member) -> new LightTrackerItemRevisionEntity(revision, flags.next()));
+        return item;
+    }
+
+    /**
+     * 用业务创建事件携带的有效状态位初始化索引。
+     */
+    public void initializeEffectiveFlags(String flags) {
+        validateEffectiveFlags(flags);
+        initialIndexStatus = new InitialIndexStatus(initialIndexStatus.effectiveCheckedOut(), flags, flags.charAt(4) == '1');
+    }
+
+    /**
+     * 应用已提交的签入。要求当前版次已物化，只更新有效状态位，版次和成员集合保持原状。
+     */
+    public void applyCheckin(int checkedInRevision, String effectiveFlags) {
+        requireCurrentRevision(checkedInRevision);
+        if (!materialized) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Check-in requires local content");
+        }
+        validateEffectiveFlags(effectiveFlags);
+        checkinIndexStatus = new EffectiveIndexStatus(checkedInRevision, 0, effectiveFlags,
+                effectiveFlags.charAt(0) == '1', effectiveFlags.charAt(1) == '1',
+                effectiveFlags.charAt(2) == '1', effectiveFlags.charAt(3) == '1', effectiveFlags.charAt(4) == '1');
+        upgradeIndexStatus = null;
+        downgradeIndexStatus = null;
+    }
+
+    /**
+     * 使用默认签出状态应用升版。目标版次已是当前版次时返回 false。
+     */
+    public boolean applyCheckout(int before, int after) {
+        return applyCheckout(before, after, "0010000000");
+    }
+
+    /**
+     * 应用业务签出事件。校验相邻版次及状态位，必要时切换为本地承载，再登记新版次。目标版次已是当前版次时返回 false。
+     */
+    public boolean applyCheckout(int before, int after, String effectiveFlags) {
+        if (after != (long) before + 1) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step checkout upgrade");
+        }
+        if (revision == after) {
+            return false;
+        }
+        requireCurrentRevision(before);
+        validateEffectiveFlags(effectiveFlags);
+        if (!materialized) {
+            switchToLocalBacked(before);
+        }
+        advanceRevision(after, effectiveFlags);
+        return true;
+    }
+
+    /**
+     * 应用取消签出事件。恢复相邻的前一版及业务提供的状态位，移除被撤销的成员。目标版次已是当前版次时返回 false。
+     */
+    public boolean applyCheckoutCancellation(int before, int after, String effectiveFlags) {
+        if (after <= 0 || before - 1 != after) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step checkout cancellation");
+        }
+        if (revision == after) {
+            return false;
+        }
+        requireCurrentRevision(before);
+        downgradeRevision(before, after, effectiveFlags);
+        return true;
+    }
+
+    /**
+     * 要求事件所依赖的业务版次与当前索引一致。
+     */
+    private void requireCurrentRevision(int expectedRevision) {
+        if (revision != expectedRevision) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected revision is not current");
+        }
+    }
+
+    /**
+     * 校验状态串为 10 至 103 位二进制字符。
+     */
+    private static void validateEffectiveFlags(String effectiveFlags) {
+        if (effectiveFlags == null || !effectiveFlags.matches("[01]{10,103}")) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Expected 10 to 103 binary effective flags");
+        }
+    }
+
+    /**
+     * 回退本地承载变体，要求前一版已登记，并记录本次待持久化的降版状态。
+     */
+    private void downgradeRevision(int before, int after, String effectiveFlags) {
+        if (!materialized || !revisions.containsKey(after)) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Cannot roll back to the requested revision");
+        }
+        validateEffectiveFlags(effectiveFlags);
+        String restoredFlags = effectiveFlags;
+        checkinIndexStatus = null;
+        revisions.remove(before);
+        revision = after;
+        sourceRevision = after;
+        upgradeIndexStatus = null;
+        downgradeIndexStatus = new DowngradeIndexStatus(before, after, 0, restoredFlags,
+                restoredFlags.charAt(0) == '1', restoredFlags.charAt(1) == '1', restoredFlags.charAt(2) == '1');
+        checkInvariants();
+    }
+
+
+    /**
+     * 从已知需求子分类推断分类 ID，用于未显式提供分类 ID 的工厂重载。
+     */
+    private static long knownClassId(long classificationId) {
+        return classificationId == 14010101L || classificationId == 14010102L ? 140101L : 0L;
+    }
+
+    /**
      * 派生创建：预分配 {@code localId}（由调用方生成）、继承 {@code commonId}、
      * 记录来源与初始业务版次，初始为 Source-backed。
      */
@@ -169,6 +212,9 @@ public final class LightTrackerItem {
                 numericProductSpaceId, classificationId, null);
     }
 
+    /**
+     * 派生来源承载的变体并记录创建人，根据已知子分类选择初始索引状态。
+     */
     public static LightTrackerItem derive(Long localId, Long commonId, Long trackerId,
                                           Long workingSetId, Integer revision,
                                           Long sourceLocalId, Integer sourceRevision,
@@ -177,6 +223,9 @@ public final class LightTrackerItem {
                 numericProductSpaceId, classificationId, knownClassId(classificationId), createdBy);
     }
 
+    /**
+     * 按调用方给出的分类及创建人派生变体。来源须为其他变体，初始版次作为首个成员登记。
+     */
     public static LightTrackerItem derive(Long localId, Long commonId, Long trackerId,
                                           Long workingSetId, Integer revision, Long sourceLocalId,
                                           Integer sourceRevision, long numericProductSpaceId,
@@ -200,12 +249,18 @@ public final class LightTrackerItem {
         return item;
     }
 
+    /**
+     * 创建本地承载变体，来源指向自身的当前版次。
+     */
     public static LightTrackerItem local(Long id, Long commonId, Long trackerId,
                                          Long workingSetId, Integer revision,
                                          long numericProductSpaceId, long classificationId) {
         return local(id, commonId, trackerId, workingSetId, revision, numericProductSpaceId, classificationId, null);
     }
 
+    /**
+     * 创建本地承载变体并记录创建人，根据已知子分类选择初始索引状态。
+     */
     public static LightTrackerItem local(Long id, Long commonId, Long trackerId,
                                          Long workingSetId, Integer revision,
                                          long numericProductSpaceId, long classificationId, String createdBy) {
@@ -213,6 +268,9 @@ public final class LightTrackerItem {
                 numericProductSpaceId, classificationId, createdBy);
     }
 
+    /**
+     * 按调用方给出的分类初始化本地承载变体，来源指向自身。
+     */
     public static LightTrackerItem local(Long id, Long commonId, Long trackerId,
                                          Long workingSetId, Integer revision, long numericProductSpaceId,
                                          long classificationId, long classId, String createdBy) {
@@ -238,6 +296,9 @@ public final class LightTrackerItem {
                 materialized, numericProductSpaceId, classificationId, null);
     }
 
+    /**
+     * 重建身份、来源指针及当前版次，记录原创建人并校验承载状态。
+     */
     public static LightTrackerItem restore(Long localId,
                                            Long commonId,
                                            Long trackerId,
@@ -262,6 +323,9 @@ public final class LightTrackerItem {
         return item;
     }
 
+    /**
+     * 重建软删状态及版次成员集合。成员必须包含当前版次。
+     */
     public static LightTrackerItem restore(Long localId, Long commonId, Long trackerId,
                                            Long workingSetId, Integer revision, Long sourceLocalId,
                                            Integer sourceRevision, boolean materialized, boolean deleted,
@@ -271,6 +335,9 @@ public final class LightTrackerItem {
                 materialized, deleted, indexedRevisions, numericProductSpaceId, classificationId, null);
     }
 
+    /**
+     * 从持久化数据重建完整版次成员集合及创建人。当前版次必须已登记，成员标记由仓储另行装配。
+     */
     public static LightTrackerItem restore(Long localId, Long commonId, Long trackerId,
                                            Long workingSetId, Integer revision, Long sourceLocalId,
                                            Integer sourceRevision, boolean materialized, boolean deleted,
@@ -332,27 +399,38 @@ public final class LightTrackerItem {
         checkInvariants();
     }
 
+    /**
+     * 返回版次成员的不可变列表，顺序沿用聚合中的登记顺序。
+     */
     public List<LightTrackerItemRevisionEntity> revisions() {
         return List.copyOf(revisions.values());
     }
 
+    /**
+     * 返回对应当前业务版次的成员，用于持久化版次索引。
+     */
     public LightTrackerItemRevisionEntity currentRevisionIndex() {
         return revisions.get(revision);
     }
 
     /**
-     * Apply a committed explicit upgrade of this item's own business revision.
+     * 登记签出产生的新版次成员，同步当前版次、来源版次及待保存的有效状态。
      */
-    private void advanceRevision(int after) {
+    private void advanceRevision(int after, String effectiveFlags) {
         checkinIndexStatus = null;
         revisions.put(after, new LightTrackerItemRevisionEntity(after, 0));
         revision = after;
         sourceRevision = after;
         downgradeIndexStatus = null;
-        upgradeIndexStatus = new EffectiveIndexStatus(after, 1, "0010000000", false, false, true, false, false);
+        upgradeIndexStatus = new EffectiveIndexStatus(after, 1, effectiveFlags,
+                effectiveFlags.charAt(0) == '1', effectiveFlags.charAt(1) == '1', effectiveFlags.charAt(2) == '1',
+                effectiveFlags.charAt(3) == '1', effectiveFlags.charAt(4) == '1');
         checkInvariants();
     }
 
+    /**
+     * 校验来源承载指向外部变体，本地承载指向自身及当前版次。
+     */
     private void checkInvariants() {
         if (!materialized) {
             if (sourceLocalId.equals(localId)) {
@@ -364,18 +442,30 @@ public final class LightTrackerItem {
         }
     }
 
+    /**
+     * 返回该变体在 Working Set 中的本地身份。
+     */
     public Long localId() {
         return localId;
     }
 
+    /**
+     * 返回跨 Working Set 追溯同一 Item 谱系的身份。
+     */
     public Long commonId() {
         return commonId;
     }
 
+    /**
+     * 返回该变体所属的 Tracker ID。
+     */
     public Long trackerId() {
         return trackerId;
     }
 
+    /**
+     * 返回该变体所属的 Working Set ID。
+     */
     public Long workingSetId() {
         return workingSetId;
     }
@@ -394,22 +484,37 @@ public final class LightTrackerItem {
         return classificationId;
     }
 
+    /**
+     * 返回该变体自身当前的业务版次。
+     */
     public Integer revision() {
         return revision;
     }
 
+    /**
+     * 返回当前来源指针所指向的变体 ID。
+     */
     public Long sourceLocalId() {
         return sourceLocalId;
     }
 
+    /**
+     * 返回当前来源指针所指向的业务版次。
+     */
     public Integer sourceRevision() {
         return sourceRevision;
     }
 
+    /**
+     * 返回当前软删除标记。
+     */
     public boolean deleted() {
         return deleted;
     }
 
+    /**
+     * 返回变体是否已切换为本地承载。
+     */
     public boolean materialized() {
         return materialized;
     }
@@ -435,24 +540,67 @@ public final class LightTrackerItem {
         return materialized ? revision : sourceRevision;
     }
 
+    /**
+     * 返回本次签入待写入的有效状态。没有待保存的签入变更时返回 null。
+     */
     public EffectiveIndexStatus checkinIndexStatus() {
         return checkinIndexStatus;
     }
 
+    /**
+     * 返回本次取消签出的有效状态及待移除版次。没有待保存的降版变更时返回 null。
+     */
     public DowngradeIndexStatus downgradeIndexStatus() {
         return downgradeIndexStatus;
     }
 
 
+    /**
+     * 返回本次签出待写入的有效状态。没有待保存的升版变更时返回 null。
+     */
     public EffectiveIndexStatus upgradeIndexStatus() {
         return upgradeIndexStatus;
     }
 
+    /**
+     * 返回索引首次写入使用的状态位。
+     */
     public InitialIndexStatus initialIndexStatus() {
         return initialIndexStatus;
     }
 
     public record InitialIndexStatus(int effectiveCheckedOut, String effectiveFlags, boolean flag5) {
+        /**
+         * 读取最新签入版次标记。
+         */
+        public boolean flag1() {
+            return effectiveFlags.charAt(0) == '1';
+        }
+
+        /**
+         * 读取最新版本标记。
+         */
+        public boolean flag2() {
+            return effectiveFlags.charAt(1) == '1';
+        }
+
+        /**
+         * 读取最新版次标记。
+         */
+        public boolean flag3() {
+            return effectiveFlags.charAt(2) == '1';
+        }
+
+        /**
+         * 读取已打基线标记。
+         */
+        public boolean flag4() {
+            return effectiveFlags.charAt(3) == '1';
+        }
+
+        /**
+         * 按分类的自动签入规则选择首版状态。
+         */
         private static InitialIndexStatus forClass(long classId) {
             return INITIALLY_CHECKED_IN_CLASS_IDS.contains(classId)
                     ? new InitialIndexStatus(0, "1110000000", false)
@@ -466,5 +614,19 @@ public final class LightTrackerItem {
 
     public record DowngradeIndexStatus(int removedRevision, int effectiveRevision, int effectiveCheckedOut,
                                        String effectiveFlags, boolean flag1, boolean flag2, boolean flag3) {
+        /**
+         * 读取已打基线标记。
+         */
+        public boolean flag4() {
+            return effectiveFlags.charAt(3) == '1';
+        }
+
+        /**
+         * 读取版次 1 的签出标记。
+         */
+        public boolean flag5() {
+            return effectiveFlags.charAt(4) == '1';
+        }
+
     }
 }

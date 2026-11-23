@@ -16,7 +16,8 @@ public interface RequirementQueryMapper {
     String SELECT_REVISION = """
             SELECT r.instance_id AS local_id, r.common_id, r.tracker AS tracker_id, r.number, r.name AS title,
                    r.description, r.revision, r.version, r.lock_version, (r.delete_flag = 1) AS deleted,
-                   TRUE AS materialized, (r.checked_out = 1) AS checked_out, r.flags
+                   TRUE AS materialized, (r.checked_out = 1) AS checked_out, r.flags,
+                   r.created_by, r.created_time, r.updated_by, r.updated_time
             FROM air_inst_requirement_rev r
             """;
 

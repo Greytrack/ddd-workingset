@@ -14,7 +14,8 @@ public record RequirementView(String localId,
                               String description,
                               int revision,
                               String version,
-                              long lockVersion, boolean materialized, boolean checkedOut, String flags) {
+                              long lockVersion, boolean materialized, boolean checkedOut, String flags,
+                              String createdBy, Long createdTime, String updatedBy, Long updatedTime) {
 
     public static RequirementView from(Requirement requirement) {
         return new RequirementView(
@@ -26,7 +27,8 @@ public record RequirementView(String localId,
                 requirement.description(),
                 requirement.revision(),
                 requirement.version(),
-                requirement.lockVersion(), requirement.hasMaterialized(), requirement.checkedOut(), requirement.flags());
+                requirement.lockVersion(), requirement.hasMaterialized(), requirement.checkedOut(), requirement.flags(),
+                requirement.createdBy(), null, null, null);
     }
 
     public static RequirementView from(RequirementDetail detail) {
@@ -39,6 +41,7 @@ public record RequirementView(String localId,
                 detail.description(),
                 detail.revision(),
                 detail.version(),
-                detail.lockVersion(), detail.materialized(), detail.checkedOut(), detail.flags());
+                detail.lockVersion(), detail.materialized(), detail.checkedOut(), detail.flags(),
+                detail.createdBy(), detail.createdTime(), detail.updatedBy(), detail.updatedTime());
     }
 }

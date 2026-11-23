@@ -4,6 +4,7 @@ package com.airedgesoft.alm.requirement.infrastructure.repositories;
 import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
+import com.airedgesoft.sharedkernel.RequestThreadHolder;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
@@ -43,7 +44,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private static final String UPDATE = """
             UPDATE air_inst_requirement_rev
-            SET name = ?, description = ?, version = ?, delete_flag = ?, lock_version = ?, flags = ?, checked_out = ?
+            SET name = ?, description = ?, version = ?, delete_flag = ?, lock_version = ?, flags = ?, checked_out = ?, updated_by = ?, updated_time = ?
             WHERE instance_id = ? AND revision = ? AND lock_version = ?
             """;
 
@@ -77,16 +78,29 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             }
             if (requirement.revision() == (long) current.revision() + 1) {
                 insertRevision(requirement);
+                jdbc.update("""
+                        UPDATE air_inst_requirement_rev SET flags = overlay(flags placing '0' from 3 for 1)
+                        WHERE instance_id = ? AND revision < ? AND substring(flags from 3 for 1) = '1'
+                        """, requirement.localId(), requirement.revision());
             } else if (!requirement.revision().equals(current.revision()) || jdbc.update(UPDATE,
                     requirement.title(), requirement.description(), requirement.version(), requirement.deleted() ? 1 : 0,
                     lockVersion, requirement.flags(), requirement.checkedOut() ? 1 : 0,
+                    RequestThreadHolder.getUserId(), System.currentTimeMillis(),
                     requirement.localId(), requirement.revision(), expected) != 1) {
                 throw new LockVersionConflictException(expected, current.lockVersion());
             }
-        }
-        if (!requirement.checkedOut() && requirement.flags().startsWith("1")) {
-            jdbc.update("UPDATE air_inst_requirement_rev SET flags = '0' || substring(flags from 2) WHERE instance_id = ? AND revision < ? AND substring(flags from 1 for 1) = '1'",
-                    requirement.localId(), requirement.revision());
+            if (current.checkedOut() && !requirement.checkedOut()) {
+                jdbc.update("""
+                        UPDATE air_inst_requirement_rev SET flags = '000' || substring(flags from 4)
+                        WHERE instance_id = ? AND revision < ? AND substring(flags from 1 for 3) <> '000'
+                        """, requirement.localId(), requirement.revision());
+                jdbc.update("""
+                        UPDATE air_inst_requirement_rev
+                        SET checkin_user = ?, checkin_time = ?, checked_out = 0
+                        WHERE instance_id = ? AND revision = ?
+                        """, RequestThreadHolder.getLongUserId(), System.currentTimeMillis(),
+                        requirement.localId(), requirement.revision());
+            }
         }
         saveCommonInstance(requirement.localId());
     }
@@ -104,6 +118,13 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         if (inserted != 1) {
             throw DomainException.withMessage(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
                     "Tracker " + requirement.trackerId() + " is unavailable");
+        }
+        if (requirement.checkedOut()) {
+            jdbc.update("""
+                    UPDATE air_inst_requirement_rev
+                    SET checkout_user = ?, checkout_time = ?, checked_out = 1
+                    WHERE instance_id = ? AND revision = ?
+                    """, RequestThreadHolder.getLongUserId(), now, requirement.localId(), requirement.revision());
         }
     }
 
@@ -149,9 +170,9 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         }
         int previousRevision = current.revision() - 1;
         if (jdbc.update("""
-                UPDATE air_inst_requirement_rev SET lock_version = ?, checked_out = 0
+                UPDATE air_inst_requirement_rev SET lock_version = ?, checked_out = 0, flags = overlay(flags placing '1' from 3 for 1), updated_by = ?, updated_time = ?
                 WHERE instance_id = ? AND revision = ?
-                """, Math.incrementExact(current.lockVersion()), instanceId, previousRevision) != 1
+                """, Math.incrementExact(current.lockVersion()), RequestThreadHolder.getUserId(), System.currentTimeMillis(), instanceId, previousRevision) != 1
                 || jdbc.update("""
                 DELETE FROM air_inst_requirement_rev WHERE instance_id = ? AND revision = ? AND lock_version = ?
                 """, instanceId, current.revision(), current.lockVersion()) != 1) {

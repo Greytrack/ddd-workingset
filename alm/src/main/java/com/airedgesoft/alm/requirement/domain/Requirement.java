@@ -40,10 +40,7 @@ public final class Requirement implements TrackerItem {
 
     private static String initialFlags(int revision) {
         if (revision > 99) throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "生效标记最多支持 100 位");
-        StringBuilder initial = new StringBuilder("0".repeat(Math.max(10, revision + 1)));
-        initial.setCharAt(0, '1');
-        if (revision > 0) initial.setCharAt(revision, '1');
-        return initial.toString();
+        return "111" + "0".repeat(Math.max(10, revision + 4) - 3);
     }
 
     private Requirement(Long localId, Long commonId, Long trackerId, String title, String description,
@@ -206,26 +203,11 @@ public final class Requirement implements TrackerItem {
         return checkedOut;
     }
 
-    public Requirement checkIn(Long expectedLockVersion, String effectiveFlags) {
-        requireCancellableCheckout(expectedLockVersion);
-        if (effectiveFlags == null || !effectiveFlags.matches("[01]{10}")) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Expected ten binary effective flags");
-        }
-        return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                Math.incrementExact(lockVersion), materialized, false, createdBy, effectiveFlags, false);
-    }
-
     public Requirement checkIn(Long expectedLockVersion) {
         requireCancellableCheckout(expectedLockVersion);
-        StringBuilder effective = new StringBuilder(flags == null ? "" : flags);
-        if (revision < 1 || revision > 99) {
-            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "签入版次须在 1 到 99 之间");
-        }
-        while (effective.length() < Math.max(10, revision + 1)) effective.append('0');
-        effective.setCharAt(0, '1');
-        effective.setCharAt(revision, '1');
+        String effective = "111" + flags.charAt(3) + "0".repeat(flags.length() - 4);
         return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                Math.incrementExact(lockVersion), materialized, false, createdBy, effective.toString(), false);
+                Math.incrementExact(lockVersion), materialized, false, createdBy, effective, false);
     }
 
     public void requireCancellableCheckout(Long expectedLockVersion) {
@@ -261,10 +243,10 @@ public final class Requirement implements TrackerItem {
 
     private String checkoutFlags() {
         if (revision >= 99) throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "生效标记最多支持 100 位");
-        StringBuilder history = new StringBuilder(flags == null ? "" : flags);
-        while (history.length() < Math.max(10, revision + 2)) history.append('0');
-        history.setCharAt(0, '0');
-        return history.toString();
+        int checkoutBit = revision + 4;
+        StringBuilder status = new StringBuilder("001" + "0".repeat(Math.max(10, checkoutBit + 1) - 3));
+        status.setCharAt(checkoutBit, '1');
+        return status.toString();
     }
 
     /**

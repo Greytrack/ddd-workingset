@@ -7,6 +7,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RequirementTest {
+    @Test
+    void checkoutUsesTheWorkingRevisionsOwnBitAfterTheFourStatusBits() {
+        Requirement initial = Requirement.create(L0, C1, T0, "A", "description", 6);
+        Requirement checkedOut = initial.upgradeRevision(0L);
+
+        assertEquals("1110000000", initial.flags());
+        assertEquals("00100000001", checkedOut.flags());
+        assertEquals("11100000000", checkedOut.checkIn(1L).flags());
+    }
+
 
     private static final Long L0 = Long.valueOf("260574482192320");
     private static final Long C1 = Long.valueOf("265506033508288");

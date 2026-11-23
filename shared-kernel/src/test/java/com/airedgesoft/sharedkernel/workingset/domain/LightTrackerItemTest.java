@@ -17,7 +17,7 @@ class LightTrackerItemTest {
         assertThrows(DomainException.class, () -> item.applyCheckoutCancellation(5, 4, "1000100001"));
         assertTrue(item.applyCheckout(3, 4));
         assertTrue(item.applyCheckoutCancellation(4, 3, "1000100001"));
-        assertEquals(new LightTrackerItem.DowngradeIndexStatus(4, 3, 0, "1010100001", true, false, true),
+        assertEquals(new LightTrackerItem.DowngradeIndexStatus(4, 3, 0, "1000100001", true, false, false),
                 item.downgradeIndexStatus());
         assertEquals(R3, item.sourceRevision());
         assertEquals(List.of(R3), item.revisions().stream().map(member -> member.revision()).toList());
