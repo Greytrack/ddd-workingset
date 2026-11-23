@@ -5,6 +5,7 @@ import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.domain.LifecycleCommand;
 import com.airedgesoft.sharekernel.workingset.domain.LifecycleResult;
 import com.airedgesoft.sharekernel.workingset.domain.TrackerItem;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 
 import java.util.Locale;
@@ -23,9 +24,9 @@ public final class Requirement implements TrackerItem {
     private final String description;
     private final Integer revision;
     private final String version;
-    private final Long lockVersion;
+    private Long lockVersion;
     private final boolean materialized;
-    private final boolean deleteFlag;
+    private boolean deleteFlag;
     private final String createdBy;
 
     private Requirement(Long localId, Long commonId, Long trackerId, String title, String description,
@@ -190,11 +191,15 @@ public final class Requirement implements TrackerItem {
                 Math.incrementExact(revision), version, Math.incrementExact(lockVersion), materialized, false, createdBy);
     }
 
-    public Requirement delete(Long expectedLockVersion) {
+    /**
+     * 软删除：标记 deleteFlag 并递增乐观锁，返回已删除事实；调用方随后通过仓储 save 持久化。
+     */
+    public BusinessObjectDeleteEvent delete(Long expectedLockVersion) {
         requireActive();
         verifyLockVersion(expectedLockVersion);
-        return new Requirement(localId, commonId, trackerId, title, description, revision, version,
-                Math.incrementExact(lockVersion), materialized, true, createdBy);
+        this.deleteFlag = true;
+        this.lockVersion = Math.incrementExact(lockVersion);
+        return new BusinessObjectDeleteEvent(localId, true);
     }
 
     public Requirement undelete(Long expectedLockVersion) {
@@ -214,7 +219,8 @@ public final class Requirement implements TrackerItem {
     @Override
     public LifecycleResult delete(LifecycleCommand command) {
         try {
-            return LifecycleResult.applied(delete(requireExpectedLockVersion(command)));
+            delete(requireExpectedLockVersion(command));
+            return LifecycleResult.applied(this);
         } catch (LockVersionConflictException conflict) {
             return LifecycleResult.conflict(conflict.getMessage());
         } catch (DomainException alreadyDeleted) {

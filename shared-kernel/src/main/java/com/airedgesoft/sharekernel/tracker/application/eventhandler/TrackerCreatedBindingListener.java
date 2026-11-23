@@ -3,6 +3,7 @@ package com.airedgesoft.sharekernel.tracker.application.eventhandler;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.SharedKernelResultCode;
+import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
@@ -23,19 +24,23 @@ import org.springframework.stereotype.Component;
 public class TrackerCreatedBindingListener {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
+    private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
 
     @ApplicationModuleListener(id = "bootstrap.TrackerCreatedBindingListener.on(sk.workingset.domain.event.TrackerCreatedEvent)")
     public void on(TrackerCreatedEvent event) {
+        if (spaces.findById(event.productSpaceId()).isEmpty()) {
+            return;
+        }
         WorkingSet workingSet = workingSets.findById(event.workingSetId())
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                        "working set disappeared: " + Long.toString(event.workingSetId())));
+                        "working set disappeared: " + event.workingSetId()));
         if (workingSet.hasTrackerBinding(event.trackerId())) {
             return;
         }
         Tracker tracker = trackers.findById(event.trackerId())
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                        "tracker disappeared: " + Long.toString(event.trackerId())));
+                        "tracker disappeared: " + event.trackerId()));
         workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), event.sharingMode());
         workingSet.audit(RequestThreadHolder.getUserId());
         workingSets.save(workingSet);

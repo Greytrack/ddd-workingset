@@ -6,6 +6,7 @@ import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharekernel.workingset.domain.event.WorkingSetDeleted;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import org.jmolecules.ddd.annotation.AggregateRoot;
@@ -128,6 +129,14 @@ public final class WorkingSet {
         if (DEFAULT_ID.equals(id)) {
             throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, Long.toString(id));
         }
+    }
+
+    /**
+     * 删除聚合；默认根不可删。调用方随后通过仓储 delete 物理删除并发布返回的事实。
+     */
+    public WorkingSetDeleted delete() {
+        requireDeletable(id);
+        return new WorkingSetDeleted(id);
     }
 
     /**

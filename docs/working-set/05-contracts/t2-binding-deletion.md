@@ -96,13 +96,12 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 | 操作                 | 入参           | 前置                                                                                                          | 后置 / 结果                                     | 失败语义                                                                                                                 |
 |----------------------|----------------|---------------------------------------------------------------------------------------------------------------|-------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
 | `deleteTracker`      | trackerId      | 无 TrackerItem、无组织子级、无派生子级（POL-014、SCN-053）                                                    | 删除 Tracker 聚合 + 解除其 TrackerBinding       | `TrackerHasItems`、`TrackerHasOrgChildren`、`TrackerHasDerivedChildren`                                                  |
-| `deleteProductSpace` | productSpaceId | 仅默认工作集；空间没有 WorkingSet 绑定、业务对象引用（含软删后仍保留的对象）、TrackerItem 或外部 Tracker 引用 | 从叶子逐个删除空 Tracker，最终删除 ProductSpace | `SpaceStillBound`（1229）、`SpaceHasBusinessReferences`、`SpaceStillHasTrackers`                                         |
+| `deleteProductSpace` | productSpaceId | 仅默认工作集；空间没有 WorkingSet 绑定、业务对象引用（含软删后仍保留的对象）、TrackerItem、有效 Tracker 或外部 Tracker 引用 | 标记 ProductSpace 已删除并发布删除事实 | `SpaceStillBound`（1229）、`SpaceHasBusinessReferences`、`SpaceStillHasTrackers` |
 | `deleteWorkingSet`   | workingSetId   | 非默认 WorkingSet，无子工作集、绑定或归属 Tracker                                                             | 只删除 WorkingSet 聚合                          | `DefaultWorkingSetUndeletable`、`WorkingSetHasChildren`、`WorkingSetStillBound`（1230）、`WorkingSetHasTrackers`（1231） |
 
 **WorkingSet 删除边界（2026-11-21 用户确认）**：存在绑定时拒绝。未绑定的归属 Tracker 仍引用 WorkingSet，须先独立删除。
 
-**产品空间删除入口**为 `DELETE /api/worksets/1/product-spaces/{spaceId}`。`202 Accepted` 表示预检通过并已可靠登记。存在
-WorkingSet 绑定时返回 `409 SpaceStillBound`。每次消费复核准入，只删除一个空 Tracker 或 ProductSpace，不自动解除绑定、删除工作集或业务对象。
+**产品空间删除入口**为 `DELETE /api/worksets/1/product-spaces/{spaceId}`。2026-11-23 用户确认有效 Tracker 阻止删除，替代逐个清理空 Tracker 的流程。命令在一个事务中读取 ProductSpace、校验、标记删除、保存和发布 `ProductSpaceDeleted`，提交后返回 `204 No Content`。已软删 Tracker 的历史行可以保留。当前删除没有恢复入口。
 
 ### 4.4 新建原生跟踪分类（Tracker）
 

@@ -20,11 +20,13 @@ import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrack
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
+import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
@@ -60,7 +62,7 @@ public class RequirementCommandService {
      * 非默认工作集：服务端生成两个不相等的雪花 ID。派生不经过本方法，CommonId 沿用来源。
      * 显式指定非默认工作集时，非共享 Tracker 必须属于该工作集；Tracker 不存在时交由持久化层给出冲突。
      */
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Requirement create(Long trackerId,
                               Long requestedWorkingSetId,
                               String title,
@@ -70,6 +72,10 @@ public class RequirementCommandService {
             requireWorkingSet(requestedWorkingSetId);
         }
         Optional<Tracker> tracker = trackers.findById(trackerId);
+        if (tracker.isEmpty()) {
+            throw DomainException.withMessage(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
+                    "tracker not found or deleted: " + trackerId);
+        }
         tracker.map(Tracker::workingSetId)
                 .filter(owner -> !owner.equals(requestedWorkingSetId))
                 .ifPresent(this::requireWorkingSet);
@@ -78,8 +84,8 @@ public class RequirementCommandService {
                 if (current.sharingMode() == SharingMode.UNSHARED
                         && !current.workingSetId().equals(requestedWorkingSetId)) {
                     throw DomainException.withMessage(FailureReason.NOT_INCLUDED,
-                            "tracker " + Long.toString(trackerId) + " is not included in working set "
-                                    + Long.toString(requestedWorkingSetId));
+                            "tracker " + trackerId + " is not included in working set "
+                                    + requestedWorkingSetId);
                 }
             });
         }
@@ -180,13 +186,17 @@ public class RequirementCommandService {
     }
 
     /**
-     * 软删除需求。
+     * 软删除需求：先捕获删除前快照，由聚合标记删除并返回事实，随后保存并发布事件。
      */
     @Transactional
     public void delete(Long id) {
         Requirement current = loadWritable(id);
         requireActive(current);
-        saveChange(current, current.delete(current.lockVersion()));
+        RequirementSnapshot snapshot = RequirementSnapshot.of(current);
+        int beforeRevision = current.revision();
+        long beforeLockVersion = current.lockVersion();
+        BusinessObjectDeleteEvent deletedEvent = current.delete(current.lockVersion());
+        saveDeleted(snapshot, current, beforeRevision, beforeLockVersion, deletedEvent);
     }
 
     /**
@@ -236,6 +246,27 @@ public class RequirementCommandService {
             eventPublisher.publishEvent(new BusinessObjectDeleteEvent(changed.localId(), changed.deleted()));
         }
         return changed;
+    }
+
+    /**
+     * 保存软删除：快照为删除前状态；删除事实由聚合的 delete 返回，随来源事务一并发布。
+     */
+    public void saveDeleted(RequirementSnapshot snapshot, Requirement changed,
+                            int beforeRevision, long beforeLockVersion,
+                            BusinessObjectDeleteEvent deletedEvent) {
+        SnapshotRefEvent snapshotRef = snapshotStore.save(snapshot);
+        repository.save(changed);
+        eventPublisher.publishEvent(new BusinessObjectUpdateEvent(
+                identifierGenerator.nextId(null).longValue(),
+                changed.localId(),
+                changed.localId(),
+                beforeRevision,
+                changed.revision(),
+                beforeLockVersion,
+                changed.lockVersion(),
+                snapshotRef,
+                System.currentTimeMillis()));
+        eventPublisher.publishEvent(deletedEvent);
     }
 }
 

@@ -19,6 +19,8 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -89,16 +91,20 @@ class BindingAcceptanceTest {
 
     @AfterEach
     void cleanUp() {
+        jdbc.update("DELETE FROM air_ws_items_index WHERE work_space_id = ?", space);
+        jdbc.update("DELETE FROM air_inst_common WHERE work_space = ? AND base_class = 1401", space);
         jdbc.update("DELETE FROM requirements WHERE tracker_id IN (?, ?)", shared, unshared);
         for (String id : worksets.reversed()) {
             jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", id);
-            jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", id);
-            jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", id);
-            jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE workingset_id = ?", id);
+            jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE workingset_id = ?)", id);
+            jdbc.update("DELETE FROM air_inst_tracker_rev WHERE workingset_id = ?", id);
             jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", id);
-            jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", id);
+            jdbc.update("DELETE FROM air_inst_workingset WHERE id = ?", id);
         }
-        jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
+        jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE work_space = ?", space);
+        jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
+        jdbc.update("DELETE FROM air_inst_tracker_rev WHERE work_space = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
     }
 
@@ -271,6 +277,8 @@ class BindingAcceptanceTest {
 
         jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", Long.toString(target.item().localId()));
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasItems");
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", sourceItem);
+        jdbc.update("DELETE FROM air_inst_common WHERE id = ?", sourceItem);
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
         assertFailure(delete(trackerPath(unshared)), HttpStatus.CONFLICT, "TrackerHasDerivedChildren");
 
@@ -288,6 +296,8 @@ class BindingAcceptanceTest {
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasOrgChildren");
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE parent_id = ?", shared));
         assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(child)).getStatusCode());
+        await().atMost(Duration.ofSeconds(8)).until(() ->
+                count("SELECT count(*) FROM trackers WHERE tracker_id = ?", child) == 0);
         bindSpace(ws);
         bindSpace(other);
         extendShared(ws, shared);
@@ -310,8 +320,11 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.NOT_FOUND, delete("/api/product-spaces/" + space).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, delete(path(ws) + "/product-spaces/" + space).getStatusCode());
         jdbc.update("UPDATE requirements SET delete_flag = true WHERE local_id = ?", sourceItem);
+        jdbc.update("UPDATE air_inst_common SET delete_flag = 1 WHERE id = ?", sourceItem);
         assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceHasBusinessReferences");
 
+        jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", sourceItem);
+        jdbc.update("DELETE FROM air_inst_common WHERE id = ?", sourceItem);
         jdbc.update("DELETE FROM requirements WHERE local_id = ?", sourceItem);
         long retainedReference = Long.parseLong(fixtureId("direct-reference-" + suffix));
         jdbc.update("INSERT INTO air_inst_common (id, base_class, work_space) VALUES (?, 1001, ?)",
@@ -329,12 +342,21 @@ class BindingAcceptanceTest {
         assertEquals(2, count("SELECT count(*) FROM trackers WHERE product_space_id = ?", space));
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
 
-        assertEquals(HttpStatus.ACCEPTED, delete(endpoint).getStatusCode());
-        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            assertEquals(0, count("SELECT count(*) FROM product_spaces WHERE product_space_id = ?", space));
-            assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
-            assertEquals(0, count("SELECT count(*) FROM trackers WHERE product_space_id = ?", space));
-        });
+        assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceStillHasTrackers");
+        assertEquals(2, count("SELECT count(*) FROM trackers WHERE product_space_id = ?", space));
+        assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(shared)).getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, delete(trackerPath(unshared)).getStatusCode());
+        jdbc.update("INSERT INTO air_inst_common (id, base_class, work_space, delete_flag) VALUES (?, 1003, ?, 0)",
+                space, space);
+        try {
+            assertEquals(HttpStatus.NO_CONTENT, delete(endpoint).getStatusCode());
+            assertEquals(1, count("SELECT count(*) FROM product_spaces WHERE product_space_id = ? AND delete_flag = 1", space));
+            assertEquals(1, count("SELECT count(*) FROM air_inst_common WHERE id = ? AND delete_flag = 1", space));
+            assertEquals(2, count("SELECT count(*) FROM air_inst_tracker_rev WHERE work_space = ? AND delete_flag = 1", space));
+            assertEquals(HttpStatus.NOT_FOUND, delete(endpoint).getStatusCode());
+        } finally {
+            jdbc.update("DELETE FROM air_inst_common WHERE id = ?", space);
+        }
     }
 
     @Test
@@ -420,6 +442,26 @@ class BindingAcceptanceTest {
     }
 
     @Test
+    void requirementCreationDoesNotWaitForAnotherTrackerReference() throws Exception {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+             Connection connection = jdbc.getDataSource().getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement reference = connection.prepareStatement(
+                    "SELECT id FROM air_inst_tracker_rev WHERE id = ? FOR KEY SHARE")) {
+                reference.setLong(1, Long.parseLong(shared));
+                reference.executeQuery().close();
+
+                Future<ResponseEntity<Map>> creation = executor.submit(() -> rest.postForEntity("/api/requirements",
+                        Map.of("trackerId", shared, "title", "Concurrent requirement", "description", "", "revision", 3),
+                        Map.class));
+                assertEquals(HttpStatus.CREATED, creation.get(5, TimeUnit.SECONDS).getStatusCode());
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    @Test
     void concurrentItemCreationAndTrackerDeletionCannotLeaveAnOrphan() throws Exception {
         CyclicBarrier start = new CyclicBarrier(2);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -448,12 +490,16 @@ class BindingAcceptanceTest {
     }
 
     private void businessItem(String id, String tracker) {
+        String commonId = fixtureId("family-" + id);
         jdbc.update("""
                 INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
                     working_set_id, created_by, created_time)
                 VALUES (?, ?, ?, 'A', 'test', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
-                """, id, fixtureId("family-" + id), tracker, tracker, System.currentTimeMillis());
+                """, id, commonId, tracker, tracker, System.currentTimeMillis());
+        ItemIndexFixture.registerRequirementFacts(jdbc, id);
+        String owner = jdbc.queryForObject("SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?", String.class, tracker);
+        ItemIndexFixture.insert(jdbc, id, commonId, tracker, owner, 3, id, 3, true);
     }
 
     private int count(String sql, String parameter) {

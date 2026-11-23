@@ -1,10 +1,12 @@
 package com.airedgesoft.sharekernel.tracker.infrastructure.repositories;
 
 
+import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.IncorrectUpdateSemanticsDataAccessException;
@@ -71,17 +73,17 @@ public class JdbcTrackerRepository implements TrackerRepository {
     }
 
     private static Long optionalId(ResultSet rs, String column) throws SQLException {
-        Long id = rs.getObject(column, Long.class);
-        return id == null ? null : id;
+        return rs.getObject(column, Long.class);
     }
 
     private static Long value(Long id) {
-        return id == null ? null : id;
+        return id;
     }
 
     private static long requireActor(Long actor, Tracker tracker) {
         if (actor == null) {
-            throw new IllegalStateException("Tracker write requires an actor: " + Long.toString(tracker.trackerId()));
+            throw DomainException.withMessage(WorkingsetResultCode.APPLICATION_DENIED,
+                    "Tracker write requires an actor: " + Long.toString(tracker.trackerId()));
         }
         return actor;
     }
@@ -108,18 +110,18 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     @Override
     public Optional<Tracker> findById(Long id) {
-        return load(id, false);
+        return load(id, "");
     }
 
     @Override
     public Optional<Tracker> lockTracker(Long id) {
-        return load(id, true);
+        return load(id, " FOR NO KEY UPDATE OF t");
     }
 
-    private Optional<Tracker> load(Long id, boolean lock) {
+    private Optional<Tracker> load(Long id, String lockingClause) {
         return jdbc.query("SELECT " + COLUMNS + FROM_TRACKER + """
                         WHERE t.id = ? AND t.delete_flag = 0
-                        """ + (lock ? " FOR UPDATE OF t" : ""), MAPPER, id)
+                        """ + lockingClause, MAPPER, id)
                 .stream().findFirst();
     }
 
@@ -184,20 +186,25 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     private void update(Tracker tracker, long actor) {
         long id = tracker.trackerId();
+        int deleteFlag = tracker.deleted() ? 1 : 0;
         requireOne(jdbc.update("""
                         UPDATE air_inst_tracker_rev
-                        SET name = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
+                        SET name = ?, delete_flag = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
                         WHERE id = ? AND work_space = ? AND delete_flag = 0
-                        """, tracker.name(), Long.toString(actor), System.currentTimeMillis(),
+                        """, tracker.name(), deleteFlag, Long.toString(actor), System.currentTimeMillis(),
                 id, tracker.numericProductSpaceId()), id);
         requireOne(jdbc.update("""
                 UPDATE air_ws_tracker c
-                SET name = t.name, lock_version = t.lock_version,
+                SET name = t.name, lock_version = t.lock_version, delete_flag = t.delete_flag,
                     updated_by = t.updated_by, updated_time = t.updated_time
                 FROM air_inst_tracker_rev t
                 WHERE t.id = ? AND c.id = t.id AND c.lock_version = t.lock_version - 1
                 """, id), id);
-        saveCommonInstance(id);
+        if (tracker.deleted()) {
+            commonInstances.remove(id);
+        } else {
+            saveCommonInstance(id);
+        }
     }
 
     private void saveCommonInstance(long id) {
@@ -210,19 +217,15 @@ public class JdbcTrackerRepository implements TrackerRepository {
                 """, JdbcCommonInstanceStore.ROW_MAPPER, id));
     }
 
-    private boolean exists(String predicate, Object... args) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM air_inst_tracker_rev WHERE delete_flag = 0 AND " + predicate + ")",
-                Boolean.class, args));
-    }
-
     @Override
-    public void deleteTracker(Long id) {
-        if (lockTracker(id).isEmpty()) {
+    public void delete(Tracker tracker) {
+        Long id = tracker.trackerId();
+        if (load(id, " FOR UPDATE OF t").isEmpty()) {
             return;
         }
         requireOne(jdbc.update("DELETE FROM air_ws_tracker WHERE id = ?", id), id);
         requireOne(jdbc.update("DELETE FROM air_inst_tracker_rev WHERE id = ?", id), id);
         commonInstances.remove(id);
     }
+
 }

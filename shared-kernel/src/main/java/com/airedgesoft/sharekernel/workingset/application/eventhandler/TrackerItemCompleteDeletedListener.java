@@ -1,7 +1,9 @@
 package com.airedgesoft.sharekernel.workingset.application.eventhandler;
 
-import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemLifecycleService;
+import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemCommandService;
 import com.airedgesoft.sharekernel.workingset.domain.event.CompleteDeleteEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -11,17 +13,15 @@ import org.springframework.stereotype.Component;
  * 处理失败时事件保留为未完成，不再提供 COW 恢复入口；
  * 处理本身幂等（无对应 LTI 为空操作）。
  */
+@Slf4j
 @Component
-public class TrackerItemCompleteDeteleListener {
+@RequiredArgsConstructor
+public class TrackerItemCompleteDeletedListener {
 
-    private final TrackerItemLifecycleService trackerItemLifecycleService;
-
-    public TrackerItemCompleteDeteleListener(TrackerItemLifecycleService lifecycle) {
-        this.trackerItemLifecycleService = lifecycle;
-    }
+    private final TrackerItemCommandService trackerItemCommandService;
 
     @ApplicationModuleListener(id = "bootstrap.RequirementPurgedListener.on(sk.workingset.domain.event.CompleteDeleteEvent)")
     public void on(CompleteDeleteEvent event) {
-        trackerItemLifecycleService.removePurged(event.requirementId());
+        trackerItemCommandService.removePurged(event.requirementId());
     }
 }

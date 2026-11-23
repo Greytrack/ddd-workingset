@@ -35,10 +35,10 @@ public class ProductSpaceController {
     }
 
     /**
-     * 默认工作集受理空产品空间删除。
+     * 在默认工作集删除空产品空间。
      */
     @DeleteMapping("/worksets/1/product-spaces/{spaceId}")
-    @ResponseStatus(HttpStatus.ACCEPTED)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long spaceId) {
         commands.delete(Long.toString(spaceId));
     }

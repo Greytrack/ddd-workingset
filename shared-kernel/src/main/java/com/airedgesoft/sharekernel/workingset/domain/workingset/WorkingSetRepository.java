@@ -15,6 +15,12 @@ public interface WorkingSetRepository {
      */
     Optional<WorkingSet> findById(Long id);
 
+    /** 重建聚合并锁定根，用于串行化子工作集创建与父工作集删除。 */
+    Optional<WorkingSet> findByIdForUpdate(Long id);
+
+    /** 保护父工作集引用，允许并行创建子工作集及修改父工作集的普通属性。 */
+    Optional<WorkingSet> findByIdForChildCreation(Long id);
+
     /**
      * 创建任务上下文重建：不检查 Preparing。
      */

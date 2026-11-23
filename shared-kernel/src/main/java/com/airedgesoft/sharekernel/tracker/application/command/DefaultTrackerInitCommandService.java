@@ -1,7 +1,6 @@
 package com.airedgesoft.sharekernel.tracker.application.command;
 
 
-import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.productspace.domain.repository.ProductSpaceRepository;
@@ -11,7 +10,6 @@ import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.ClassificationCatalog;
 import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
-import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,7 +21,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -57,7 +54,10 @@ public class DefaultTrackerInitCommandService {
                 continue;
             }
             Long trackerId = trackerTransaction.execute(status -> provisionDefault(spaceId, classification));
-            provisioned.add(Objects.requireNonNull(trackerId));
+            if (trackerId == null) {
+                return List.of();
+            }
+            provisioned.add(trackerId);
         }
         List<Long> trackerIds = List.copyOf(provisioned);
         events.publishEvent(new DefaultTrackersProvisionedEvent(productSpaceId, trackerIds));
@@ -65,9 +65,11 @@ public class DefaultTrackerInitCommandService {
     }
 
     private Long provisionDefault(String spaceId, Classification classification) {
-        // The ProductSpace lookup locks its row. Keep that lock with the Tracker insert and its foreign-key check.
-        ProductSpace space = spaces.findById(spaceId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
+        // 与空间删除竞争同一行。删除先提交时，迟到的创建事件无需继续初始化。
+        ProductSpace space = spaces.findById(spaceId).orElse(null);
+        if (space == null) {
+            return null;
+        }
         return trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId())
                 .map(Tracker::trackerId)
                 .orElseGet(() -> saveDefault(space, classification));

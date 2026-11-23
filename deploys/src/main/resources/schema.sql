@@ -225,6 +225,7 @@ CREATE TABLE IF NOT EXISTS product_spaces
     product_space_id BIGINT PRIMARY KEY,
     name             VARCHAR(255)
 );
+ALTER TABLE product_spaces ADD COLUMN IF NOT EXISTS delete_flag INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS classifications
 (
@@ -562,7 +563,7 @@ SELECT r.workingset_id                                                          
 FROM air_ws_workingset_branch_relation r
          JOIN air_inst_tracker_rev t ON t.id = r.tracker_id AND t.work_space = r.work_space AND t.delete_flag = 0
          JOIN air_inst_workingset w ON w.id = r.workingset_id AND w.delete_flag = 0
-         JOIN product_spaces p ON p.product_space_id = r.work_space
+         JOIN product_spaces p ON p.product_space_id = r.work_space AND p.delete_flag = 0
 WHERE t.share = 1
    OR (t.share = 0 AND t.workingset_id = r.workingset_id);
 

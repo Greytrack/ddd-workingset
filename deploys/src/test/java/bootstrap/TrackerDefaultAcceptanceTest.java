@@ -68,16 +68,15 @@ class TrackerDefaultAcceptanceTest {
     @AfterEach
     void cleanup() {
         for (String space : testSpaces) {
-            jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)", space);
-            jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id = ?)", space);
-            jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
-            jdbc.update("DELETE FROM trackers WHERE product_space_id = ? AND working_set_id = ?", space, child);
-            jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
-            jdbc.update("DELETE FROM space_bindings WHERE product_space_id = ?", space);
+            jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
+            jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
+            jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE work_space = ?", space);
+            jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
+            jdbc.update("DELETE FROM air_inst_tracker_rev WHERE work_space = ?", space);
             jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
         }
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
-        jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
+        jdbc.update("DELETE FROM air_inst_workingset WHERE id = ?", child);
     }
 
     @Test
@@ -268,7 +267,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(2, instanceSummaries.findByIds(List.of(id, 1L, id, Long.MAX_VALUE)).size());
         assertEquals(HttpStatus.NO_CONTENT, rest.exchange("/api/trackers/" + id, HttpMethod.DELETE,
                 null, Void.class).getStatusCode());
-        assertTrue(instanceSummaries.findById(id).isEmpty());
+        await().atMost(Duration.ofSeconds(8)).until(() -> instanceSummaries.findById(id).isEmpty());
     }
 
     @Test
@@ -281,7 +280,8 @@ class TrackerDefaultAcceptanceTest {
             Tracker tracker = new Tracker(id, "projection collision", null, 1L,
                     space, classifications.findClassification("14010101").orElseThrow(),
                     Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
-            assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
+            assertThrows(DataIntegrityViolationException.class,
+                    () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                     Integer.class, id));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
@@ -300,7 +300,8 @@ class TrackerDefaultAcceptanceTest {
                 space, classifications.findClassification("14010101").orElseThrow(),
                 Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
 
-        assertThrows(DataIntegrityViolationException.class, () -> trackerRepository.save(tracker));
+        assertThrows(DataIntegrityViolationException.class,
+                () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                 Integer.class, id));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_tracker WHERE id = ?",
@@ -322,8 +323,8 @@ class TrackerDefaultAcceptanceTest {
             assertTrue(bindings.trackers().stream().anyMatch(binding -> tracker.trackerId().equals(binding.trackerId())));
         });
         rest.delete("/api/trackers/" + tracker.trackerId());
-        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(0, jdbc.queryForObject(
-                "SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?", Integer.class, Long.valueOf(tracker.trackerId()))));
+        await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1, jdbc.queryForObject(
+                "SELECT count(*) FROM air_inst_tracker_rev WHERE id = ? AND delete_flag = 1", Integer.class, Long.valueOf(tracker.trackerId()))));
     }
 
     @Test
@@ -370,7 +371,11 @@ class TrackerDefaultAcceptanceTest {
         }
         Map<String, String> allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
                 sharedClassification, "sharingMode", "SHARED");
-        assertEquals(HttpStatus.CREATED, rest.postForEntity(url, allowed, TrackerView.class).getStatusCode());
+        ResponseEntity<TrackerView> allowedResponse = rest.postForEntity(url, allowed, TrackerView.class);
+        assertEquals(HttpStatus.CREATED, allowedResponse.getStatusCode());
+        String allowedTrackerId = allowedResponse.getBody().trackerId();
+        await().atMost(Duration.ofSeconds(8)).until(() -> rest.getForObject("/api/worksets/1/bindings", BindingsView.class)
+                .trackers().stream().anyMatch(binding -> allowedTrackerId.equals(binding.trackerId())));
         Map<String, String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
                 sharedClassification, "sharingMode", "UNSHARED");
         ResponseEntity<Map> refusal = rest.postForEntity(url, rejected, Map.class);

@@ -857,7 +857,7 @@ INV-014/015/023；[裁定](archive/reviews/2026-11-09-stage-3-architecture-revie
 
 ## SCN-064 删除无绑定的空 ProductSpace
 
-**业务规则：用户于 2026-11-21 裁定，见[绑定与删除契约 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)。验收表述
+**业务规则：用户于 2026-11-23 更新裁定，见[绑定与删除契约 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)。验收表述
 Draft。**
 
 - Given 根与子工作集绑定了 P，P 内只有空 Tracker。
@@ -866,9 +866,12 @@ Draft。**
 - Given P 无绑定，仍被业务对象引用，即使对象已软删除。
 - When 在默认工作集删除 P。
 - Then 返回 `SpaceHasBusinessReferences`，P 保留。
-- Given P 无绑定或业务引用，且只有无外部引用的空 Tracker。
+- Given P 无绑定或业务引用，但仍有有效的空 Tracker。
 - When 在默认工作集删除 P。
-- Then 请求受理，逐个删除空 Tracker，最后删除 P。
+- Then 返回 `409 SpaceStillHasTrackers`，P 和 Tracker 保留。
+- Given P 无绑定、业务引用和有效 Tracker，空间内可有已软删的 Tracker 历史行。
+- When 在默认工作集删除 P。
+- Then 返回 `204`，P 已标记删除并发布 `ProductSpaceDeleted`，Tracker 历史行保留。
 
 <a id="scn-065"></a>
 

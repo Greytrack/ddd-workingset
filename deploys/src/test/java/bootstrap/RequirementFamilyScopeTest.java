@@ -91,7 +91,8 @@ class RequirementFamilyScopeTest {
     void soft_deleted_row_keeps_family_identity_until_restored_or_purged() {
         Requirement first = requirement("L1-", t1);
         save(first);
-        save(first.delete(first.lockVersion()));
+        first.delete(first.lockVersion());
+        save(first);
         assertThrows(DataIntegrityViolationException.class, () -> save(requirement("L2-", t1)));
     }
 
@@ -104,7 +105,8 @@ class RequirementFamilyScopeTest {
         save(saved);
         assertEquals(List.of(identity), catalog.identities(trackerId));
 
-        save(saved.delete(saved.lockVersion()));
+        saved.delete(saved.lockVersion());
+        save(saved);
         assertTrue(catalog.identities(trackerId).isEmpty());
         assertEquals(List.of(identity), catalog.identitiesForMerge(trackerId));
     }

@@ -14,6 +14,7 @@ import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrack
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
+import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,12 +111,12 @@ class RequirementCreateScopeTest {
     }
 
     @Test
-    void unknown_tracker_is_left_to_persistence_validation() {
+    void unknown_tracker_rejects_creation_before_persistence() {
         when(trackers.findById(TRACKER)).thenReturn(Optional.empty());
 
-        Requirement created = service.create(TRACKER, Long.valueOf("1"), "A", "d", REVISION);
-
-        assertNotEquals(Long.toString(created.localId()), Long.toString(created.commonId()));
-        verify(repository).save(any());
+        DomainException failure = assertThrows(DomainException.class,
+                () -> service.create(TRACKER, WorkingSet.DEFAULT_ID, "A", "d", REVISION));
+        assertSame(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT, failure.getResCode());
+        verify(repository, never()).save(any());
     }
 }

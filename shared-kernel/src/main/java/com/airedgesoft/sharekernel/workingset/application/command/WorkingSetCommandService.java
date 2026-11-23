@@ -96,7 +96,8 @@ public class WorkingSetCommandService {
         if (newId.equals(parentId)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
-        writable(parentId);
+        workingSets.findByIdForChildCreation(parentId)
+                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(parentId)));
         if (queries.findAncestors(parentId).contains(newId)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
@@ -137,10 +138,10 @@ public class WorkingSetCommandService {
     }
 
     /**
-     * 把产品空间绑定到工作集，保存后发布空间绑定事件。
+     * 在保存绑定前确认空间有效，并与产品空间删除协调。
      */
     private ProductSpace lockSpace(String spaceId) {
-        return spaces.findById(spaceId)
+        return spaces.findByIdForBinding(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
     }
 
@@ -261,9 +262,8 @@ public class WorkingSetCommandService {
 
     private Tracker directParentTracker(WorkingSet target, Long id) {
         Long parentId = target.requireParentId();
-        // 非根父级锁定绑定范围，串行化解绑与新纳入。根原生 Tracker 由 Tracker 行锁保护。
         boolean boundInParent = !WorkingSet.DEFAULT_ID.equals(parentId) && writable(parentId).hasTrackerBinding(id);
-        Tracker source = trackers.lockTracker(id)
+        Tracker source = trackers.findById(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(id)));
         target.requireDirectParent(source, boundInParent);
         return source;

@@ -25,9 +25,9 @@ class ModuleEntrypointsTest {
         Set<String> components = Arrays.stream(packages).flatMap(pkg -> scanner.findCandidateComponents(pkg).stream())
                 .map(BeanDefinition::getBeanClassName).collect(Collectors.toSet());
 
-        assertTrue(components.contains("alm.requirement.adapters.RequirementController"));
-        assertTrue(components.contains("alm.requirement.application.eventhandler.RequirementDerivedItemSummaryListener"));
-        assertTrue(components.contains("sk.workingset.adapters.WorkingSetController"));
+        assertTrue(components.contains("com.airedgesoft.alm.requirement.adapters.RequirementController"));
+        assertTrue(components.contains("com.airedgesoft.alm.requirement.application.eventhandler.RequirementDerivedItemSummaryListener"));
+        assertTrue(components.contains("com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController"));
         assertTrue(components.contains("bootstrap.web.ApiExceptionHandler"));
 
         Map<String, String> existingListeners = Map.of(
@@ -38,14 +38,15 @@ class ModuleEntrypointsTest {
                 "TrackerItemCreatedListener", "TrackerItemCreatedListener",
                 "WorkingSetCreationSubmittedListener", "WorkingSetCreationSubmittedListener");
         for (Map.Entry<String, String> entry : existingListeners.entrySet()) {
-            String className = "sk.workingset.application.eventhandler." + entry.getKey();
+            String className = "com.airedgesoft.sharekernel.workingset.application.eventhandler." + entry.getKey();
             assertTrue(components.contains(className));
             Class<?> listener = Class.forName(className);
             Method method = Arrays.stream(listener.getDeclaredMethods())
                     .filter(candidate -> candidate.isAnnotationPresent(ApplicationModuleListener.class))
                     .findFirst().orElseThrow();
             ApplicationListenerMethodAdapter adapter = new ApplicationListenerMethodAdapter(entry.getKey(), listener, method);
-            assertEquals("bootstrap." + entry.getValue() + ".on(" + method.getParameterTypes()[0].getName() + ")",
+            assertEquals("bootstrap." + entry.getValue() + ".on(sk.workingset.domain.event."
+                            + method.getParameterTypes()[0].getSimpleName() + ")",
                     adapter.getListenerId());
         }
     }

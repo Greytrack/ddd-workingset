@@ -29,13 +29,14 @@ public class DefaultTrackersBindingListener {
     @ApplicationModuleListener(id = "bootstrap.DefaultTrackersBindingListener.on(sk.tracker.domain.event.DefaultTrackersProvisionedEvent)")
     public void on(DefaultTrackersProvisionedEvent event) {
         String spaceId = event.productSpaceId().toString();
+        ProductSpace space = spaces.findById(spaceId).orElse(null);
+        if (space == null) {
+            return;
+        }
         WorkingSet workingSet = workingSets.findById(WorkingSet.DEFAULT_ID)
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "default working set disappeared"));
         if (!workingSet.hasSpaceBinding(spaceId)) {
-            ProductSpace space = spaces.findById(spaceId)
-                    .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
-                            "product space disappeared: " + spaceId));
             workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
         }
         for (Long trackerId : event.trackerIds()) {

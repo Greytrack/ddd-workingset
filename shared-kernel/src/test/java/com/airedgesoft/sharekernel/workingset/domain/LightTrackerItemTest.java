@@ -39,13 +39,13 @@ class LightTrackerItemTest {
     void deletionChangesDoNotAlterRevisionOrContentLocation() {
         LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, CLASSIFICATION);
         assertFalse(item.deleted());
-        assertTrue(item.recordDeletionState(true));
-        assertFalse(item.recordDeletionState(true));
+        assertTrue(item.delete());
+        assertFalse(item.delete());
         assertTrue(item.deleted());
         assertEquals(R3, item.currentRevisionIndex().revision());
         assertEquals(L1, item.effectiveContentSource());
         assertEquals(R3, item.effectiveContentRevision());
-        assertTrue(item.recordDeletionState(false));
+        assertTrue(item.undelete());
         assertFalse(item.deleted());
     }
 

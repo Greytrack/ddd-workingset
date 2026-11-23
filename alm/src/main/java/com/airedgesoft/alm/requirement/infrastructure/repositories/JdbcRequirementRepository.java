@@ -34,7 +34,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                  delete_flag, working_set_id, created_by, created_time)
             SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, t.workingset_id, ?, ?
             FROM air_inst_tracker_rev t
-            WHERE t.id = ?
+            WHERE t.id = ? AND t.delete_flag = 0
             """;
 
     private static final String UPDATE = """
@@ -66,11 +66,15 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             if (actor == null || actor.isBlank()) {
                 throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
             }
-            jdbc.update(INSERT, requirement.localId(), requirement.commonId(),
+            int inserted = jdbc.update(INSERT, requirement.localId(), requirement.commonId(),
                     requirement.trackerId(), requirement.title(), requirement.title(), requirement.description(),
                     requirement.revision(), requirement.version(), lockVersion, requirement.deleted(),
                     actor, System.currentTimeMillis(),
                     requirement.trackerId());
+            if (inserted == 0) {
+                throw DomainException.withMessage(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
+                        "Tracker " + requirement.trackerId() + " is unavailable");
+            }
             saveCommonInstance(requirement.localId());
             return;
         }
@@ -110,7 +114,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     }
 
     @Override
-    public void purge(Requirement requirement) {
+    public void delete(Requirement requirement) {
         long id = requirement.localId();
         jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", id);
         if (jdbc.update("DELETE FROM requirements WHERE local_id = ?", id) == 1) {

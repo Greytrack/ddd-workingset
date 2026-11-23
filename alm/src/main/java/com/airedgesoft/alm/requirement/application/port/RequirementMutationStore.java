@@ -12,6 +12,4 @@ public interface RequirementMutationStore extends RequirementRepository {
     Optional<Requirement> lockById(Long id);
 
     Optional<Requirement> lockFamilyInWorkingSet(Long trackerId, Long commonId);
-
-    void purge(Requirement requirement);
 }

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -35,7 +36,7 @@ public class RequirementLifecycleService {
     /**
      * 永久删除：先通过 guard（须已软删），无来源依赖时清除对象并发布彻底删除事件。
      */
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void delete2(Long id) {
         Requirement current = requirements.lockById(id).orElseThrow(() -> missing(id));
         commands.requireTrackerWorkingSet(current.trackerId());
@@ -43,11 +44,11 @@ public class RequirementLifecycleService {
         if (!decision.succeeded()) {
             throw DomainException.withMessage(RequirementResultCode.SOFT_DELETE_REQUIRED, Long.toString(id));
         }
-        // The same source row lock serializes a concurrent derivation; deleted sources cannot acquire new dependents.
+        // 扩展侧读取来源并写入依赖，永久删除侧检查依赖并删除来源。可串行化事务检测交错写入。
         if (items.hasSourceBackedDependents(id)) {
             throw DomainException.withMessage(FailureReason.PREPARING, "Derived items still depend on source " + Long.toString(id));
         }
-        requirements.purge(current);
+        requirements.delete(current);
         eventPublisher.publishEvent(new CompleteDeleteEvent(id, current.trackerId(), System.currentTimeMillis()));
     }
 }

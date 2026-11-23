@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.SavepointManager;
 import org.springframework.transaction.annotation.Isolation;
@@ -267,10 +268,12 @@ public class WorkingSetCreationService {
      */
     public void execute(String id) {
         startIfPending(id);
+        TransactionTemplate stepTransaction = new TransactionTemplate(transaction.getTransactionManager(), transaction);
+        stepTransaction.setIsolationLevel(Isolation.SERIALIZABLE.value());
 
         boolean hasMoreWork;
         do {
-            hasMoreWork = advanceOneStepInTransaction(id);
+            hasMoreWork = advanceWithConcurrencyRetry(id, stepTransaction);
         } while (hasMoreWork);
     }
 
@@ -283,8 +286,20 @@ public class WorkingSetCreationService {
         });
     }
 
-    private boolean advanceOneStepInTransaction(String id) {
-        return Boolean.TRUE.equals(transaction.execute(tx -> {
+    private boolean advanceWithConcurrencyRetry(String id, TransactionTemplate stepTransaction) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return advanceOneStepInTransaction(id, stepTransaction);
+            } catch (PessimisticLockingFailureException conflict) {
+                if (attempt == 3) {
+                    throw conflict;
+                }
+            }
+        }
+    }
+
+    private boolean advanceOneStepInTransaction(String id, TransactionTemplate stepTransaction) {
+        return Boolean.TRUE.equals(stepTransaction.execute(tx -> {
             // 每步重新锁定任务并读取进度，事件重投也从已提交的位置继续。
             WorkingSetCreation current = lock(id);
             if (current.status() != Status.Running) {

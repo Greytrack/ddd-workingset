@@ -14,7 +14,11 @@ public interface TrackerQueryProvider {
 
     boolean hasDerivedChildren(Long id);
 
+    boolean hasRegisteredBusinessItems(Long id);
+
     List<Long> findTrackerIdsInSpace(String spaceId);
+
+    boolean hasActiveTrackersInSpace(String spaceId);
 
     boolean hasExternalTrackerReferences(String spaceId);
 

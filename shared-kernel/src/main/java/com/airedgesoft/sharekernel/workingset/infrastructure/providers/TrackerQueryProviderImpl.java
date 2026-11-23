@@ -35,10 +35,22 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     }
 
     @Override
+    public boolean hasRegisteredBusinessItems(Long id) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM air_inst_common WHERE tracker = ?)
+                """, Boolean.class, id));
+    }
+
+    @Override
     public List<Long> findTrackerIdsInSpace(String spaceId) {
         return jdbc.queryForList("""
                 SELECT id FROM air_inst_tracker_rev WHERE work_space = ? ORDER BY id
                 """, Long.class, Long.valueOf(spaceId)).stream().toList();
+    }
+
+    @Override
+    public boolean hasActiveTrackersInSpace(String spaceId) {
+        return exists("work_space = ?", Long.valueOf(spaceId));
     }
 
     @Override

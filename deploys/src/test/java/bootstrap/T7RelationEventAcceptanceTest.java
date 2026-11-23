@@ -61,6 +61,7 @@ class T7RelationEventAcceptanceTest {
         jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM requirements WHERE tracker_id = ?", parentTracker);
+        jdbc.update("DELETE FROM air_inst_common WHERE id = ?", parentItem);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
     }
@@ -104,6 +105,7 @@ class T7RelationEventAcceptanceTest {
                 VALUES (?, ?, ?, 'source', 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, parentItem, parentItem, parentTracker, parentTracker, System.currentTimeMillis());
+        ItemIndexFixture.registerRequirementFacts(jdbc, parentItem);
         ItemIndexFixture.insert(jdbc, parentItem, parentItem, parentTracker, "1", 3, parentItem, 3, true);
     }
 

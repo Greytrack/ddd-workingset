@@ -12,6 +12,16 @@ public final class ItemIndexFixture {
     private ItemIndexFixture() {
     }
 
+    static void registerRequirementFacts(JdbcTemplate jdbc, String localId) {
+        jdbc.update("""
+                INSERT INTO air_inst_common
+                    (id, base_class, class, type, work_space, tracker, common_id, workingset_id, revision, delete_flag)
+                SELECT r.local_id, 1401, 140101, 14010101, t.work_space, r.tracker_id, r.common_id,
+                       r.working_set_id, r.revision, CASE WHEN r.delete_flag THEN 1 ELSE 0 END
+                FROM requirements r JOIN air_inst_tracker_rev t ON t.id = r.tracker_id WHERE r.local_id = ?
+                """, localId);
+    }
+
     /**
      * 以给定来源证据写入一条 Item 索引，并登记其版次成员。
      *

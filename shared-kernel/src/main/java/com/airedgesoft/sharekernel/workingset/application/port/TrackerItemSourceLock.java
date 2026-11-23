@@ -1,5 +1,7 @@
 package com.airedgesoft.sharekernel.workingset.application.port;
 
+import java.util.Optional;
+
 /**
  * 锁定来源业务对象，并读取版次与删除状态。
  *
@@ -7,5 +9,10 @@ package com.airedgesoft.sharekernel.workingset.application.port;
  * 它<strong>不是</strong>跨聚合原子校验，也不能替代目标 BC 在本地事务中重新校验。
  */
 public interface TrackerItemSourceLock {
+    Optional<State> read(Long localId);
 
+    Optional<State> lock(Long localId);
+
+    record State(Integer revision, boolean deleted) {
+    }
 }

@@ -1,6 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.application.eventhandler;
 
-import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemLifecycleService;
+import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemCommandService;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeAppliedEvent;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -13,9 +13,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class MergeAppliedListener {
 
-    private final TrackerItemLifecycleService lifecycle;
+    private final TrackerItemCommandService lifecycle;
 
-    public MergeAppliedListener(TrackerItemLifecycleService lifecycle) {
+    public MergeAppliedListener(TrackerItemCommandService lifecycle) {
         this.lifecycle = lifecycle;
     }
 

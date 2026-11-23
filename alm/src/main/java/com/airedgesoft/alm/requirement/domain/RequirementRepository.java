@@ -14,6 +14,11 @@ public interface RequirementRepository {
     void save(Requirement requirement);
 
     /**
+     * 物理删除聚合；软删除通过 {@link #save(Requirement)} 持久化聚合的 deleteFlag。
+     */
+    void delete(Requirement requirement);
+
+    /**
      * 按 LocalId 重建聚合。
      */
     Optional<Requirement> findById(Long localId);

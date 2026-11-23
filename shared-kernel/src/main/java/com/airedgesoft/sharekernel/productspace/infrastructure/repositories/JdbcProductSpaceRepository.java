@@ -23,7 +23,24 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
 
     @Override
     public Optional<ProductSpace> findById(String id) {
-        return jdbc.query("SELECT product_space_id, name FROM product_spaces WHERE product_space_id = ? FOR UPDATE",
+        return load(id, " FOR NO KEY UPDATE");
+    }
+
+    @Override
+    public Optional<ProductSpace> findByIdForBinding(String id) {
+        return load(id, " FOR KEY SHARE");
+    }
+
+    @Override
+    public Optional<ProductSpace> findByIdForDeletion(String id) {
+        return load(id, " FOR UPDATE");
+    }
+
+    private Optional<ProductSpace> load(String id, String lockingClause) {
+        return jdbc.query("""
+                        SELECT product_space_id, name FROM product_spaces
+                        WHERE product_space_id = ? AND delete_flag = 0
+                        """ + lockingClause,
                         (row, position) -> new ProductSpace(row.getLong(1), row.getString(2)), Long.valueOf(id))
                 .stream().findFirst();
     }
@@ -31,6 +48,11 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     @Override
     public void save(ProductSpace space) {
         long id = space.numericId();
+        if (space.deleted()) {
+            jdbc.update("UPDATE product_spaces SET delete_flag = 1 WHERE product_space_id = ?", id);
+            jdbc.update("UPDATE air_inst_common SET delete_flag = 1 WHERE id = ?", id);
+            return;
+        }
         jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", id, space.name());
         commonInstances.save(new AirInstCommonPo(id, 1003L, 100301L, 10030101L,
                 id, null, space.name(), null, null, 1L, 0, null, null, null, null, null,
@@ -48,11 +70,4 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
                 """, Boolean.class, space.numericId(), space.numericId()));
     }
 
-    @Override
-    public void delete(ProductSpace space) {
-        long numericId = space.numericId();
-        if (jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", numericId) == 1) {
-            commonInstances.remove(numericId);
-        }
-    }
 }

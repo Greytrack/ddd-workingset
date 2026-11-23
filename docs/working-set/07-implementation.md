@@ -43,9 +43,11 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 
 ## 3. 当前事件协作
 
+ALM 创建 Requirement 时普通读取 Tracker，并在插入时过滤已软删 Tracker。创建与 Tracker 删除使用可串行化事务，冲突返回 HTTP 409。Tracker 自身的变更和删除沿用命令侧行锁。
+
 | 事实                              | 发布方                                                                     | 消费者/后续动作                                                                                                                                                                |
 |-----------------------------------|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Requirement 创建后登记 LTI        | ALM `TrackerItemCreatedEvent`                                              | SK 幂等登记 Local-backed LTI；业务已删除时跳过                                                                                                                                 |
+| Requirement 创建后登记 LTI        | ALM `TrackerItemCreatedEvent`                                              | SK 按公共登记确认对象仍存在，再幂等登记 Local-backed LTI。已软删对象登记删除标记，永久删除后的重投跳过。                                                                       |
 | Requirement 普通修改/继承编辑保存 | ALM `BusinessObjectUpdateEvent`                                            | SK COW 请求；`TrackerItemLocalizedListener` 对首次继承编辑在独立事务切换 LTI                                                                                                   |
 | COW 业务保存                      | SK `TrackerItemMaterializationRequestedEvent`                              | ALM 保存 Requirement 并发布 `TrackerItemMaterializationCompletedEvent`                                                                                                         |
 | COW 完成                          | ALM `TrackerItemMaterializationCompletedEvent`                             | SK 在独立事务切换 Local-backed / 记录失败终态                                                                                                                                  |
@@ -63,10 +65,11 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 | 路径              | 当前状态                                                                                                                                   | 差距/待验证                                                                                                                  |
 |-------------------|--------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | ProductSpace 创建 | `ProductSpaceCommandService.create` 保存 ProductSpace 并发布 `ProductSpaceCreatedEvent`；默认 Tracker 逐个在独立事务提交，之后登记绑定事件 | 部分失败后，重投复用已提交的默认 Tracker；绑定仍在独立的 WorkingSet 事务完成。                                               |
-| ProductSpace 删除 | [T2 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)；存在 WorkingSet 绑定时拒绝，Modulith 逐事件删除空 Tracker 和空间                | 每步复核绑定及业务引用。受理后出现新引用时中止，保留未完成事件和已提交的空容器清理结果。删除期间没有公开任务状态。           |
+| ProductSpace 删除 | [T2 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)；通过准入后，同一事务保存 ProductSpace 删除标记并发布 `ProductSpaceDeleted` | 只写 ProductSpace 聚合；创建和绑定入口重读有效空间，迟到的默认初始化事件遇到已删除空间时结束。 |
 | WorkingSet 删除   | [T2 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)；拒绝仍有子工作集、绑定或归属 Tracker 的工作集                                   | 成功路径只写 WorkingSet 聚合。                                                                                               |
 | T7 创建/扩展      | 阶段按项执行，但工作集创建、Tracker 派生、范围绑定及 LTI 索引仍与各自的任务进度同事务提交                                                  | 按[反模式审查](archive/reviews/2026-11-19-ddd-anti-pattern-scan.md)将聚合副作用与任务进度拆成独立提交，用可靠结果事件推进任务。 |
 | Tracker 创建      | TrackerCommandService 仅持久化 Tracker，绑定由 `TrackerCreatedEvent` 的监听器在 Working Set 事务中完成                                     | 主路径已事件化；仍需验证监听失败、重复投递、绑定拒绝和运维可观察性。ProductSpace 初始化不在该路径内。                        |
+| Tracker 删除      | 软删除：`Tracker.delete()` 标记 `deleted` 并返回 `TrackerDeletedEvent`，`TrackerRepository.save` 持久化 `delete_flag`；物理删除使用 `TrackerRepository.delete(聚合)`。保留 `requireDeletable`（无 Item、无组织子级、无派生子级）校验，绑定关系保留以支持将来恢复。 | 已验收无绑定 Tracker 与 ALM Item 创建并发。软删后绑定不可见但物理保留，恢复入口与可见性待设计。 |
 | 继承编辑          | ALM 保存后由 `BusinessObjectUpdateEvent` 异步切换 LTI                                                                                      | 保存成功不保证 LTI 立即 Local-backed；读取方需容忍短暂 Source-backed。切换失败不回滚业务保存。                               |
 | 文件夹分类        | 空间初始化和工作集创建、扩展由应用编排默认纳入文件夹分类。Tracker 仓储按自身行重建，仅保留分类引用和三层 ID。                              | Folder 业务能力由相应 BC 提供。见 [ADR-0008](06-decisions/adr-0008-tracker-third-level-container.md)。                       |
 
@@ -119,8 +122,7 @@ com.airedgesoft.alm.requirement.application.query
 
 - `WorkingSetRepository.save` 保存新建根及其成员，或保存持锁重建聚合的成员差量；现有根字段没有修改命令。绑定的增删及
   `shown` 修改均经聚合；空间绑定仍由 Folder Tracker 关系表示，未变更关系不重写。
-- Tracker 与创建任务也统一用 `save`，保存分支由实现处理。产品空间当前无更新命令；`save` 只写新对象，重复身份不覆盖。跨工作集的
-  Tracker 删除清理仍由删除用例协调。
+- Tracker 与创建任务也统一用 `save`，保存分支由实现处理；Tracker 软删除经 `Tracker.delete()` 标记后由 `save` 持久化 `delete_flag`，物理删除使用 `TrackerRepository.delete(聚合)`。产品空间当前无更新命令；`save` 只写新对象，重复身份不覆盖。
 - MergeRound 仓储已拆分 `claim`（按 requestId 原子认领新轮次）与 `save`（更新已有轮次状态）；MergeCheckpointQuery 直接从旧表只读查询跨轮次最新基准。LTI 原子家族占位不以普通保存替代。
 - 产品空间、Tracker 与 Working Set 各有聚合仓储；入口及初始化的事务差距见 §4。
 
@@ -134,6 +136,8 @@ com.airedgesoft.alm.requirement.application.query
 - 关系事件 outbox/消费方仍按 T7-E 开放项处理。
 
 ## 7. 验收证据索引
+
+2026-11-23 使用 Java 21 在专用 PostgreSQL 测试库执行 `mvn -B -pl deploys -am test`，共 207 项通过。shared-kernel 34 项、ALM 16 项、deploys 157 项，其中 ArchUnit 14 项。回归覆盖 LTI 迟到登记、恢复及旧事件重投、工作集父子创建与删除竞态、无绑定 Tracker 删除与 Item 创建竞态、派生来源不可用及批次提交。
 
 | 主题          | 当前结论                                                                                                 | 记录                                                                                                                                                        |
 |---------------|----------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -150,13 +154,7 @@ com.airedgesoft.alm.requirement.application.query
 
 - `RequestThreadHolder` 已在写侧仓储中移除：审计事实由 WorkingSet/`LightTrackerItem`/Requirement/Tracker
   聚合携带，应用层在构造或修改时注入；`com.airedgesoft.sharekernel.businessframework` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
-- 2026-11-22 全量测试：shared-kernel 33、alm 16、ArchitectureTest 14 通过；deploys 154 项中 21 failures + 10 errors，集中在
-  Merge、Binding、Tracker、Requirement 与 Snowflake 的既有语义/夹具问题。时间类型统一为 epoch 毫秒、仓储审计解耦相关的测试均通过。
-- 2026-11-22 针对性回归：共享 Tracker 列表可见/非共享隔离、Requirement 读侧、Merge `claim`/`save` 约定的编译与局部测试通过；不能替代全量集成回归。
-- 数据库/Redis 集成回归需在专用空库执行；当前工作区未执行全量。
 - T7-F 规模、失败明细保留和关系消费仍待专题验证，见 [后续计划](08-plan.md)。
-- 2026-11-19 的完整测试记录为 **160 项通过**；ArchUnit 规则覆盖 query→command、command→query、application→MyBatis 和
-  domain→持久化框架边界。2026-11-20 后的改动尚未完成全量回归。
 
 ## 9. 追溯
 

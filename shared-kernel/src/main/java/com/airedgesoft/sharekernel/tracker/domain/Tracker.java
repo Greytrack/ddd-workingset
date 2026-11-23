@@ -4,6 +4,7 @@ import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharekernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
@@ -37,6 +38,7 @@ public final class Tracker {
     private final Long createdBy;
     private Long updatedBy;
     private String name;
+    private boolean deleted;
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
                    Long numericProductSpaceId, Classification classification, SharingMode sharingMode,
@@ -196,6 +198,23 @@ public final class Tracker {
      */
     public void touch(Long actor) {
         this.updatedBy = Objects.requireNonNull(actor, "actor");
+    }
+
+    /**
+     * 软删除：标记 {@code deleted} 并返回已删除事实；调用方随后通过仓储 save 持久化。
+     */
+    public TrackerDeletedEvent delete(Long actor) {
+        if (deleted) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE,
+                    "Tracker already deleted: " + Long.toString(trackerId));
+        }
+        this.deleted = true;
+        this.updatedBy = Objects.requireNonNull(actor, "actor");
+        return new TrackerDeletedEvent(trackerId);
+    }
+
+    public boolean deleted() {
+        return deleted;
     }
 
     public boolean isNew() {

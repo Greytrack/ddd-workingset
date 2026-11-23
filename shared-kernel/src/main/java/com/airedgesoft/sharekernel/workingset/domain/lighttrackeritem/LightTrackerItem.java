@@ -286,11 +286,25 @@ public final class LightTrackerItem {
     /**
      * Synchronize the committed lifecycle of this variant without changing its content source or revision.
      */
-    public boolean recordDeletionState(boolean deleted) {
-        if (this.deleted == deleted) {
+    /**
+     * 软删除：标记 deleted；已删除时返回 false。
+     */
+    public boolean delete() {
+        if (deleted) {
             return false;
         }
-        this.deleted = deleted;
+        this.deleted = true;
+        return true;
+    }
+
+    /**
+     * 恢复：清除 deleted；未删除时返回 false。
+     */
+    public boolean undelete() {
+        if (!deleted) {
+            return false;
+        }
+        this.deleted = false;
         return true;
     }
 

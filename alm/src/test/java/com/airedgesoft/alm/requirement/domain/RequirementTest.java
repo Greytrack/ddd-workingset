@@ -75,7 +75,9 @@ class RequirementTest {
         assertTrue(created.hasMaterialized());
         assertFalse(inherited.hasMaterialized());
         assertTrue(created.changeTitle("B", Long.valueOf(0)).hasMaterialized());
-        assertTrue(created.delete(Long.valueOf(0)).hasMaterialized());
+        Requirement deleted = givenRequirement();
+        deleted.delete(Long.valueOf(0));
+        assertTrue(deleted.hasMaterialized(), "删除不改变 materialized");
         assertFalse(inherited.changeTitle("B", Long.valueOf(0)).hasMaterialized());
     }
 

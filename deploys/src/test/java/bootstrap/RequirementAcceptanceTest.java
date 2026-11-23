@@ -1,7 +1,7 @@
 package bootstrap;
 
 
-import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemLifecycleService;
+import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemCommandService;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
@@ -59,7 +59,7 @@ class RequirementAcceptanceTest {
     @Autowired
     private LightTrackerItemQueryProvider indexQueries;
     @Autowired
-    private TrackerItemLifecycleService indexLifecycle;
+    private TrackerItemCommandService indexLifecycle;
 
     private RootTrackerFixture fixture;
     private String localId;

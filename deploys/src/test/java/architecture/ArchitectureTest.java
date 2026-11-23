@@ -16,70 +16,71 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
  * AC-01：Working Set 编译期不依赖 ALM 的实现模块或业务聚合类型（A1/T4 §3.1）。
  */
 @AnalyzeClasses(
-        packages = {"sk.workingset", "sk.productspace", "alm.requirement", "bootstrap"},
+        packages = {"com.airedgesoft.sharekernel.workingset", "com.airedgesoft.sharekernel.productspace",
+                "com.airedgesoft.sharekernel.tracker", "com.airedgesoft.alm.requirement", "bootstrap"},
         importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
 
     @ArchTest
     static final ArchRule product_space_inner_layers_must_not_depend_on_outer_layers =
             noClasses()
-                    .that().resideInAnyPackage("sk.productspace.domain..", "sk.productspace.application..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.productspace.domain..", "com.airedgesoft.sharekernel.productspace.application..")
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "sk.productspace.infrastructure..", "sk.productspace.adapters..",
-                            "sk.workingset.infrastructure..", "sk.workingset.adapters..",
-                            "sk.tracker.infrastructure..", "sk.tracker.adapters..");
+                            "com.airedgesoft.sharekernel.productspace.infrastructure..", "com.airedgesoft.sharekernel.productspace.adapters..",
+                            "com.airedgesoft.sharekernel.workingset.infrastructure..", "com.airedgesoft.sharekernel.workingset.adapters..",
+                            "com.airedgesoft.sharekernel.tracker.infrastructure..", "com.airedgesoft.sharekernel.tracker.adapters..");
 
     @ArchTest
     static final ArchRule alm_inner_layers_must_not_depend_on_infrastructure =
             noClasses()
-                    .that().resideInAnyPackage("alm.requirement.domain..", "alm.requirement.application..")
+                    .that().resideInAnyPackage("com.airedgesoft.alm.requirement.domain..", "com.airedgesoft.alm.requirement.application..")
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "alm.requirement.infrastructure..", "alm.requirement.adapters..");
+                            "com.airedgesoft.alm.requirement.infrastructure..", "com.airedgesoft.alm.requirement.adapters..");
 
     @ArchTest
     static final ArchRule domain_must_not_depend_on_app_exception =
             noClasses()
-                    .that().resideInAnyPackage("sk.workingset.domain..", "alm.requirement.domain..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.workingset.domain..", "com.airedgesoft.alm.requirement.domain..")
                     .should().dependOnClassesThat().areAssignableTo(AppException.class);
 
     @ArchTest
     static final ArchRule working_set_must_not_depend_on_alm =
             noClasses()
-                    .that().resideInAPackage("sk.workingset..")
-                    .should().dependOnClassesThat().resideInAPackage("alm.requirement..");
+                    .that().resideInAPackage("com.airedgesoft.sharekernel.workingset..")
+                    .should().dependOnClassesThat().resideInAPackage("com.airedgesoft.alm.requirement..");
 
     @ArchTest
     static final ArchRule query_must_not_depend_on_command =
             noClasses()
                     .that().resideInAnyPackage(
-                            "sk.workingset.application.query..", "alm.requirement.application.query..")
+                            "com.airedgesoft.sharekernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "sk.workingset.application.command..", "alm.requirement.application.command..");
+                            "com.airedgesoft.sharekernel.workingset.application.command..", "com.airedgesoft.alm.requirement.application.command..");
 
     @ArchTest
     static final ArchRule command_must_not_depend_on_query =
             noClasses()
                     .that().resideInAnyPackage(
-                            "sk.workingset.application.command..", "alm.requirement.application.command..")
+                            "com.airedgesoft.sharekernel.workingset.application.command..", "com.airedgesoft.alm.requirement.application.command..")
                     .should().dependOnClassesThat(
                             resideInAnyPackage(
-                                    "sk.workingset.application.query..", "alm.requirement.application.query..")
+                                    "com.airedgesoft.sharekernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
                                     .and(resideOutsideOfPackages(
-                                            "sk.workingset.application.query.provider..",
-                                            "alm.requirement.application.query.provider..")));
+                                            "com.airedgesoft.sharekernel.workingset.application.query.provider..",
+                                            "com.airedgesoft.alm.requirement.application.query.provider..")));
 
     @ArchTest
     static final ArchRule query_application_must_not_depend_on_mybatis =
             noClasses()
                     .that().resideInAnyPackage(
-                            "sk.workingset.application.query..", "alm.requirement.application.query..")
+                            "com.airedgesoft.sharekernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.baomidou..", "org.apache.ibatis..");
 
     @ArchTest
     static final ArchRule domain_must_not_depend_on_persistence_frameworks =
             noClasses()
-                    .that().resideInAnyPackage("sk.workingset.domain..", "sk.productspace.domain..", "alm.requirement.domain..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.workingset.domain..", "com.airedgesoft.sharekernel.productspace.domain..", "com.airedgesoft.alm.requirement.domain..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.baomidou..", "org.apache.ibatis..", "org.springframework.jdbc..");
 
@@ -105,21 +106,21 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule shared_kernel_repositories_must_not_depend_on_business_bc_types =
             noClasses()
-                    .that().resideInAnyPackage("sk.workingset.infrastructure.repositories..")
-                    .should().dependOnClassesThat().resideInAnyPackage("alm.requirement..");
+                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.workingset.infrastructure.repositories..")
+                    .should().dependOnClassesThat().resideInAnyPackage("com.airedgesoft.alm.requirement..");
 
     @ArchTest
     static final ArchRule shared_kernel_infrastructure_must_not_depend_on_business_bc_types =
             noClasses()
                     .that().resideInAnyPackage(
-                            "sk.workingset.infrastructure..", "sk.tracker.infrastructure..",
-                            "sk.productspace.infrastructure..")
-                    .should().dependOnClassesThat().resideInAnyPackage("alm.requirement..");
+                            "com.airedgesoft.sharekernel.workingset.infrastructure..", "com.airedgesoft.sharekernel.tracker.infrastructure..",
+                            "com.airedgesoft.sharekernel.productspace.infrastructure..")
+                    .should().dependOnClassesThat().resideInAnyPackage("com.airedgesoft.alm.requirement..");
 
     @ArchTest
     static final ArchRule composition_root_must_not_depend_on_business_bc_adapters_or_infrastructure =
             noClasses()
                     .that().resideInAPackage("bootstrap..")
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "alm.requirement.adapters..", "alm.requirement.infrastructure..");
+                            "com.airedgesoft.alm.requirement.adapters..", "com.airedgesoft.alm.requirement.infrastructure..");
 }

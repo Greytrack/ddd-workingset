@@ -25,8 +25,8 @@ flowchart TD
     G -->|"是"| G1["删除 Tracker 聚合<br/>并解除其 TrackerBinding"]
     G -->|"否"| G2["拒绝：TrackerHasItems<br/>TrackerHasOrgChildren<br/>TrackerHasDerivedChildren"]
 
-    B -->|"ProductSpace 聚合"| D{"默认工作集<br/>无 WorkingSet 绑定、业务引用及外部 Tracker 引用"}
-    D -->|"是"| D1["逐个删除空 Tracker<br/>删除 ProductSpace 聚合"]
+    B -->|"ProductSpace 聚合"| D{"默认工作集<br/>无绑定、业务引用或有效 Tracker"}
+    D -->|"是"| D1["标记 ProductSpace 已删除<br/>保存并发布删除事实"]
     D -->|"否"| D2["拒绝"]
 
     B -->|"WorkingSet"| E{"非默认 WS 且<br/>无子级、绑定及归属 Tracker"}
@@ -61,42 +61,32 @@ sequenceDiagram
     autonumber
     actor U as 用户
     participant PS as ProductSpace
-    participant WS as WorkingSet 集合
-    participant TR as Tracker 集合
-
     U->>PS: deleteProductSpace
-    PS->>PS: 审查业务引用和外部 Tracker 引用
+    PS->>PS: 加载聚合并校验绑定、引用及有效 Tracker
     alt 审查失败
         PS-->>U: 拒绝删除
-    else 可受理
-        PS-->>U: 202 Accepted
-        loop 每个绑定工作集
-            PS->>WS: 解除该空间的 TrackerBinding 与 SpaceBinding
-        end
-        loop 从空的叶子 Tracker 开始
-            PS->>TR: 删除一个 Tracker
-        end
-        PS->>PS: 删除 ProductSpace 聚合
+    else 可删除
+        PS->>PS: 标记删除、保存并发布 ProductSpaceDeleted
+        PS-->>U: 204 No Content
     end
 ```
 
 ## 3. 规则索引
 
 1. **删除子工作集**时，Shared Tracker 的 Item 不阻塞解除其关联。
-2. **空产品空间删除**先校验绑定，通过可靠事件逐个删除空
-   Tracker。具体准入见[绑定与删除契约](../05-contracts/t2-binding-deletion.md#43-聚合删除)。
+2. **空产品空间删除**先校验绑定、引用和有效 Tracker。具体准入见[绑定与删除契约](../05-contracts/t2-binding-deletion.md#43-聚合删除)。
 3. **删除 WorkingSet 是受成员关系约束的业务操作**：任一成员不可合法解除即整体阻止，不引入无条件级联解除；解除顺序为
    TrackerBinding → SpaceBinding → WorkingSet。
 
 ## 4. 裁定与图表状态
 
-K1～K3 的冻结范围与 2026-11-21 对产品空间删除的裁定见[契约 v1](../05-contracts/t2-binding-deletion.md)。
+K1～K3 的冻结范围与 2026-11-23 对产品空间删除的裁定见[契约 v1](../05-contracts/t2-binding-deletion.md)。
 
 图本身仍为 `Draft / Candidate`：Mermaid 实际渲染未验证（环境无 `mmdc`），纳入正式基线与发布前须在可渲染环境复核。
 
 ## 事务边界补充
 
-ProductSpace 删除按图中的顺序逐聚合提交。其余流程的事务现状见[实现边界](../07-implementation.md)。
+ProductSpace 删除只写入自身聚合。事务现状见[实现边界](../07-implementation.md)。
 
 ```mermaid
 sequenceDiagram

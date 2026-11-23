@@ -6,6 +6,7 @@ import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryApprovedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeEntryResolvedEvent.Outcome;
@@ -94,7 +95,11 @@ public final class RequirementMergeWriter {
             Requirement created = create(command);
             repository.save(created);
             if (command.operation() == MergeEntryApprovedEvent.Operation.DELETE) {
-                requirements.saveChange(created, created.delete(created.lockVersion()));
+                RequirementSnapshot snapshot = RequirementSnapshot.of(created);
+                int beforeRevision = created.revision();
+                long beforeLockVersion = created.lockVersion();
+                BusinessObjectDeleteEvent deletedEvent = created.delete(created.lockVersion());
+                requirements.saveDeleted(snapshot, created, beforeRevision, beforeLockVersion, deletedEvent);
             }
             return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
                     created.localId(), command.sourceRevision(), created.revision(), true,
@@ -105,16 +110,27 @@ public final class RequirementMergeWriter {
             throw DomainException.withMessage(MergeResCode.CONFLICT, "target identity changed");
         }
         Long expected = command.expectedLockVersion();
-        Requirement changed = switch (command.operation()) {
-            case UPDATE -> current.changeContent(
+        Requirement changed = current;
+        BusinessObjectDeleteEvent deletedEvent = null;
+        switch (command.operation()) {
+            case UPDATE -> changed = current.changeContent(
                     text(command.acceptedFields(), "title", current.title()),
                     text(command.acceptedFields(), "description", current.description()), expected);
-            case DELETE -> current.delete(expected);
-            case RESTORE -> current.restoreContent(text(command.baseFields(), "title", null),
+            case DELETE -> {
+                RequirementSnapshot snapshot = RequirementSnapshot.of(current);
+                int beforeRevision = current.revision();
+                long beforeLockVersion = current.lockVersion();
+                deletedEvent = current.delete(expected);
+                requirements.saveDeleted(snapshot, current, beforeRevision, beforeLockVersion, deletedEvent);
+                changed = current;
+            }
+            case RESTORE -> changed = current.restoreContent(text(command.baseFields(), "title", null),
                     text(command.baseFields(), "description", null), expected);
             case CREATE -> throw DomainException.withMessage(MergeResCode.CONFLICT, "target already exists");
-        };
-        requirements.saveChange(current, changed);
+        }
+        if (deletedEvent == null) {
+            requirements.saveChange(current, changed);
+        }
         return new MergeEntryResolvedEvent(command.roundId(), command.entryId(), Outcome.APPLIED,
                 changed.localId(), command.sourceRevision(), changed.revision(), false,
                 command.inherited(), null);

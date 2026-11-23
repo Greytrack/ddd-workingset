@@ -7,6 +7,7 @@ import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.Trac
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import com.airedgesoft.sharekernel.workingset.adapters.WorkingSetCreationController.CreationView;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetCreationService;
+import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.WorkingSetCreationSubmittedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
@@ -20,9 +21,12 @@ import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -39,12 +43,17 @@ import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static bootstrap.FixtureIds.fixtureId;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "workingset.creation.index-batch-size=2")
@@ -76,6 +85,8 @@ class WorkingSetCreationAcceptanceTest {
     private WorkingSetCreationService creations;
     @Autowired
     private LightTrackerItemRepository items;
+    @SpyBean
+    private LightTrackerItemQueryProvider itemQueries;
     @Autowired
     private ObjectMapper mapper;
 
@@ -85,6 +96,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", child);
         jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", parent);
         jdbc.update("DELETE FROM air_ws_items_index WHERE work_space_id IN (?, ?)", space, otherSpace);
+        jdbc.update("DELETE FROM air_inst_common WHERE work_space IN (?, ?) AND base_class = 1401", space, otherSpace);
         jdbc.update("DELETE FROM requirements WHERE tracker_id IN (SELECT tracker_id FROM trackers WHERE product_space_id IN (?, ?))",
                 space, otherSpace);
         jdbc.update("""
@@ -525,6 +537,7 @@ class WorkingSetCreationAcceptanceTest {
         seedItem(unshared, stale, stale, false);
         seedParentLti(parentTracker, fixtureId("virtual-stale-" + child), stale, stale, false);
         jdbc.update("UPDATE requirements SET revision = 4 WHERE local_id = ?", stale);
+        jdbc.update("UPDATE air_inst_common SET revision = 4 WHERE id = ?", stale);
 
         String id = submit(new Request(parent, child, "index-derived", List.of(space), List.of(), List.of(parentTracker)));
         CreationView completed = awaitStatus(id, Status.PartiallySucceeded);
@@ -567,35 +580,38 @@ class WorkingSetCreationAcceptanceTest {
         for (String family : families) {
             seedItem(unshared, family, family, false);
         }
+        CountDownLatch nextBatchStarted = new CountDownLatch(1);
+        CountDownLatch releaseBatch = new CountDownLatch(1);
+        doAnswer(call -> {
+            nextBatchStarted.countDown();
+            assertTrue(releaseBatch.await(15, TimeUnit.SECONDS));
+            return call.callRealMethod();
+        }).when(itemQueries).pageInTracker(eq(Long.valueOf(unshared)), anyLong(), eq(families.get(1)), eq(2));
         String id;
-        try (Connection connection = dataSource.getConnection()) {
-            connection.setAutoCommit(false);
-            try (PreparedStatement statement = connection.prepareStatement("SELECT local_id FROM requirements WHERE local_id = ? FOR UPDATE")) {
-                statement.setString(1, last);
-                statement.executeQuery().close();
-                id = submit(new Request("1", child, "index-running", List.of(space), List.of(), List.of(unshared)));
-                await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                    CreationView running = task(id);
-                    assertEquals(Status.Running, running.status());
-                    assertEquals(Stage.INDEX_UNSHARED_TRACKERS, running.stage());
-                    assertNotNull(running.indexProgress().get(unshared));
-                    assertEquals(2, running.indexProgress().get(unshared).succeeded());
-                });
-                String firstLocal = jdbc.queryForObject(
-                        "SELECT local_id FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?",
-                        String.class, child, first);
-                ResponseEntity<Map> response = rest.getForEntity("/api/requirements/" + firstLocal, Map.class);
-                assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-                assertEquals("PREPARING", response.getBody().get("reason"));
-                assertEquals(HttpStatus.OK, rest.getForEntity(CREATIONS + "/" + id + "/working-set", Map.class).getStatusCode());
-                String tracker = jdbc.queryForObject(
-                        "SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?",
-                        String.class, child, unshared);
-                ItemIndexFixture.insert(jdbc, fixtureId("existing-" + child), last, tracker, child, 3, last, 3, false);
-                transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmittedEvent(id)));
-            } finally {
-                connection.rollback();
-            }
+        try {
+            id = submit(new Request("1", child, "index-running", List.of(space), List.of(), List.of(unshared)));
+            assertTrue(nextBatchStarted.await(5, TimeUnit.SECONDS));
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+                CreationView running = task(id);
+                assertEquals(Status.Running, running.status());
+                assertEquals(Stage.INDEX_UNSHARED_TRACKERS, running.stage());
+                assertNotNull(running.indexProgress().get(unshared));
+                assertEquals(2, running.indexProgress().get(unshared).succeeded());
+            });
+            String firstLocal = jdbc.queryForObject(
+                    "SELECT local_id FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?",
+                    String.class, child, first);
+            ResponseEntity<Map> response = rest.getForEntity("/api/requirements/" + firstLocal, Map.class);
+            assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+            assertEquals("PREPARING", response.getBody().get("reason"));
+            assertEquals(HttpStatus.OK, rest.getForEntity(CREATIONS + "/" + id + "/working-set", Map.class).getStatusCode());
+            String tracker = jdbc.queryForObject(
+                    "SELECT tracker_id FROM trackers WHERE working_set_id = ? AND source_id = ?",
+                    String.class, child, unshared);
+            ItemIndexFixture.insert(jdbc, fixtureId("existing-" + child), last, tracker, child, 3, last, 3, false);
+            transaction.executeWithoutResult(tx -> events.publishEvent(new WorkingSetCreationSubmittedEvent(id)));
+        } finally {
+            releaseBatch.countDown();
         }
         CreationView completed = awaitStatus(id, Status.Succeeded);
         assertEquals(2, completed.indexProgress().get(unshared).succeeded());
@@ -660,6 +676,43 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals("NoDerivableTracker", duplicate.getBody().get("reason"));
         assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM trackers WHERE working_set_id = ?",
                 Integer.class, child));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void creationAndExtensionCompleteWhileSourceRowsAreLockedForNormalWrites(boolean extend) throws Exception {
+        seedRange();
+        if (extend) {
+            createTarget();
+        }
+        String item = fixtureId("source-write-" + child);
+        seedItem(unshared, item, item, false);
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement parentRow = connection.prepareStatement(
+                    "SELECT id FROM air_inst_workingset WHERE id = 1 FOR NO KEY UPDATE");
+                 PreparedStatement tracker = connection.prepareStatement(
+                    "SELECT id FROM air_inst_tracker_rev WHERE id = ? FOR NO KEY UPDATE");
+                 PreparedStatement productSpace = connection.prepareStatement(
+                         "SELECT product_space_id FROM product_spaces WHERE product_space_id = ? FOR NO KEY UPDATE");
+                 PreparedStatement source = connection.prepareStatement(
+                    "SELECT id FROM air_inst_common WHERE id = ? FOR UPDATE")) {
+                parentRow.executeQuery().close();
+                tracker.setLong(1, Long.parseLong(unshared));
+                tracker.executeQuery().close();
+                productSpace.setLong(1, Long.parseLong(space));
+                productSpace.executeQuery().close();
+                source.setLong(1, Long.parseLong(item));
+                source.executeQuery().close();
+
+                String id = extend ? extension(List.of(unshared))
+                        : submit(new Request("1", child, "create-with-source-writes", List.of(space), List.of(), List.of(unshared)));
+                CreationView completed = awaitStatus(id, Status.Succeeded);
+                assertEquals(1, completed.indexProgress().get(unshared).succeeded());
+            } finally {
+                connection.rollback();
+            }
+        }
     }
 
     @Test
@@ -738,6 +791,7 @@ class WorkingSetCreationAcceptanceTest {
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, localId, commonId, tracker, deleted, tracker, System.currentTimeMillis());
         String owner = jdbc.queryForObject("SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?", String.class, tracker);
+        ItemIndexFixture.registerRequirementFacts(jdbc, localId);
         ItemIndexFixture.insert(jdbc, localId, commonId, tracker, owner, 3, localId, 3, true);
         if (deleted) {
             jdbc.update("UPDATE air_ws_items_index SET flags = 1 WHERE local_id = ?", localId);

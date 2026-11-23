@@ -10,6 +10,7 @@ import java.util.Optional;
  */
 @Repository
 public interface TrackerRepository {
+
     Optional<Tracker> findById(Long id);
 
     Optional<Tracker> lockTracker(Long id);
@@ -23,5 +24,9 @@ public interface TrackerRepository {
      */
     void save(Tracker tracker);
 
-    void deleteTracker(Long id);
+    /**
+     * 物理删除聚合；软删除通过 {@link #save(Tracker)} 持久化聚合的 deleted 状态。
+     */
+    void delete(Tracker tracker);
+
 }

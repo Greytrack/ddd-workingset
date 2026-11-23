@@ -52,6 +52,22 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     @Override
+    public Optional<WorkingSet> findByIdForUpdate(Long id) {
+        return loadLocked(id, " FOR UPDATE");
+    }
+
+    @Override
+    public Optional<WorkingSet> findByIdForChildCreation(Long id) {
+        return loadLocked(id, " FOR KEY SHARE");
+    }
+
+    private Optional<WorkingSet> loadLocked(Long id, String lockingClause) {
+        requireReady(id);
+        return jdbc.query("SELECT id FROM air_inst_workingset WHERE id = ? AND delete_flag = 0" + lockingClause,
+                (row, index) -> row.getLong(1), id).stream().findFirst().flatMap(this::loadWorkingSet);
+    }
+
+    @Override
     public Optional<WorkingSet> findByIdForCreation(Long id) {
         return loadWorkingSet(id);
     }

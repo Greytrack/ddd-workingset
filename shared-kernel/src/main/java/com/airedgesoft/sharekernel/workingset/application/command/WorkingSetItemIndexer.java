@@ -6,6 +6,7 @@ import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
+import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
@@ -19,9 +20,11 @@ import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreati
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation.Stage;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.SavepointManager;
 
@@ -31,11 +34,11 @@ import java.util.List;
 /**
  * Pages parent Items using the baseline time stored with the creation task.
  *
- * <p>候选只来自父 Tracker 的 LTI；业务 BC 只负责提供受锁保护的来源状态。
+ * <p>候选只来自父 Tracker 的 LTI；来源校验使用通用业务对象登记中的状态和版次。
  */
 @Slf4j
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public final class WorkingSetItemIndexer {
 
 
@@ -44,6 +47,10 @@ public final class WorkingSetItemIndexer {
     private final LightTrackerItemQueryProvider itemQueries;
     private final LightTrackerItemRepository items;
     private final IdentifierGenerator ids;
+    private final TrackerItemSourceLock sourceLock;
+
+    @Value("${workingset.creation.index-batch-size:100}")
+    private int batchSize;
 
     static final long FOLDER_CLASSIFICATION_ID = 10070101L;
 
@@ -53,6 +60,9 @@ public final class WorkingSetItemIndexer {
     }
 
     private static FailureReason reason(RuntimeException failure) {
+        if (failure instanceof PessimisticLockingFailureException concurrencyConflict) {
+            throw concurrencyConflict;
+        }
         if (failure instanceof DomainException domainFailure) {
             return FailureReason.of(domainFailure);
         }
@@ -84,7 +94,6 @@ public final class WorkingSetItemIndexer {
         WorkingSetCreation.IndexProgress progress = creation.indexProgress().getOrDefault(Long.toString(parent), IndexProgress.initial());
         Object savepoint = transaction.createSavepoint();
         List<LightTrackerItemSummary> page;
-        int batchSize = 100;
         try {
             page = itemQueries.pageInTracker(parent, baselineAt, progress.afterLocalId(), batchSize);
         } catch (RuntimeException failure) {
@@ -138,6 +147,16 @@ public final class WorkingSetItemIndexer {
         }
         Long sourceId = candidate.effectiveContentSource();
         Integer sourceRevision = candidate.effectiveContentRevision();
+        TrackerItemSourceLock.State source = sourceLock.read(sourceId).orElse(null);
+        if (source == null) {
+            return new Outcome(IndexResult.Skipped, failure(parent, child, candidate.localId(), FailureReason.NOT_FOUND));
+        }
+        if (source.deleted()) {
+            return new Outcome(IndexResult.Skipped, failure(parent, child, candidate.localId(), FailureReason.DELETED));
+        }
+        if (!sourceRevision.equals(source.revision())) {
+            return new Outcome(IndexResult.Skipped, failure(parent, child, candidate.localId(), FailureReason.HISTORY_UNAVAILABLE));
+        }
         Long id;
         do {
             id = ids.nextId(null).longValue();

@@ -4,10 +4,12 @@ package com.airedgesoft.sharekernel.workingset.application.command;
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.WorkingSetQueryProvider;
+import com.airedgesoft.sharekernel.workingset.domain.event.WorkingSetDeleted;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class WorkingSetDeletionService {
     private final WorkingSetRepository workingSets;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
+    private final ApplicationEventPublisher events;
 
     /**
      * 校验引用后仅删除 WorkingSet 聚合。
@@ -30,7 +33,7 @@ public class WorkingSetDeletionService {
     @Transactional
     public void deleteWorkingSet(Long id) {
         WorkingSet.requireDeletable(id);
-        WorkingSet workingSet = workingSets.findById(id)
+        WorkingSet workingSet = workingSets.findByIdForUpdate(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
         assertNoChildren(id);
         if (queries.hasBindings(id)) {
@@ -39,7 +42,9 @@ public class WorkingSetDeletionService {
         if (trackerQueries.hasOwnedTrackers(id)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_TRACKERS, Long.toString(id));
         }
-        workingSets.delete(workingSet);
+        WorkingSetDeleted deletedEvent = workingSet.delete();
+        workingSets.save(workingSet);
+        events.publishEvent(deletedEvent);
     }
 
     private void assertNoChildren(Long id) {

@@ -21,8 +21,8 @@ T4 的 Adapter 边界。
 
 | 关注点                   | 归属       | 入口                                                            |
 |--------------------------|------------|-----------------------------------------------------------------|
-| 内容是否仍被 COW 依赖    | SK         | `TrackerItemLifecycleService.assertPurgeable`                   |
-| LTI 移除                 | SK         | `TrackerItemLifecycleService.removePurged`                      |
+| 内容是否仍被 COW 依赖    | SK         | `TrackerItemCommandService.assertPurgeable`                   |
+| LTI 移除                 | SK         | `TrackerItemCommandService.removePurged`                      |
 | 业务对象的创建/校验/提交 | ALM        | `RequirementWritePort.materialize` / `verifyMaterializedTarget` |
 | 业务对象永久删除决定     | ALM        | `RequirementLifecycleService.delete2`                           |
 | 删除后清理 LTI 的通知    | 跨 BC 事件 | `CompleteDeleteEvent` → `TrackerItemPurgedListener`             |

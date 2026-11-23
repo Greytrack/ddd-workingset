@@ -2,9 +2,11 @@ package com.airedgesoft.sharekernel.workingset.application.command;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.RequestThreadHolder;
+import com.airedgesoft.sharekernel.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
 import com.airedgesoft.sharekernel.tracker.domain.Tracker;
 import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
+import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeTargetEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
@@ -23,10 +25,12 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
-public class TrackerItemLifecycleService {
+public class TrackerItemCommandService {
 
-    private final TrackerRepository trackers;
-    private final LightTrackerItemRepository items;
+    private final TrackerRepository trackerRepository;
+    private final LightTrackerItemRepository lightTrackerItemRepository;
+    private final LiteBusinessObjectProvider businessObjects;
+    private final TrackerItemSourceLock sourceLock;
 
     private static ItemClassification classificationOf(Tracker tracker) {
         return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
@@ -45,14 +49,14 @@ public class TrackerItemLifecycleService {
      */
     @Transactional
     public void applyCommittedUpgrade(Long id, Integer before, Integer after) {
-        LightTrackerItem item = items.findByIdForUpdate(id)
+        LightTrackerItem item = lightTrackerItemRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "item index missing for committed revision: " + Long.toString(id)));
+                        "item index missing for committed revision: " + id));
         if (!item.materialized()) {
             item.switchToLocalBacked(before);
         }
         if (item.advanceRevision(before, after)) {
-            items.save(item);
+            lightTrackerItemRepository.save(item);
         }
     }
 
@@ -61,14 +65,13 @@ public class TrackerItemLifecycleService {
      */
     @Transactional
     public void synchronizeDeletion(Long id) {
-        LightTrackerItem current = items.findById(id).orElse(null);
-        if (current == null) {
-            return;
-        }
-        items.findByIdForUpdate(id).ifPresent(item -> {
-            if (item.recordDeletionState(true)) {
-                items.save(item);
-            }
+        lightTrackerItemRepository.findByIdForUpdate(id).ifPresent(item -> {
+            businessObjects.findById(id).ifPresent(current -> {
+                boolean changed = current.isDeleted() ? item.delete() : item.undelete();
+                if (changed) {
+                    lightTrackerItemRepository.save(item);
+                }
+            });
         });
     }
 
@@ -77,7 +80,7 @@ public class TrackerItemLifecycleService {
      */
     @Transactional
     public void removePurged(Long localId) {
-        items.remove(localId);
+        lightTrackerItemRepository.remove(localId);
     }
 
     /**
@@ -104,27 +107,30 @@ public class TrackerItemLifecycleService {
 
     private void registerLocal(Long id, Long commonId, Long trackerId, Long workingSetId,
                                Integer revision) {
-        if (items.findById(id).isPresent()) {
+        TrackerItemSourceLock.State current = sourceLock.lock(id).orElse(null);
+        if (current == null) {
             return;
         }
-        if (items.findById(id).isPresent()) {
+        if (lightTrackerItemRepository.findById(id).isPresent()) {
             return;
         }
-        Tracker tracker = trackers.findById(trackerId)
+        Tracker tracker = trackerRepository.findById(trackerId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
                 classificationOf(tracker), RequestThreadHolder.getUserId());
-        item.recordDeletionState(false);
-        items.save(item);
+        if (current.deleted()) {
+            item.delete();
+        }
+        lightTrackerItemRepository.save(item);
     }
 
     private void switchToLocalContent(Long localId, Integer revision) {
-        LightTrackerItem item = items.findByIdForUpdate(localId)
+        LightTrackerItem item = lightTrackerItemRepository.findByIdForUpdate(localId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "target variant disappeared: " + Long.toString(localId)));
+                        "target variant disappeared: " + localId));
         if (!item.materialized()) {
             item.switchToLocalBacked(revision);
-            items.save(item);
+            lightTrackerItemRepository.save(item);
         }
     }
 }

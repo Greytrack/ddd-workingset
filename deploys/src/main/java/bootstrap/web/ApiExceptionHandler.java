@@ -9,6 +9,7 @@ import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharekernel.workingset.error.MergeResCode;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -29,7 +30,7 @@ import java.util.Objects;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ExceptionHandler({DataIntegrityViolationException.class, PessimisticLockingFailureException.class})
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation() {
         return ResponseEntity.status(409).body(Map.of("code", WorkingsetResultCode.DATA_INTEGRITY_CONFLICT.getCode(),
                 "reason", "DATA_INTEGRITY_CONFLICT", "message", WorkingsetResultCode.DATA_INTEGRITY_CONFLICT.getDesc()));
