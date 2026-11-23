@@ -140,7 +140,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                 item.sourceLocalId(),
                 item.sourceRevision(),
                 item.materialized() ? 1 : 0,
-                item.indexFlags(),
+                item.deleted() ? 1 : 0,
                 actor,
                 now,
                 upgrade == null ? 1 : upgrade.effectiveRevision(),

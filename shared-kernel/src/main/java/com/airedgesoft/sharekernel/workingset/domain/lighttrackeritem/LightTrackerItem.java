@@ -2,14 +2,10 @@ package com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
+import lombok.Getter;
 import org.jmolecules.ddd.annotation.AggregateRoot;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Working Set 专属独立聚合（D-008）：身份、来源与有效变体定位权威。
@@ -23,22 +19,11 @@ import java.util.Set;
  * </ul>
  * 首次物化原子切换三字段；显式升版同步推进本地来源版次与成员索引。
  */
+@Getter
 @AggregateRoot
 public final class LightTrackerItem {
 
     private static final Set<Long> INITIALLY_CHECKED_IN_CLASS_IDS = Set.of(140101L);
-
-    public record InitialIndexStatus(int effectiveCheckedOut, String effectiveFlags, boolean flag5) {
-        private static InitialIndexStatus forClass(long classId) {
-            return INITIALLY_CHECKED_IN_CLASS_IDS.contains(classId)
-                    ? new InitialIndexStatus(0, "1110000000", false)
-                    : new InitialIndexStatus(1, "1110100000", true);
-        }
-    }
-
-    public record EffectiveIndexStatus(int effectiveRevision, int effectiveCheckedOut, String effectiveFlags,
-                                     boolean flag1, boolean flag2, boolean flag3, boolean flag4, boolean flag5) {
-    }
 
     private final Long localId;
     private final Long commonId;
@@ -46,7 +31,6 @@ public final class LightTrackerItem {
     private final Long workingSetId;
     private final long productSpaceId;
     private final long classificationId;
-    private final Map<Integer, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
     private final String createdBy;
     private Integer revision;
     private Long sourceLocalId;
@@ -56,10 +40,8 @@ public final class LightTrackerItem {
     private InitialIndexStatus initialIndexStatus;
     private EffectiveIndexStatus upgradeIndexStatus;
     private EffectiveIndexStatus checkinIndexStatus;
-
-    public EffectiveIndexStatus checkinIndexStatus() {
-        return checkinIndexStatus;
-    }
+    private DowngradeIndexStatus downgradeIndexStatus;
+    private final Map<Integer, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
 
     public void applyCheckin(int checkedInRevision, String effectiveFlags) {
         requireCurrentRevision(checkedInRevision);
@@ -72,15 +54,6 @@ public final class LightTrackerItem {
                 effectiveFlags.charAt(2) == '1', effectiveFlags.charAt(3) == '1', effectiveFlags.charAt(4) == '1');
         upgradeIndexStatus = null;
         downgradeIndexStatus = null;
-    }
-    private DowngradeIndexStatus downgradeIndexStatus;
-
-    public record DowngradeIndexStatus(int removedRevision, int effectiveRevision, int effectiveCheckedOut,
-                                       String effectiveFlags, boolean flag1, boolean flag2, boolean flag3) {
-    }
-
-    public DowngradeIndexStatus downgradeIndexStatus() {
-        return downgradeIndexStatus;
     }
 
     public static LightTrackerItem restoreRevisionState(LightTrackerItem item, List<Integer> memberFlags) {
@@ -144,13 +117,6 @@ public final class LightTrackerItem {
         checkInvariants();
     }
 
-    public EffectiveIndexStatus upgradeIndexStatus() {
-        return upgradeIndexStatus;
-    }
-
-    public InitialIndexStatus initialIndexStatus() {
-        return initialIndexStatus;
-    }
 
     private static long knownClassId(long classificationId) {
         return classificationId == 14010101L || classificationId == 14010102L ? 140101L : 0L;
@@ -325,6 +291,28 @@ public final class LightTrackerItem {
     }
 
     /**
+     * 软删除：标记 deleted；已删除时返回 false。
+     */
+    public boolean delete() {
+        if (deleted) {
+            return false;
+        }
+        this.deleted = true;
+        return true;
+    }
+
+    /**
+     * 恢复：清除 deleted；未删除时返回 false。
+     */
+    public boolean undelete() {
+        if (!deleted) {
+            return false;
+        }
+        this.deleted = false;
+        return true;
+    }
+
+    /**
      * 首次 COW 生效：在单次聚合状态变更中同步更新三字段（T3 §6、A2）。
      *
      * @param expectedRevision 目标业务版次；必须等于本变体当前 revision（普通修改不升级版次）
@@ -350,10 +338,6 @@ public final class LightTrackerItem {
 
     public LightTrackerItemRevisionEntity currentRevisionIndex() {
         return revisions.get(revision);
-    }
-
-    public int indexFlags() {
-        return deleted ? 1 : 0;
     }
 
     /**
@@ -422,31 +406,6 @@ public final class LightTrackerItem {
         return sourceRevision;
     }
 
-    /**
-     * Synchronize the committed lifecycle of this variant without changing its content source or revision.
-     */
-    /**
-     * 软删除：标记 deleted；已删除时返回 false。
-     */
-    public boolean delete() {
-        if (deleted) {
-            return false;
-        }
-        this.deleted = true;
-        return true;
-    }
-
-    /**
-     * 恢复：清除 deleted；未删除时返回 false。
-     */
-    public boolean undelete() {
-        if (!deleted) {
-            return false;
-        }
-        this.deleted = false;
-        return true;
-    }
-
     public boolean deleted() {
         return deleted;
     }
@@ -474,5 +433,38 @@ public final class LightTrackerItem {
      */
     public Integer effectiveContentRevision() {
         return materialized ? revision : sourceRevision;
+    }
+
+    public EffectiveIndexStatus checkinIndexStatus() {
+        return checkinIndexStatus;
+    }
+
+    public DowngradeIndexStatus downgradeIndexStatus() {
+        return downgradeIndexStatus;
+    }
+
+
+    public EffectiveIndexStatus upgradeIndexStatus() {
+        return upgradeIndexStatus;
+    }
+
+    public InitialIndexStatus initialIndexStatus() {
+        return initialIndexStatus;
+    }
+
+    public record InitialIndexStatus(int effectiveCheckedOut, String effectiveFlags, boolean flag5) {
+        private static InitialIndexStatus forClass(long classId) {
+            return INITIALLY_CHECKED_IN_CLASS_IDS.contains(classId)
+                    ? new InitialIndexStatus(0, "1110000000", false)
+                    : new InitialIndexStatus(1, "1110100000", true);
+        }
+    }
+
+    public record EffectiveIndexStatus(int effectiveRevision, int effectiveCheckedOut, String effectiveFlags,
+                                       boolean flag1, boolean flag2, boolean flag3, boolean flag4, boolean flag5) {
+    }
+
+    public record DowngradeIndexStatus(int removedRevision, int effectiveRevision, int effectiveCheckedOut,
+                                       String effectiveFlags, boolean flag1, boolean flag2, boolean flag3) {
     }
 }
