@@ -799,8 +799,6 @@ CREATE TABLE IF NOT EXISTS air_inst_requirement_rev
 
 CREATE INDEX IF NOT EXISTS idx_requirement_rev_tracker ON air_inst_requirement_rev (tracker, instance_id);
 
-DROP VIEW IF EXISTS requirements;
-
 CREATE TABLE IF NOT EXISTS air_ws_items_index
 (
     id                    BIGINT PRIMARY KEY,
