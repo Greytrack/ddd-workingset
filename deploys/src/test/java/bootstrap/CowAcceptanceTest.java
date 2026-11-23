@@ -113,8 +113,9 @@ class CowAcceptanceTest {
         assertTrue(failures.findBySource(Long.valueOf(source)).isEmpty());
         System.out.printf("AT-03/04 HTTP B→C source=%s target=%s; DB=%s; completed=%d%n", source, first.id(),
                 jdbc.queryForMap("""
-                        SELECT r.title, l.has_copied = 1 AS materialized, l.source_local_id, l.source_revision
-                        FROM requirements r JOIN air_ws_items_index l USING (local_id) WHERE r.local_id = ?
+                        SELECT r.name AS title, l.has_copied = 1 AS materialized, l.source_local_id, l.source_revision
+                        FROM air_inst_requirement_rev r JOIN air_ws_items_index l ON l.local_id = r.instance_id
+                        WHERE r.instance_id = ? ORDER BY r.revision DESC LIMIT 1
                         """, first.id()), completedEvents());
     }
 
@@ -192,7 +193,7 @@ class CowAcceptanceTest {
         assertEquals(0, childView.lockVersion());
         assertEquals("A", childView.title());
         assertEquals("COW", childView.description());
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_requirement_rev WHERE instance_id = ?",
                 Integer.class, child.id()));
         assertFalse(read(child).materialized());
     }
@@ -208,7 +209,7 @@ class CowAcceptanceTest {
                         "expectedLockVersion", 0)), String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM air_inst_requirement_rev WHERE instance_id = ?",
                 Integer.class, child.id()));
         ReadContent content = read(child);
         assertFalse(content.materialized());
@@ -253,7 +254,7 @@ class CowAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() ->
                 assertEquals("MATERIALIZE", failures.findBySource(Long.valueOf(source)).getFirst().stage()));
         assertFalse(read(invalid).materialized());
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_requirement_rev WHERE instance_id = ?",
                 Integer.class, invalid.id()));
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
     }

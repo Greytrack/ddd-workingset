@@ -257,7 +257,7 @@ class BindingAcceptanceTest {
         assertEquals(HttpStatus.NOT_FOUND, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(folderTrackerBinding, jdbc.queryForObject(folderTrackerRelation, Long.class,
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
-        assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
+        assertEquals(1, count("SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev WHERE tracker = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
@@ -480,12 +480,12 @@ class BindingAcceptanceTest {
 
             if (create.get(10, TimeUnit.SECONDS) == HttpStatus.CREATED) {
                 assertEquals(HttpStatus.CONFLICT, remove.get(10, TimeUnit.SECONDS));
-                assertEquals(1, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
+                assertEquals(1, count("SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev WHERE tracker = ?", shared));
                 assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
             } else {
                 assertEquals(HttpStatus.CONFLICT, create.get(10, TimeUnit.SECONDS));
                 assertEquals(HttpStatus.NO_CONTENT, remove.get(10, TimeUnit.SECONDS));
-                assertEquals(0, count("SELECT count(*) FROM requirements WHERE tracker_id = ?", shared));
+                assertEquals(0, count("SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev WHERE tracker = ?", shared));
                 assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
             }
         }
@@ -494,8 +494,8 @@ class BindingAcceptanceTest {
     private void businessItem(String id, String tracker) {
         String commonId = fixtureId("family-" + id);
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id, created_by, created_time)
+                INSERT INTO air_inst_requirement_rev (instance_id, common_id, tracker, name, description, revision, lock_version,
+                    workingset_id, created_by, created_time)
                 VALUES (?, ?, ?, 'A', 'test', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, id, commonId, tracker, tracker, System.currentTimeMillis());

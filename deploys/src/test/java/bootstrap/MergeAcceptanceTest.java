@@ -156,7 +156,7 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM merge_rounds WHERE id = ?", round);
         }
         List<String> itemIds = jdbc.queryForList("""
-                SELECT local_id FROM requirements WHERE tracker_id IN
+                SELECT instance_id FROM air_inst_requirement_rev WHERE tracker IN
                     (SELECT tracker_id FROM trackers WHERE product_space_id = ?)
                 UNION SELECT local_id FROM air_ws_items_index WHERE branch_id IN
                     (SELECT tracker_id FROM trackers WHERE product_space_id = ?)
@@ -216,11 +216,11 @@ class MergeAcceptanceTest {
         assertEquals(1, result.summary().confirmed());
         assertEquals("source", requirement(editedId).title());
         assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + removedId, Map.class));
-        assertTrue(jdbc.queryForObject("SELECT delete_flag FROM requirements WHERE local_id = ?", Boolean.class, removedId));
+        assertTrue(jdbc.queryForObject("SELECT delete_flag = 1 FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Boolean.class, removedId));
         assertEquals(1, confirmations(round, add));
         assertEquals(0, confirmations(round, remove));
         assertEquals("new", jdbc.queryForObject(
-                "SELECT title FROM requirements WHERE tracker_id = ? AND common_id = ?", String.class, targetTracker, add));
+                "SELECT name FROM air_inst_requirement_rev WHERE tracker = ? AND common_id = ? ORDER BY revision DESC LIMIT 1", String.class, targetTracker, add));
         assertEquals(result, apply(round));
 
         // Soft deletion is shown as an addition but preserves the original target identity.
@@ -246,7 +246,7 @@ class MergeAcceptanceTest {
         String kept = seed(childTracker, deleted, "target retained");
         String edited = id("mixed-field-update");
         String source = seed(rootTracker, edited, "source title");
-        jdbc.update("UPDATE requirements SET description = 'source description' WHERE local_id = ?", source);
+        jdbc.update("UPDATE air_inst_requirement_rev SET description = 'source description' WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", source);
         String target = seed(childTracker, edited, "target title");
         ComparisonPage first = compare("1", child);
         Difference update = diff(first, edited);
@@ -550,7 +550,7 @@ class MergeAcceptanceTest {
         seed(childTracker, deferred, "target");
         ComparisonPage comparison = compare("1", child);
         assertTrue(submitFails(child, comparison, field(diff(comparison, deferred), "DEFER", true)));
-        jdbc.update("UPDATE requirements SET title = '', lock_version = 1 WHERE local_id = ?", rejectedSource);
+        jdbc.update("UPDATE air_inst_requirement_rev SET name = '', lock_version = 1 WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", rejectedSource);
         ComparisonPage withInvalidSource = compare("1", child);
         String round = submit(child, withInvalidSource, field(diff(withInvalidSource, keep), "IGNORED", true),
                 field(diff(withInvalidSource, rejected), "ACCEPT", false),
@@ -633,8 +633,8 @@ class MergeAcceptanceTest {
         ItemIndexFixture.updateRevision(jdbc, Long.toString(grand.item().localId()), 1);
 
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id, created_by, created_time)
+                INSERT INTO air_inst_requirement_rev (instance_id, common_id, tracker, name, description, revision, lock_version,
+                    workingset_id, created_by, created_time)
                 VALUES (?, ?, ?, 'parent local', 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, parentLocal, anchor, childTracker, childTracker, System.currentTimeMillis());
@@ -742,9 +742,9 @@ class MergeAcceptanceTest {
         assertEquals(State.Succeeded, awaitResult(submit(child, compare("1", child),
                 existence(first, "ACCEPT"))).state());
         String sourceLocal = jdbc.queryForObject(
-                "SELECT local_id FROM requirements WHERE tracker_id = ? AND common_id = ?",
+                "SELECT instance_id FROM air_inst_requirement_rev WHERE tracker = ? AND common_id = ? ORDER BY revision DESC LIMIT 1",
                 String.class, rootTracker, family);
-        jdbc.update("UPDATE requirements SET revision = revision + 1, title = ? WHERE local_id = ?",
+        jdbc.update("UPDATE air_inst_requirement_rev SET revision = revision + 1, name = ? WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)",
                 "changed after first round", sourceLocal);
         Difference second = diff(compare("1", child), family);
         ResponseEntity<MergeRound> secondRound = rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
@@ -858,7 +858,7 @@ class MergeAcceptanceTest {
         assertEquals(State.Succeeded, awaitResult(firstRound).state());
         assertEquals(appliedVersion, requirement(target).lockVersion());
 
-        jdbc.update("UPDATE requirements SET revision = 4, title = 'source revised' WHERE local_id = ?", source);
+        jdbc.update("UPDATE air_inst_requirement_rev SET revision = 4, name = 'source revised' WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", source);
         ComparisonPage next = compare("1", child);
         String secondRound = submit(child, next, field(diff(next, family), "IGNORED", true));
         assertEquals(State.Succeeded, awaitResult(secondRound).state());
@@ -937,8 +937,8 @@ class MergeAcceptanceTest {
     private String seed(String tracker, String common, String title) {
         String local = fixtureId("L-" + UUID.randomUUID());
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id, created_by, created_time)
+                INSERT INTO air_inst_requirement_rev (instance_id, common_id, tracker, name, description, revision, lock_version,
+                    workingset_id, created_by, created_time)
                 VALUES (?, ?, ?, ?, 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, local, common, tracker, title, tracker, System.currentTimeMillis());

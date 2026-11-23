@@ -117,7 +117,8 @@ final class DeriveFixture {
                     ((Number) (materialized ? row.get("revision") : row.get("source_revision"))).intValue());
         }
         List<Map<String, Object>> rows = jdbc.queryForList("""
-                SELECT tracker_id, common_id FROM requirements WHERE local_id = ?
+                SELECT tracker AS tracker_id, common_id FROM air_inst_requirement_rev WHERE instance_id = ?
+                ORDER BY revision DESC LIMIT 1
                 """, Long.valueOf(sourceLocalId));
         if (rows.isEmpty()) {
             throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);

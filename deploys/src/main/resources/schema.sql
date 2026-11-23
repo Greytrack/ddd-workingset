@@ -799,17 +799,7 @@ CREATE TABLE IF NOT EXISTS air_inst_requirement_rev
 
 CREATE INDEX IF NOT EXISTS idx_requirement_rev_tracker ON air_inst_requirement_rev (tracker, instance_id);
 
--- ALM current-revision projection. Historical reads resolve the requested revision directly.
-CREATE OR REPLACE VIEW requirements AS
-SELECT r.id AS revision_row_id, r.instance_id AS local_id, r.common_id, r.tracker AS tracker_id,
-       r.number, r.name AS title, r.name, r.description, r.revision, r.version,
-       r.lock_version, (r.delete_flag = 1) AS delete_flag, r.workingset_id AS working_set_id,
-       r.created_by, r.created_time, r.flags, r.checked_out
-FROM air_inst_requirement_rev r
-WHERE NOT EXISTS (
-    SELECT 1 FROM air_inst_requirement_rev newer
-    WHERE newer.instance_id = r.instance_id AND newer.revision > r.revision
-);
+DROP VIEW IF EXISTS requirements;
 
 CREATE TABLE IF NOT EXISTS air_ws_items_index
 (

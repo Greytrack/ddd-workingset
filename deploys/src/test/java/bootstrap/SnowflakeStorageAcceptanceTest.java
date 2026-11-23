@@ -54,7 +54,7 @@ class SnowflakeStorageAcceptanceTest {
             assertEquals(requirement.localId(), requirement.commonId());
             assertTrue(requirement.number().startsWith("REQ-"));
             assertEquals(requirement.number(),
-                    jdbc.queryForObject("SELECT number FROM requirements WHERE local_id = ?", String.class, rootId));
+                    jdbc.queryForObject("SELECT number FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", String.class, rootId));
             await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> assertEquals(1,
                     jdbc.queryForObject("SELECT count(*) FROM air_ws_items_index WHERE local_id = ?", Integer.class, rootId)));
 
@@ -90,7 +90,7 @@ class SnowflakeStorageAcceptanceTest {
             assertNotEquals(requirement.localId(), itemLocalId);
             assertEquals(requirement.commonId(), String.valueOf(item.get("common_id")));
             long childLocalId = Long.parseLong(itemLocalId);
-            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirements WHERE local_id = ?",
+            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_requirement_rev WHERE instance_id = ?",
                     Integer.class, childLocalId));
             String itemPath = "/api/requirements/" + itemLocalId;
             ResponseEntity<RequirementView> inherited = rest.getForEntity(itemPath, RequirementView.class);
@@ -113,7 +113,7 @@ class SnowflakeStorageAcceptanceTest {
             assertEquals(1, jdbc.queryForObject("""
                     SELECT count(*) FROM air_inst_common WHERE id = ? AND name = '编号修订'
                     """, Integer.class, childLocalId));
-            assertEquals("bigint", jdbc.queryForObject("SELECT pg_typeof(local_id)::text FROM requirements WHERE local_id = ?",
+            assertEquals("bigint", jdbc.queryForObject("SELECT pg_typeof(instance_id)::text FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1",
                     String.class, Long.valueOf(itemLocalId)));
         } finally {
             String trackerFilter = "SELECT tracker_id FROM trackers WHERE product_space_id = ?";

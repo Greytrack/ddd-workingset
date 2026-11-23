@@ -48,14 +48,14 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             """;
 
     private static final RowMapper<Requirement> MAPPER = (rs, rowNum) -> Requirement.restore(
-            rs.getLong("local_id"),
+            rs.getLong("instance_id"),
             rs.getLong("common_id"),
-            rs.getLong("tracker_id"),
-            rs.getString("title"),
+            rs.getLong("tracker"),
+            rs.getString("name"),
             rs.getString("description"),
             rs.getInt("revision"),
             rs.getString("version"),
-            rs.getLong("lock_version"), true, rs.getBoolean("delete_flag"),
+            rs.getLong("lock_version"), true, rs.getInt("delete_flag") == 1,
             rs.getString("created_by"), rs.getString("flags"), rs.getInt("checked_out") == 1);
 
     private final JdbcTemplate jdbc;
@@ -110,8 +110,12 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     @Override
     public Optional<Requirement> findById(Long localId) {
         return jdbc.query(
-                "SELECT local_id, common_id, tracker_id, title, description, revision, version, lock_version, delete_flag, created_by, flags, checked_out "
-                        + "FROM requirements WHERE local_id = ?",
+                """
+                SELECT instance_id, common_id, tracker, name, description, revision, version, lock_version,
+                       delete_flag, created_by, flags, checked_out
+                FROM air_inst_requirement_rev WHERE instance_id = ?
+                ORDER BY revision DESC LIMIT 1
+                """,
                 MAPPER,
                 localId).stream().findFirst();
     }
@@ -129,8 +133,8 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     @Override
     public Optional<Requirement> lockFamilyInWorkingSet(Long trackerId, Long commonId) {
         return jdbc.queryForList("""
-                SELECT r.local_id FROM requirements r
-                WHERE r.working_set_id = (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ? AND delete_flag = 0)
+                SELECT DISTINCT r.instance_id FROM air_inst_requirement_rev r
+                WHERE r.workingset_id = (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ? AND delete_flag = 0)
                   AND r.common_id = ?
                 """, Long.class, trackerId, commonId).stream().findFirst().flatMap(this::lockById);
     }
@@ -171,15 +175,16 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private void saveCommonInstance(long id) {
         AirInstCommonPo common = jdbc.queryForObject("""
-                SELECT t.work_space, r.number, COALESCE(r.name, r.title) AS name, r.version, r.revision,
-                       r.delete_flag, r.lock_version, r.common_id, r.working_set_id, r.tracker_id
-                FROM requirements r JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
-                WHERE r.local_id = ?
+                SELECT t.work_space, r.number, r.name, r.version, r.revision,
+                       r.delete_flag, r.lock_version, r.common_id, r.workingset_id, r.tracker
+                FROM air_inst_requirement_rev r JOIN air_inst_tracker_rev t ON t.id = r.tracker
+                WHERE r.instance_id = ?
+                ORDER BY r.revision DESC LIMIT 1
                 """, (rs, row) -> new AirInstCommonPo(id, 1401L, 140101L, 14010101L,
                 rs.getObject("work_space", Long.class), rs.getString("number"), rs.getString("name"),
-                null, rs.getString("version"), rs.getLong("revision"), rs.getBoolean("delete_flag") ? 1 : 0,
+                null, rs.getString("version"), rs.getLong("revision"), rs.getInt("delete_flag"),
                 rs.getLong("lock_version"), null, null, null, null, null, null, rs.getLong("common_id"),
-                rs.getLong("working_set_id"), null, rs.getLong("tracker_id"), rs.getLong("revision")), id);
+                rs.getLong("workingset_id"), null, rs.getLong("tracker"), rs.getLong("revision")), id);
         commonInstances.save(common);
     }
 

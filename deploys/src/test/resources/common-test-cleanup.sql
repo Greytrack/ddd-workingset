@@ -19,8 +19,8 @@ WHERE (c.base_class, c.class, c.type) IN (
                   WHERE product_space_id = c.id
                   UNION ALL
                   SELECT 1
-                  FROM requirements
-                  WHERE local_id = c.id
+                  FROM air_inst_requirement_rev
+                  WHERE instance_id = c.id
                   UNION ALL
                   SELECT 1
                   FROM air_ws_items_index

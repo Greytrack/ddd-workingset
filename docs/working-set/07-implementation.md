@@ -27,7 +27,7 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 
 ## 2. 跨 BC 读取边界（2026-11-19 调整）
 
-- ALM 按版次写入 `air_inst_requirement_rev`。`id` 标识版次行，`instance_id` 对应稳定的 LocalId，`common_id` 对应跨工作集谱系。当前读模型按实例取最大的 `revision`，历史内容按实例与指定版次查询。
+- ALM 按版次写入 `air_inst_requirement_rev`。`id` 标识版次行，`instance_id` 对应稳定的 LocalId，`common_id` 对应跨工作集谱系。命令仓储、当前查询与历史回读均直接访问原生表。当前查询按实例取最大的 `revision`，历史回读按实例与指定版次定位。
   签出新增业务行，取消签出删除被撤销行并恢复前一版，签入在当前行保存有效状态位。业务事务提交对应事实事件，SK 在独立事务同步索引。当前 schema 和演示数据从空库重建。
 - LightTrackerItem 的当前索引和版次成员分别写入两张旧索引表，由同一次聚合保存提交；签出、取消签出和签入规则见
   [双表索引与版次成员](05-contracts/t3-lti-materialization.md#31-双表索引与版次成员)。
@@ -36,7 +36,7 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
   的身份和来源解析供系统内部使用，业务内容由相应 BC 的 API 提供。
 - 不再为单个查询方法新增专用同步 Port；`TrackerItemLifecyclePort` 及其 `findInheritedTarget` 已移除。集合读取和读模型查询使用
   `application/query/provider` 下的 Provider。
-- 共享 Tracker 的 Item 列表按 Tracker 读取：共享 Tracker 通过 `TrackerBinding` 对其绑定工作集可见；非共享 Tracker 仅在所属工作集可见（`RequirementQueryService.findByTracker`）。不能再用 `requirements.working_set_id` 过滤共享 Tracker 的 Item。
+- 共享 Tracker 的 Item 列表按 Tracker 读取：共享 Tracker 通过 `TrackerBinding` 对其绑定工作集可见；非共享 Tracker 仅在所属工作集可见（`RequirementQueryService.findByTracker`）。不能再用 `air_inst_requirement_rev.workingset_id` 过滤共享 Tracker 的 Item。
 - LightTrackerItem 自带 `classificationId` / `numericProductSpaceId`，分别写入索引的 `sub_class_id` / `work_space_id`；LTI 仓储不再 join `air_inst_common`，也不再从公共摘要推断子类。
 - 多业务对象类型通过 `BusinessObjectTypeRegistry` / `BusinessObjectTypeAdapter` 按 Tracker 分类路由；一个 Tracker 只承载一种对象类型。当前只注册 Requirement 类型，新增 BC 只加 Adapter。
 - 直接读取不等于获得写入权：业务 BC **不得**调用 SK 聚合仓储的 `save`、`delete`、`remove` 或修改 SK
@@ -118,7 +118,7 @@ com.airedgesoft.alm.requirement.application.query
     - Requirement 活跃身份目录由 ALM 查询 Provider 直接读取，供比较与派生索引使用；不经聚合仓储。Tracker 展示列表仅由
       Working Set 查询 Provider 提供。
     - Requirement 列表按 Tracker 读取：共享 Tracker 通过绑定对所有绑定工作集可见，非共享 Tracker 仅所属工作集可见；
-      `workingSetId` 用于可见性校验，不再作为 `requirements.working_set_id` 过滤条件。
+      `workingSetId` 用于可见性校验，不再作为 `air_inst_requirement_rev.workingset_id` 过滤条件。
 - Controller 暂未拆分，`WorkingSetController` 与 `RequirementController` 同时注入 command/query 服务。
 - 跨聚合事务的实现差距见 §4。
 

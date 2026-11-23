@@ -16,19 +16,19 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
  * AC-01：Working Set 编译期不依赖 ALM 的实现模块或业务聚合类型（A1/T4 §3.1）。
  */
 @AnalyzeClasses(
-        packages = {"com.airedgesoft.sharekernel.workingset", "com.airedgesoft.sharekernel.productspace",
-                "com.airedgesoft.sharekernel.tracker", "com.airedgesoft.alm.requirement", "bootstrap"},
+        packages = {"com.airedgesoft.sharedkernel.workingset", "com.airedgesoft.sharedkernel.productspace",
+                "com.airedgesoft.sharedkernel.tracker", "com.airedgesoft.alm.requirement", "bootstrap"},
         importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
 
     @ArchTest
     static final ArchRule product_space_inner_layers_must_not_depend_on_outer_layers =
             noClasses()
-                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.productspace.domain..", "com.airedgesoft.sharekernel.productspace.application..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharedkernel.productspace.domain..", "com.airedgesoft.sharedkernel.productspace.application..")
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "com.airedgesoft.sharekernel.productspace.infrastructure..", "com.airedgesoft.sharekernel.productspace.adapters..",
-                            "com.airedgesoft.sharekernel.workingset.infrastructure..", "com.airedgesoft.sharekernel.workingset.adapters..",
-                            "com.airedgesoft.sharekernel.tracker.infrastructure..", "com.airedgesoft.sharekernel.tracker.adapters..");
+                            "com.airedgesoft.sharedkernel.productspace.infrastructure..", "com.airedgesoft.sharedkernel.productspace.adapters..",
+                            "com.airedgesoft.sharedkernel.workingset.infrastructure..", "com.airedgesoft.sharedkernel.workingset.adapters..",
+                            "com.airedgesoft.sharedkernel.tracker.infrastructure..", "com.airedgesoft.sharedkernel.tracker.adapters..");
 
     @ArchTest
     static final ArchRule alm_inner_layers_must_not_depend_on_infrastructure =
@@ -40,47 +40,47 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule domain_must_not_depend_on_app_exception =
             noClasses()
-                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.workingset.domain..", "com.airedgesoft.alm.requirement.domain..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharedkernel.workingset.domain..", "com.airedgesoft.alm.requirement.domain..")
                     .should().dependOnClassesThat().areAssignableTo(AppException.class);
 
     @ArchTest
     static final ArchRule working_set_must_not_depend_on_alm =
             noClasses()
-                    .that().resideInAPackage("com.airedgesoft.sharekernel.workingset..")
+                    .that().resideInAPackage("com.airedgesoft.sharedkernel.workingset..")
                     .should().dependOnClassesThat().resideInAPackage("com.airedgesoft.alm.requirement..");
 
     @ArchTest
     static final ArchRule query_must_not_depend_on_command =
             noClasses()
                     .that().resideInAnyPackage(
-                            "com.airedgesoft.sharekernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
+                            "com.airedgesoft.sharedkernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "com.airedgesoft.sharekernel.workingset.application.command..", "com.airedgesoft.alm.requirement.application.command..");
+                            "com.airedgesoft.sharedkernel.workingset.application.command..", "com.airedgesoft.alm.requirement.application.command..");
 
     @ArchTest
     static final ArchRule command_must_not_depend_on_query =
             noClasses()
                     .that().resideInAnyPackage(
-                            "com.airedgesoft.sharekernel.workingset.application.command..", "com.airedgesoft.alm.requirement.application.command..")
+                            "com.airedgesoft.sharedkernel.workingset.application.command..", "com.airedgesoft.alm.requirement.application.command..")
                     .should().dependOnClassesThat(
                             resideInAnyPackage(
-                                    "com.airedgesoft.sharekernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
+                                    "com.airedgesoft.sharedkernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
                                     .and(resideOutsideOfPackages(
-                                            "com.airedgesoft.sharekernel.workingset.application.query.provider..",
+                                            "com.airedgesoft.sharedkernel.workingset.application.query.provider..",
                                             "com.airedgesoft.alm.requirement.application.query.provider..")));
 
     @ArchTest
     static final ArchRule query_application_must_not_depend_on_mybatis =
             noClasses()
                     .that().resideInAnyPackage(
-                            "com.airedgesoft.sharekernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
+                            "com.airedgesoft.sharedkernel.workingset.application.query..", "com.airedgesoft.alm.requirement.application.query..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.baomidou..", "org.apache.ibatis..");
 
     @ArchTest
     static final ArchRule domain_must_not_depend_on_persistence_frameworks =
             noClasses()
-                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.workingset.domain..", "com.airedgesoft.sharekernel.productspace.domain..", "com.airedgesoft.alm.requirement.domain..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharedkernel.workingset.domain..", "com.airedgesoft.sharedkernel.productspace.domain..", "com.airedgesoft.alm.requirement.domain..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.baomidou..", "org.apache.ibatis..", "org.springframework.jdbc..");
 
@@ -106,15 +106,15 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule shared_kernel_repositories_must_not_depend_on_business_bc_types =
             noClasses()
-                    .that().resideInAnyPackage("com.airedgesoft.sharekernel.workingset.infrastructure.repositories..")
+                    .that().resideInAnyPackage("com.airedgesoft.sharedkernel.workingset.infrastructure.repositories..")
                     .should().dependOnClassesThat().resideInAnyPackage("com.airedgesoft.alm.requirement..");
 
     @ArchTest
     static final ArchRule shared_kernel_infrastructure_must_not_depend_on_business_bc_types =
             noClasses()
                     .that().resideInAnyPackage(
-                            "com.airedgesoft.sharekernel.workingset.infrastructure..", "com.airedgesoft.sharekernel.tracker.infrastructure..",
-                            "com.airedgesoft.sharekernel.productspace.infrastructure..")
+                            "com.airedgesoft.sharedkernel.workingset.infrastructure..", "com.airedgesoft.sharedkernel.tracker.infrastructure..",
+                            "com.airedgesoft.sharedkernel.productspace.infrastructure..")
                     .should().dependOnClassesThat().resideInAnyPackage("com.airedgesoft.alm.requirement..");
 
     @ArchTest

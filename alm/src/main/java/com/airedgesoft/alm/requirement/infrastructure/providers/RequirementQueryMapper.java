@@ -13,39 +13,34 @@ import java.util.List;
 @Mapper
 public interface RequirementQueryMapper {
 
-    @Select("""
-            SELECT instance_id AS local_id, common_id, tracker AS tracker_id, number, name AS title,
-                   description, revision, version, lock_version, (delete_flag = 1) AS deleted, TRUE AS materialized, (checked_out = 1) AS checked_out, flags
-            FROM air_inst_requirement_rev WHERE instance_id = #{id} AND revision = #{revision}
-            """)
+    String SELECT_REVISION = """
+            SELECT r.instance_id AS local_id, r.common_id, r.tracker AS tracker_id, r.number, r.name AS title,
+                   r.description, r.revision, r.version, r.lock_version, (r.delete_flag = 1) AS deleted,
+                   TRUE AS materialized, (r.checked_out = 1) AS checked_out, r.flags
+            FROM air_inst_requirement_rev r
+            """;
+
+    String LATEST = """
+            AND NOT EXISTS (
+                SELECT 1 FROM air_inst_requirement_rev newer
+                WHERE newer.instance_id = r.instance_id AND newer.revision > r.revision
+            )
+            """;
+
+    @Select(SELECT_REVISION + "WHERE r.instance_id = #{id} AND r.revision = #{revision}")
     RequirementDetail findRevision(@Param("id") long id, @Param("revision") int revision);
 
-    @Select("""
-            SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
-                   lock_version, delete_flag AS deleted, TRUE AS materialized, (checked_out = 1) AS checked_out, flags
-            FROM requirements WHERE local_id = #{id}
-            """)
+    @Select(SELECT_REVISION + "WHERE r.instance_id = #{id} ORDER BY r.revision DESC LIMIT 1")
     RequirementDetail find(@Param("id") long id);
 
-    @Select("""
-            SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
-                   lock_version, delete_flag AS deleted, TRUE AS materialized, (checked_out = 1) AS checked_out, flags
-            FROM requirements
-            WHERE tracker_id = #{trackerId}
-            ORDER BY local_id
-            """)
+    @Select(SELECT_REVISION + "WHERE r.tracker = #{trackerId} " + LATEST + "ORDER BY r.instance_id")
     List<RequirementDetail> findByTracker(@Param("trackerId") long trackerId);
 
-    @Select("""
-            <script>
-            SELECT local_id, common_id, tracker_id, number, title, description, revision, version,
-                   lock_version, delete_flag AS deleted, TRUE AS materialized, (checked_out = 1) AS checked_out, flags
-            FROM requirements
-            WHERE local_id IN
+    @Select("<script>" + SELECT_REVISION + """
+            WHERE r.instance_id IN
             <foreach collection="localIds" item="localId" open="(" separator="," close=")">
                 #{localId}
             </foreach>
-            </script>
-            """)
+            """ + LATEST + "</script>")
     List<RequirementDetail> findByIds(@Param("localIds") List<Long> localIds);
 }

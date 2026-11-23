@@ -16,9 +16,10 @@ public final class ItemIndexFixture {
         jdbc.update("""
                 INSERT INTO air_inst_common
                     (id, base_class, class, type, work_space, tracker, common_id, workingset_id, revision, delete_flag)
-                SELECT r.local_id, 1401, 140101, 14010101, t.work_space, r.tracker_id, r.common_id,
-                       r.working_set_id, r.revision, CASE WHEN r.delete_flag THEN 1 ELSE 0 END
-                FROM requirements r JOIN air_inst_tracker_rev t ON t.id = r.tracker_id WHERE r.local_id = ?
+                SELECT r.instance_id, 1401, 140101, 14010101, t.work_space, r.tracker, r.common_id,
+                       r.workingset_id, r.revision, r.delete_flag
+                FROM air_inst_requirement_rev r JOIN air_inst_tracker_rev t ON t.id = r.tracker
+                WHERE r.instance_id = ? ORDER BY r.revision DESC LIMIT 1
                 """, localId);
     }
 

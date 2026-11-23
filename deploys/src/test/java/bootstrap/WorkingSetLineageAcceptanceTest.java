@@ -182,7 +182,7 @@ class WorkingSetLineageAcceptanceTest {
                         SELECT (SELECT count(*) FROM air_inst_workingset)
                                + (SELECT count(*) FROM air_inst_tracker_rev)
                                + (SELECT count(*) FROM product_spaces)
-                               + (SELECT count(*) FROM requirements)
+                               + (SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev)
                                + (SELECT count(*) FROM air_ws_items_index WHERE has_copied = 0),
                                count(*), array_agg(DISTINCT base_class ORDER BY base_class)
                         FROM air_inst_common

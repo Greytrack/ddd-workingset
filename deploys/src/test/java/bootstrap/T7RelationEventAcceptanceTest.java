@@ -100,8 +100,8 @@ class T7RelationEventAcceptanceTest {
                 VALUES (?, '1', ?, 10070101, 'UNSHARED', TRUE)
                 """, fixtureId("folder-" + suffix), space);
         jdbc.update("""
-                INSERT INTO requirements (local_id, common_id, tracker_id, title, description, revision, lock_version,
-                    working_set_id, created_by, created_time)
+                INSERT INTO air_inst_requirement_rev (instance_id, common_id, tracker, name, description, revision, lock_version,
+                    workingset_id, created_by, created_time)
                 VALUES (?, ?, ?, 'source', 'description', 3, 0,
                     (SELECT workingset_id FROM air_inst_tracker_rev WHERE id = ?), 'test', ?)
                 """, parentItem, parentItem, parentTracker, parentTracker, System.currentTimeMillis());

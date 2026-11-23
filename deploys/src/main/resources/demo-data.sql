@@ -236,15 +236,16 @@ FROM air_inst_requirement_rev
 WHERE revision = 2;
 
 WITH indexed (local_id, common_id, tracker_id, working_set_id, revision, source_local_id, source_revision, materialized)
-         AS (SELECT local_id,
+         AS (SELECT DISTINCT ON (instance_id) instance_id,
                     common_id,
-                    tracker_id,
-                    working_set_id,
+                    tracker,
+                    workingset_id,
                     revision,
-                    local_id,
+                    instance_id,
                     revision,
                     true
-             FROM requirements)
+             FROM air_inst_requirement_rev
+             ORDER BY instance_id, revision DESC)
 INSERT
 INTO air_ws_items_index
 (id, local_id, common_id, branch_id, workingset_id, revision, source_local_id, source_revision, has_copied, flags,
@@ -352,11 +353,15 @@ SELECT pg_temp.demo_id(9500000 + row_number() OVER (ORDER BY i.local_id)),
        i.work_space_id, i.workingset_id, i.master_id, i.branch_id, i.common_id, i.local_id, 1, i.sub_class_id,
        i.flags, 0, i.created_by, i.created_time
 FROM air_ws_items_index i
-JOIN requirements r ON r.local_id = i.local_id
-WHERE r.revision = 2;
+JOIN air_inst_requirement_rev r ON r.instance_id = i.local_id AND r.revision = 1
+WHERE i.revision = 2;
 
 -- Public summaries are part of the initial Demo dataset, including inherited item summaries.
-WITH source_rows (
+WITH current_requirements AS (
+    SELECT DISTINCT ON (instance_id) *
+    FROM air_inst_requirement_rev
+    ORDER BY instance_id, revision DESC
+), source_rows (
                   id, base_class, class, type, work_space, number, name, version, revision, delete_flag, lock_version,
                   created_by, created_time, updated_by, updated_time, checked_out, owner, common_id, workingset_id,
                   parent_id, tracker, max_revision
@@ -433,16 +438,16 @@ WITH source_rows (
                  1
           FROM product_spaces
           UNION ALL
-          SELECT r.local_id,
+          SELECT r.instance_id,
                  1401,
                  140101,
                  14010101,
                  t.work_space,
                  r.number,
-                 COALESCE(r.name, r.title),
+                 r.name,
                  r.version,
                  r.revision,
-                 CASE WHEN r.delete_flag THEN 1 ELSE 0 END,
+                 r.delete_flag,
                  r.lock_version,
                  NULL,
                  NULL,
@@ -451,12 +456,12 @@ WITH source_rows (
                  NULL,
                  NULL,
                  r.common_id,
-                 r.working_set_id,
+                 r.workingset_id,
                  NULL,
-                 r.tracker_id,
+                 r.tracker,
                  r.revision
-          FROM requirements r
-                   JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
+          FROM current_requirements r
+                   JOIN air_inst_tracker_rev t ON t.id = r.tracker
           UNION ALL
           SELECT l.local_id,
                  1401,
@@ -464,7 +469,7 @@ WITH source_rows (
                  14010101,
                  t.work_space,
                  r.number,
-                 CASE WHEN r.revision = l.source_revision THEN COALESCE(r.name, r.title) END,
+                 CASE WHEN r.revision = l.source_revision THEN r.name END,
                  CASE WHEN r.revision = l.source_revision THEN r.version END,
                  l.revision,
                  0,
@@ -481,10 +486,10 @@ WITH source_rows (
                  l.branch_id,
                  l.revision
           FROM air_ws_items_index l
-                   JOIN requirements r ON r.local_id = l.source_local_id
+                   JOIN current_requirements r ON r.instance_id = l.source_local_id
                    JOIN air_inst_tracker_rev t ON t.id = l.branch_id
           WHERE l.has_copied = 0
-            AND NOT EXISTS (SELECT 1 FROM requirements m WHERE m.local_id = l.local_id))
+            AND NOT EXISTS (SELECT 1 FROM air_inst_requirement_rev m WHERE m.instance_id = l.local_id))
 INSERT
 INTO air_inst_common (id, base_class, class, type, work_space, number, name, version, revision, delete_flag,
                       lock_version,

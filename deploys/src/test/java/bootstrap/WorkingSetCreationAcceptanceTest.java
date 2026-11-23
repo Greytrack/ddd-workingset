@@ -546,7 +546,7 @@ class WorkingSetCreationAcceptanceTest {
         String stale = fixtureId("stale-" + child);
         seedItem(unshared, stale, stale, false);
         seedParentLti(parentTracker, fixtureId("virtual-stale-" + child), stale, stale, false);
-        jdbc.update("UPDATE requirements SET revision = 4 WHERE local_id = ?", stale);
+        jdbc.update("UPDATE air_inst_requirement_rev SET revision = 4 WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", stale);
         jdbc.update("UPDATE air_inst_common SET revision = 4 WHERE id = ?", stale);
 
         String id = submit(new Request(parent, child, "index-derived", List.of(space), List.of(), List.of(parentTracker)));
