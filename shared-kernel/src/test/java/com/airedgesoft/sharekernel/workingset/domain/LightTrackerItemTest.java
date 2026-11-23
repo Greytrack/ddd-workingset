@@ -2,7 +2,6 @@ package com.airedgesoft.sharekernel.workingset.domain;
 
 
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +10,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LightTrackerItemTest {
-    private static final ItemClassification CLASSIFICATION = new ItemClassification(42L, 14010101L);
+    private static final long PRODUCT_SPACE_ID = 42L;
+    private static final long CLASSIFICATION_ID = 14010101L;
 
     private static final Long L0 = Long.valueOf("260574482192320");
     private static final Long L1 = Long.valueOf("261158455371712");
@@ -22,7 +22,7 @@ class LightTrackerItemTest {
 
     @Test
     void derive_creates_source_backed_variant() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
 
         assertEquals(L1, item.localId());
         assertEquals(C1, item.commonId());
@@ -37,7 +37,7 @@ class LightTrackerItemTest {
 
     @Test
     void deletionChangesDoNotAlterRevisionOrContentLocation() {
-        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
         assertFalse(item.deleted());
         assertTrue(item.delete());
         assertFalse(item.delete());
@@ -52,12 +52,12 @@ class LightTrackerItemTest {
     @Test
     void derive_rejects_local_id_equal_to_source() {
         assertThrows(DomainException.class,
-                () -> LightTrackerItem.derive(L0, C1, T1, WS1, R3, L0, R3, CLASSIFICATION));
+                () -> LightTrackerItem.derive(L0, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID));
     }
 
     @Test
     void switchToLocalBacked_updates_three_fields_and_keeps_identity() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
         Long before = item.localId();
 
         item.switchToLocalBacked(R3);
@@ -73,7 +73,7 @@ class LightTrackerItemTest {
 
     @Test
     void switchToLocalBacked_rejects_second_call() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
         item.switchToLocalBacked(R3);
 
         assertThrows(DomainException.class, () -> item.switchToLocalBacked(R3));
@@ -81,14 +81,14 @@ class LightTrackerItemTest {
 
     @Test
     void switchToLocalBacked_rejects_revision_mismatch() {
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
 
         assertThrows(DomainException.class, () -> item.switchToLocalBacked(4));
     }
 
     @Test
     void explicitUpgradeRetainsPreviousRevisionAndIgnoresReplay() {
-        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
         Integer r4 = 4;
         assertThrows(DomainException.class, () -> item.advanceRevision(r4, 5));
         assertTrue(item.advanceRevision(R3, r4));
@@ -99,7 +99,7 @@ class LightTrackerItemTest {
 
     @Test
     void restore_keeps_identity_and_state() {
-        LightTrackerItem item = LightTrackerItem.restore(L1, C1, T1, WS1, R3, L0, R3, false, CLASSIFICATION);
+        LightTrackerItem item = LightTrackerItem.restore(L1, C1, T1, WS1, R3, L0, R3, false, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
 
         assertEquals(L1, item.localId());
         assertFalse(item.materialized());
@@ -108,9 +108,10 @@ class LightTrackerItemTest {
 
     @Test
     void derivedItemCarriesTrackerClassificationAndSpace() {
-        ItemClassification classification = new ItemClassification(42L, 14010101L);
+        long productSpaceId = 42L;
+        long classificationId = 14010101L;
 
-        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, classification);
+        LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, productSpaceId, classificationId);
 
         assertEquals(42L, item.numericProductSpaceId());
         assertEquals(14010101L, item.classificationId());

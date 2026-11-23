@@ -251,7 +251,7 @@ public class WorkingSetCommandService {
     }
 
     private WorkingSet lockTaskTarget(Long id) {
-        return workingSets.findByIdForCreation(id)
+        return workingSets.findByIdForTaskWrite(id)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 

@@ -40,6 +40,9 @@ public interface WorkingSetQueryMapper {
             """)
     List<Long> findChildren(@Param("id") long id);
 
+    @Select("SELECT id FROM air_inst_workingset WHERE parent_id = #{id} AND delete_flag = 0 ORDER BY id")
+    List<Long> findActiveChildren(@Param("id") long id);
+
     @Select("""
             WITH RECURSIVE lineage(working_set_id, parent_working_set_id, distance) AS (
                 SELECT id, NULLIF(parent_id, 0), 0

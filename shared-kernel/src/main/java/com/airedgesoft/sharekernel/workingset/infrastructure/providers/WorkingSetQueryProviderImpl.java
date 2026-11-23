@@ -37,6 +37,11 @@ public class WorkingSetQueryProviderImpl implements WorkingSetQueryProvider {
     }
 
     @Override
+    public List<Long> findActiveChildren(long workingSetId) {
+        return mapper.findActiveChildren(workingSetId);
+    }
+
+    @Override
     public List<Long> findAncestors(long workingSetId) {
         return mapper.findAncestors(workingSetId);
     }

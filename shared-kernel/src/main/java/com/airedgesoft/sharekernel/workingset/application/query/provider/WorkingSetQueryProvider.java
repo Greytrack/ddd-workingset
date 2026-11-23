@@ -19,6 +19,9 @@ public interface WorkingSetQueryProvider {
 
     List<Long> findChildren(long workingSetId);
 
+    /** 删除守卫使用，包括已落库但仍在准备中的子工作集。 */
+    List<Long> findActiveChildren(long workingSetId);
+
     List<Long> findAncestors(long workingSetId);
 
     List<TrackerSummary> findTrackers(long workingSetId);

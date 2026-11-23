@@ -849,9 +849,12 @@ INV-014/015/023；[裁定](archive/reviews/2026-11-09-stage-3-architecture-revie
 - Given WS1 已无绑定，但仍拥有 Tracker。
 - When 再次删除 WS1。
 - Then 拒绝（`WorkingSetHasTrackers`）。
+- Given WS1 有已落库但仍处于 Preparing 的子工作集。
+- When 删除 WS1。
+- Then 拒绝（`WorkingSetHasChildren`）。
 - Given WS1 无子级、无绑定且无归属 Tracker。
 - When 再次删除 WS1。
-- Then 只删除 WS1。默认 WorkingSet 始终不可删除（`DefaultWorkingSetUndeletable`）。
+- Then 返回 `204`，只标记 WS1 已删除并发布 `WorkingSetDeleted`。对 WS1 的普通查询和重复删除返回 `404`。默认 WorkingSet 始终不可删除（`DefaultWorkingSetUndeletable`）。
 
 <a id="scn-064"></a>
 

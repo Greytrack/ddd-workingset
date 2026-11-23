@@ -32,6 +32,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -770,6 +771,27 @@ class WorkingSetCreationAcceptanceTest {
                 Map.of("requestId", fixtureId("another-" + child), "trackerIds", List.of(unshared)), Map.class);
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("PREPARING", response.getBody().get("reason"));
+    }
+
+    @Test
+    void preparingChildPreventsDeletionOfItsParent() throws Exception {
+        FixtureIds.insertWorkingSet(jdbc, "1", parent);
+        FixtureIds.insertWorkingSet(jdbc, parent, child);
+        Request request = new Request(parent, child, fixtureId("preparing-request-" + child),
+                List.of(), List.of(), List.of());
+        String id = fixtureId("preparing-child-" + child);
+        WorkingSetCreation creation = WorkingSetCreation.submit(id, request, "test", System.currentTimeMillis())
+                .start(System.currentTimeMillis());
+        jdbc.update("""
+                INSERT INTO working_set_creations
+                    (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
+                VALUES (?, ?, ?, ?, 'Running', CAST(? AS jsonb), now())
+                """, id, parent, child, request.requestId(), mapper.writeValueAsString(creation));
+
+        ResponseEntity<Map> response = rest.exchange("/api/worksets/" + parent, HttpMethod.DELETE, null, Map.class);
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("WorkingSetHasChildren", response.getBody().get("reason"));
+        assertEquals(List.of(child), response.getBody().get("childWorkingSetIds"));
     }
 
     private void createTarget() {

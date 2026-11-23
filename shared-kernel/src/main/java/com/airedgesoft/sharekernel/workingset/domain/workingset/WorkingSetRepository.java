@@ -26,6 +26,9 @@ public interface WorkingSetRepository {
      */
     Optional<WorkingSet> findByIdForCreation(Long id);
 
+    /** 在准备态任务写入目标范围前保护目标引用，与工作集删除互斥。 */
+    Optional<WorkingSet> findByIdForTaskWrite(Long id);
+
     /**
      * 保存聚合（新增或更新）；绑定变更随根一次保存。
      */

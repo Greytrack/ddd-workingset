@@ -2,7 +2,6 @@ package bootstrap;
 
 
 import com.airedgesoft.lib.execption.DomainException;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.error.BindingResCode;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -77,9 +76,9 @@ final class DeriveFixture {
 
         LightTrackerItem item = LightTrackerItem.restore(Long.valueOf(localId), commonId, Long.valueOf(trackerId),
                 Long.valueOf(targetWorkingSet), revision, Long.valueOf(content.localId()),
-                content.revision(), false, new ItemClassification(
-                        ((Number) source.get("product_space_id")).longValue(),
-                        ((Number) source.get("classification_id")).longValue()));
+                content.revision(), false,
+                ((Number) source.get("product_space_id")).longValue(),
+                ((Number) source.get("classification_id")).longValue());
         return new Result(trackerId, sourceTrackerId, item);
     }
 

@@ -9,7 +9,6 @@ import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeTargetEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +30,6 @@ public class TrackerItemCommandService {
     private final LightTrackerItemRepository lightTrackerItemRepository;
     private final LiteBusinessObjectProvider businessObjects;
     private final TrackerItemSourceLock sourceLock;
-
-    private static ItemClassification classificationOf(Tracker tracker) {
-        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
-    }
 
     /**
      * 继承编辑完成：把未物化的目标变体切换为 Local-backed。
@@ -117,7 +112,7 @@ public class TrackerItemCommandService {
         Tracker tracker = trackerRepository.findById(trackerId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
-                classificationOf(tracker), RequestThreadHolder.getUserId());
+                tracker.numericProductSpaceId(), tracker.numericClassificationId(), RequestThreadHolder.getUserId());
         if (current.deleted()) {
             item.delete();
         }

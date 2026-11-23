@@ -5,7 +5,6 @@ import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemCom
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
@@ -178,7 +177,7 @@ class RequirementAcceptanceTest {
         Long id = Long.valueOf(fixtureId("revision-item-" + UUID.randomUUID()));
         items.save(LightTrackerItem.local(id, Long.valueOf(Long.toString(id)),
                 Long.valueOf(trackerId), WorkingSet.DEFAULT_ID, 3,
-                new ItemClassification(Long.parseLong(fixtureId(trackerId + "-s")), 14010101L), "test"));
+                Long.parseLong(fixtureId(trackerId + "-s")), 14010101L, "test"));
 
         indexLifecycle.applyCommittedUpgrade(id, 3, 4);
         indexLifecycle.applyCommittedUpgrade(id, 3, 4);

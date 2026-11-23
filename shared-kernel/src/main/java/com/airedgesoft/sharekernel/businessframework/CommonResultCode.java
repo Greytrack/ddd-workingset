@@ -1,4 +1,4 @@
-package com.airedgesoft.sharekernel;
+package com.airedgesoft.sharekernel.businessframework;
 
 import com.airedgesoft.lib.execption.ResCode;
 import lombok.AllArgsConstructor;

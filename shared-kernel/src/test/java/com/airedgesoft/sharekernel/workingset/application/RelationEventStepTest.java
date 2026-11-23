@@ -15,7 +15,6 @@ import com.airedgesoft.sharekernel.workingset.domain.Classification;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
 import com.airedgesoft.sharekernel.workingset.domain.event.*;
 import com.airedgesoft.sharekernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet.TrackerBinding;
@@ -46,7 +45,7 @@ class RelationEventStepTest {
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
         LightTrackerItem item = LightTrackerItem.derive(Long.valueOf("261158455371712"), Long.valueOf("265506033508288"), childId, target, 3,
-                Long.valueOf("260574482192320"), 3, new ItemClassification(42L, 14010101L));
+                Long.valueOf("260574482192320"), 3, 42L, 14010101L);
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
@@ -90,7 +89,7 @@ class RelationEventStepTest {
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
                         TrackerOrigin.UNSHARED_DERIVATION)));
         LightTrackerItem item = LightTrackerItem.derive(Long.valueOf("261158455371712"), Long.valueOf("265506033508288"), childId, target, 3,
-                Long.valueOf("260574482192320"), 3, new ItemClassification(42L, 14010101L));
+                Long.valueOf("260574482192320"), 3, 42L, 14010101L);
 
         TrackerRepository trackers = mock(TrackerRepository.class);
         WorkingSetRepository workingSets = mock(WorkingSetRepository.class);

@@ -381,7 +381,9 @@ class BindingAcceptanceTest {
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", owned));
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", owned);
         assertEquals(HttpStatus.NO_CONTENT, delete(path(ws)).getStatusCode());
-        assertEquals(0, count("SELECT count(*) FROM working_sets WHERE working_set_id = ?", ws));
+        assertFailure(rest.getForEntity(path(ws), Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+        assertFailure(delete(path(ws)), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+        assertEquals(1, count("SELECT count(*) FROM air_inst_workingset WHERE id = ? AND delete_flag = 1", ws));
         assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", owned));
         assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
@@ -415,7 +417,6 @@ class BindingAcceptanceTest {
 
     @Test
     void concurrentChildCreationAndParentDeletionCannotLeaveADanglingParent() throws Exception {
-        String child = fixtureId("RACE-CHILD-" + suffix);
         CyclicBarrier start = new CyclicBarrier(2);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<ResponseEntity<Map>> create = executor.submit(() -> {
@@ -436,7 +437,8 @@ class BindingAcceptanceTest {
             } else {
                 assertFailure(createResult, HttpStatus.NOT_FOUND, "WorkingSetNotFound");
                 assertEquals(HttpStatus.NO_CONTENT, remove.get(10, TimeUnit.SECONDS).getStatusCode());
-                assertEquals(0, count("SELECT count(*) FROM working_sets WHERE working_set_id = ?", child));
+                assertFailure(rest.getForEntity(path(ws), Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+                assertEquals(0, count("SELECT count(*) FROM air_inst_workingset WHERE parent_id = ? AND delete_flag = 0", ws));
             }
         }
     }

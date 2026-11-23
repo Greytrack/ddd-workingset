@@ -36,6 +36,7 @@ public final class WorkingSet {
     private String name;
     private String color;
     private String actor;
+    private boolean deleted;
 
     public WorkingSet(Long id, Long parentWorkingSetId,
                       Collection<SpaceBinding> spaces, Collection<TrackerBinding> trackers) {
@@ -132,11 +133,20 @@ public final class WorkingSet {
     }
 
     /**
-     * 删除聚合；默认根不可删。调用方随后通过仓储 delete 物理删除并发布返回的事实。
+     * 标记聚合已删除；调用方持久化该状态后发布删除事实。
      */
-    public WorkingSetDeleted delete() {
+    public WorkingSetDeleted delete(String actor) {
         requireDeletable(id);
+        if (deleted) {
+            throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
+        }
+        audit(actor);
+        deleted = true;
         return new WorkingSetDeleted(id);
+    }
+
+    public boolean deleted() {
+        return deleted;
     }
 
     /**

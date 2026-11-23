@@ -66,7 +66,7 @@ ALM 创建 Requirement 时普通读取 Tracker，并在插入时过滤已软删 
 |-------------------|--------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | ProductSpace 创建 | `ProductSpaceCommandService.create` 保存 ProductSpace 并发布 `ProductSpaceCreatedEvent`；默认 Tracker 逐个在独立事务提交，之后登记绑定事件 | 部分失败后，重投复用已提交的默认 Tracker；绑定仍在独立的 WorkingSet 事务完成。                                               |
 | ProductSpace 删除 | [T2 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)；通过准入后，同一事务保存 ProductSpace 删除标记并发布 `ProductSpaceDeleted` | 只写 ProductSpace 聚合；创建和绑定入口重读有效空间，迟到的默认初始化事件遇到已删除空间时结束。 |
-| WorkingSet 删除   | [T2 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)；拒绝仍有子工作集、绑定或归属 Tracker 的工作集                                   | 成功路径只写 WorkingSet 聚合。                                                                                               |
+| WorkingSet 删除   | [T2 §4.3](05-contracts/t2-binding-deletion.md#43-聚合删除)；拒绝仍有有效子工作集（含已落库的 Preparing 子级）、绑定或归属 Tracker 的工作集 | 同一事务保存工作集删除标记、同步通用业务登记并发布 `WorkingSetDeleted`。建立子级或写入目标范围时与删除互斥。 |
 | T7 创建/扩展      | 阶段按项执行，但工作集创建、Tracker 派生、范围绑定及 LTI 索引仍与各自的任务进度同事务提交                                                  | 按[反模式审查](archive/reviews/2026-11-19-ddd-anti-pattern-scan.md)将聚合副作用与任务进度拆成独立提交，用可靠结果事件推进任务。 |
 | Tracker 创建      | TrackerCommandService 仅持久化 Tracker，绑定由 `TrackerCreatedEvent` 的监听器在 Working Set 事务中完成                                     | 主路径已事件化；仍需验证监听失败、重复投递、绑定拒绝和运维可观察性。ProductSpace 初始化不在该路径内。                        |
 | Tracker 删除      | 软删除：`Tracker.delete()` 标记 `deleted` 并返回 `TrackerDeletedEvent`，`TrackerRepository.save` 持久化 `delete_flag`；物理删除使用 `TrackerRepository.delete(聚合)`。保留 `requireDeletable`（无 Item、无组织子级、无派生子级）校验，绑定关系保留以支持将来恢复。 | 已验收无绑定 Tracker 与 ALM Item 创建并发。软删后绑定不可见但物理保留，恢复入口与可见性待设计。 |
@@ -136,6 +136,8 @@ com.airedgesoft.alm.requirement.application.query
 - 关系事件 outbox/消费方仍按 T7-E 开放项处理。
 
 ## 7. 验收证据索引
+
+2026-11-23 WorkingSet 删除修复后，隔离 PostgreSQL 全量回归 211 项，209 项通过。绑定验收 16 项、工作集创建与扩展验收 25 项全部通过，覆盖删除后不可查询、Preparing 子级拒绝删除以及创建子级与删除父级的竞争。剩余两项失败分别是 Tracker 旧兼容列空值断言和监听器装配测试的旧类名断言。
 
 2026-11-23 使用 Java 21 在专用 PostgreSQL 测试库执行 `mvn -B -pl deploys -am test`，共 207 项通过。shared-kernel 34 项、ALM 16 项、deploys 157 项，其中 ArchUnit 14 项。回归覆盖 LTI 迟到登记、恢复及旧事件重投、工作集父子创建与删除竞态、无绑定 Tracker 删除与 Item 创建竞态、派生来源不可用及批次提交。
 

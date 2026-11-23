@@ -53,16 +53,17 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
 
     @Override
     public Optional<WorkingSet> findByIdForUpdate(Long id) {
+        requireReady(id);
         return loadLocked(id, " FOR UPDATE");
     }
 
     @Override
     public Optional<WorkingSet> findByIdForChildCreation(Long id) {
+        requireReady(id);
         return loadLocked(id, " FOR KEY SHARE");
     }
 
     private Optional<WorkingSet> loadLocked(Long id, String lockingClause) {
-        requireReady(id);
         return jdbc.query("SELECT id FROM air_inst_workingset WHERE id = ? AND delete_flag = 0" + lockingClause,
                 (row, index) -> row.getLong(1), id).stream().findFirst().flatMap(this::loadWorkingSet);
     }
@@ -70,6 +71,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     @Override
     public Optional<WorkingSet> findByIdForCreation(Long id) {
         return loadWorkingSet(id);
+    }
+
+    @Override
+    public Optional<WorkingSet> findByIdForTaskWrite(Long id) {
+        return loadLocked(id, " FOR KEY SHARE");
     }
 
     private Optional<WorkingSet> loadWorkingSet(Long id) {
@@ -122,27 +128,30 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         } else {
             updateHeader(workingSet);
         }
-        updateMembership(workingSet);
+        if (!workingSet.deleted()) {
+            updateMembership(workingSet);
+        }
     }
 
     private void updateHeader(WorkingSet workingSet) {
         Long id = workingSet.id();
         String actor = requireActor(workingSet.actor());
         long now = System.currentTimeMillis();
+        int deleteFlag = workingSet.deleted() ? 1 : 0;
         int updated = jdbc.update("""
                 UPDATE air_inst_workingset
-                SET name = ?, color = ?, lock_version = COALESCE(lock_version, 0) + 1,
+                SET name = ?, color = ?, delete_flag = ?, lock_version = COALESCE(lock_version, 0) + 1,
                     updated_by = ?, updated_time = ?
                 WHERE id = ? AND delete_flag = 0
-                """, workingSet.name(), workingSet.color(), actor, now, id);
+                """, workingSet.name(), workingSet.color(), deleteFlag, actor, now, id);
         if (updated != 1) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
         }
         jdbc.update("""
                 UPDATE air_inst_common
-                SET name = ?, updated_by = ?, updated_time = ?
+                SET name = ?, delete_flag = ?, updated_by = ?, updated_time = ?
                 WHERE id = ?
-                """, workingSet.name(), actor, now, id);
+                """, workingSet.name(), deleteFlag, actor, now, id);
     }
 
     private void insert(WorkingSet workingSet) {

@@ -24,7 +24,5 @@ class TrackerTest {
         assertEquals(301L, grandchild.numericClassificationId());
         assertEquals(11L, grandchild.baseClassId());
         assertEquals(111L, grandchild.classId());
-        assertEquals(Long.valueOf(103), grandchild.compatibility().trackerId());
-        assertEquals(301L, grandchild.compatibility().originalClassificationId());
     }
 }

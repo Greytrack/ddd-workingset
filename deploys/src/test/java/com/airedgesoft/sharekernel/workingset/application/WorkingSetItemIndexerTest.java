@@ -4,7 +4,6 @@ package com.airedgesoft.sharekernel.workingset.application;
 import bootstrap.ItemIndexFixture;
 import bootstrap.WorkingsetApplication;
 import com.airedgesoft.sharekernel.workingset.application.command.WorkingSetItemIndexer;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSetCreation;
@@ -95,11 +94,12 @@ class WorkingSetItemIndexerTest {
         ItemIndexFixture.insert(jdbc, fixtureId("parent-lti-" + suffix), family, parentTracker, parent, 3, source, 3, false);
         Long winner = Long.valueOf(fixtureId("existing-" + suffix));
         Long contender = Long.valueOf(fixtureId("contender-" + suffix));
-        ItemClassification classification = new ItemClassification(Long.parseLong(space), 14010101L);
+        long productSpaceId = Long.parseLong(space);
+        long classificationId = 14010101L;
         LightTrackerItem existing = LightTrackerItem.local(winner, Long.valueOf(family), Long.valueOf(childTracker),
-                Long.valueOf(child), 3, classification, "test");
+                Long.valueOf(child), 3, productSpaceId, classificationId, "test");
         LightTrackerItem duplicate = LightTrackerItem.local(contender, Long.valueOf(family), Long.valueOf(childTracker),
-                Long.valueOf(child), 3, classification, "test");
+                Long.valueOf(child), 3, productSpaceId, classificationId, "test");
         transaction.executeWithoutResult(status -> {
             assertTrue(items.claimFamily(existing));
             assertFalse(items.claimFamily(duplicate));

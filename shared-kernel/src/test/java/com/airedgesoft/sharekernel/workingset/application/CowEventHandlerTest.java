@@ -6,7 +6,6 @@ import com.airedgesoft.sharekernel.workingset.domain.cow.CowMaterializationStore
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,7 @@ import static org.mockito.Mockito.*;
 class CowEventHandlerTest {
     private static LightTrackerItem target(String id, Long source, Integer own, Integer sourceRevision) {
         return LightTrackerItem.restore(Long.valueOf(id), Long.valueOf("264220103598016"), Long.valueOf("264443044134848"),
-                Long.valueOf("266514385749952"), own, source, sourceRevision, false, new ItemClassification(42L, 14010101L));
+                Long.valueOf("266514385749952"), own, source, sourceRevision, false, 42L, 14010101L);
     }
 
     @Test

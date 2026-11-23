@@ -42,7 +42,8 @@ public final class LightTrackerItem {
                              Long commonId,
                              Long trackerId,
                              Long workingSetId,
-                             ItemClassification classification,
+                             long numericProductSpaceId,
+                             long classificationId,
                              Integer revision,
                              Long sourceLocalId,
                              Integer sourceRevision,
@@ -51,6 +52,9 @@ public final class LightTrackerItem {
         if (localId <= 0 || commonId <= 0 || trackerId <= 0 || workingSetId <= 0 || sourceLocalId <= 0) {
             throw new IllegalArgumentException("LightTrackerItem IDs must be positive");
         }
+        if (numericProductSpaceId <= 0 || classificationId <= 0) {
+            throw new IllegalArgumentException("product space and classification IDs must be positive");
+        }
         if (revision < 0 || sourceRevision < 0) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "revision must not be negative");
         }
@@ -58,8 +62,8 @@ public final class LightTrackerItem {
         this.commonId = commonId;
         this.trackerId = trackerId;
         this.workingSetId = workingSetId;
-        this.numericProductSpaceId = classification.numericProductSpaceId();
-        this.classificationId = classification.classificationId();
+        this.numericProductSpaceId = numericProductSpaceId;
+        this.classificationId = classificationId;
         this.revision = revision;
         this.revisions.put(revision, new LightTrackerItemRevisionEntity(revision));
         this.sourceLocalId = sourceLocalId;
@@ -75,15 +79,15 @@ public final class LightTrackerItem {
     public static LightTrackerItem derive(Long localId, Long commonId, Long trackerId,
                                           Long workingSetId, Integer revision,
                                           Long sourceLocalId, Integer sourceRevision,
-                                          ItemClassification classification) {
+                                          long numericProductSpaceId, long classificationId) {
         return derive(localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision,
-                classification, null);
+                numericProductSpaceId, classificationId, null);
     }
 
     public static LightTrackerItem derive(Long localId, Long commonId, Long trackerId,
                                           Long workingSetId, Integer revision,
                                           Long sourceLocalId, Integer sourceRevision,
-                                          ItemClassification classification, String createdBy) {
+                                          long numericProductSpaceId, long classificationId, String createdBy) {
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
@@ -91,13 +95,12 @@ public final class LightTrackerItem {
         Objects.requireNonNull(revision, "revision");
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
         Objects.requireNonNull(sourceRevision, "sourceRevision");
-        Objects.requireNonNull(classification, "classification");
         if (localId.equals(sourceLocalId)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST,
                     "derived variant must be source-backed: localId must differ from sourceLocalId");
         }
         LightTrackerItem item = new LightTrackerItem(
-                localId, commonId, trackerId, workingSetId, classification,
+                localId, commonId, trackerId, workingSetId, numericProductSpaceId, classificationId,
                 revision, sourceLocalId, sourceRevision, false, createdBy);
         item.checkInvariants();
         return item;
@@ -105,14 +108,15 @@ public final class LightTrackerItem {
 
     public static LightTrackerItem local(Long id, Long commonId, Long trackerId,
                                          Long workingSetId, Integer revision,
-                                         ItemClassification classification) {
-        return local(id, commonId, trackerId, workingSetId, revision, classification, null);
+                                         long numericProductSpaceId, long classificationId) {
+        return local(id, commonId, trackerId, workingSetId, revision, numericProductSpaceId, classificationId, null);
     }
 
     public static LightTrackerItem local(Long id, Long commonId, Long trackerId,
                                          Long workingSetId, Integer revision,
-                                         ItemClassification classification, String createdBy) {
-        return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true, classification, createdBy);
+                                         long numericProductSpaceId, long classificationId, String createdBy) {
+        return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true,
+                numericProductSpaceId, classificationId, createdBy);
     }
 
     /**
@@ -126,9 +130,9 @@ public final class LightTrackerItem {
                                            Long sourceLocalId,
                                            Integer sourceRevision,
                                            boolean materialized,
-                                           ItemClassification classification) {
+                                           long numericProductSpaceId, long classificationId) {
         return restore(localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision,
-                materialized, classification, null);
+                materialized, numericProductSpaceId, classificationId, null);
     }
 
     public static LightTrackerItem restore(Long localId,
@@ -139,7 +143,7 @@ public final class LightTrackerItem {
                                            Long sourceLocalId,
                                            Integer sourceRevision,
                                            boolean materialized,
-                                           ItemClassification classification,
+                                           long numericProductSpaceId, long classificationId,
                                            String createdBy) {
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
@@ -148,9 +152,8 @@ public final class LightTrackerItem {
         Objects.requireNonNull(revision, "revision");
         Objects.requireNonNull(sourceLocalId, "sourceLocalId");
         Objects.requireNonNull(sourceRevision, "sourceRevision");
-        Objects.requireNonNull(classification, "classification");
         LightTrackerItem item = new LightTrackerItem(
-                localId, commonId, trackerId, workingSetId, classification,
+                localId, commonId, trackerId, workingSetId, numericProductSpaceId, classificationId,
                 revision, sourceLocalId, sourceRevision, materialized, createdBy);
         item.checkInvariants();
         return item;
@@ -159,18 +162,20 @@ public final class LightTrackerItem {
     public static LightTrackerItem restore(Long localId, Long commonId, Long trackerId,
                                            Long workingSetId, Integer revision, Long sourceLocalId,
                                            Integer sourceRevision, boolean materialized, boolean deleted,
-                                           List<Integer> indexedRevisions, ItemClassification classification) {
+                                           List<Integer> indexedRevisions,
+                                           long numericProductSpaceId, long classificationId) {
         return restore(localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision,
-                materialized, deleted, indexedRevisions, classification, null);
+                materialized, deleted, indexedRevisions, numericProductSpaceId, classificationId, null);
     }
 
     public static LightTrackerItem restore(Long localId, Long commonId, Long trackerId,
                                            Long workingSetId, Integer revision, Long sourceLocalId,
                                            Integer sourceRevision, boolean materialized, boolean deleted,
-                                           List<Integer> indexedRevisions, ItemClassification classification,
+                                           List<Integer> indexedRevisions,
+                                           long numericProductSpaceId, long classificationId,
                                            String createdBy) {
         LightTrackerItem item = restore(localId, commonId, trackerId, workingSetId, revision,
-                sourceLocalId, sourceRevision, materialized, classification, createdBy);
+                sourceLocalId, sourceRevision, materialized, numericProductSpaceId, classificationId, createdBy);
         item.deleted = deleted;
         item.revisions.clear();
         for (Integer indexed : indexedRevisions) {

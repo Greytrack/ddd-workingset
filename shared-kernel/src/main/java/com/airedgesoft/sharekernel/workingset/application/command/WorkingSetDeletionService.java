@@ -2,6 +2,7 @@ package com.airedgesoft.sharekernel.workingset.application.command;
 
 
 import com.airedgesoft.lib.execption.DomainException;
+import com.airedgesoft.sharekernel.RequestThreadHolder;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.event.WorkingSetDeleted;
@@ -42,13 +43,13 @@ public class WorkingSetDeletionService {
         if (trackerQueries.hasOwnedTrackers(id)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_TRACKERS, Long.toString(id));
         }
-        WorkingSetDeleted deletedEvent = workingSet.delete();
+        WorkingSetDeleted deletedEvent = workingSet.delete(RequestThreadHolder.getUserId());
         workingSets.save(workingSet);
         events.publishEvent(deletedEvent);
     }
 
     private void assertNoChildren(Long id) {
-        List<String> children = queries.findChildren(id).stream().map(Object::toString).toList();
+        List<String> children = queries.findActiveChildren(id).stream().map(Object::toString).toList();
         if (!children.isEmpty()) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN, Long.toString(id), Map.of("childWorkingSetIds", children));
         }

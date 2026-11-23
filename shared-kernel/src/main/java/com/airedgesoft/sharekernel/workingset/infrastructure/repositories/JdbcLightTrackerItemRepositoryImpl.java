@@ -3,7 +3,6 @@ package com.airedgesoft.sharekernel.workingset.infrastructure.repositories;
 
 import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.SharedKernelResultCode;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRevisionEntity;
@@ -58,7 +57,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             rs.getInt("source_revision"),
             rs.getBoolean("materialized"), rs.getBoolean("deleted"),
             Arrays.stream((Integer[]) rs.getArray("indexed_revisions").getArray()).toList(),
-            new ItemClassification(rs.getLong("work_space_id"), rs.getLong("sub_class_id")),
+            rs.getLong("work_space_id"), rs.getLong("sub_class_id"),
             rs.getString("created_by"));
 
     private final JdbcTemplate jdbc;

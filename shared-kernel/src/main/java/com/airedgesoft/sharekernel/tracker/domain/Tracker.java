@@ -26,14 +26,13 @@ public final class Tracker {
     private final Long commonId;
     private final Long sourceId;
     private final Long workingSetId;
-    private final Long numericProductSpaceId;
+    private final Long productSpaceId;
     private final long classificationId;
     private final long baseClassId;
     private final long classId;
     private final SharingMode sharingMode;
     private final Long parentId;
     private final boolean isDefault;
-    private final TrackerCompatibility compatibility;
     private final boolean newAggregate;
     private final Long createdBy;
     private Long updatedBy;
@@ -41,45 +40,45 @@ public final class Tracker {
     private boolean deleted;
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
-                   Long numericProductSpaceId, Classification classification, SharingMode sharingMode,
+                   Long productSpaceId, Classification classification, SharingMode sharingMode,
                    Long parentId, boolean isDefault) {
-        this(trackerId, trackerId, name, sourceId, workingSetId, numericProductSpaceId,
+        this(trackerId, trackerId, name, sourceId, workingSetId, productSpaceId,
                 classification, sharingMode, parentId, isDefault);
     }
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
-                   Long numericProductSpaceId, Classification classification, SharingMode sharingMode,
+                   Long productSpaceId, Classification classification, SharingMode sharingMode,
                    Long parentId, boolean isDefault, Long actor) {
-        this(trackerId, trackerId, name, sourceId, workingSetId, numericProductSpaceId,
+        this(trackerId, trackerId, name, sourceId, workingSetId, productSpaceId,
                 classification, sharingMode, parentId, isDefault, true, actor, actor);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long numericProductSpaceId, Classification classification,
+                    Long workingSetId, Long productSpaceId, Classification classification,
                     SharingMode sharingMode, Long parentId, boolean isDefault) {
-        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
+        this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
                 classification, sharingMode, parentId, isDefault, true);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long numericProductSpaceId, Classification classification,
+                    Long workingSetId, Long productSpaceId, Classification classification,
                     SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate) {
-        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
+        this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
                 classification.numericId(), classification.baseClassId(), classification.classId(),
                 sharingMode, parentId, isDefault, newAggregate, null, null);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long numericProductSpaceId, Classification classification,
+                    Long workingSetId, Long productSpaceId, Classification classification,
                     SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate,
                     Long createdBy, Long updatedBy) {
-        this(trackerId, commonId, name, sourceId, workingSetId, numericProductSpaceId,
+        this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
                 classification.numericId(), classification.baseClassId(), classification.classId(),
                 sharingMode, parentId, isDefault, newAggregate, createdBy, updatedBy);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long numericProductSpaceId, long classificationId,
+                    Long workingSetId, Long productSpaceId, long classificationId,
                     long baseClassId, long classId,
                     SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate,
                     Long createdBy, Long updatedBy) {
@@ -93,12 +92,11 @@ public final class Tracker {
         this.parentId = parentId;
         this.isDefault = isDefault;
         this.workingSetId = Objects.requireNonNull(workingSetId, "workingSetId");
-        this.numericProductSpaceId = Objects.requireNonNull(numericProductSpaceId, "productSpaceId");
+        this.productSpaceId = Objects.requireNonNull(productSpaceId, "productSpaceId");
         this.classificationId = classificationId;
         this.baseClassId = baseClassId;
         this.classId = classId;
         this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
-        this.compatibility = new TrackerCompatibility(trackerId, classificationId);
         this.newAggregate = newAggregate;
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;
@@ -206,7 +204,7 @@ public final class Tracker {
     public TrackerDeletedEvent delete(Long actor) {
         if (deleted) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE,
-                    "Tracker already deleted: " + Long.toString(trackerId));
+                    "Tracker already deleted: " + trackerId);
         }
         this.deleted = true;
         this.updatedBy = Objects.requireNonNull(actor, "actor");
@@ -250,7 +248,7 @@ public final class Tracker {
     }
 
     public Long numericProductSpaceId() {
-        return numericProductSpaceId;
+        return productSpaceId;
     }
 
     public long baseClassId() {
@@ -277,10 +275,6 @@ public final class Tracker {
         return isDefault;
     }
 
-    public TrackerCompatibility compatibility() {
-        return compatibility;
-    }
-
     public boolean rename(String newName) {
         String normalized = normalizeName(newName);
         if (normalized.equals(name)) {
@@ -291,7 +285,7 @@ public final class Tracker {
     }
 
     public String productSpaceId() {
-        return numericProductSpaceId.toString();
+        return productSpaceId.toString();
     }
 
     public String classificationId() {

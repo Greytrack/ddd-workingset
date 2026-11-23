@@ -9,7 +9,6 @@ import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemSummary;
-import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.ItemClassification;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharekernel.workingset.domain.workingset.WorkingSet;
@@ -69,10 +68,6 @@ public final class WorkingSetItemIndexer {
         log.warn("Working set indexing operation failed", failure);
         return failure instanceof DataAccessResourceFailureException
                 ? FailureReason.DEPENDENCY_UNAVAILABLE : FailureReason.UNKNOWN;
-    }
-
-    private static ItemClassification classificationOf(Tracker tracker) {
-        return new ItemClassification(tracker.numericProductSpaceId(), tracker.numericClassificationId());
     }
 
     /**
@@ -162,7 +157,7 @@ public final class WorkingSetItemIndexer {
             id = ids.nextId(null).longValue();
         } while (Long.toString(id).equals(Long.toString(candidate.commonId())) || id.equals(sourceId));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
-                candidate.revision(), sourceId, sourceRevision, classificationOf(child),
+                candidate.revision(), sourceId, sourceRevision, child.numericProductSpaceId(), child.numericClassificationId(),
                 RequestThreadHolder.getUserId());
         if (!items.claimFamily(item)) {
             return new Outcome(IndexResult.Existing, null);

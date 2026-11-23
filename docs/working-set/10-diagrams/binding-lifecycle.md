@@ -30,7 +30,7 @@ flowchart TD
     D -->|"否"| D2["拒绝"]
 
     B -->|"WorkingSet"| E{"非默认 WS 且<br/>无子级、绑定及归属 Tracker"}
-    E -->|"是"| E1["删除 WorkingSet"]
+    E -->|"是"| E1["标记 WorkingSet 已删除<br/>保存并发布删除事实"]
     E -->|"否"| E2["拒绝删除"]
 ```
 
@@ -45,12 +45,12 @@ sequenceDiagram
     participant WS as 子 WorkingSet
 
     U->>WS: deleteWorkingSet
-    WS->>WS: 校验非默认且无子级、绑定及归属 Tracker
+    WS->>WS: 校验非默认且无有效子级、绑定及归属 Tracker
     alt 预检拒绝
         WS-->>U: 返回对应冲突
     else 允许删除
-        WS->>WS: 删除 WorkingSet
-        WS-->>U: 完成
+        WS->>WS: 标记删除、保存并发布 WorkingSetDeleted
+        WS-->>U: 204 No Content
     end
 ```
 
@@ -75,8 +75,7 @@ sequenceDiagram
 
 1. **删除子工作集**时，Shared Tracker 的 Item 不阻塞解除其关联。
 2. **空产品空间删除**先校验绑定、引用和有效 Tracker。具体准入见[绑定与删除契约](../05-contracts/t2-binding-deletion.md#43-聚合删除)。
-3. **删除 WorkingSet 是受成员关系约束的业务操作**：任一成员不可合法解除即整体阻止，不引入无条件级联解除；解除顺序为
-   TrackerBinding → SpaceBinding → WorkingSet。
+3. **删除 WorkingSet 是受成员关系约束的业务操作**。存在有效子级、绑定或归属 Tracker 时拒绝删除，仅写入 WorkingSet 聚合。
 
 ## 4. 裁定与图表状态
 
