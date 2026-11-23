@@ -805,22 +805,7 @@ function openRequirementCreate() {
 }
 
 async function openRequirementEdit(item) {
-    const localId = item.localId;
-    try {
-        const requirement = await api('/api/requirements/' + encodeURIComponent(localId));
-        requirementContext = {mode: 'edit', localId, lockVersion: requirement.lockVersion};
-        openModal(`${modalHeader('编辑需求', requirement.number || shortId(localId))}
-      <form id="requirementForm">
-        <div class="modal-body">
-          <div class="field"><label for="reqTitle">标题</label><input id="reqTitle" name="title" value="${escapeHtml(requirement.title)}" required></div>
-          <div class="field"><label for="reqDescription">描述</label><textarea id="reqDescription" name="description" required>${escapeHtml(requirement.description)}</textarea></div>
-          <div id="requirementFormError" class="form-error"></div>
-        </div>
-        <div class="modal-foot"><button type="button" class="btn" data-close-modal>取消</button><button type="submit" class="btn primary">保存</button></div>
-      </form>`);
-    } catch (error) {
-        setStatus(reasonText(error.body) || error.message, 'error');
-    }
+    return openRequirementPage(item);
 }
 
 async function submitRequirement(form) {
@@ -1057,7 +1042,7 @@ function bindEvents() {
             return;
         }
         const row = event.target.closest('[data-local-id]');
-        if (row) loadContent(row.dataset.localId, row.dataset.itemWs);
+        if (row) openRequirementPage(state.items.find((item) => item.localId === row.dataset.localId) || {localId: row.dataset.localId});
     });
 
     $('#itemActions').addEventListener('click', (event) => {

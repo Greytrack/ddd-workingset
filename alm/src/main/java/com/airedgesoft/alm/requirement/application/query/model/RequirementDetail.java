@@ -5,5 +5,5 @@ package com.airedgesoft.alm.requirement.application.query.model;
  */
 public record RequirementDetail(Long localId, Long commonId, Long trackerId, String number,
                                 String title, String description, int revision, String version,
-                                long lockVersion, boolean deleted, boolean materialized) {
+                                long lockVersion, boolean deleted, boolean materialized, boolean checkedOut, String flags) {
 }

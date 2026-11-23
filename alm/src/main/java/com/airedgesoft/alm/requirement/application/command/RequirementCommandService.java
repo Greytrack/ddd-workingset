@@ -204,6 +204,14 @@ public class RequirementCommandService {
     }
 
     @Transactional
+    public Requirement checkIn(Long localId, Long expectedLockVersion) {
+        Requirement checkedIn = loadWritable(localId).checkIn(expectedLockVersion);
+        repository.save(checkedIn);
+        eventPublisher.publishEvent(new BusinessObjectCheckedInEvent(localId, checkedIn.revision(), checkedIn.flags()));
+        return checkedIn;
+    }
+
+    @Transactional
     public Requirement cancelCheckout(Long localId, Long expectedLockVersion) {
         Requirement current = loadWritable(localId);
         current.requireCancellableCheckout(expectedLockVersion);

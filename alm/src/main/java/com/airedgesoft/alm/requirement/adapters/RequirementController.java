@@ -55,7 +55,7 @@ public class RequirementController {
                 requestedWorkingSetId,
                 requireText(request.title(), "title"),
                 Objects.requireNonNull(request.description(), "description"),
-                (request.revision() == null ? 0 : request.revision()));
+                (request.revision() == null ? 1 : request.revision()));
         return RequirementView.from(created);
     }
 
@@ -75,6 +75,7 @@ public class RequirementController {
     @PutMapping("/{localId}/title")
     public RequirementView changeTitle(@PathVariable("localId") Long localId,
                                        @RequestBody ChangeTitleRequest request) {
+        requireCheckedOut(localId);
         Requirement changed = commands.changeTitle(
                 localId,
                 requireText(request.title(), "title"),
@@ -88,6 +89,7 @@ public class RequirementController {
     @PutMapping("/{localId}")
     public RequirementView changeContent(@PathVariable("localId") Long localId,
                                          @RequestBody ChangeRequirementRequest request) {
+        requireCheckedOut(localId);
         Requirement changed = commands.changeContent(
                 localId,
                 requireText(request.title(), "title"),
@@ -139,5 +141,30 @@ public class RequirementController {
     public RequirementView find(@PathVariable("localId") Long localId) {
         RequirementDetail detail = queries.find(localId);
         return RequirementView.from(detail);
+    }
+
+    @PostMapping("/{localId}/checkout")
+    public RequirementView checkout(@PathVariable Long localId, @RequestBody CheckoutRequest request) {
+        return RequirementView.from(commands.upgradeRevision(localId, request.expectedLockVersion()));
+    }
+
+    @PostMapping("/{localId}/checkin")
+    public RequirementView checkin(@PathVariable Long localId, @RequestBody CheckinRequest request) {
+        return RequirementView.from(commands.checkIn(localId, request.expectedLockVersion()));
+    }
+
+    @PostMapping("/{localId}/cancel-checkout")
+    public RequirementView cancelCheckout(@PathVariable Long localId, @RequestBody CheckoutRequest request) {
+        return RequirementView.from(commands.cancelCheckout(localId, request.expectedLockVersion()));
+    }
+
+    public record CheckoutRequest(long expectedLockVersion) {}
+
+    public record CheckinRequest(long expectedLockVersion, String effectiveFlags) {}
+
+    private void requireCheckedOut(Long localId) {
+        if (!queries.find(localId).checkedOut()) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "请先签出需求后再编辑");
+        }
     }
 }

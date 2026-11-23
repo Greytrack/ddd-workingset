@@ -84,6 +84,10 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                 throw new LockVersionConflictException(expected, current.lockVersion());
             }
         }
+        if (!requirement.checkedOut() && requirement.flags().startsWith("1")) {
+            jdbc.update("UPDATE air_inst_requirement_rev SET flags = '0' || substring(flags from 2) WHERE instance_id = ? AND revision < ? AND substring(flags from 1 for 1) = '1'",
+                    requirement.localId(), requirement.revision());
+        }
         saveCommonInstance(requirement.localId());
     }
 

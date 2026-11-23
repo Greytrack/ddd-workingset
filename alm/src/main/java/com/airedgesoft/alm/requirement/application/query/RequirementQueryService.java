@@ -124,6 +124,6 @@ public class RequirementQueryService {
                 requirement.localId(), requirement.commonId(),
                 requirement.trackerId(), requirement.number(), requirement.title(),
                 requirement.description(), requirement.revision(), requirement.version(),
-                requirement.lockVersion(), requirement.deleted(), requirement.hasMaterialized());
+                requirement.lockVersion(), requirement.deleted(), requirement.hasMaterialized(), false, source.flags());
     }
 }
