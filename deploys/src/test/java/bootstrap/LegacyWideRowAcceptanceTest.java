@@ -91,7 +91,7 @@ class LegacyWideRowAcceptanceTest {
         TrackerCompatibilityRow mirror = trackers.findLegacyCompatibilityRow(trackerId, spaceId).orElseThrow();
         assertEquals("after", mirror.name());
         assertEquals((short) 1, mirror.locked());
-        assertNull(mirror.deleteFlag());
+        assertEquals(0, mirror.deleteFlag());
         assertEquals("{\"mirror\": true}", mirror.attributes());
     }
 }

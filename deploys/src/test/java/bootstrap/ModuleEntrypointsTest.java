@@ -27,18 +27,18 @@ class ModuleEntrypointsTest {
 
         assertTrue(components.contains("com.airedgesoft.alm.requirement.adapters.RequirementController"));
         assertTrue(components.contains("com.airedgesoft.alm.requirement.application.eventhandler.RequirementDerivedItemSummaryListener"));
-        assertTrue(components.contains("com.airedgesoft.sharekernel.workingset.adapters.WorkingSetController"));
+        assertTrue(components.contains("com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController"));
         assertTrue(components.contains("bootstrap.web.ApiExceptionHandler"));
 
         Map<String, String> existingListeners = Map.of(
                 "MergeRoundSubmittedListener", "MergeRoundSubmittedListener",
                 "TrackerItemChangedListener", "RequirementChangedListener",
                 "MergeAppliedListener", "RequirementMergeAppliedListener",
-                "TrackerItemCompleteDeteleListener", "RequirementPurgedListener",
+                "TrackerItemCompleteDeletedListener", "RequirementPurgedListener",
                 "TrackerItemCreatedListener", "TrackerItemCreatedListener",
                 "WorkingSetCreationSubmittedListener", "WorkingSetCreationSubmittedListener");
         for (Map.Entry<String, String> entry : existingListeners.entrySet()) {
-            String className = "com.airedgesoft.sharekernel.workingset.application.eventhandler." + entry.getKey();
+            String className = "com.airedgesoft.sharedkernel.workingset.application.eventhandler." + entry.getKey();
             assertTrue(components.contains(className));
             Class<?> listener = Class.forName(className);
             Method method = Arrays.stream(listener.getDeclaredMethods())

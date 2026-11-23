@@ -485,7 +485,7 @@ class TrackerDefaultAcceptanceTest {
         List<TrackerView> trackers = Arrays.asList(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class));
         for (String spaceId : List.of(firstSpace, secondSpace)) {
             String trackerId = fixtureId("T-NAME-" + spaceId);
-            assertEquals(spaceId, trackerRepository.findById(Long.valueOf(trackerId)).orElseThrow().productSpaceId());
+            assertEquals(Long.valueOf(spaceId), trackerRepository.findById(Long.valueOf(trackerId)).orElseThrow().productSpaceId());
             assertTrue(bindings.spaces().stream().anyMatch(binding -> spaceId.equals(binding.productSpaceId())));
             assertTrue(bindings.trackers().stream().anyMatch(binding -> trackerId.equals(binding.trackerId())));
             assertTrue(trackers.stream().anyMatch(tracker -> trackerId.equals(tracker.trackerId())));
