@@ -7,7 +7,7 @@
 
 ## 决定
 
-创建和扩展任务在 `working_set_creations.result` 保存选择、各 Tracker 的基线时间与游标进度。历史时间由请求指定；缺省 HEAD
+创建和扩展任务在 `air_ws_creations.result` 保存选择、各 Tracker 的基线时间与游标进度。历史时间由请求指定；缺省 HEAD
 统一使用首次受理时间，与 Item 创建时间使用同一数据库时钟。共享 Tracker 仍复用权威对象；基线时间只参与非共享 Item 的候选查询。
 
 执行按父 Tracker、基线时间与 LocalId 游标分页。首版 ALM 和 LTI

@@ -127,7 +127,7 @@ class SnowflakeStorageAcceptanceTest {
             jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", spaceId);
             jdbc.update("DELETE FROM space_bindings WHERE product_space_id = ?", spaceId);
             if (targetId != null) {
-                jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", targetId);
+                jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", targetId);
                 jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", targetId);
             }
             jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", spaceId);

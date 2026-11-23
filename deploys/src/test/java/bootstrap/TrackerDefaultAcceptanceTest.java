@@ -75,7 +75,7 @@ class TrackerDefaultAcceptanceTest {
             jdbc.update("DELETE FROM air_inst_tracker_rev WHERE work_space = ?", space);
             jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
         }
-        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", child);
+        jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM air_inst_workingset WHERE id = ?", child);
     }
 

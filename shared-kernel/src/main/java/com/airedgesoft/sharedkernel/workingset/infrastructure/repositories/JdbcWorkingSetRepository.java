@@ -112,7 +112,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
 
     private void requireReady(Long id) {
         boolean preparing = Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM working_set_creations
+                SELECT EXISTS (SELECT 1 FROM air_ws_creations
                     WHERE new_working_set_id = ? AND status IN ('Pending', 'Running')
                       AND COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE')
                 """, Boolean.class, id));

@@ -111,7 +111,7 @@ class WorkingSetCreationAcceptanceTest {
                 space, otherSpace);
         jdbc.update("""
                 DELETE FROM event_publication WHERE serialized_event LIKE ANY (
-                    SELECT '%' || id || '%' FROM working_set_creations WHERE new_working_set_id IN (?, ?))
+                    SELECT '%' || id || '%' FROM air_ws_creations WHERE new_working_set_id IN (?, ?))
                 """, child, parent);
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", child);
@@ -119,7 +119,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("DELETE FROM space_bindings WHERE working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", child);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", parent);
-        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id IN (?, ?)", child, parent);
+        jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE product_space_id IN (?, ?)", space, otherSpace);
         jdbc.update("DELETE FROM product_spaces WHERE product_space_id IN (?, ?)", space, otherSpace);
     }
@@ -349,7 +349,7 @@ class WorkingSetCreationAcceptanceTest {
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                 assertEquals(Status.Succeeded, task(id).status()));
         jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + id + "%");
-        jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", pendingParent);
+        jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", pendingParent);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", pendingParent);
     }
 
@@ -395,7 +395,7 @@ class WorkingSetCreationAcceptanceTest {
         long now = System.currentTimeMillis();
         WorkingSetCreation running = WorkingSetCreation.submit(taskId, request, "test", now).start(now);
         jdbc.update("""
-                INSERT INTO working_set_creations
+                INSERT INTO air_ws_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, '1', ?, 'running', 'Running', CAST(? AS jsonb), now())
                 """, taskId, mid, mapper.writeValueAsString(running));
@@ -404,7 +404,7 @@ class WorkingSetCreationAcceptanceTest {
             assertFalse(ancestors.contains(mid));
             assertTrue(ancestors.contains("1"));
         } finally {
-            jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", mid);
+            jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", mid);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", mid, leaf);
         }
     }
@@ -444,7 +444,7 @@ class WorkingSetCreationAcceptanceTest {
         assertEquals(submitted.createdAt(), submitted.baselineAtByTracker().get(Long.valueOf(second)));
         awaitStatus(submitted.creationId(), Status.Succeeded);
         assertTrue(jdbc.queryForObject("""
-                SELECT jsonb_exists(result->'baselineAtByTracker', ?) FROM working_set_creations WHERE id = ?
+                SELECT jsonb_exists(result->'baselineAtByTracker', ?) FROM air_ws_creations WHERE id = ?
                 """, Boolean.class, second, submitted.creationId()));
         assertEquals(Set.of(earlier, head), Set.copyOf(jdbc.queryForList("""
                 SELECT common_id FROM air_ws_items_index WHERE workingset_id = ?
@@ -808,7 +808,7 @@ class WorkingSetCreationAcceptanceTest {
                     assertEquals(sameTarget ? "PREPARING" : "WorkingSetAlreadyExists", rejected.getBody().get("reason"));
                 }
                 assertEquals(1, jdbc.queryForObject("""
-                        SELECT count(*) FROM working_set_creations WHERE request_id IN (?, ?)
+                        SELECT count(*) FROM air_ws_creations WHERE request_id IN (?, ?)
                         """, Integer.class, requestId, otherRequestId));
             } finally {
                 connection.rollback();
@@ -831,7 +831,7 @@ class WorkingSetCreationAcceptanceTest {
                 List.of(unshared), null, Mode.EXTEND);
         WorkingSetCreation active = WorkingSetCreation.submit(activeId, request, "test", System.currentTimeMillis()).start(System.currentTimeMillis());
         jdbc.update("""
-                INSERT INTO working_set_creations
+                INSERT INTO air_ws_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, '1', ?, ?, 'Running', CAST(? AS jsonb), now())
                 """, activeId, child, request.requestId(), mapper.writeValueAsString(active));
@@ -852,7 +852,7 @@ class WorkingSetCreationAcceptanceTest {
         WorkingSetCreation creation = WorkingSetCreation.submit(id, request, "test", System.currentTimeMillis())
                 .start(System.currentTimeMillis());
         jdbc.update("""
-                INSERT INTO working_set_creations
+                INSERT INTO air_ws_creations
                     (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                 VALUES (?, ?, ?, ?, 'Running', CAST(? AS jsonb), now())
                 """, id, parent, child, request.requestId(), mapper.writeValueAsString(creation));

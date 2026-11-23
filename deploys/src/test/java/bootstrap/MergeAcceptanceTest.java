@@ -1,5 +1,10 @@
 package bootstrap;
 
+import com.airedgesoft.alm.requirement.application.eventhandler.RequirementMergeApprovedListener;
+import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryApprovedEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.util.AopTestUtils;
+
 
 
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
@@ -92,6 +97,8 @@ class MergeAcceptanceTest {
     private ApplicationEventPublisher events;
     @Autowired
     private TransactionTemplate transactions;
+    @Autowired
+    private RequirementMergeApprovedListener approvedListener;
     private String childTracker;
     private String childAnchor;
 
@@ -150,10 +157,10 @@ class MergeAcceptanceTest {
                   AND (event_type LIKE '%MergeEntryApprovedEvent'
                        OR event_type LIKE '%MergeEntryResolvedEvent')
                 """, Integer.class) == 0);
-        jdbc.update("DELETE FROM merge_rounds WHERE request_id LIKE ?", "%" + suffix + "%");
+        jdbc.update("DELETE FROM air_ws_merge_rounds WHERE request_id LIKE ?", "%" + suffix + "%");
         for (String round : rounds) {
             jdbc.update("DELETE FROM air_ws_items_merge_index WHERE batch_id = ?", round);
-            jdbc.update("DELETE FROM merge_rounds WHERE id = ?", round);
+            jdbc.update("DELETE FROM air_ws_merge_rounds WHERE id = ?", round);
         }
         List<String> itemIds = jdbc.queryForList("""
                 SELECT instance_id FROM air_inst_requirement_rev WHERE tracker IN
@@ -172,7 +179,7 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", workset);
-            jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", workset);
+            jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", workset);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", workset);
         }
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
@@ -317,7 +324,7 @@ class MergeAcceptanceTest {
         });
         assertEquals("source", requirement(target).title());
         assertEquals(1, jdbc.queryForObject(
-                "SELECT count(*) FROM merge_rounds WHERE request_id = ?", Integer.class, requestId));
+                "SELECT count(*) FROM air_ws_merge_rounds WHERE request_id = ?", Integer.class, requestId));
     }
 
     @Test
@@ -362,7 +369,7 @@ class MergeAcceptanceTest {
             rounds.add((String) first.getBody().get("id"));
             tokens.add((String) first.getBody().get("token"));
         }
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM merge_rounds WHERE request_id = ?",
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM air_ws_merge_rounds WHERE request_id = ?",
                 Integer.class, requestId));
     }
 
@@ -376,7 +383,7 @@ class MergeAcceptanceTest {
         Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(field(diff(frozen, family), "ACCEPT", false)));
         assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class));
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM merge_rounds WHERE request_id = ?",
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_merge_rounds WHERE request_id = ?",
                 Integer.class, requestId));
     }
 
@@ -584,7 +591,7 @@ class MergeAcceptanceTest {
     }
 
     @Test
-    void repeatedApplyIsIdempotentAndRecordsOnlyTheCommittedWrite() {
+    void repeatedApplyIsIdempotentAndRecordsOnlyTheCommittedWrite() throws Exception {
         String family = id("resume");
         String source = seed(rootTracker, family, "accepted");
         String target = seed(childTracker, family, "before");
@@ -607,6 +614,23 @@ class MergeAcceptanceTest {
         assertEquals(result, apply(round));
         assertEquals("accepted", requirement(target).title());
         assertEquals("later accepted", requirement(laterTarget).title());
+
+        String approved = jdbc.queryForObject("""
+                SELECT serialized_event FROM event_publication
+                WHERE event_type LIKE '%.MergeEntryApprovedEvent'
+                  AND serialized_event::jsonb ->> 'roundId' = ?
+                  AND serialized_event::jsonb ->> 'localId' = ?
+                """, String.class, round, target);
+        MergeEntryApprovedEvent replay = new ObjectMapper().readValue(approved, MergeEntryApprovedEvent.class);
+        long lockVersion = requirement(target).lockVersion();
+        RequirementMergeApprovedListener listener = AopTestUtils.getTargetObject(approvedListener);
+        transactions.executeWithoutResult(tx -> listener.on(replay));
+        assertEquals(lockVersion, requirement(target).lockVersion());
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM event_publication
+                WHERE event_type LIKE '%.MergeEntryResolvedEvent'
+                  AND serialized_event::jsonb ->> 'roundId' = ? AND serialized_event::jsonb ->> 'entryId' = ?
+                """, Integer.class, replay.roundId(), replay.entryId()));
 
         MergeCheckpoint checkpoint = checkpoints.findLatest(new MergeCheckpoint.Key(
                 Long.valueOf(rootTracker), Long.valueOf(childTracker), Long.valueOf(family))).orElseThrow();
@@ -725,7 +749,7 @@ class MergeAcceptanceTest {
         String low = rootTracker.compareTo(childTracker) < 0 ? rootTracker : childTracker;
         String high = low.equals(rootTracker) ? childTracker : rootTracker;
         jdbc.update("""
-                INSERT INTO merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
+                INSERT INTO air_ws_merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
                 VALUES (?, ?, ?, CAST('{"state":"Running"}' AS jsonb), ?, ?)
                 """, id("busy-round"), id("busy-token"), id("busy-request"), low, high);
         rounds.add(id("busy-round"));

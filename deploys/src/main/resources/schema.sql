@@ -893,7 +893,7 @@ CREATE INDEX IF NOT EXISTS idx_cow_failures_target ON cow_failures (target_local
 -- ---------------------------------------------------------------------------
 
 -- 一轮 MergeRound 承载一页用户决策。requestId 是幂等键，必填且全局唯一。
-CREATE TABLE IF NOT EXISTS merge_rounds
+CREATE TABLE IF NOT EXISTS air_ws_merge_rounds
 (
     id           BIGINT PRIMARY KEY,
     token        VARCHAR(64)  NOT NULL UNIQUE,
@@ -904,8 +904,8 @@ CREATE TABLE IF NOT EXISTS merge_rounds
 );
 
 -- 一页决策同属一个 Tracker 对；Preparing/Running 期间占用该对，作为并发合并闸门。
-CREATE UNIQUE INDEX IF NOT EXISTS uq_merge_rounds_active_tracker_pair
-    ON merge_rounds (tracker_a_id, tracker_b_id)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_merge_rounds_active_tracker_pair
+    ON air_ws_merge_rounds (tracker_a_id, tracker_b_id)
     WHERE (state ->> 'state') IN ('Preparing', 'Running');
 
 -- One immutable row per confirmation. The entry's snowflake ID makes delivery idempotent.
@@ -942,25 +942,11 @@ CREATE INDEX IF NOT EXISTS idx_air_ws_merge_current
 CREATE INDEX IF NOT EXISTS idx_air_ws_merge_batch_range
     ON air_ws_items_merge_index (batch_id, branch_a_id, branch_b_id, merge_seq DESC);
 
-CREATE TABLE IF NOT EXISTS requirement_merge_receipts
-(
-    round_id        BIGINT      NOT NULL,
-    entry_id        BIGINT      NOT NULL,
-    outcome         VARCHAR(32) NOT NULL,
-    business_ref    BIGINT,
-    source_revision INTEGER     NOT NULL,
-    target_revision INTEGER     NOT NULL,
-    created         BOOLEAN     NOT NULL,
-    inherited       BOOLEAN     NOT NULL,
-    failure         TEXT,
-    PRIMARY KEY (round_id, entry_id)
-);
-
 -- ---------------------------------------------------------------------------
 -- Working Set creation LRO
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS working_set_creations
+CREATE TABLE IF NOT EXISTS air_ws_creations
 (
     id                    BIGINT PRIMARY KEY,
     parent_working_set_id BIGINT       NOT NULL,
@@ -975,15 +961,15 @@ CREATE TABLE IF NOT EXISTS working_set_creations
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_creation_target
-    ON working_set_creations (new_working_set_id)
+    ON air_ws_creations (new_working_set_id)
     WHERE result -> 'request' ->> 'mode' = 'CREATE';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_working_set_creation_request_id
-    ON working_set_creations (request_id);
+    ON air_ws_creations (request_id);
 DROP INDEX IF EXISTS uq_creation_request_id;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_extension_target
-    ON working_set_creations (new_working_set_id)
+    ON air_ws_creations (new_working_set_id)
     WHERE (result -> 'request' ->> 'mode' = 'EXTEND'
         AND status IN ('Pending', 'Running'));
 

@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * ALM 对 Merge 条目的应用边界：幂等、整体校验、提交并返回结果事件。
+ * ALM 对 Merge 条目的应用边界：整体校验、提交并返回结果事件。
  */
 @Slf4j
 @Service
@@ -27,7 +27,6 @@ import java.util.Optional;
 public final class RequirementMergeWriter {
     private final RequirementMutationStore repository;
     private final RequirementCommandService requirements;
-    private final RequirementMergeReceiptStore receipts;
 
     private static MergeEntryResolvedEvent rejected(MergeEntryApprovedEvent command, Outcome outcome,
                                                     String failure) {
@@ -54,20 +53,8 @@ public final class RequirementMergeWriter {
         return text;
     }
 
-    /**
-     * 幂等应用合并条目：整体校验目标、提交并返回结果事件。
-     */
+    /** 应用已通过幂等检查的合并条目并返回业务结果。 */
     public MergeEntryResolvedEvent apply(MergeEntryApprovedEvent command) {
-        Optional<MergeEntryResolvedEvent> existing = receipts.find(command.roundId(), command.entryId());
-        if (existing.isPresent()) {
-            return existing.orElseThrow();
-        }
-        MergeEntryResolvedEvent result = applyChecked(command);
-        receipts.save(result);
-        return result;
-    }
-
-    private MergeEntryResolvedEvent applyChecked(MergeEntryApprovedEvent command) {
         try {
             MergeEntryResolvedEvent applied = applyCommand(command);
             return applied;

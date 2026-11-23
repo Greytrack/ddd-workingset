@@ -47,7 +47,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     public boolean claim(MergeRound round) {
         Long[] trackers = trackerPair(round);
         int inserted = jdbc.update("""
-                        INSERT INTO merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
+                        INSERT INTO air_ws_merge_rounds (id, token, request_id, state, tracker_a_id, tracker_b_id)
                         VALUES (?, ?, ?, CAST(? AS jsonb), ?, ?)
                         ON CONFLICT (request_id) DO NOTHING
                         """, round.numericId(), round.token(), round.requestId(), encode(round),
@@ -59,7 +59,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     public void save(MergeRound round) {
         Long[] trackers = trackerPair(round);
         int affected = jdbc.update("""
-                UPDATE merge_rounds
+                UPDATE air_ws_merge_rounds
                 SET state = CAST(? AS jsonb),
                     tracker_a_id = ?,
                     tracker_b_id = ?
@@ -125,7 +125,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
     public Optional<MergeRound> findById(String id) {
         // 命令侧（dispatch/resolve）在事务内读出轮次后修改，需要行锁串行化同一轮次的并发收敛；
         // 普通读取（GET）不在事务内，不额外加锁，与旧实现的 lock=false 行为保持一致。
-        String sql = "SELECT state FROM merge_rounds WHERE id = ?"
+        String sql = "SELECT state FROM air_ws_merge_rounds WHERE id = ?"
                 + (TransactionSynchronizationManager.isActualTransactionActive() ? " FOR UPDATE" : "");
         return jdbc.query(sql, (rs, row) -> decode(rs.getString(1), MergeRound.class),
                 Long.valueOf(id)).stream().findFirst();
@@ -133,7 +133,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
 
     @Override
     public Optional<MergeRound> findByRequestId(String requestId) {
-        return jdbc.query("SELECT state FROM merge_rounds WHERE request_id = ?",
+        return jdbc.query("SELECT state FROM air_ws_merge_rounds WHERE request_id = ?",
                 (rs, row) -> decode(rs.getString(1), MergeRound.class), requestId).stream().findFirst();
     }
 

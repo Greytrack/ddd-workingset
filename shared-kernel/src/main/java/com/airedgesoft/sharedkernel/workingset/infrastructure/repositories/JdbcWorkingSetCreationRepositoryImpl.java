@@ -37,7 +37,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     private boolean insert(WorkingSetCreation creation) {
         WorkingSetCreation.Request request = creation.request();
         return jdbc.update("""
-                        INSERT INTO working_set_creations
+                        INSERT INTO air_ws_creations
                             (id, parent_working_set_id, new_working_set_id, request_id, status, result, created_at)
                         VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
                         ON CONFLICT DO NOTHING
@@ -47,18 +47,18 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
 
     @Override
     public Optional<WorkingSetCreation> find(String id) {
-        return load("SELECT result FROM working_set_creations WHERE id = ?", Long.valueOf(id));
+        return load("SELECT result FROM air_ws_creations WHERE id = ?", Long.valueOf(id));
     }
 
     @Override
     public Optional<WorkingSetCreation> findForUpdate(String id) {
-        return load("SELECT result FROM working_set_creations WHERE id = ? FOR UPDATE", Long.valueOf(id));
+        return load("SELECT result FROM air_ws_creations WHERE id = ? FOR UPDATE", Long.valueOf(id));
     }
 
     @Override
     public Optional<WorkingSetCreation> findByTarget(Long target) {
         return load("""
-                SELECT result FROM working_set_creations
+                SELECT result FROM air_ws_creations
                 WHERE new_working_set_id = ?
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
@@ -68,7 +68,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     @Override
     public Optional<WorkingSetCreation> findByRequest(String requestId) {
         return load("""
-                SELECT result FROM working_set_creations
+                SELECT result FROM air_ws_creations
                 WHERE request_id = ?
                 """, requestId);
     }
@@ -76,7 +76,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
     @Override
     public Optional<WorkingSetCreation> findActiveExtension(Long target) {
         return load("""
-                SELECT result FROM working_set_creations
+                SELECT result FROM air_ws_creations
                 WHERE new_working_set_id = ? AND result->'request'->>'mode' = 'EXTEND'
                   AND status IN ('Pending', 'Running')
                 ORDER BY created_at DESC, id DESC
@@ -86,7 +86,7 @@ public class JdbcWorkingSetCreationRepositoryImpl implements WorkingSetCreationR
 
     private boolean update(WorkingSetCreation creation) {
         return jdbc.update("""
-                        UPDATE working_set_creations
+                        UPDATE air_ws_creations
                         SET status = ?, result = CAST(? AS jsonb), started_at = ?, completed_at = ?
                         WHERE id = ?
                         """, creation.status().name(), encode(creation),

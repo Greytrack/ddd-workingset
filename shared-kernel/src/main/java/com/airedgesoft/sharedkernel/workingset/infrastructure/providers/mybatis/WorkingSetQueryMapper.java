@@ -22,7 +22,7 @@ public interface WorkingSetQueryMapper {
 
     @Select("""
             SELECT EXISTS (
-                SELECT 1 FROM working_set_creations
+                SELECT 1 FROM air_ws_creations
                 WHERE new_working_set_id = #{id} AND status IN ('Pending', 'Running')
                   AND COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE')
             """)
@@ -32,7 +32,7 @@ public interface WorkingSetQueryMapper {
             SELECT w.id FROM air_inst_workingset w
             WHERE w.parent_id = #{id} AND w.delete_flag = 0
               AND NOT EXISTS (
-                  SELECT 1 FROM working_set_creations c
+                  SELECT 1 FROM air_ws_creations c
                   WHERE c.new_working_set_id = w.id
                     AND c.status IN ('Pending', 'Running')
                     AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')
@@ -54,7 +54,7 @@ public interface WorkingSetQueryMapper {
             ) CYCLE working_set_id SET cyclic USING path
             SELECT l.working_set_id FROM lineage l
             WHERE l.distance > 0 AND NOT EXISTS (
-                SELECT 1 FROM working_set_creations c
+                SELECT 1 FROM air_ws_creations c
                 WHERE c.new_working_set_id = l.working_set_id
                   AND c.status IN ('Pending', 'Running')
                   AND COALESCE(c.result->'request'->>'mode', 'CREATE') = 'CREATE')

@@ -99,7 +99,7 @@ class BindingAcceptanceTest {
             jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE workingset_id = ?", id);
             jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE workingset_id = ?)", id);
             jdbc.update("DELETE FROM air_inst_tracker_rev WHERE workingset_id = ?", id);
-            jdbc.update("DELETE FROM working_set_creations WHERE new_working_set_id = ?", id);
+            jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", id);
             jdbc.update("DELETE FROM air_inst_workingset WHERE id = ?", id);
         }
         jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE work_space = ?", space);

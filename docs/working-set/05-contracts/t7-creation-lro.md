@@ -128,7 +128,7 @@ Requirement 是业务 BC 参考实现。
 
 ### 7.1 持久化
 
-`working_set_creations.result` 保存规范化请求、各 Tracker 解析后的 `baselineAtByTracker`、发起人、进度与明细。DDL
+`air_ws_creations.result` 保存规范化请求、各 Tracker 解析后的 `baselineAtByTracker`、发起人、进度与明细。DDL
 见 [schema.sql](../../../deploys/src/main/resources/schema.sql)。
 
 ### 7.2 端口
