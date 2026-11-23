@@ -164,8 +164,7 @@ class MergeAcceptanceTest {
         for (String local : itemIds) {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + local + "%");
             jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", local);
-            jdbc.update("DELETE FROM cow_materializations WHERE source_local_id = ?", local);
-            jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", local);
+
             jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", local);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", local);
         }

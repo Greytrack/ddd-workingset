@@ -86,3 +86,4 @@ Thumbs.db
 /shared-kernel/src/main/java/com/airedgesoft/sharekernel/businessframework/domain/litebusinessobject/LiteBusinessObjectProvider.java
 /shared-kernel/src/main/java/com/airedgesoft/sharekernel/businessframework/infrastructure/projection/JdbcLiteBusinessObjectProvider.java
 /shared-kernel/src/main/java/com/airedgesoft/sharekernel/businessframework/infrastructure/repository/BusinessObjectBuilderRegistryImpl.java
+/shared-kernel/src/main/java/com/airedgesoft/sharedkernel/businessframework/

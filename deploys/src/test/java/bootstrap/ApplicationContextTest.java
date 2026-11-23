@@ -88,7 +88,7 @@ class ApplicationContextTest {
         assertEquals(0L, event.beforeLockVersion());
         assertEquals(1L, event.afterLockVersion());
         assertTrue(String.valueOf(event.eventId()).matches("\\d+"), "eventId 应为雪花 ID");
-        assertNotNull(event.snapshotRef());
+        assertTrue(event.snapshot().isObject());
         assertNotNull(event.occurredAt());
     }
 

@@ -331,34 +331,16 @@ SELECT id,
        sub_class_id
 FROM air_ws_items_index;
 
--- Demo items currently at revision 2 also have a real revision 1 snapshot and index member.
-INSERT INTO requirement_snapshots
-(snapshot_ref, local_id, common_id, tracker_id, title, description, revision, version, lock_version)
-SELECT pg_temp.demo_id(9500000 + row_number() OVER (ORDER BY local_id)),
-       local_id,
-       common_id,
-       tracker_id,
-       title,
-       '首次登记：' || title,
-       1,
-       version,
-       0
-FROM requirements
-WHERE revision = 2;
-
+-- Demo items currently at revision 2 also have a revision 1 index member.
 INSERT INTO air_ws_items_revision_index
-(id, work_space_id, workingset_id, master_id, branch_id, common_id, local_id, revision, sub_class_id)
-SELECT s.snapshot_ref,
-       i.work_space_id,
-       i.workingset_id,
-       i.master_id,
-       i.branch_id,
-       i.common_id,
-       i.local_id,
-       s.revision,
-       i.sub_class_id
-FROM requirement_snapshots s
-         JOIN air_ws_items_index i ON i.local_id = s.local_id;
+(id, work_space_id, workingset_id, master_id, branch_id, common_id, local_id, revision, sub_class_id,
+ flags, lock_version, created_by, created_time)
+SELECT pg_temp.demo_id(9500000 + row_number() OVER (ORDER BY i.local_id)),
+       i.work_space_id, i.workingset_id, i.master_id, i.branch_id, i.common_id, i.local_id, 1, i.sub_class_id,
+       i.flags, 0, i.created_by, i.created_time
+FROM air_ws_items_index i
+JOIN requirements r ON r.local_id = i.local_id
+WHERE r.revision = 2;
 
 -- Public summaries are part of the initial Demo dataset, including inherited item summaries.
 WITH source_rows (
@@ -459,13 +441,9 @@ WITH source_rows (
                  r.working_set_id,
                  NULL,
                  r.tracker_id,
-                 GREATEST(r.revision, h.max_revision)
+                 r.revision
           FROM requirements r
                    JOIN air_inst_tracker_rev t ON t.id = r.tracker_id
-                   LEFT JOIN (SELECT local_id, max(revision) AS max_revision
-                              FROM requirement_snapshots
-                              GROUP BY local_id) h
-                             ON h.local_id = r.local_id
           UNION ALL
           SELECT l.local_id,
                  1401,

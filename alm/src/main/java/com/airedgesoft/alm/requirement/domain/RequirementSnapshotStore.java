@@ -6,14 +6,9 @@ import com.airedgesoft.sharedkernel.workingset.domain.event.SnapshotRefEvent;
 import java.util.Optional;
 
 /**
- * ALM 自有快照存储：保存「修改前」不可变内容并返回引用；SK 只持有引用。
+ * 读取来源变更事件中由 ALM 定义的不可变快照。
  */
 public interface RequirementSnapshotStore {
-
-    /**
-     * 保存快照并返回不可变引用。
-     */
-    SnapshotRefEvent save(RequirementSnapshot snapshot);
 
     /**
      * 按引用回读快照；不存在时返回空，不以当前值冒充。

@@ -4,7 +4,6 @@ package com.airedgesoft.alm.requirement.application.command;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
-import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.RequestThreadHolder;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
@@ -14,7 +13,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectLocalizedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
-import com.airedgesoft.sharedkernel.workingset.domain.event.SnapshotRefEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
@@ -23,6 +21,7 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepos
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -43,7 +42,7 @@ import java.util.function.UnaryOperator;
 public class RequirementCommandService {
 
     private final RequirementRepository repository;
-    private final RequirementSnapshotStore snapshotStore;
+    private final ObjectMapper snapshotJson;
     private final IdentifierGenerator identifierGenerator;
     private final ApplicationEventPublisher eventPublisher;
     private final TrackerRepository trackers;
@@ -226,11 +225,10 @@ public class RequirementCommandService {
     }
 
     /**
-     * 保存变更：先保存修改前快照，再保存对象并发布来源变更事件（及软删事件）。
+     * 保存变更：保存对象并在来源变更事件中携带修改前快照（及软删事件）。
      */
     public Requirement saveChange(Requirement current, Requirement changed) {
         RequirementSnapshot snapshot = RequirementSnapshot.of(current);
-        SnapshotRefEvent snapshotRef = snapshotStore.save(snapshot);
 
         repository.save(changed);
 
@@ -242,7 +240,7 @@ public class RequirementCommandService {
                 changed.revision(),
                 current.lockVersion(),
                 changed.lockVersion(),
-                snapshotRef,
+                snapshotJson.valueToTree(snapshot),
                 System.currentTimeMillis());
 
         // 发布记录随来源事务提交，监听器在提交后异步处理。
@@ -259,7 +257,6 @@ public class RequirementCommandService {
     public void saveDeleted(RequirementSnapshot snapshot, Requirement changed,
                             int beforeRevision, long beforeLockVersion,
                             BusinessObjectDeleteEvent deletedEvent) {
-        SnapshotRefEvent snapshotRef = snapshotStore.save(snapshot);
         repository.save(changed);
         eventPublisher.publishEvent(new BusinessObjectUpdateEvent(
                 identifierGenerator.nextId(null).longValue(),
@@ -269,7 +266,7 @@ public class RequirementCommandService {
                 changed.revision(),
                 beforeLockVersion,
                 changed.lockVersion(),
-                snapshotRef,
+                snapshotJson.valueToTree(snapshot),
                 System.currentTimeMillis()));
         eventPublisher.publishEvent(deletedEvent);
     }

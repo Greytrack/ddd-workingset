@@ -4,7 +4,6 @@ package com.airedgesoft.alm.requirement.application;
 import com.airedgesoft.alm.requirement.application.command.RequirementCommandService;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
-import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
@@ -17,6 +16,7 @@ import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -40,7 +40,7 @@ class RequirementCreateScopeTest {
     private final WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
     private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
-            repository, mock(RequirementSnapshotStore.class), ids, mock(ApplicationEventPublisher.class), trackers,
+            repository, new ObjectMapper(), ids, mock(ApplicationEventPublisher.class), trackers,
             workingSets, mock(LightTrackerItemRepository.class));
 
     private static Tracker tracker(String workingSetId, SharingMode sharingMode) {

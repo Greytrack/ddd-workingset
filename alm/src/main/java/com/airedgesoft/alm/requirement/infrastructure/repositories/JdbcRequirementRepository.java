@@ -4,6 +4,7 @@ package com.airedgesoft.alm.requirement.infrastructure.repositories;
 import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
+import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
@@ -116,7 +117,10 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     @Override
     public void delete(Requirement requirement) {
         long id = requirement.localId();
-        jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", id);
+        jdbc.update("""
+                DELETE FROM event_publication
+                WHERE event_type = ? AND serialized_event::jsonb ->> 'sourceLocalId' = ?
+                """, BusinessObjectUpdateEvent.class.getName(), Long.toString(id));
         if (jdbc.update("DELETE FROM requirements WHERE local_id = ?", id) == 1) {
             commonInstances.remove(id);
         }

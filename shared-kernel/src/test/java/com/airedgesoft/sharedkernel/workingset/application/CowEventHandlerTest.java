@@ -2,9 +2,9 @@ package com.airedgesoft.sharedkernel.workingset.application;
 
 
 import com.airedgesoft.sharedkernel.workingset.application.command.CowEventHandler;
-import com.airedgesoft.sharedkernel.workingset.domain.cow.CowMaterializationStore;
+import com.airedgesoft.sharedkernel.workingset.application.query.provider.CowRequestPublications;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
-import com.airedgesoft.sharedkernel.workingset.domain.event.SnapshotRefEvent;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
@@ -12,10 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
+import java.util.function.Consumer;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,19 +40,21 @@ class CowEventHandlerTest {
         when(items.findSourceBackedTargets(source, before)).thenReturn(List.of(target));
 
         BusinessObjectUpdateEvent event = new BusinessObjectUpdateEvent(42, source, source, before, after,
-                Long.valueOf(5), Long.valueOf(6), SnapshotRefEvent.of("258782756974528"), 0L);
+                Long.valueOf(5), Long.valueOf(6), JsonNodeFactory.instance.objectNode(), 0L);
 
-        CowMaterializationStore store = mock(CowMaterializationStore.class);
-        CowMaterializationStore.Entry pending = new CowMaterializationStore.Entry(42, target.localId(),
-                source, before, CowMaterializationStore.Status.PENDING, 1, false, null);
-        when(store.markPending(42, target.localId(), source, before)).thenReturn(pending);
+        CowRequestPublications publications = mock(CowRequestPublications.class);
+        when(items.findByIdForUpdate(target.localId())).thenReturn(Optional.of(target));
+        when(publications.exists(source, target.localId())).thenReturn(false, true);
 
         TransactionTemplate transaction = mock(TransactionTemplate.class);
-        when(transaction.execute(any())).thenAnswer(invocation ->
-                ((TransactionCallback<?>) invocation.getArgument(0))
-                        .doInTransaction(mock(TransactionStatus.class)));
+        doAnswer(invocation -> {
+            Consumer<TransactionStatus> action = invocation.getArgument(0);
+            action.accept(mock(TransactionStatus.class));
+            return null;
+        }).when(transaction).executeWithoutResult(any());
 
-        CowEventHandler handler = new CowEventHandler(items, transaction, store, events);
+        CowEventHandler handler = new CowEventHandler(items, transaction, publications, events);
+        handler.onTrackerItemChanged(event);
         handler.onTrackerItemChanged(event);
 
         ArgumentCaptor<TrackerItemMaterializationRequestedEvent> request =

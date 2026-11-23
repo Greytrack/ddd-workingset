@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 class RepositorySourceConventionTest {
 
     private static final Set<String> BUSINESS_TABLES = Set.of(
-            "requirements", "requirement_snapshots",
+            "requirements",
             "parts", "quality_objects", "dqa_items", "gates",
             "reviews", "test_cases", "bugs", "documents");
 

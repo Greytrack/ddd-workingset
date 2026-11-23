@@ -58,12 +58,11 @@ class CowAcceptanceTest {
         if (source != null) {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", eventPattern());
             jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", source);
-            jdbc.update("DELETE FROM cow_materializations WHERE source_local_id = ?", source);
-            jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", source);
+
         }
         for (String target : targets) {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", "%" + target + "%");
-            jdbc.update("DELETE FROM requirement_snapshots WHERE local_id = ?", target);
+
             jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", target);
             jdbc.update("DELETE FROM requirements WHERE local_id = ?", target);
         }
@@ -93,6 +92,23 @@ class CowAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 2);
         assertLocalContent(first, "A");
         assertLocalContent(second, "A");
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM event_publication
+                WHERE event_type LIKE '%.BusinessObjectUpdateEvent'
+                  AND serialized_event::jsonb ->> 'sourceLocalId' = ?
+                  AND serialized_event::jsonb -> 'snapshot' ->> 'title' = 'A'
+                """, Integer.class, source));
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(DISTINCT serialized_event::jsonb -> 'snapshotRef' ->> 'id')
+                FROM event_publication
+                WHERE event_type LIKE '%.TrackerItemMaterializationRequestedEvent'
+                  AND serialized_event::jsonb ->> 'sourceLocalId' = ?
+                """, Integer.class, source));
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT count(*) FROM event_publication
+                WHERE event_type LIKE '%.TrackerItemMaterializationRequestedEvent'
+                  AND serialized_event::jsonb ->> 'sourceLocalId' = ?
+                """, Integer.class, source));
         assertEquals("C", rest.getForObject("/api/requirements/" + source, RequirementView.class).title());
         assertTrue(failures.findBySource(Long.valueOf(source)).isEmpty());
         System.out.printf("AT-03/04 HTTP B→C source=%s target=%s; DB=%s; completed=%d%n", source, first.id(),
@@ -253,7 +269,7 @@ class CowAcceptanceTest {
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
         assertLocalContent(target, "A");
         assertEquals(1, read(target).contentRevision());
-        assertEquals(3, jdbc.queryForObject("SELECT revision FROM requirement_snapshots WHERE local_id = ?",
+        assertEquals(3, jdbc.queryForObject("SELECT (serialized_event::jsonb -> 'snapshot' ->> 'revision')::integer FROM event_publication WHERE event_type LIKE '%.BusinessObjectUpdateEvent' AND serialized_event::jsonb ->> 'sourceLocalId' = ?",
                 Integer.class, source));
     }
 
@@ -280,7 +296,7 @@ class CowAcceptanceTest {
             assertTrue(reachedSwitch.await(5, TimeUnit.SECONDS));
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(path + "/delete2", null, Map.class).getStatusCode());
             assertEquals(HttpStatus.GONE, rest.getForEntity(path, Map.class).getStatusCode());
-            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE event_type LIKE '%.BusinessObjectUpdateEvent' AND serialized_event::jsonb ->> 'sourceLocalId' = ? AND serialized_event::jsonb -> 'snapshot' IS NOT NULL",
                     Integer.class, source));
         } finally {
             releaseSwitch.countDown();
@@ -293,7 +309,7 @@ class CowAcceptanceTest {
                 Integer.class, Long.valueOf(target.id())));
         assertEquals(HttpStatus.NO_CONTENT, rest.postForEntity(path + "/delete2", null, Void.class).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(path, Map.class).getStatusCode());
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM requirement_snapshots WHERE local_id = ?",
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM event_publication WHERE event_type LIKE '%.BusinessObjectUpdateEvent' AND serialized_event::jsonb ->> 'sourceLocalId' = ? AND serialized_event::jsonb -> 'snapshot' IS NOT NULL",
                 Integer.class, source));
         Requirement edited = requirements.changeTitle(Long.valueOf(target.id()), "editable after purge", Long.valueOf(0));
         assertEquals("editable after purge", edited.title());
@@ -310,16 +326,6 @@ class CowAcceptanceTest {
             return null;
         }).when(items).save(argThat(item -> item != null && item.materialized()
                 && Long.toString(item.localId()).equals(target.id())));
-    }
-
-    private String receiptStatus(Target target) {
-        return jdbc.queryForList("SELECT status FROM cow_materializations WHERE target_local_id = ?",
-                String.class, target.id()).stream().findFirst().orElse("");
-    }
-
-    private int attempts(Target target) {
-        return jdbc.queryForObject("SELECT attempts FROM cow_materializations WHERE target_local_id = ?",
-                Integer.class, target.id());
     }
 
     private void createSource() {

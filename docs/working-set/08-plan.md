@@ -33,7 +33,7 @@
 | 连接池     | 每轮执行占用一个外层锁连接 + 内层写入连接，核对并行轮次与 Hikari 容量                                                                                                    | T6-B/T6-E |
 | 比较       | 瞬时 compare 在候选家族规模增长时的耗时与分页稳定性（不承诺跨请求冻结）                                                                                                  | T6-E      |
 | 工作集创建 | 按 Tracker 基线时间分页扫描耗时、并发创建、批大小、失败明细规模                                                                                                          | T7-F      |
-| 保留与清理 | `merge_rounds`、`requirement_merge_receipts`、`air_ws_items_merge_index`、`cow_materializations`、`event_publication` 的保留期与归档；合并基准历史承担去重，不能独立删除 | T6-E/T7-F |
+| 保留与清理 | `merge_rounds`、`requirement_merge_receipts`、`air_ws_items_merge_index`、`event_publication` 的保留期与归档；合并基准历史承担去重，COW 来源及请求发布记录承担回读和去重 | T6-E/T7-F |
 
 ### 2.2 待采样指标
 

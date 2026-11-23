@@ -664,19 +664,6 @@ CREATE TABLE IF NOT EXISTS air_ws_items_revision_index
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_revision ON air_ws_items_revision_index (local_id, revision);
 
-CREATE TABLE IF NOT EXISTS requirement_snapshots
-(
-    snapshot_ref BIGINT PRIMARY KEY,
-    local_id     BIGINT  NOT NULL,
-    common_id    BIGINT  NOT NULL,
-    tracker_id   BIGINT  NOT NULL,
-    title        TEXT    NOT NULL,
-    description  TEXT    NOT NULL,
-    revision     INTEGER NOT NULL,
-    version      VARCHAR(64),
-    lock_version BIGINT  NOT NULL
-);
-
 -- ---------------------------------------------------------------------------
 -- Copy-on-write recovery / diagnostics
 -- ---------------------------------------------------------------------------
@@ -701,23 +688,6 @@ CREATE TABLE IF NOT EXISTS cow_failures
 
 CREATE INDEX IF NOT EXISTS idx_cow_failures_source ON cow_failures (source_local_id);
 CREATE INDEX IF NOT EXISTS idx_cow_failures_target ON cow_failures (target_local_id);
-
-CREATE TABLE IF NOT EXISTS cow_materializations
-(
-    event_id        BIGINT      NOT NULL,
-    target_local_id BIGINT      NOT NULL,
-    source_local_id BIGINT      NOT NULL,
-    source_revision INTEGER     NOT NULL,
-    status          VARCHAR(32) NOT NULL,
-    attempts        INTEGER     NOT NULL DEFAULT 0,
-    business_saved  BOOLEAN     NOT NULL DEFAULT FALSE,
-    last_error      TEXT,
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (event_id, target_local_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_cow_materializations_target ON cow_materializations (target_local_id);
-CREATE INDEX IF NOT EXISTS idx_cow_materializations_status ON cow_materializations (status);
 
 -- ---------------------------------------------------------------------------
 -- Merge LRO (compare itself is not persisted)
