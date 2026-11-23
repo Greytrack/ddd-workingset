@@ -63,7 +63,7 @@ class T7RelationEventAcceptanceTest {
         jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker = ?", parentTracker);
         jdbc.update("DELETE FROM air_inst_common WHERE id = ?", parentItem);
         jdbc.update("DELETE FROM trackers WHERE product_space_id = ?", space);
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
+        jdbc.update("DELETE FROM air_inst_product_space WHERE id = ?", space);
     }
 
     @Test
@@ -89,7 +89,7 @@ class T7RelationEventAcceptanceTest {
     }
 
     private void seedParentRange() {
-        jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
+        jdbc.update("INSERT INTO air_inst_product_space (id, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 0, 0, 'test', 0, 'test', 0)", space);
         FixtureIds.insertClassification(jdbc, classification, "UNSHARED");
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)

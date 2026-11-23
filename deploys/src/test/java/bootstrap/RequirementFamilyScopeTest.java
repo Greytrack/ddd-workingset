@@ -45,7 +45,7 @@ class RequirementFamilyScopeTest {
     void provision() {
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", ws2);
         for (String tracker : new String[]{t1, t2, t3, t4}) {
-            jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", fixtureId(tracker + "-space"));
+            jdbc.update("INSERT INTO air_inst_product_space (id, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 0, 0, 'test', 0, 'test', 0)", fixtureId(tracker + "-space"));
         }
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
@@ -75,7 +75,7 @@ class RequirementFamilyScopeTest {
         // Child trackers reference parents through source_id; remove them first.
         for (String tracker : new String[]{t3, t4, t2, t1}) {
             jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", tracker);
-            jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", fixtureId(tracker + "-space"));
+            jdbc.update("DELETE FROM air_inst_product_space WHERE id = ?", fixtureId(tracker + "-space"));
         }
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", ws2);
     }

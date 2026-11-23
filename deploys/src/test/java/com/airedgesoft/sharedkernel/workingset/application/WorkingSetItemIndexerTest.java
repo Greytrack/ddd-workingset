@@ -59,12 +59,12 @@ class WorkingSetItemIndexerTest {
         jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker = ?", sourceTracker);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", sourceTracker);
         jdbc.update("DELETE FROM working_sets WHERE working_set_id IN (?, ?)", child, parent);
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
+        jdbc.update("DELETE FROM air_inst_product_space WHERE id = ?", space);
     }
 
     @Test
     void existingFamilyWinsOverDeletedSource() {
-        jdbc.update("INSERT INTO product_spaces (product_space_id) VALUES (?)", space);
+        jdbc.update("INSERT INTO air_inst_product_space (id, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 0, 0, 'test', 0, 'test', 0)", space);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, '1')", parent);
         jdbc.update("INSERT INTO working_sets (working_set_id, parent_working_set_id) VALUES (?, ?)", child, parent);
         jdbc.update("""

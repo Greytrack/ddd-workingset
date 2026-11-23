@@ -73,7 +73,7 @@ class TrackerDefaultAcceptanceTest {
             jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE work_space = ?", space);
             jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
             jdbc.update("DELETE FROM air_inst_tracker_rev WHERE work_space = ?", space);
-            jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
+            jdbc.update("DELETE FROM air_inst_product_space WHERE id = ?", space);
         }
         jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id = ?", child);
         jdbc.update("DELETE FROM air_inst_workingset WHERE id = ?", child);
@@ -387,7 +387,7 @@ class TrackerDefaultAcceptanceTest {
     void defaultTrackerIsUniquePerWorkingSetSpaceAndClassification() {
         String spaceId = fixtureId("PS-DEF-" + suffix);
         testSpaces.add(spaceId);
-        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", spaceId, "空间-" + suffix);
+        jdbc.update("INSERT INTO air_inst_product_space (id, name, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, ?, 0, 0, 'test', 0, 'test', 0)", spaceId, "空间-" + suffix);
         String classification = jdbc.queryForObject("SELECT classification_id FROM classifications WHERE classification_id = 14010101", String.class);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id,
@@ -405,7 +405,7 @@ class TrackerDefaultAcceptanceTest {
     void trackerNameIsUniqueWithinSpaceAndClassification() {
         String spaceId = fixtureId("PS-NAME-" + suffix);
         testSpaces.add(spaceId);
-        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)", spaceId, "空间-" + suffix);
+        jdbc.update("INSERT INTO air_inst_product_space (id, name, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, ?, 0, 0, 'test', 0, 'test', 0)", spaceId, "空间-" + suffix);
         String classification = jdbc.queryForObject("SELECT classification_id FROM classifications WHERE classification_id = 14010101", String.class);
         String name = "同名-" + suffix;
         jdbc.update("""
@@ -467,7 +467,7 @@ class TrackerDefaultAcceptanceTest {
         String name = "同名跨空间-" + suffix;
         for (String spaceId : Arrays.asList(firstSpace, secondSpace)) {
             testSpaces.add(spaceId);
-            jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, ?)",
+            jdbc.update("INSERT INTO air_inst_product_space (id, name, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, ?, 0, 0, 'test', 0, 'test', 0)",
                     spaceId, "空间-" + suffix);
             jdbc.update("""
                     INSERT INTO trackers (tracker_id, name, working_set_id, product_space_id, classification_id, sharing_mode)

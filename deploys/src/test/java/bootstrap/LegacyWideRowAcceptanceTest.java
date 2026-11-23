@@ -55,7 +55,7 @@ class LegacyWideRowAcceptanceTest {
         long spaceId = 990002;
         long id = 990003;
         Long trackerId = id;
-        jdbc.update("INSERT INTO product_spaces (product_space_id, name) VALUES (?, 'legacy-test')", spaceId);
+        jdbc.update("INSERT INTO air_inst_product_space (id, name, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 'legacy-test', 0, 0, 'test', 0, 'test', 0)", spaceId);
         jdbc.update("""
                 INSERT INTO air_inst_tracker_rev (id, instance_id, common_id, workingset_id, work_space,
                     base_class, class, type, tracker_class, number, name, owner, share, revision, delete_flag,

@@ -181,7 +181,7 @@ class WorkingSetLineageAcceptanceTest {
                 try (ResultSet rows = sql.executeQuery("""
                         SELECT (SELECT count(*) FROM air_inst_workingset)
                                + (SELECT count(*) FROM air_inst_tracker_rev)
-                               + (SELECT count(*) FROM product_spaces)
+                               + (SELECT count(*) FROM air_inst_product_space)
                                + (SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev)
                                + (SELECT count(*) FROM air_ws_items_index WHERE has_copied = 0),
                                count(*), array_agg(DISTINCT base_class ORDER BY base_class)
@@ -206,10 +206,10 @@ class WorkingSetLineageAcceptanceTest {
                     assertEquals(0, rows.getLong(1));
                 }
                 try (ResultSet rows = sql.executeQuery("""
-                        SELECT count(*) FROM product_spaces p
-                        LEFT JOIN air_inst_common c ON c.id = p.product_space_id
-                        WHERE c.work_space IS DISTINCT FROM p.product_space_id
-                           OR c.common_id IS DISTINCT FROM p.product_space_id
+                        SELECT count(*) FROM air_inst_product_space p
+                        LEFT JOIN air_inst_common c ON c.id = p.id
+                        WHERE c.work_space IS DISTINCT FROM p.id
+                           OR c.common_id IS DISTINCT FROM p.id
                            OR c.workingset_id IS DISTINCT FROM 1
                         """)) {
                     assertTrue(rows.next());

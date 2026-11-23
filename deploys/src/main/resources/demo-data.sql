@@ -16,9 +16,12 @@ FROM (VALUES (1, '整车平台'),
              (5, '车联网'),
              (6, '质量与合规')) AS space(n, name);
 
-INSERT INTO product_spaces (product_space_id, name)
-SELECT pg_temp.demo_id(100 + n), name
-FROM demo_spaces;
+INSERT INTO air_inst_product_space
+(id, base_class, class, type, name, instance_id, common_id, work_space, workingset_id, tracker,
+ lock_version, delete_flag, created_by, created_time, updated_by, updated_time)
+SELECT id, 1003, 100301, 10030101, name, id, id, id, 1, 584189545406816,
+       0, 0, 'demo', 1704067200000, 'demo', 1704067200000
+FROM (SELECT pg_temp.demo_id(100 + n) AS id, name FROM demo_spaces) spaces;
 
 INSERT INTO air_inst_workingset
 (id, instance_id, common_id, workingset_id, parent_id, base_class, class, type, tracker,
@@ -414,29 +417,10 @@ WITH current_requirements AS (
                  1
           FROM air_inst_tracker_rev
           UNION ALL
-          SELECT product_space_id,
-                 1003,
-                 100301,
-                 10030101,
-                 product_space_id,
-                 NULL,
-                 name,
-                 NULL,
-                 1,
-                 0,
-                 NULL,
-                 NULL,
-                 NULL,
-                 NULL,
-                 NULL,
-                 NULL,
-                 NULL,
-                 product_space_id,
-                 1,
-                 NULL,
-                 584189545406816,
-                 1
-          FROM product_spaces
+          SELECT id, base_class, class, type, work_space, number, name, NULL, revision, delete_flag, lock_version,
+                 created_by, created_time, updated_by, updated_time, NULL, owner, common_id, workingset_id,
+                 parent_id, tracker, revision
+          FROM air_inst_product_space
           UNION ALL
           SELECT r.instance_id,
                  1401,

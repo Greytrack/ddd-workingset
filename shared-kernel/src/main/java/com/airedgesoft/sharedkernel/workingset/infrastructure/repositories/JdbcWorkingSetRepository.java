@@ -91,7 +91,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         List<WorkingSet.SpaceBinding> spaces = jdbc.query("""
                 SELECT sb.product_space_id, ps.name AS product_space_name, sb.origin, sb.state
                 FROM space_bindings sb
-                LEFT JOIN product_spaces ps ON ps.product_space_id = sb.product_space_id
+                LEFT JOIN air_inst_product_space ps ON ps.id = sb.product_space_id
                 WHERE sb.working_set_id = ? ORDER BY sb.product_space_id
                 """, (rs, row) -> new WorkingSet.SpaceBinding(id, rs.getLong("product_space_id"),
                 rs.getString("product_space_name"),

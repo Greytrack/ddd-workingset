@@ -88,7 +88,7 @@ public interface WorkingSetQueryMapper {
     @Select("""
             SELECT sb.product_space_id, ps.name, sb.origin, sb.state
             FROM space_bindings sb
-            LEFT JOIN product_spaces ps ON ps.product_space_id = sb.product_space_id
+            LEFT JOIN air_inst_product_space ps ON ps.id = sb.product_space_id
             WHERE sb.working_set_id = #{id}
             ORDER BY sb.product_space_id
             """)

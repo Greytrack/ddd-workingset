@@ -121,7 +121,7 @@ class WorkingSetCreationAcceptanceTest {
         jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", parent);
         jdbc.update("DELETE FROM air_ws_creations WHERE new_working_set_id IN (?, ?)", child, parent);
         jdbc.update("DELETE FROM trackers WHERE product_space_id IN (?, ?)", space, otherSpace);
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id IN (?, ?)", space, otherSpace);
+        jdbc.update("DELETE FROM air_inst_product_space WHERE id IN (?, ?)", space, otherSpace);
     }
 
     @Test
@@ -360,7 +360,7 @@ class WorkingSetCreationAcceptanceTest {
         try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
             try (PreparedStatement statement = connection.prepareStatement(
-                    "SELECT product_space_id FROM product_spaces WHERE product_space_id = ? FOR UPDATE")) {
+                    "SELECT id FROM air_inst_product_space WHERE id = ? FOR UPDATE")) {
                 statement.setString(1, space);
                 statement.executeQuery().close();
                 id = submit(new Request("1", child, "filter", List.of(space), List.of(), List.of()));
@@ -704,7 +704,7 @@ class WorkingSetCreationAcceptanceTest {
                  PreparedStatement tracker = connection.prepareStatement(
                     "SELECT id FROM air_inst_tracker_rev WHERE id = ? FOR NO KEY UPDATE");
                  PreparedStatement productSpace = connection.prepareStatement(
-                         "SELECT product_space_id FROM product_spaces WHERE product_space_id = ? FOR NO KEY UPDATE");
+                         "SELECT id FROM air_inst_product_space WHERE id = ? FOR NO KEY UPDATE");
                  PreparedStatement source = connection.prepareStatement(
                     "SELECT id FROM air_inst_common WHERE id = ? FOR UPDATE")) {
                 parentRow.executeQuery().close();
@@ -894,7 +894,7 @@ class WorkingSetCreationAcceptanceTest {
     }
 
     private void seedRange() {
-        jdbc.update("INSERT INTO product_spaces VALUES (?), (?)", space, otherSpace);
+        jdbc.update("INSERT INTO air_inst_product_space (id, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 0, 0, 'test', 0, 'test', 0), (?, 0, 0, 'test', 0, 'test', 0)", space, otherSpace);
         FixtureIds.insertClassification(jdbc, SHARED_CLASSIFICATION, "SHARED");
         FixtureIds.insertClassification(jdbc, UNSHARED_CLASSIFICATION, "UNSHARED");
         seedFolderTracker(space);

@@ -15,7 +15,7 @@ record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
     }
 
     void provision() {
-        jdbc.update("INSERT INTO product_spaces VALUES (?)", spaceId());
+        jdbc.update("INSERT INTO air_inst_product_space (id, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 0, 0, 'test', 0, 'test', 0)", spaceId());
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, working_set_id, product_space_id, classification_id, sharing_mode)
                 VALUES (?, '1', ?, ?, 'UNSHARED')
@@ -25,7 +25,7 @@ record RootTrackerFixture(JdbcTemplate jdbc, String trackerId) {
     void remove() {
         jdbc.update("DELETE FROM air_ws_items_index WHERE branch_id = ?", trackerId);
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", trackerId);
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", spaceId());
+        jdbc.update("DELETE FROM air_inst_product_space WHERE id = ?", spaceId());
     }
 
     void removeRequirement(String localId) {

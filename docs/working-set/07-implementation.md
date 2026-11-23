@@ -128,7 +128,7 @@ com.airedgesoft.alm.requirement.application.query
   `shown` 修改均经聚合；空间绑定仍由 Folder Tracker 关系表示，未变更关系不重写。
 - Tracker 与创建任务也统一用 `save`，保存分支由实现处理；Tracker 软删除经 `Tracker.delete()` 标记后由 `save` 持久化 `delete_flag`，物理删除使用 `TrackerRepository.delete(聚合)`。产品空间当前无更新命令；`save` 只写新对象，重复身份不覆盖。
 - MergeRound 仓储已拆分 `claim`（按 requestId 原子认领新轮次）与 `save`（更新已有轮次状态）；MergeCheckpointQuery 直接从旧表只读查询跨轮次最新基准。LTI 原子家族占位不以普通保存替代。
-- 产品空间、Tracker 与 Working Set 各有聚合仓储；入口及初始化的事务差距见 §4。
+- 产品空间、Tracker 与 Working Set 各有聚合仓储；入口及初始化的事务差距见 §4。产品空间直接读写 V3 结构的 `air_inst_product_space`，以 `id` 作为产品空间标识。Tracker 和空间绑定仍通过各自的外键列引用该 ID。创建与软删除写入对应审计字段，`delete_flag` 的 `0` 表示有效，`1` 表示已删除。
 
 ### 6.2 查询侧后续
 

@@ -81,7 +81,7 @@ class BindingAcceptanceTest {
         for (String child : List.of(ws, other)) {
             createChild("1", child);
         }
-        jdbc.update("INSERT INTO product_spaces VALUES (?)", space);
+        jdbc.update("INSERT INTO air_inst_product_space (id, lock_version, delete_flag, created_by, created_time, updated_by, updated_time) VALUES (?, 0, 0, 'test', 0, 'test', 0)", space);
         FixtureIds.insertClassification(jdbc, sharedClass, "SHARED");
         FixtureIds.insertClassification(jdbc, unsharedClass, "UNSHARED");
         original(shared, sharedClass, "SHARED", null);
@@ -105,7 +105,7 @@ class BindingAcceptanceTest {
         jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE work_space = ?", space);
         jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE work_space = ?)", space);
         jdbc.update("DELETE FROM air_inst_tracker_rev WHERE work_space = ?", space);
-        jdbc.update("DELETE FROM product_spaces WHERE product_space_id = ?", space);
+        jdbc.update("DELETE FROM air_inst_product_space WHERE id = ?", space);
     }
 
     @Test
@@ -338,7 +338,7 @@ class BindingAcceptanceTest {
                 """, ws, shared, space, sharedClass, other, shared, space, sharedClass);
         assertFailure(delete(endpoint), HttpStatus.CONFLICT, "SpaceStillBound");
         assertEquals(2, count("SELECT count(*) FROM space_bindings WHERE product_space_id = ?", space));
-        assertEquals(1, count("SELECT count(*) FROM product_spaces WHERE product_space_id = ?", space));
+        assertEquals(1, count("SELECT count(*) FROM air_inst_product_space WHERE id = ?", space));
         assertEquals(2, count("SELECT count(*) FROM trackers WHERE product_space_id = ?", space));
         jdbc.update("DELETE FROM tracker_bindings WHERE product_space_id = ?", space);
 
@@ -350,7 +350,7 @@ class BindingAcceptanceTest {
                 space, space);
         try {
             assertEquals(HttpStatus.NO_CONTENT, delete(endpoint).getStatusCode());
-            assertEquals(1, count("SELECT count(*) FROM product_spaces WHERE product_space_id = ? AND delete_flag = 1", space));
+            assertEquals(1, count("SELECT count(*) FROM air_inst_product_space WHERE id = ? AND delete_flag = 1", space));
             assertEquals(1, count("SELECT count(*) FROM air_inst_common WHERE id = ? AND delete_flag = 1", space));
             assertEquals(2, count("SELECT count(*) FROM air_inst_tracker_rev WHERE work_space = ? AND delete_flag = 1", space));
             assertEquals(HttpStatus.NOT_FOUND, delete(endpoint).getStatusCode());

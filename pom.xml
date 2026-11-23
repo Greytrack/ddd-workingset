@@ -15,6 +15,7 @@
         <module>alm</module>
         <module>deploys</module>
         <module>lib-jdbc</module>
+        <module>lib-id</module>
     </modules>
 
     <properties>
