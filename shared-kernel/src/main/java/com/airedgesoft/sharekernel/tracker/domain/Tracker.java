@@ -178,7 +178,7 @@ public final class Tracker {
     public static Tracker derived(Long id, Tracker source, Long target, boolean isDefault,
                                   Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
-                source.numericProductSpaceId(), source.classificationId, source.baseClassId, source.classId,
+                source.productSpaceId(), source.classificationId, source.baseClassId, source.classId,
                 source.sharingMode(), null,
                 isDefault, true, createdBy, createdBy);
     }
@@ -247,7 +247,7 @@ public final class Tracker {
         return workingSetId;
     }
 
-    public Long numericProductSpaceId() {
+    public Long productSpaceId() {
         return productSpaceId;
     }
 
@@ -282,10 +282,6 @@ public final class Tracker {
         }
         name = normalized;
         return true;
-    }
-
-    public String productSpaceId() {
-        return productSpaceId.toString();
     }
 
     public String classificationId() {

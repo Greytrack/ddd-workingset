@@ -153,7 +153,7 @@ public class WorkingSetCreationService {
             Long id = trackerId;
             Tracker source = trackers.findById(id).orElse(null);
             if (source != null && REQUIRED_TRACKER_CLASSIFICATIONS.contains(source.numericClassificationId())
-                    && hasClassificationBinding(targetSet, source.numericProductSpaceId(), source.numericClassificationId())) {
+                    && hasClassificationBinding(targetSet, source.productSpaceId(), source.numericClassificationId())) {
                 continue;
             }
             if (source != null && source.sharingMode() == SharingMode.SHARED) {
@@ -166,7 +166,7 @@ public class WorkingSetCreationService {
                 // Unknown sources reach the task so its failure is reported alongside valid selections.
                 unshared.add(trackerId);
             }
-            if (source != null) spaces.add(source.productSpaceId());
+            if (source != null) spaces.add(source.productSpaceId().toString());
         }
         if (shared.isEmpty() && unshared.isEmpty() && spaces.isEmpty()) {
             throw DomainException.withMessage(BindingResCode.NO_DERIVABLE_TRACKER, Long.toString(target));

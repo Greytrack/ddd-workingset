@@ -106,6 +106,12 @@ class WorkingSetItemIndexerTest {
         });
         assertEquals(3, items.findById(winner).orElseThrow().currentRevisionIndex().revision());
         assertTrue(items.findById(contender).isEmpty());
+        assertEquals(Boolean.TRUE, jdbc.queryForObject("""
+                SELECT (effective_revision = 1 AND flag1 AND flag2 AND flag3 AND NOT flag4
+                    AND lock_version = 0 AND effective_checked_out = 0
+                    AND effective_flags = '1110000000' AND NOT flag5)
+                FROM air_ws_items_index WHERE local_id = ?
+                """, Boolean.class, winner));
 
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parent, child, "request",
                 List.of(space), List.of(), List.of(parentTracker));

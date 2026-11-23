@@ -8,6 +8,9 @@ import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.application.port.TrackerItemSourceLock;
 import com.airedgesoft.sharekernel.workingset.domain.event.MergeTargetEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckedInEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckedOutEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckoutCancelledEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharekernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
@@ -24,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
-public class TrackerItemCommandService {
+public class LightTrackerItemCommandService {
 
     private final TrackerRepository trackerRepository;
     private final LightTrackerItemRepository lightTrackerItemRepository;
@@ -39,20 +42,34 @@ public class TrackerItemCommandService {
         switchToLocalContent(localId, revision);
     }
 
-    /**
-     * 应用已提交的显式升版：必要时先物化，再推进版次并登记新成员。
-     */
     @Transactional
-    public void applyCommittedUpgrade(Long id, Integer before, Integer after) {
-        LightTrackerItem item = lightTrackerItemRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
-                        "item index missing for committed revision: " + id));
-        if (!item.materialized()) {
-            item.switchToLocalBacked(before);
-        }
-        if (item.advanceRevision(before, after)) {
+    public void applyCheckout(BusinessObjectCheckedOutEvent event) {
+        LightTrackerItem item = lockItemForRevisionChange(event.localId());
+        if (item.applyCheckout(event.beforeRevision(), event.afterRevision())) {
             lightTrackerItemRepository.save(item);
         }
+    }
+
+    @Transactional
+    public void applyCheckoutCancellation(BusinessObjectCheckoutCancelledEvent event) {
+        LightTrackerItem item = lockItemForRevisionChange(event.localId());
+        if (item.applyCheckoutCancellation(event.beforeRevision(),
+                event.afterRevision(), event.effectiveFlags())) {
+            lightTrackerItemRepository.save(item);
+        }
+    }
+
+    @Transactional
+    public void applyCheckin(BusinessObjectCheckedInEvent event) {
+        LightTrackerItem item = lockItemForRevisionChange(event.localId());
+        item.applyCheckin(event.revision(), event.effectiveFlags());
+        lightTrackerItemRepository.save(item);
+    }
+
+    private LightTrackerItem lockItemForRevisionChange(Long localId) {
+        return lightTrackerItemRepository.findByIdForUpdate(localId)
+                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
+                        "item index missing for committed revision: " + localId));
     }
 
     /**
@@ -112,7 +129,7 @@ public class TrackerItemCommandService {
         Tracker tracker = trackerRepository.findById(trackerId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
-                tracker.numericProductSpaceId(), tracker.numericClassificationId(), RequestThreadHolder.getUserId());
+                tracker.productSpaceId(), tracker.numericClassificationId(), tracker.classId(), RequestThreadHolder.getUserId());
         if (current.deleted()) {
             item.delete();
         }

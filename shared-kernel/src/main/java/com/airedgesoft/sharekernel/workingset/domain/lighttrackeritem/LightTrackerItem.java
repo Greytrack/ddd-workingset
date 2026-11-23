@@ -4,10 +4,12 @@ import com.airedgesoft.lib.execption.DomainException;
 import com.airedgesoft.sharekernel.workingset.error.WorkingsetResultCode;
 import org.jmolecules.ddd.annotation.AggregateRoot;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Working Set 专属独立聚合（D-008）：身份、来源与有效变体定位权威。
@@ -24,11 +26,25 @@ import java.util.Objects;
 @AggregateRoot
 public final class LightTrackerItem {
 
+    private static final Set<Long> INITIALLY_CHECKED_IN_CLASS_IDS = Set.of(140101L);
+
+    public record InitialIndexStatus(int effectiveCheckedOut, String effectiveFlags, boolean flag5) {
+        private static InitialIndexStatus forClass(long classId) {
+            return INITIALLY_CHECKED_IN_CLASS_IDS.contains(classId)
+                    ? new InitialIndexStatus(0, "1110000000", false)
+                    : new InitialIndexStatus(1, "1110100000", true);
+        }
+    }
+
+    public record EffectiveIndexStatus(int effectiveRevision, int effectiveCheckedOut, String effectiveFlags,
+                                     boolean flag1, boolean flag2, boolean flag3, boolean flag4, boolean flag5) {
+    }
+
     private final Long localId;
     private final Long commonId;
     private final Long trackerId;
     private final Long workingSetId;
-    private final long numericProductSpaceId;
+    private final long productSpaceId;
     private final long classificationId;
     private final Map<Integer, LightTrackerItemRevisionEntity> revisions = new LinkedHashMap<>();
     private final String createdBy;
@@ -37,12 +53,114 @@ public final class LightTrackerItem {
     private Integer sourceRevision;
     private boolean materialized;
     private boolean deleted;
+    private InitialIndexStatus initialIndexStatus;
+    private EffectiveIndexStatus upgradeIndexStatus;
+    private EffectiveIndexStatus checkinIndexStatus;
+
+    public EffectiveIndexStatus checkinIndexStatus() {
+        return checkinIndexStatus;
+    }
+
+    public void applyCheckin(int checkedInRevision, String effectiveFlags) {
+        requireCurrentRevision(checkedInRevision);
+        if (!materialized) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Check-in requires local content");
+        }
+        validateEffectiveFlags(effectiveFlags);
+        checkinIndexStatus = new EffectiveIndexStatus(checkedInRevision, 0, effectiveFlags,
+                effectiveFlags.charAt(0) == '1', effectiveFlags.charAt(1) == '1',
+                effectiveFlags.charAt(2) == '1', effectiveFlags.charAt(3) == '1', effectiveFlags.charAt(4) == '1');
+        upgradeIndexStatus = null;
+        downgradeIndexStatus = null;
+    }
+    private DowngradeIndexStatus downgradeIndexStatus;
+
+    public record DowngradeIndexStatus(int removedRevision, int effectiveRevision, int effectiveCheckedOut,
+                                       String effectiveFlags, boolean flag1, boolean flag2, boolean flag3) {
+    }
+
+    public DowngradeIndexStatus downgradeIndexStatus() {
+        return downgradeIndexStatus;
+    }
+
+    public static LightTrackerItem restoreRevisionState(LightTrackerItem item, List<Integer> memberFlags) {
+        Iterator<Integer> flags = memberFlags.iterator();
+        item.revisions.replaceAll((revision, member) -> new LightTrackerItemRevisionEntity(revision, flags.next()));
+        return item;
+    }
+
+    public boolean applyCheckout(int before, int after) {
+        if (after != (long) before + 1) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step checkout upgrade");
+        }
+        if (revision == after) {
+            return false;
+        }
+        requireCurrentRevision(before);
+        if (!materialized) {
+            switchToLocalBacked(before);
+        }
+        advanceRevision(after);
+        return true;
+    }
+
+    public boolean applyCheckoutCancellation(int before, int after, String effectiveFlags) {
+        if (after <= 0 || before - 1 != after) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step checkout cancellation");
+        }
+        if (revision == after) {
+            return false;
+        }
+        requireCurrentRevision(before);
+        downgradeRevision(before, after, effectiveFlags);
+        return true;
+    }
+
+    private void requireCurrentRevision(int expectedRevision) {
+        if (revision != expectedRevision) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected revision is not current");
+        }
+    }
+
+    private static void validateEffectiveFlags(String effectiveFlags) {
+        if (effectiveFlags == null || !effectiveFlags.matches("[01]{10}")) {
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "Expected ten binary effective flags");
+        }
+    }
+
+    private void downgradeRevision(int before, int after, String effectiveFlags) {
+        if (!materialized || !revisions.containsKey(after)) {
+            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Cannot roll back to the requested revision");
+        }
+        validateEffectiveFlags(effectiveFlags);
+        String restoredFlags = effectiveFlags.substring(0, 2) + "1" + effectiveFlags.substring(3);
+        checkinIndexStatus = null;
+        revisions.remove(before);
+        revision = after;
+        sourceRevision = after;
+        upgradeIndexStatus = null;
+        downgradeIndexStatus = new DowngradeIndexStatus(before, after, 0, restoredFlags,
+                restoredFlags.charAt(0) == '1', restoredFlags.charAt(1) == '1', true);
+        checkInvariants();
+    }
+
+    public EffectiveIndexStatus upgradeIndexStatus() {
+        return upgradeIndexStatus;
+    }
+
+    public InitialIndexStatus initialIndexStatus() {
+        return initialIndexStatus;
+    }
+
+    private static long knownClassId(long classificationId) {
+        return classificationId == 14010101L || classificationId == 14010102L ? 140101L : 0L;
+    }
 
     private LightTrackerItem(Long localId,
                              Long commonId,
                              Long trackerId,
                              Long workingSetId,
-                             long numericProductSpaceId,
+                             long productSpaceId,
                              long classificationId,
                              Integer revision,
                              Long sourceLocalId,
@@ -52,7 +170,7 @@ public final class LightTrackerItem {
         if (localId <= 0 || commonId <= 0 || trackerId <= 0 || workingSetId <= 0 || sourceLocalId <= 0) {
             throw new IllegalArgumentException("LightTrackerItem IDs must be positive");
         }
-        if (numericProductSpaceId <= 0 || classificationId <= 0) {
+        if (productSpaceId <= 0 || classificationId <= 0) {
             throw new IllegalArgumentException("product space and classification IDs must be positive");
         }
         if (revision < 0 || sourceRevision < 0) {
@@ -62,14 +180,15 @@ public final class LightTrackerItem {
         this.commonId = commonId;
         this.trackerId = trackerId;
         this.workingSetId = workingSetId;
-        this.numericProductSpaceId = numericProductSpaceId;
+        this.productSpaceId = productSpaceId;
         this.classificationId = classificationId;
         this.revision = revision;
-        this.revisions.put(revision, new LightTrackerItemRevisionEntity(revision));
+        this.revisions.put(revision, new LightTrackerItemRevisionEntity(revision, 0));
         this.sourceLocalId = sourceLocalId;
         this.sourceRevision = sourceRevision;
         this.materialized = materialized;
         this.createdBy = createdBy;
+        this.initialIndexStatus = InitialIndexStatus.forClass(knownClassId(classificationId));
     }
 
     /**
@@ -88,6 +207,14 @@ public final class LightTrackerItem {
                                           Long workingSetId, Integer revision,
                                           Long sourceLocalId, Integer sourceRevision,
                                           long numericProductSpaceId, long classificationId, String createdBy) {
+        return derive(localId, commonId, trackerId, workingSetId, revision, sourceLocalId, sourceRevision,
+                numericProductSpaceId, classificationId, knownClassId(classificationId), createdBy);
+    }
+
+    public static LightTrackerItem derive(Long localId, Long commonId, Long trackerId,
+                                          Long workingSetId, Integer revision, Long sourceLocalId,
+                                          Integer sourceRevision, long numericProductSpaceId,
+                                          long classificationId, long classId, String createdBy) {
         Objects.requireNonNull(localId, "localId");
         Objects.requireNonNull(commonId, "commonId");
         Objects.requireNonNull(trackerId, "trackerId");
@@ -102,6 +229,7 @@ public final class LightTrackerItem {
         LightTrackerItem item = new LightTrackerItem(
                 localId, commonId, trackerId, workingSetId, numericProductSpaceId, classificationId,
                 revision, sourceLocalId, sourceRevision, false, createdBy);
+        item.initialIndexStatus = InitialIndexStatus.forClass(classId);
         item.checkInvariants();
         return item;
     }
@@ -117,6 +245,15 @@ public final class LightTrackerItem {
                                          long numericProductSpaceId, long classificationId, String createdBy) {
         return restore(id, commonId, trackerId, workingSetId, revision, id, revision, true,
                 numericProductSpaceId, classificationId, createdBy);
+    }
+
+    public static LightTrackerItem local(Long id, Long commonId, Long trackerId,
+                                         Long workingSetId, Integer revision, long numericProductSpaceId,
+                                         long classificationId, long classId, String createdBy) {
+        LightTrackerItem item = local(id, commonId, trackerId, workingSetId, revision,
+                numericProductSpaceId, classificationId, createdBy);
+        item.initialIndexStatus = InitialIndexStatus.forClass(classId);
+        return item;
     }
 
     /**
@@ -179,7 +316,7 @@ public final class LightTrackerItem {
         item.deleted = deleted;
         item.revisions.clear();
         for (Integer indexed : indexedRevisions) {
-            item.revisions.put(indexed, new LightTrackerItemRevisionEntity(indexed));
+            item.revisions.put(indexed, new LightTrackerItemRevisionEntity(indexed, null));
         }
         if (!item.revisions.containsKey(revision)) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Current revision is missing from the index");
@@ -215,24 +352,21 @@ public final class LightTrackerItem {
         return revisions.get(revision);
     }
 
+    public int indexFlags() {
+        return deleted ? 1 : 0;
+    }
+
     /**
      * Apply a committed explicit upgrade of this item's own business revision.
      */
-    public boolean advanceRevision(Integer before, Integer after) {
-        if (after != (long) before + 1) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Expected a one-step revision upgrade");
-        }
-        if (revision >= after) {
-            return false;
-        }
-        if (!revision.equals(before) || !materialized) {
-            throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Revision predecessor is not ready");
-        }
-        revisions.put(after, new LightTrackerItemRevisionEntity(after));
+    private void advanceRevision(int after) {
+        checkinIndexStatus = null;
+        revisions.put(after, new LightTrackerItemRevisionEntity(after, 0));
         revision = after;
         sourceRevision = after;
+        downgradeIndexStatus = null;
+        upgradeIndexStatus = new EffectiveIndexStatus(after, 1, "0010000000", false, false, true, false, false);
         checkInvariants();
-        return true;
     }
 
     private void checkInvariants() {
@@ -265,8 +399,8 @@ public final class LightTrackerItem {
     /**
      * 所属 Tracker 的产品空间 ID。
      */
-    public long numericProductSpaceId() {
-        return numericProductSpaceId;
+    public long productSpaceId() {
+        return productSpaceId;
     }
 
     /**

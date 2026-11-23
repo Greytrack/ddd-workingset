@@ -71,7 +71,7 @@ public class TrackerController {
             return new TrackerView(Long.toString(tracker.trackerId()), tracker.name(),
                     tracker.parentId() == null ? null : Long.toString(tracker.parentId()),
                     tracker.sourceId() == null ? null : Long.toString(tracker.sourceId()),
-                    tracker.productSpaceId(), tracker.classificationId(), tracker.sharingMode().name(),
+                    tracker.productSpaceId().toString(), tracker.classificationId(), tracker.sharingMode().name(),
                     tracker.isDefault());
         }
     }

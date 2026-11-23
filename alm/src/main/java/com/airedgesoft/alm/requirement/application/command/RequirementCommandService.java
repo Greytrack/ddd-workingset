@@ -12,6 +12,7 @@ import com.airedgesoft.sharekernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharekernel.workingset.application.FailureReason;
 import com.airedgesoft.sharekernel.workingset.domain.Classification.SharingMode;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectLocalizedEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.SnapshotRefEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
@@ -142,7 +143,11 @@ public class RequirementCommandService {
             return repository.findById(localId).orElseGet(() -> createEditBase(target, expectedLockVersion));
         }).orElseGet(() -> loadWritable(localId));
         requireActive(current);
-        return saveChange(current, change.apply(current));
+        Requirement changed = saveChange(current, change.apply(current));
+        if (inherited.isPresent()) {
+            eventPublisher.publishEvent(new BusinessObjectLocalizedEvent(changed.localId(), changed.revision()));
+        }
+        return changed;
     }
 
     private void requireWorkingSet(Long id) {

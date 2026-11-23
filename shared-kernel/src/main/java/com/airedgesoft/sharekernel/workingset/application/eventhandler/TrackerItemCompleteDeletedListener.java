@@ -1,6 +1,6 @@
 package com.airedgesoft.sharekernel.workingset.application.eventhandler;
 
-import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemCommandService;
+import com.airedgesoft.sharekernel.workingset.application.command.LightTrackerItemCommandService;
 import com.airedgesoft.sharekernel.workingset.domain.event.CompleteDeleteEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +18,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TrackerItemCompleteDeletedListener {
 
-    private final TrackerItemCommandService trackerItemCommandService;
+    private final LightTrackerItemCommandService lightTrackerItemCommandService;
 
     @ApplicationModuleListener(id = "bootstrap.RequirementPurgedListener.on(sk.workingset.domain.event.CompleteDeleteEvent)")
     public void on(CompleteDeleteEvent event) {
-        trackerItemCommandService.removePurged(event.requirementId());
+        lightTrackerItemCommandService.removePurged(event.requirementId());
     }
 }

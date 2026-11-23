@@ -309,7 +309,7 @@ public final class WorkingSet {
     }
 
     public TrackerBinding bindTracker(Tracker tracker, Classification classification, SharingMode requestedMode) {
-        requireSpaceBinding(tracker.productSpaceId());
+        requireSpaceBinding(tracker.productSpaceId().toString());
         if (!tracker.classificationId().equals(classification.id())
                 || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
             throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
@@ -318,7 +318,7 @@ public final class WorkingSet {
             throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
         }
         WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
-        WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.id(),
+        WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.numericId(),
                 requestedMode, origin);
         trackers.put(binding.trackerId(), binding);
         return binding;

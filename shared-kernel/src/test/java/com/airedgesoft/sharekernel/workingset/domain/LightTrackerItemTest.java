@@ -10,6 +10,36 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LightTrackerItemTest {
+    @Test
+    void cancellingCheckoutRestoresFlagsAndAllowsRevisionReuse() {
+        LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
+
+        assertThrows(DomainException.class, () -> item.applyCheckoutCancellation(5, 4, "1000100001"));
+        assertTrue(item.applyCheckout(3, 4));
+        assertTrue(item.applyCheckoutCancellation(4, 3, "1000100001"));
+        assertEquals(new LightTrackerItem.DowngradeIndexStatus(4, 3, 0, "1010100001", true, false, true),
+                item.downgradeIndexStatus());
+        assertEquals(R3, item.sourceRevision());
+        assertEquals(List.of(R3), item.revisions().stream().map(member -> member.revision()).toList());
+
+        assertFalse(item.applyCheckoutCancellation(4, 3, "1000100001"));
+        assertTrue(item.applyCheckout(3, 4));
+        assertEquals(Integer.valueOf(4), item.revision());
+    }
+
+    @Test
+    void initialIndexStatusUsesTrackerClass() {
+        LightTrackerItem requirement = LightTrackerItem.derive(
+                L1, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, 99999L, 140101L, "test");
+        LightTrackerItem other = LightTrackerItem.derive(
+                L1, C1, T1, WS1, R3, L0, R3, PRODUCT_SPACE_ID, 99999L, 100701L, "test");
+
+        assertEquals(new LightTrackerItem.InitialIndexStatus(0, "1110000000", false),
+                requirement.initialIndexStatus());
+        assertEquals(new LightTrackerItem.InitialIndexStatus(1, "1110100000", true),
+                other.initialIndexStatus());
+    }
+
     private static final long PRODUCT_SPACE_ID = 42L;
     private static final long CLASSIFICATION_ID = 14010101L;
 
@@ -90,9 +120,12 @@ class LightTrackerItemTest {
     void explicitUpgradeRetainsPreviousRevisionAndIgnoresReplay() {
         LightTrackerItem item = LightTrackerItem.local(L1, C1, T1, WS1, R3, PRODUCT_SPACE_ID, CLASSIFICATION_ID);
         Integer r4 = 4;
-        assertThrows(DomainException.class, () -> item.advanceRevision(r4, 5));
-        assertTrue(item.advanceRevision(R3, r4));
-        assertFalse(item.advanceRevision(R3, r4));
+        assertThrows(DomainException.class, () -> item.applyCheckout(r4, 5));
+        assertTrue(item.applyCheckout(R3, r4));
+        assertFalse(item.applyCheckout(R3, r4));
+        assertEquals(new LightTrackerItem.EffectiveIndexStatus(
+                r4, 1, "0010000000", false, false, true, false, false), item.upgradeIndexStatus());
+        assertEquals(Integer.valueOf(0), item.currentRevisionIndex().flags());
         assertEquals(List.of(R3, r4), item.revisions().stream().map(member -> member.revision()).toList());
         assertEquals(r4, item.effectiveContentRevision());
     }
@@ -113,7 +146,7 @@ class LightTrackerItemTest {
 
         LightTrackerItem item = LightTrackerItem.derive(L1, C1, T1, WS1, R3, L0, R3, productSpaceId, classificationId);
 
-        assertEquals(42L, item.numericProductSpaceId());
+        assertEquals(42L, item.productSpaceId());
         assertEquals(14010101L, item.classificationId());
     }
 }

@@ -170,7 +170,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                             created_by, created_time, updated_by, updated_time)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 584578917040480, 584532998805760, 0,
                             ?, ?, ?, ?, NULL, 1, 10001, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?)
-                        """, id, id, tracker.commonId(), workset, tracker.numericProductSpaceId(),
+                        """, id, id, tracker.commonId(), workset, tracker.productSpaceId(),
                 tracker.baseClassId(), tracker.classId(), tracker.numericClassificationId(), tracker.numericClassificationId(),
                 tracker.name(), number, actor, shared,
                 parent, source, defaultFlag, 1, auditActor, now, auditActor, now);
@@ -192,7 +192,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                         SET name = ?, delete_flag = ?, updated_by = ?, updated_time = ?, lock_version = lock_version + 1
                         WHERE id = ? AND work_space = ? AND delete_flag = 0
                         """, tracker.name(), deleteFlag, Long.toString(actor), System.currentTimeMillis(),
-                id, tracker.numericProductSpaceId()), id);
+                id, tracker.productSpaceId()), id);
         requireOne(jdbc.update("""
                 UPDATE air_ws_tracker c
                 SET name = t.name, lock_version = t.lock_version, delete_flag = t.delete_flag,

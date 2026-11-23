@@ -213,7 +213,7 @@ public class WorkingSetCommandService {
         String spaceId = null;
         try {
             Tracker source = directParentTracker(target, id);
-            spaceId = source.productSpaceId();
+            spaceId = source.productSpaceId().toString();
             List<TrackerToBind> scope = bySpace.get(spaceId);
             if (scope == null) {
                 throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, spaceId);
@@ -235,8 +235,8 @@ public class WorkingSetCommandService {
         WorkingSet target = lockTaskTarget(id);
         Tracker source = directParentTracker(target, parentTrackerId);
         requireUnshared(source);
-        if (!selectedSpaces.contains(source.productSpaceId())) {
-            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, source.productSpaceId());
+        if (!selectedSpaces.contains(source.productSpaceId().toString())) {
+            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, source.productSpaceId().toString());
         }
         if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
             return false;
@@ -247,7 +247,7 @@ public class WorkingSetCommandService {
     }
 
     String trackerSpaceForTask(Long id) {
-        return trackers.findById(id).map(Tracker::productSpaceId).orElse(null);
+        return trackers.findById(id).map(tracker -> tracker.productSpaceId().toString()).orElse(null);
     }
 
     private WorkingSet lockTaskTarget(Long id) {
@@ -270,7 +270,7 @@ public class WorkingSetCommandService {
     }
 
     private Tracker derivedTracker(WorkingSet target, Tracker source, long actor) {
-        boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId(),
+        boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId().toString(),
                 source.classificationId());
         return Tracker.derived(Long.valueOf(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
                 isDefault, actor);

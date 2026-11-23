@@ -1,7 +1,11 @@
 package bootstrap;
 
 
-import com.airedgesoft.sharekernel.workingset.application.command.TrackerItemCommandService;
+import com.airedgesoft.sharekernel.workingset.application.command.LightTrackerItemCommandService;
+import com.airedgesoft.sharekernel.workingset.application.command.LightTrackerItemCommandService;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckedInEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckedOutEvent;
+import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectCheckoutCancelledEvent;
 import com.airedgesoft.sharekernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharekernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharekernel.workingset.domain.event.TrackerItemCreatedEvent;
@@ -58,7 +62,7 @@ class RequirementAcceptanceTest {
     @Autowired
     private LightTrackerItemQueryProvider indexQueries;
     @Autowired
-    private TrackerItemCommandService indexLifecycle;
+    private LightTrackerItemCommandService indexLifecycle;
 
     private RootTrackerFixture fixture;
     private String localId;
@@ -171,7 +175,7 @@ class RequirementAcceptanceTest {
 
     @Test
     @Transactional
-    void committedUpgradeUpdatesBothLegacyIndexesAndPreservesPreviousRevision() {
+    void checkoutLifecycleUpdatesIndexAndCheckinPreservesRevisionMembers() {
         String trackerId = fixtureId("revision-tracker-" + UUID.randomUUID());
         new RootTrackerFixture(jdbc, trackerId).provision();
         Long id = Long.valueOf(fixtureId("revision-item-" + UUID.randomUUID()));
@@ -179,8 +183,9 @@ class RequirementAcceptanceTest {
                 Long.valueOf(trackerId), WorkingSet.DEFAULT_ID, 3,
                 Long.parseLong(fixtureId(trackerId + "-s")), 14010101L, "test"));
 
-        indexLifecycle.applyCommittedUpgrade(id, 3, 4);
-        indexLifecycle.applyCommittedUpgrade(id, 3, 4);
+        BusinessObjectCheckedOutEvent checkout = new BusinessObjectCheckedOutEvent(id, 3, 4);
+        indexLifecycle.applyCheckout(checkout);
+        indexLifecycle.applyCheckout(checkout);
 
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*) FROM air_ws_items_index WHERE local_id = ? AND revision = 4
@@ -189,6 +194,32 @@ class RequirementAcceptanceTest {
         assertEquals(List.of(3, 4), jdbc.queryForList("""
                 SELECT revision FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision
                 """, Integer.class, id));
+
+        indexLifecycle.applyCheckoutCancellation(
+                new BusinessObjectCheckoutCancelledEvent(id, 4, 3, "1000100001"));
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM air_ws_items_index WHERE local_id = ? AND revision = 3
+                    AND source_local_id = local_id AND source_revision = 3 AND has_copied = 1
+                    AND effective_revision = 3 AND effective_checked_out = 0
+                    AND effective_flags = '1010100001' AND flag1 AND NOT flag2 AND flag3
+                """, Integer.class, id));
+        assertEquals(List.of(3), jdbc.queryForList("""
+                SELECT revision FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision
+                """, Integer.class, id));
+
+        indexLifecycle.applyCheckout(new BusinessObjectCheckedOutEvent(id, 3, 4));
+        String members = "SELECT * FROM air_ws_items_revision_index WHERE local_id = ? ORDER BY revision";
+        List<Map<String, Object>> beforeCheckin = jdbc.queryForList(members, id);
+        BusinessObjectCheckedInEvent checkin = new BusinessObjectCheckedInEvent(id, 4, "1110000000");
+        indexLifecycle.applyCheckin(checkin);
+        indexLifecycle.applyCheckin(checkin);
+
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM air_ws_items_index WHERE local_id = ? AND revision = 4
+                    AND source_revision = 4 AND effective_revision = 4 AND effective_checked_out = 0
+                    AND effective_flags = '1110000000' AND flag1 AND flag2 AND flag3 AND NOT flag4 AND NOT flag5
+                """, Integer.class, id));
+        assertEquals(beforeCheckin, jdbc.queryForList(members, id));
     }
 
     private List<Integer> indexedRevisions() {

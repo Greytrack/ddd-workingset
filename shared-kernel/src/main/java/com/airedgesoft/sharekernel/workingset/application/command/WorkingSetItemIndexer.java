@@ -54,7 +54,7 @@ public final class WorkingSetItemIndexer {
     static final long FOLDER_CLASSIFICATION_ID = 10070101L;
 
     private static Failure failure(Long parent, Tracker child, Long localId, FailureReason reason) {
-        return new Failure(Stage.INDEX_UNSHARED_TRACKERS, child.productSpaceId(), Long.toString(parent),
+        return new Failure(Stage.INDEX_UNSHARED_TRACKERS, child.productSpaceId().toString(), Long.toString(parent),
                 localId == null ? null : Long.toString(localId), reason.name(), System.currentTimeMillis());
     }
 
@@ -157,7 +157,7 @@ public final class WorkingSetItemIndexer {
             id = ids.nextId(null).longValue();
         } while (Long.toString(id).equals(Long.toString(candidate.commonId())) || id.equals(sourceId));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
-                candidate.revision(), sourceId, sourceRevision, child.numericProductSpaceId(), child.numericClassificationId(),
+                candidate.revision(), sourceId, sourceRevision, child.productSpaceId(), child.numericClassificationId(), child.classId(),
                 RequestThreadHolder.getUserId());
         if (!items.claimFamily(item)) {
             return new Outcome(IndexResult.Existing, null);
