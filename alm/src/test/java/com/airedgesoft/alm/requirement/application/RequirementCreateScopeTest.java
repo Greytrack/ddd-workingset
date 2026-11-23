@@ -14,7 +14,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -38,9 +37,8 @@ class RequirementCreateScopeTest {
     private final RequirementRepository repository = mock(RequirementRepository.class);
     private final TrackerRepository trackers = mock(TrackerRepository.class);
     private final WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
-    private final IdentifierGenerator ids = mock(IdentifierGenerator.class);
     private final RequirementCommandService service = new RequirementCommandService(
-            repository, new ObjectMapper(), ids, mock(ApplicationEventPublisher.class), trackers,
+            repository, new ObjectMapper(), mock(ApplicationEventPublisher.class), trackers,
             workingSets, mock(LightTrackerItemRepository.class));
 
     private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
@@ -52,7 +50,6 @@ class RequirementCreateScopeTest {
 
     @BeforeEach
     void stubIdentifiers() {
-        when(ids.nextId(null)).thenReturn(100L, 200L, 300L, 400L);
         Long root = WorkingSet.DEFAULT_ID;
         Long child = Long.valueOf("259712159403968");
         when(workingSets.findById(root)).thenReturn(Optional.of(new WorkingSet(root, null, List.of(), List.of())));

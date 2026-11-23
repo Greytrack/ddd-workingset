@@ -39,7 +39,7 @@ class RequirementChangeFlowTest {
     private final TrackerRepository trackers = mock(TrackerRepository.class);
     private final WorkingSetRepository workingSets = mock(WorkingSetRepository.class);
     private final RequirementCommandService service = new RequirementCommandService(
-            requirements, new ObjectMapper(), new SnowflakeIdGenerator(1, 1), publisher,
+            requirements, new ObjectMapper(), publisher,
             trackers, workingSets,
             mock(LightTrackerItemRepository.class));
     private final Requirement before = Requirement.create(

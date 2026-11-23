@@ -65,7 +65,7 @@ class MergeRelationRepairStepTest {
 
         MergeRelationRepairStep step = new MergeRelationRepairStep(mock(RelationSourceQueryProvider.class),
                 new RelationEventPublisher(event -> {
-                }, entity -> 1L));
+                }));
         assertEquals(0, step.changedTargets(round).size());
     }
 
@@ -91,7 +91,7 @@ class MergeRelationRepairStepTest {
                         Long.valueOf("265625955250112"), 3), changedTarget)));
 
         ArrayList<Object> published = new ArrayList<Object>();
-        RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
+        RelationEventPublisher publisher = new RelationEventPublisher(published::add);
         MergeRelationRepairStep step = new MergeRelationRepairStep(source, publisher);
 
         MergeRelationRepairStep.StepResult result = step.repair(round);

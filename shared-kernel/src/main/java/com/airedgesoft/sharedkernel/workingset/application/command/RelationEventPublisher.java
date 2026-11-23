@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import com.airedgesoft.sharedkernel.workingset.domain.event.AssociationCreationRequestedEvent;
@@ -7,7 +8,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.event.DanglingReferenceRep
 import com.airedgesoft.sharedkernel.workingset.domain.event.ReferenceCreationRequestedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -25,8 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public final class RelationEventPublisher {
     private final ApplicationEventPublisher events;
-    private final IdentifierGenerator ids;
-
+    
 
     /**
      * 发布 Reference 创建请求事件，返回已发布事件列表。
@@ -59,7 +58,7 @@ public final class RelationEventPublisher {
     }
 
     private RelationEventMetadataEvent metadata(String originalRelationId, String originId, OriginType originType) {
-        return new RelationEventMetadataEvent(Long.toString(ids.nextId(null).longValue()), originalRelationId, originId, originType,
+        return new RelationEventMetadataEvent(Long.toString(Ids.nextId()), originalRelationId, originId, originType,
                 System.currentTimeMillis());
     }
 }

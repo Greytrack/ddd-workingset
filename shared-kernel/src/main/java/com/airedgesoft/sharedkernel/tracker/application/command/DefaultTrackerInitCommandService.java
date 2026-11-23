@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.tracker.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.sharedkernel.RequestThreadHolder;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
@@ -10,7 +11,6 @@ import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
 import com.airedgesoft.sharedkernel.workingset.domain.Classification;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -36,8 +36,7 @@ public class DefaultTrackerInitCommandService {
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final ClassificationCatalog classifications;
-    private final IdentifierGenerator ids;
-    private final ApplicationEventPublisher events;
+        private final ApplicationEventPublisher events;
     private final PlatformTransactionManager transactionManager;
 
     /**
@@ -76,7 +75,7 @@ public class DefaultTrackerInitCommandService {
     }
 
     private Long saveDefault(ProductSpace space, Classification classification) {
-        Tracker tracker = Tracker.original(ids.nextId(null).longValue(),
+        Tracker tracker = Tracker.original(Ids.nextId(),
                 space, classification, null, true, RequestThreadHolder.getLongUserId());
         trackers.save(tracker);
         return tracker.trackerId();

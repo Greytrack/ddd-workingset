@@ -1,5 +1,6 @@
 package com.airedgesoft.alm.requirement.infrastructure.repositories;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
@@ -9,7 +10,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdate
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
@@ -61,8 +61,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
 
     private final JdbcTemplate jdbc;
     private final JdbcCommonInstanceStore commonInstances;
-    private final IdentifierGenerator ids;
-
+    
 
     @Override
     public void save(Requirement requirement) {
@@ -111,7 +110,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED);
         }
         long now = System.currentTimeMillis();
-        int inserted = jdbc.update(INSERT, ids.nextId(null).longValue(), requirement.localId(), requirement.commonId(),
+        int inserted = jdbc.update(INSERT, Ids.nextId(), requirement.localId(), requirement.commonId(),
                 requirement.title(), requirement.description(), requirement.revision(), requirement.version(),
                 requirement.lockVersion(), requirement.deleted() ? 1 : 0,
                 actor, now, actor, now, requirement.flags(), requirement.checkedOut() ? 1 : 0, requirement.trackerId());

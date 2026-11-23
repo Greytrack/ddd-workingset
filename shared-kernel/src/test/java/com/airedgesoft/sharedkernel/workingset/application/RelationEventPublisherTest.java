@@ -10,16 +10,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RelationEventPublisherTest {
     private final List<Object> published = new ArrayList<>();
-    private final AtomicLong sequence = new AtomicLong(10);
-    private final RelationEventPublisher publisher = new RelationEventPublisher(event -> published.add(event),
-            entity -> sequence.incrementAndGet());
+    private final RelationEventPublisher publisher = new RelationEventPublisher(event -> published.add(event));
 
     private static ReferenceEndpointEvent source() {
         return new ReferenceEndpointEvent(Long.valueOf("259712159403968"), Long.valueOf("261158455371712"), Long.valueOf("265506033508288"),
@@ -54,7 +51,7 @@ class RelationEventPublisherTest {
         assertEquals("reference-42", creation.getFirst().metadata().originalRelationId());
         assertEquals("task-1", creation.getFirst().metadata().originId());
         assertEquals(OriginType.CREATION, creation.getFirst().metadata().originType());
-        assertEquals("11", creation.getFirst().metadata().eventId());
+        assertTrue(Long.parseLong(creation.getFirst().metadata().eventId()) > 0);
         assertEquals("reference-42", repair.getFirst().metadata().originalRelationId());
         assertEquals("round-1", repair.getFirst().metadata().originId());
     }

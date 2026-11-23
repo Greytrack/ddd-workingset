@@ -57,7 +57,6 @@ class CowAcceptanceTest {
     void cleanUp() {
         if (source != null) {
             jdbc.update("DELETE FROM event_publication WHERE serialized_event LIKE ?", eventPattern());
-            jdbc.update("DELETE FROM cow_failures WHERE source_local_id = ?", source);
 
         }
         for (String target : targets) {
@@ -249,7 +248,7 @@ class CowAcceptanceTest {
         // 模拟早期数据的家族身份损坏，直接验证 COW 对持久化证据的防护。
         ItemIndexFixture.updateFamily(jdbc, invalid.id(), fixtureId("INVALID-" + UUID.randomUUID()));
 
-        change("B", 0);
+        requirements.changeTitle(Long.valueOf(source), "B", 0L);
 
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() ->
                 assertEquals("MATERIALIZE", failures.findBySource(Long.valueOf(source)).getFirst().stage()));
@@ -257,6 +256,24 @@ class CowAcceptanceTest {
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_requirement_rev WHERE instance_id = ?",
                 Integer.class, invalid.id()));
         await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 1);
+        jdbc.update("""
+                INSERT INTO event_publication
+                    (id, listener_id, event_type, serialized_event, publication_date, completion_date)
+                SELECT gen_random_uuid(), listener_id, event_type, serialized_event, publication_date, now()
+                FROM event_publication
+                WHERE event_type LIKE '%.TrackerItemMaterializationCompletedEvent'
+                  AND serialized_event::jsonb ->> 'targetLocalId' = ?
+                  AND serialized_event::jsonb ->> 'outcome' = 'FAILED'
+                """, invalid.id());
+        assertEquals(1, failures.findBySource(Long.valueOf(source)).size());
+
+        requirements.changeTitle(Long.valueOf(source), "C", 1L);
+        await().atMost(Duration.ofSeconds(8)).until(() -> completedEvents() == 2);
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT count(*) FROM event_publication
+                WHERE event_type LIKE '%.TrackerItemMaterializationRequestedEvent'
+                  AND serialized_event::jsonb ->> 'targetLocalId' = ?
+                """, Integer.class, invalid.id()));
     }
 
     @Test

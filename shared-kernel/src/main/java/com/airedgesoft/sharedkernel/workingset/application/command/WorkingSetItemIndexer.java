@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.RequestThreadHolder;
@@ -18,7 +19,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreat
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.ItemOutcome;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.Stage;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,8 +45,7 @@ public final class WorkingSetItemIndexer {
     private final TrackerRepository trackers;
     private final LightTrackerItemQueryProvider itemQueries;
     private final LightTrackerItemRepository items;
-    private final IdentifierGenerator ids;
-    private final TrackerItemSourceLock sourceLock;
+        private final TrackerItemSourceLock sourceLock;
 
     @Value("${workingset.creation.index-batch-size:100}")
     private int batchSize;
@@ -154,7 +153,7 @@ public final class WorkingSetItemIndexer {
         }
         Long id;
         do {
-            id = ids.nextId(null).longValue();
+            id = Ids.nextId();
         } while (Long.toString(id).equals(Long.toString(candidate.commonId())) || id.equals(sourceId));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
                 candidate.revision(), sourceId, sourceRevision, child.productSpaceId(), child.numericClassificationId(), child.classId(),

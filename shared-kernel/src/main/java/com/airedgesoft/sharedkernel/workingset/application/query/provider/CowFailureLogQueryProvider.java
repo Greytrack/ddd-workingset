@@ -4,11 +4,9 @@ package com.airedgesoft.sharedkernel.workingset.application.query.provider;
 import java.util.List;
 
 /**
- * COW 失败记录端口：保留失败阶段、尝试次数与原因，供审计读取。
+ * 按来源查询持久化的 COW 业务失败结果，供审计读取。
  */
 public interface CowFailureLogQueryProvider {
-    void record(Failure failure);
-
     List<Failure> findBySource(Long sourceLocalId);
 
     record Failure(long eventId, Long targetLocalId, Long sourceLocalId,

@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.productspace.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.event.ProductSpaceCreatedEvent;
@@ -9,7 +10,6 @@ import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightT
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,14 +26,13 @@ public class ProductSpaceCommandService {
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
     private final LightTrackerItemQueryProvider itemQueries;
-    private final IdentifierGenerator ids;
-
+    
     /**
      * 创建产品空间并发布创建事件。
      */
     @Transactional
     public ProductSpace create(String name) {
-        ProductSpace space = new ProductSpace(ids.nextId(null).longValue(), name);
+        ProductSpace space = new ProductSpace(Ids.nextId(), name);
         spaces.save(space);
         events.publishEvent(new ProductSpaceCreatedEvent(space.numericId()));
         return space;

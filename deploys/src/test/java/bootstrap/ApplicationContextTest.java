@@ -6,7 +6,6 @@ import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCommandService;
 import com.airedgesoft.sharedkernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -37,7 +36,6 @@ class ApplicationContextTest {
             assertNotNull(context.getBean(WorkingSetCommandService.class));
             assertNotNull(context.getBean(WorkingSetQueryService.class));
             assertNotNull(context.getBean(RequirementCommandService.class));
-            assertNotNull(context.getBean(IdentifierGenerator.class));
         }
     }
 

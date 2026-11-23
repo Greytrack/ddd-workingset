@@ -1,5 +1,6 @@
 package com.airedgesoft.alm.requirement.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
@@ -23,7 +24,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +46,7 @@ public class RequirementCommandService {
 
     private final RequirementRepository repository;
     private final ObjectMapper snapshotJson;
-    private final IdentifierGenerator identifierGenerator;
-    private final ApplicationEventPublisher eventPublisher;
+        private final ApplicationEventPublisher eventPublisher;
     private final TrackerRepository trackers;
     private final WorkingSetRepository workingSets;
     private final LightTrackerItemRepository items;
@@ -96,7 +95,7 @@ public class RequirementCommandService {
                 .map(current -> current.sharingMode() == SharingMode.SHARED
                         || WorkingSet.DEFAULT_ID.equals(current.workingSetId()))
                 .orElse(false);
-        long local = identifierGenerator.nextId(null).longValue();
+        long local = Ids.nextId();
         long common = defaultWorkingSet ? local : nextDistinct(local);
         Requirement requirement = Requirement.create(
                 Long.valueOf(String.valueOf(local)), Long.valueOf(String.valueOf(common)),
@@ -109,9 +108,9 @@ public class RequirementCommandService {
     }
 
     private long nextDistinct(long local) {
-        long common = identifierGenerator.nextId(null).longValue();
+        long common = Ids.nextId();
         while (common == local) {
-            common = identifierGenerator.nextId(null).longValue();
+            common = Ids.nextId();
         }
         return common;
     }
@@ -266,7 +265,7 @@ public class RequirementCommandService {
     private void publishSourceChange(RequirementSnapshot snapshot, Requirement changed,
                                      int beforeRevision, long beforeLockVersion) {
         eventPublisher.publishEvent(new BusinessObjectUpdateEvent(
-                identifierGenerator.nextId(null).longValue(),
+                Ids.nextId(),
                 changed.localId(),
                 changed.localId(),
                 beforeRevision,

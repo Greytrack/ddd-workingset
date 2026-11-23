@@ -2,7 +2,6 @@ package com.airedgesoft.sharedkernel.workingset.application.command;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.SharedKernelResultCode;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.CowFailureLogQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.CowRequestPublications;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemMaterializationCompletedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemMaterializationRequestedEvent;
@@ -15,7 +14,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 
 /**
- * 消费 ALM 的实例化结果：成功则切换 LTI，失败则落失败终态。
+ * 消费 ALM 的实例化结果：成功则切换 LTI，失败结果由事件发布记录保留。
  */
 @Slf4j
 @Service
@@ -23,18 +22,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 public final class CowMaterializationCompletionService {
     private final CowRequestPublications requests;
     private final LightTrackerItemRepository items;
-    private final CowFailureLogQueryProvider failureLog;
     private final TransactionTemplate transaction;
 
 
     /**
-     * 消费物化结果：成功切换 LTI 为 Local-backed，失败记录失败终态。
+     * 消费物化结果：成功切换 LTI 为 Local-backed，失败时保留来源指针。
      */
     public void complete(TrackerItemMaterializationCompletedEvent event) {
         if (event.outcome() == TrackerItemMaterializationCompletedEvent.Outcome.MATERIALIZED) {
             transaction.executeWithoutResult(status -> switchToLocalBacked(event));
-        } else {
-            transaction.executeWithoutResult(status -> fail(event));
         }
     }
 
@@ -54,22 +50,6 @@ public final class CowMaterializationCompletionService {
         }
         target.switchToLocalBacked(target.revision());
         items.save(target);
-    }
-
-    private void fail(TrackerItemMaterializationCompletedEvent event) {
-        if (items.findByIdForUpdate(event.targetLocalId()).isEmpty()) {
-            return;
-        }
-        TrackerItemMaterializationRequestedEvent request = requestFor(event);
-        boolean recorded = failureLog.findBySource(request.sourceLocalId()).stream()
-                .anyMatch(failure -> failure.eventId() == event.eventId()
-                        && failure.targetLocalId().equals(event.targetLocalId()));
-        if (!recorded) {
-            failureLog.record(new CowFailureLogQueryProvider.Failure(event.eventId(), event.targetLocalId(),
-                    request.sourceLocalId(), request.beforeRevision(), request.afterRevision(),
-                    request.beforeLockVersion(), request.afterLockVersion(), 1, "MATERIALIZE", "MATERIALIZATION_FAILED",
-                    event.failure(), System.currentTimeMillis()));
-        }
     }
 
     private TrackerItemMaterializationRequestedEvent requestFor(TrackerItemMaterializationCompletedEvent event) {

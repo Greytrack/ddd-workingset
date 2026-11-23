@@ -12,4 +12,12 @@
     <artifactId>lib-id</artifactId>
     <name>lib-id</name>
     <description>ID generation helpers only — directory: lib-id</description>
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

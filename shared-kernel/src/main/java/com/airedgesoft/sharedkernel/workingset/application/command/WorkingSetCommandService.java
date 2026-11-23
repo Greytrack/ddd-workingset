@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.RequestThreadHolder;
@@ -20,7 +21,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreat
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,8 +36,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class WorkingSetCommandService {
 
-    private final IdentifierGenerator identifierGenerator;
-    private final WorkingSetRepository workingSets;
+        private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
     private final WorkingSetQueryProvider queries;
@@ -87,7 +86,7 @@ public class WorkingSetCommandService {
      */
     @Transactional
     public WorkingSet createChildWorkingSet(Long parentId, String name, String color) {
-        return createChildForTask(parentId, identifierGenerator.nextId(null).longValue(), name, color,
+        return createChildForTask(parentId, Ids.nextId(), name, color,
                 RequestThreadHolder.getLongUserId());
     }
 
@@ -272,7 +271,7 @@ public class WorkingSetCommandService {
     private Tracker derivedTracker(WorkingSet target, Tracker source, long actor) {
         boolean isDefault = !trackerQueries.existsDefaultTracker(target.id(), source.productSpaceId().toString(),
                 source.classificationId());
-        return Tracker.derived(Long.valueOf(String.valueOf(identifierGenerator.nextId(null).longValue())), source, target.id(),
+        return Tracker.derived(Long.valueOf(String.valueOf(Ids.nextId())), source, target.id(),
                 isDefault, actor);
     }
 

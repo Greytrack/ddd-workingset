@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.infrastructure.repositories;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.SharedKernelResultCode;
@@ -8,7 +9,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrac
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem.EffectiveIndexStatus;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRevisionEntity;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -90,8 +90,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
             Arrays.asList((Integer[]) rs.getArray("indexed_revision_flags").getArray()));
 
     private final JdbcTemplate jdbc;
-    private final IdentifierGenerator ids;
-
+    
     @Override
     public void save(LightTrackerItem item) {
         EffectiveIndexStatus checkin = item.checkinIndexStatus();
@@ -153,7 +152,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                     "LightTrackerItem write requires an actor: " + item.localId());
         }
         return jdbc.update(INSERT + onConflict,
-                ids.nextId(null).longValue(),
+                Ids.nextId(),
                 item.localId(),
                 item.commonId(),
                 item.revision(),
@@ -240,7 +239,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                            i.sub_class_id, ?, 0, ?, ?
                     FROM air_ws_items_index i WHERE i.local_id = ?
                     ON CONFLICT (local_id, revision) DO NOTHING
-                """, ids.nextId(null).longValue(), member.revision(), member.flags(), item.createdBy(),
+                """, Ids.nextId(), member.revision(), member.flags(), item.createdBy(),
                 System.currentTimeMillis(), item.localId());
     }
 

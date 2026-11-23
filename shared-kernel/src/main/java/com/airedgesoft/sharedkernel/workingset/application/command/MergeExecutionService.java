@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
@@ -18,7 +19,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.merge.MergeRound.Outcome;
 import com.airedgesoft.sharedkernel.workingset.domain.merge.MergeRound.State;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.error.MergeResCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -49,8 +49,7 @@ public class MergeExecutionService {
     private final MergeRepository mergeRepository;
     private final MergeEvidenceReader evidence;
     private final TrackerRepository trackers;
-    private final IdentifierGenerator ids;
-    private final TransactionTemplate transaction;
+        private final TransactionTemplate transaction;
     private final ApplicationEventPublisher events;
     private final MergeRelationRepairStep relationRepair;
 
@@ -127,7 +126,7 @@ public class MergeExecutionService {
             return matching(existing.get(), source, target);
         }
         TrackerPair pair = trackerPair(decisions);
-        MergeRound prepared = MergeRound.prepare(Long.toString(ids.nextId(null).longValue()), requestId, source, target, caller);
+        MergeRound prepared = MergeRound.prepare(Long.toString(Ids.nextId()), requestId, source, target, caller);
         // 原子认领幂等键：同一 requestId 的并发提交中只有一个插入成功，其余读取 winner。
         MergeRound winner = mergeRepository.claim(prepared)
                 ? prepared
@@ -172,7 +171,7 @@ public class MergeExecutionService {
                 throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "decision is required");
             }
             request.decision().validate(frozen);
-            updated = updated.register(new Entry(Long.toString(ids.nextId(null).longValue()),
+            updated = updated.register(new Entry(Long.toString(Ids.nextId()),
                     frozen, request.decision(), null));
         }
         mergeRepository.save(updated);
@@ -249,7 +248,7 @@ public class MergeExecutionService {
         Long localId = action == MergeEntryApprovedEvent.Operation.CREATE
                 ? (WorkingSet.DEFAULT_ID.equals(round.target())
                 ? frozen.family()
-                : ids.nextId(null).longValue())
+                : Ids.nextId())
                 : target.localId();
         boolean inherited = target.localId() != null && !target.localId().equals(target.contentId());
         boolean create = action == MergeEntryApprovedEvent.Operation.CREATE;

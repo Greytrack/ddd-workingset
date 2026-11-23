@@ -1056,31 +1056,6 @@ CREATE TABLE IF NOT EXISTS air_ws_items_revision_index
 CREATE UNIQUE INDEX IF NOT EXISTS uq_air_ws_items_revision ON air_ws_items_revision_index (local_id, revision);
 
 -- ---------------------------------------------------------------------------
--- Copy-on-write recovery / diagnostics
--- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS cow_failures
-(
-    id                  BIGINT PRIMARY KEY,
-    event_id            BIGINT       NOT NULL,
-    target_local_id     BIGINT       NOT NULL,
-    source_local_id     BIGINT       NOT NULL,
-    before_revision     INTEGER      NOT NULL,
-    after_revision      INTEGER      NOT NULL,
-    before_lock_version BIGINT,
-    after_lock_version  BIGINT,
-    attempts            INTEGER      NOT NULL DEFAULT 1,
-    stage               VARCHAR(32)  NOT NULL,
-    error_type          VARCHAR(255) NOT NULL,
-    message             TEXT,
-    occurred_at         TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    resolved_at         TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_cow_failures_source ON cow_failures (source_local_id);
-CREATE INDEX IF NOT EXISTS idx_cow_failures_target ON cow_failures (target_local_id);
-
--- ---------------------------------------------------------------------------
 -- Merge LRO (compare itself is not persisted)
 -- ---------------------------------------------------------------------------
 

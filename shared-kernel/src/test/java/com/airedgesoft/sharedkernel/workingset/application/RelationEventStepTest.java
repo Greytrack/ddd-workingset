@@ -67,7 +67,7 @@ class RelationEventStepTest {
                 targetEndpoint)));
 
         ArrayList<Object> published = new ArrayList<Object>();
-        RelationEventPublisher publisher = new RelationEventPublisher(published::add, entity -> 10L);
+        RelationEventPublisher publisher = new RelationEventPublisher(published::add);
         RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source, publisher);
 
         RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
@@ -102,7 +102,7 @@ class RelationEventStepTest {
 
         RelationEventStep step = new RelationEventStep(trackers, workingSets, itemQueries, source,
                 new RelationEventPublisher(event -> {
-                }, entity -> 1L));
+                }));
 
         RelationEventStep.StepResult result = step.publish(target, parentId, OriginType.EXTENSION, "extension-1");
 

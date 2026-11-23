@@ -1,6 +1,6 @@
 # 实现现状与验收证据
 
-**状态：Reviewed（2026-11-22 静态核对；实现证据，不是新增基线裁定）**
+**状态：Reviewed（2026-11-24 静态核对；实现证据，不是新增基线裁定）**
 
 本页是「代码现在怎样」的唯一权威：模块与上下文边界、跨 BC 读取边界、事件协作、与 TC-002 的剩余差距、查询侧实现记录与验收证据索引。业务语义仍以
 [BASELINE](01-baseline.md)、[ADR](06-decisions/README.md) 与 [T1～T7 契约](05-contracts/)为准；本页不把当前代码反推为新的业务规则。
@@ -20,6 +20,8 @@ BC；是否拆为独立限界上下文仍需按语言、所有权和运行时证
 | `sharedkernel`      | ProductSpace 聚合根、创建/删除命令、ProductSpace 仓储                                            | ProductSpace 是独立聚合；创建后通过事件推进默认 Tracker 与绑定，剩余差距见 §4。                                                          |
 | `sharedkernel`        | WorkingSet/绑定、LightTrackerItem、COW、WorkingSet 创建 LRO、Compare/Merge、关系和查询 Provider | Working Set 核心能力；命令侧聚合仓储与查询侧 Provider 分离。                                                                              |
 | `com.airedgesoft.alm.requirement`               | Requirement 参考实现、Merge 执行适配、物化请求消费、继承编辑查询回退                            | 业务 BC 参考实现；只读使用 SK 共享聚合/仓储，写入通过事件协作。                                                                           |
+
+独立 `lib-id` 模块提供 `Ids.nextId()` 雪花门面；命令服务、仓储与测试统一调用该静态入口，不再注册或注入 MyBatis-Plus `IdentifierGenerator`。
 
 `sharedkernel` 中的 `BusinessObject` 是**通用业务对象能力接口**，与
 `sharedkernel`
@@ -54,7 +56,7 @@ ALM 创建 Requirement 时普通读取 Tracker，并在插入时过滤已软删 
 | Requirement 首次继承编辑           | ALM `BusinessObjectLocalizedEvent` | SK 独立事务切换该目标的 LTI |
 | Requirement 版次生命周期            | ALM 签出、取消签出与签入事件 | SK 独立事务按 [T3 契约](05-contracts/t3-lti-materialization.md#31-双表索引与版次成员) 同步索引 |
 | COW 业务保存                      | SK `TrackerItemMaterializationRequestedEvent`                              | ALM 保存 Requirement 并发布 `TrackerItemMaterializationCompletedEvent`                                                                                                         |
-| COW 完成                          | ALM `TrackerItemMaterializationCompletedEvent`                             | SK 在独立事务切换 Local-backed / 记录失败终态                                                                                                                                  |
+| COW 完成                          | ALM `TrackerItemMaterializationCompletedEvent`                             | SK 在独立事务切换 Local-backed；失败终态由已持久化的请求和结果事件提供查询                                                                                                                                  |
 | Merge 条目批准                    | SK `MergeEntryApprovedEvent` 携带目标 Tracker 分类、冻结应用值及目标期望锁 | ALM 在同一事务中按轮次和条目加锁、查询已持久化的结果事件、首次执行时保存目标并发布 `MergeEntryResolvedEvent`。结果发布记录承担批准事件重投的去重。证据校验留在轮次登记阶段。[ADR-0009](06-decisions/adr-0009-merge-dispatch-frozen-evidence.md) |
 | Merge 条目结果与确认              | ALM `MergeEntryResolvedEvent`                                              | SK 在同一轮次事务持久化条目结果和所需确认，按需发布 `MergeAppliedEvent`；确认写失败时轮次不结束                                                                                |
 | Merge 目标 LTI                    | SK `MergeAppliedEvent`                                                     | SK 独立事务切换/创建 LTI                                                                                                                                                       |
@@ -88,6 +90,7 @@ ALM 创建 Requirement 时普通读取 Tracker，并在插入时过滤已软删 
 - Merge `requestId` 的 PostgreSQL advisory lock；当前由 `MergeRepository.claim` 使用 `ON CONFLICT (request_id) DO NOTHING` 原子认领；
 - LightTrackerItem Redis 缓存装饰器及 `workingset.item-cache` 配置；
 - “ALM 直接读取 SK 仓储一定违规”的笼统表述；当前只禁止直接写入，读取边界见 §2。
+- `bootstrap.SnowflakeIdGenerator`、`bootstrap.configuration.IdGeneratorConfig` 与 MyBatis-Plus `IdentifierGenerator` 注入；ID 生成统一由 `lib-id` 的 `Ids.nextId()` 承担。
 
 ## 6. 查询侧实施记录
 

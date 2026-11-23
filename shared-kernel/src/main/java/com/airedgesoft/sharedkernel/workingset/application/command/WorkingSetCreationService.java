@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.RequestThreadHolder;
@@ -18,7 +19,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreat
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -44,8 +44,7 @@ public class WorkingSetCreationService {
     private static final List<Long> REQUIRED_TRACKER_CLASSIFICATIONS = List.of(10070101L);
 
     private final WorkingSetCreationRepository workingSetCreationRepository;
-    private final IdentifierGenerator ids;
-    private final WorkingSetRepository workingSets;
+        private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final WorkingSetCommandService workingSetService;
     private final TransactionTemplate transaction;
@@ -84,7 +83,7 @@ public class WorkingSetCreationService {
             WorkingSetCreation task = existing.get();
             return replayCreate(task, request.apply(task.request().numericTargetWorkingSetId()));
         }
-        return submit(request.apply(ids.nextId(null).longValue()));
+        return submit(request.apply(Ids.nextId()));
     }
 
     /**
@@ -110,7 +109,7 @@ public class WorkingSetCreationService {
         workingSets.findById(Long.valueOf(request.parentWorkingSetId()));
         long acceptedAt = workingSetCreationRepository.acceptanceTime();
         validateBaselines(request.selectedTrackerIds(), request.baselineOverrides(), acceptedAt);
-        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(Ids.nextId()),
                 withDefaultTrackers(request, null), RequestThreadHolder.getUserId(), acceptedAt);
         if (workingSetCreationRepository.save(creation)) {
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
@@ -175,7 +174,7 @@ public class WorkingSetCreationService {
                 spaces.stream().map(Long::valueOf).toList(), shared, unshared, targetSet.name(), Mode.EXTEND,
                 null, baselineOverrides, List.of(), submittedIds);
         request = withDefaultTrackers(request, targetSet);
-        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(ids.nextId(null).longValue()),
+        WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(Ids.nextId()),
                 request, RequestThreadHolder.getUserId(), acceptedAt);
         if (workingSetCreationRepository.save(creation)) {
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));

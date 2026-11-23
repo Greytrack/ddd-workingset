@@ -6,7 +6,7 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 /**
- * 监听 ALM 的实例化完成结果，更新 SK 的 LTI 收据与本地内容状态。
+ * 监听 ALM 的实例化结果，成功时切换 LTI，失败结果保留在事件发布记录中。
  */
 @Component
 public class TrackerItemMaterializationCompletedListener {

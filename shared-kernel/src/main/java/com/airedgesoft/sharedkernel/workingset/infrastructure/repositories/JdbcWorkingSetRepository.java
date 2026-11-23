@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.infrastructure.repositories;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
@@ -10,7 +11,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,8 +27,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class JdbcWorkingSetRepository implements WorkingSetRepository {
     private final JdbcTemplate jdbc;
-    private final IdentifierGenerator ids;
-    private final JdbcCommonInstanceStore commonInstances;
+        private final JdbcCommonInstanceStore commonInstances;
 
     private static String requireActor(String actor) {
         if (actor == null || actor.isBlank()) {
@@ -191,7 +190,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                         INSERT INTO air_ws_workingset_branch_relation (id, workingset_id, work_space, tracker_id,
                             lock_version, created_by, created_time, updated_by, updated_time, is_show)
                         VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
-                        """, ids.nextId(null).longValue(), binding.workingSetId(),
+                        """, Ids.nextId(), binding.workingSetId(),
                 binding.numericProductSpaceId(), binding.trackerId(), actor, now, actor, now,
                 binding.shown() ? 1 : 0);
     }

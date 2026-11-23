@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.tracker.application.command;
 
+import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.RequestThreadHolder;
@@ -17,7 +18,6 @@ import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -36,8 +36,7 @@ public class TrackerCommandService {
     private final ProductSpaceRepository productSpaceRepository;
     private final ClassificationCatalog classifications;
     private final TrackerQueryProvider trackerQueries;
-    private final IdentifierGenerator ids;
-    private final ApplicationEventPublisher events;
+        private final ApplicationEventPublisher events;
 
     /**
      * 在默认工作集创建业务原生 Tracker。
@@ -53,7 +52,7 @@ public class TrackerCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
         ProductSpace space = productSpaceRepository.findById(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
-        Tracker tracker = Tracker.original(ids.nextId(null).longValue(), name, space,
+        Tracker tracker = Tracker.original(Ids.nextId(), name, space,
                 classification, sharingMode, RequestThreadHolder.getLongUserId());
         trackerRepository.save(tracker);
         events.publishEvent(new TrackerCreatedEvent(
