@@ -13,11 +13,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication(scanBasePackages = {
         "bootstrap",
         "com.airedgesoft.lib.jdbc",
+        // bridge-v3（v3 ↔ v4 勾连模块）：shared-kernel 端口的 v3 直读实现 Bean（V3* 实现）在此装配
+        "com.airedgesoft.bridge.v3",
         "com.airedgesoft.alm.requirement",
         "com.airedgesoft.sharedkernel.workingset",
         "com.airedgesoft.sharedkernel.tracker",
         "com.airedgesoft.sharedkernel.productspace",
-        "com.airedgesoft.sharedkernel.businessframework.infrastructure.providers"
+        "com.airedgesoft.sharedkernel.businessframework"
 })
 @MapperScan(basePackages = {
         "com.airedgesoft.sharedkernel.workingset.infrastructure",

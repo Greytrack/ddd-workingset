@@ -38,12 +38,6 @@
       <version>${revision}</version>
       <scope>compile</scope>
     </dependency>
-    <!-- v3 工具：SpringContextUtils / CommonResultCode（infrastructure-sdk 不传递 tools，显式声明） -->
-    <dependency>
-      <groupId>com.airedgesoft</groupId>
-      <artifactId>infrastructure-tools</artifactId>
-      <version>${revision}</version>
-    </dependency>
     <!-- 编号临界区分布式锁（NumberService.withNumberLock 封装 v3 executeInsertSql 分类级 redis 锁口径）：
          RedissonClient bean 由 v3 RedissonConfiguration（infrastructure-tools，随 deploy-full 组件扫描装配，读 RedisProperties）提供；
          starter 自动配置遇既有 bean 条件退让；版本由 lib-deps BOM 管理 -->
