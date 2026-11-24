@@ -9,7 +9,7 @@ import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemSummary;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;

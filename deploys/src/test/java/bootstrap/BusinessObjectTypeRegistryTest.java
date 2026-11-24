@@ -10,7 +10,7 @@ import com.airedgesoft.sharedkernel.workingset.application.port.Capabilities;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemSummary;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerItemCatalogQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.infrastructure.providers.DefaultBusinessObjectTypeRegistry;
 import org.junit.jupiter.api.Test;
 

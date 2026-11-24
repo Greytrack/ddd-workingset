@@ -10,7 +10,7 @@ import com.airedgesoft.sharedkernel.businessframework.application.context.Author
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectLocalizedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectCheckedInEvent;

@@ -1,5 +1,7 @@
 package bootstrap;
 
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
+
 
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.lib.exception.DomainException;
@@ -17,7 +19,7 @@ import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.Tra
 import com.airedgesoft.sharedkernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharedkernel.workingset.application.query.model.TrackerBindingSummary;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -110,7 +112,7 @@ class TrackerDefaultAcceptanceTest {
             TrackerBindingSummary folder = bindings.stream().filter(binding -> binding.classificationId().equals(10070101L))
                     .findFirst().orElseThrow();
             assertTrue(bindings.stream().anyMatch(binding -> !binding.classificationId().equals(10070101L)));
-            assertEquals(10070101L, classifications.findClassification("10070101").orElseThrow().numericId());
+            assertEquals(10070101L, classifications.findClassification("10070101").orElseThrow().getId());
 
             jdbc.update("DELETE FROM pg_temp.classifications WHERE classification_id = ?", 10070101L);
             Tracker tracker = trackerRepository.lockTracker(folder.trackerId()).orElseThrow();
@@ -279,7 +281,7 @@ class TrackerDefaultAcceptanceTest {
         try {
             Tracker tracker = new Tracker(id, "projection collision", null, 1L,
                     space, classifications.findClassification("14010101").orElseThrow(),
-                    Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
+                    SharingMode.UNSHARED, null, false, 419436436619264L);
             assertThrows(DataIntegrityViolationException.class,
                     () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
@@ -298,7 +300,7 @@ class TrackerDefaultAcceptanceTest {
         Long id = Long.valueOf(fixtureId("TRACKER-ROLLBACK-" + suffix));
         Tracker tracker = new Tracker(id, "x".repeat(501), null, 1L,
                 space, classifications.findClassification("14010101").orElseThrow(),
-                Classification.SharingMode.UNSHARED, null, false, 419436436619264L);
+                SharingMode.UNSHARED, null, false, 419436436619264L);
 
         assertThrows(DataIntegrityViolationException.class,
                 () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
@@ -334,10 +336,10 @@ class TrackerDefaultAcceptanceTest {
         ClassificationView[] classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
         assertTrue(Arrays.stream(classifications).anyMatch(classification ->
                 sharedClassification.equals(classification.classificationId())
-                        && classification.sharingMode() == Classification.SharingMode.SHARED));
+                        && classification.sharingMode() == SharingMode.SHARED));
 
         String url = "/api/worksets/1/trackers";
-        for (Classification.SharingMode mode : Classification.SharingMode.values()) {
+        for (SharingMode mode : SharingMode.values()) {
             Map<String, String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
                     "14010101", "sharingMode", mode.name());
             ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
@@ -355,7 +357,7 @@ class TrackerDefaultAcceptanceTest {
                     .getStatusCode());
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
 
-            if (mode == Classification.SharingMode.SHARED) {
+            if (mode == SharingMode.SHARED) {
                 FixtureIds.insertWorkingSet(jdbc, "1", child);
                 FixtureIds.extendWithRootFolder(rest, jdbc, child, spaceId);
                 FixtureIds.extendScope(rest, child,
@@ -451,11 +453,11 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
         ProductSpace space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
-        Classification classification = new Classification(258831141156800L, Classification.SharingMode.UNSHARED,
+        ClassSnapshot classification = ClassSnapshot.forTracker(258831141156800L, false,
                 "测试分类", 11L, 111L);
         assertThrows(DomainException.class, () -> new Tracker(
                 Long.valueOf(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
-                Long.valueOf(child), space.numericId(), classification, classification.sharingMode(), null, false));
+                Long.valueOf(child), space.numericId(), classification, SharingMode.from(classification), null, false));
     }
 
     @Test
