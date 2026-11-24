@@ -1,5 +1,6 @@
 package bootstrap;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -12,22 +13,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication(scanBasePackages = {
         "bootstrap",
         "com.airedgesoft.lib.jdbc",
-        "com.airedgesoft.alm.requirement.adapters",
-        "com.airedgesoft.alm.requirement.application",
-        "com.airedgesoft.alm.requirement.infrastructure",
-        "com.airedgesoft.sharedkernel.workingset.adapters",
-        "com.airedgesoft.sharedkernel.workingset.application",
+        "com.airedgesoft.alm.requirement",
+        "com.airedgesoft.sharedkernel.workingset",
+        "com.airedgesoft.sharedkernel.tracker",
+        "com.airedgesoft.sharedkernel.productspace",
+        "com.airedgesoft.sharedkernel.businessframework.infrastructure.providers"
+})
+@MapperScan(basePackages = {
         "com.airedgesoft.sharedkernel.workingset.infrastructure",
-        "com.airedgesoft.sharedkernel.businessframework.infrastructure.projection",
-        "com.airedgesoft.sharedkernel.tracker.adapters",
-        "com.airedgesoft.sharedkernel.tracker.application",
-        "com.airedgesoft.sharedkernel.tracker.infrastructure",
-        "com.airedgesoft.sharedkernel.productspace"
-})
-@MapperScan({
-        "com.airedgesoft.sharedkernel.workingset.infrastructure.providers",
-        "com.airedgesoft.alm.requirement.infrastructure.providers"
-})
+        "com.airedgesoft.alm.requirement.infrastructure"
+}, annotationClass = Mapper.class)
 public class WorkingsetApplication {
 
     public static void main(String[] args) {
