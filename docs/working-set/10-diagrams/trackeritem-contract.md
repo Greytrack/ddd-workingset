@@ -18,7 +18,7 @@ classDiagram
     class Tracker {
         <<AggregateRoot>>
         +TrackerId
-        +SharingMode
+        +boolean shared
         +parentId
         +sourceId
     }

@@ -213,7 +213,7 @@ class WorkingSetCreationAcceptanceTest {
                 .map(binding -> binding.productSpaceId()).collect(Collectors.toSet()));
         assertEquals(4, bindings.trackers().size());
         assertEquals(1, bindings.trackers().stream().filter(binding -> shared.equals(binding.trackerId())).count());
-        String copy = bindings.trackers().stream().filter(binding -> "UNSHARED".equals(binding.sharingMode()))
+        String copy = bindings.trackers().stream().filter(binding -> !binding.shared())
                 .filter(binding -> !"10070101".equals(binding.classificationId()))
                 .findFirst().orElseThrow().trackerId();
         assertEquals(unshared, jdbc.queryForObject("SELECT source_id FROM trackers WHERE tracker_id = ?", String.class, copy));

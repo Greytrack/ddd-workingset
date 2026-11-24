@@ -2,7 +2,6 @@ package com.airedgesoft.sharedkernel.tracker.domain;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
@@ -30,7 +29,7 @@ public final class Tracker {
     private final long classificationId;
     private final long baseClassId;
     private final long classId;
-    private final SharingMode sharingMode;
+    private final boolean shared;
     private final Long parentId;
     private final boolean isDefault;
     private final boolean newAggregate;
@@ -40,47 +39,47 @@ public final class Tracker {
     private boolean deleted;
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
-                   Long productSpaceId, ClassSnapshot classification, SharingMode sharingMode,
+                   Long productSpaceId, ClassSnapshot classification, boolean shared,
                    Long parentId, boolean isDefault) {
         this(trackerId, trackerId, name, sourceId, workingSetId, productSpaceId,
-                classification, sharingMode, parentId, isDefault);
+                classification, shared, parentId, isDefault);
     }
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
-                   Long productSpaceId, ClassSnapshot classification, SharingMode sharingMode,
+                   Long productSpaceId, ClassSnapshot classification, boolean shared,
                    Long parentId, boolean isDefault, Long actor) {
         this(trackerId, trackerId, name, sourceId, workingSetId, productSpaceId,
-                classification, sharingMode, parentId, isDefault, true, actor, actor);
+                classification, shared, parentId, isDefault, true, actor, actor);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
                     Long workingSetId, Long productSpaceId, ClassSnapshot classification,
-                    SharingMode sharingMode, Long parentId, boolean isDefault) {
+                    boolean shared, Long parentId, boolean isDefault) {
         this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
-                classification, sharingMode, parentId, isDefault, true);
+                classification, shared, parentId, isDefault, true);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
                     Long workingSetId, Long productSpaceId, ClassSnapshot classification,
-                    SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate) {
+                    boolean shared, Long parentId, boolean isDefault, boolean newAggregate) {
         this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
                 classification.getId(), classification.getBaseClassId(), classification.getClassId(),
-                sharingMode, parentId, isDefault, newAggregate, null, null);
+                shared, parentId, isDefault, newAggregate, null, null);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
                     Long workingSetId, Long productSpaceId, ClassSnapshot classification,
-                    SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate,
+                    boolean shared, Long parentId, boolean isDefault, boolean newAggregate,
                     Long createdBy, Long updatedBy) {
         this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
                 classification.getId(), classification.getBaseClassId(), classification.getClassId(),
-                sharingMode, parentId, isDefault, newAggregate, createdBy, updatedBy);
+                shared, parentId, isDefault, newAggregate, createdBy, updatedBy);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
                     Long workingSetId, Long productSpaceId, long classificationId,
                     long baseClassId, long classId,
-                    SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate,
+                    boolean shared, Long parentId, boolean isDefault, boolean newAggregate,
                     Long createdBy, Long updatedBy) {
         this.trackerId = Objects.requireNonNull(trackerId, "trackerId");
         this.commonId = Objects.requireNonNull(commonId, "commonId");
@@ -96,7 +95,7 @@ public final class Tracker {
         this.classificationId = classificationId;
         this.baseClassId = baseClassId;
         this.classId = classId;
-        this.sharingMode = Objects.requireNonNull(sharingMode, "sharingMode");
+        this.shared = shared;
         this.newAggregate = newAggregate;
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;
@@ -106,7 +105,7 @@ public final class Tracker {
         if (sourceId == null && !WorkingSet.DEFAULT_ID.equals(workingSetId)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "original Tracker must belong to the default Working Set");
         }
-        if (sourceId != null && (sharingMode != SharingMode.UNSHARED || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
+        if (sourceId != null && (shared || WorkingSet.DEFAULT_ID.equals(workingSetId))) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "derived Tracker must be unshared and belong to a child Working Set");
         }
         if (sourceId != null && (trackerId.equals(commonId) || trackerId.equals(sourceId))) {
@@ -117,18 +116,18 @@ public final class Tracker {
     public static Tracker reconstitute(Long id, Long commonId, String name, Long source,
                                        Long owner, Long productSpace, long classificationId,
                                        long baseClassId, long classId,
-                                       SharingMode sharing, Long parent, boolean isDefault) {
+                                       boolean shared, Long parent, boolean isDefault) {
         return reconstitute(id, commonId, name, source, owner, productSpace, classificationId, baseClassId, classId,
-                sharing, parent, isDefault, null, null);
+                shared, parent, isDefault, null, null);
     }
 
     public static Tracker reconstitute(Long id, Long commonId, String name, Long source,
                                        Long owner, Long productSpace, long classificationId,
                                        long baseClassId, long classId,
-                                       SharingMode sharing, Long parent, boolean isDefault,
+                                       boolean shared, Long parent, boolean isDefault,
                                        Long createdBy, Long updatedBy) {
         return new Tracker(id, commonId, name, source, owner, productSpace, classificationId,
-                baseClassId, classId, sharing, parent, isDefault, false, createdBy, updatedBy);
+                baseClassId, classId, shared, parent, isDefault, false, createdBy, updatedBy);
     }
 
     /**
@@ -149,22 +148,22 @@ public final class Tracker {
     public static Tracker original(Long id, ProductSpace space, ClassSnapshot classification, Long parentId,
                                    boolean isDefault, Long actor) {
         return new Tracker(id, id, isDefault ? classification.getName() : null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
-                classification.sharingMode(), parentId, isDefault, true, actor, actor);
+                classification.isShared(), parentId, isDefault, true, actor, actor);
     }
 
     public static Tracker original(Long id, String name, ProductSpace space, ClassSnapshot classification,
-                                   SharingMode sharingMode) {
-        return original(id, name, space, classification, sharingMode, null);
+                                   boolean shared) {
+        return original(id, name, space, classification, shared, null);
     }
 
     public static Tracker original(Long id, String name, ProductSpace space, ClassSnapshot classification,
-                                   SharingMode sharingMode, Long actor) {
+                                   boolean shared, Long actor) {
         String normalizedName = normalizeName(name);
-        if (!classification.allows(sharingMode)) {
+        if (!classification.allows(shared)) {
             throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, String.valueOf(classification.getId()));
         }
         return new Tracker(id, id, normalizedName, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
-                sharingMode, null, false, true, actor, actor);
+                shared, null, false, true, actor, actor);
     }
 
     public static Tracker derived(Long id, Tracker source, Long target) {
@@ -179,7 +178,7 @@ public final class Tracker {
                                   Long createdBy) {
         return new Tracker(id, source.commonId(), source.name(), source.trackerId(), target,
                 source.productSpaceId(), source.classificationId, source.baseClassId, source.classId,
-                source.sharingMode(), null,
+                source.shared(), null,
                 isDefault, true, createdBy, createdBy);
     }
 
@@ -263,8 +262,8 @@ public final class Tracker {
         return classificationId;
     }
 
-    public SharingMode sharingMode() {
-        return sharingMode;
+    public boolean shared() {
+        return shared;
     }
 
     public Long parentId() {

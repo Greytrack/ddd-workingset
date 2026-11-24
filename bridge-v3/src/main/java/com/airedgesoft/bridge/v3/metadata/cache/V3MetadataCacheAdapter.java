@@ -2,7 +2,6 @@ package com.airedgesoft.bridge.v3.metadata.cache;
 
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.attribute.AttributeSnapshot;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.criteria.definition.CriteriaSnapshot;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.metadata.MetadataCachePort;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.metadata.model.NodeSnapshot;
@@ -30,12 +29,12 @@ public class V3MetadataCacheAdapter implements MetadataCachePort {
 
     private static final RowMapper<ClassSnapshot> CLASSIFICATION = (row, position) ->
             ClassSnapshot.build(row.getLong(1),
-                    SharingMode.valueOf(row.getString(2)) == SharingMode.SHARED,
+                    row.getBoolean(2),
                     row.getString(3),
                     row.getLong(4),
                     row.getLong(5));
 
-    private static final String SELECT = "SELECT classification_id, sharing_mode, name, base_class_id, class_id FROM classifications";
+    private static final String SELECT = "SELECT classification_id, sharing_mode = 'SHARED' AS shared, name, base_class_id, class_id FROM classifications";
 
     @Override
     public List<ClassSnapshot> baseClasses() {

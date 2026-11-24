@@ -46,7 +46,7 @@ public class DefaultTrackersBindingListener {
             Tracker tracker = trackers.findById(trackerId)
                     .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                             "tracker disappeared: " + Long.toString(trackerId)));
-            workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.sharingMode());
+            workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.shared());
         }
         workingSet.audit(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(workingSet);

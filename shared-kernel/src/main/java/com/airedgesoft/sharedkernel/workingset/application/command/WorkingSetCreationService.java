@@ -8,7 +8,6 @@ import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetCreationSubmittedEvent;
@@ -155,7 +154,7 @@ public class WorkingSetCreationService {
                     && hasClassificationBinding(targetSet, source.productSpaceId(), source.numericClassificationId())) {
                 continue;
             }
-            if (source != null && source.sharingMode() == SharingMode.SHARED) {
+            if (source != null && source.shared()) {
                 if (targetSet.hasTrackerBinding(id)) continue;
                 shared.add(trackerId);
             } else {
@@ -202,7 +201,7 @@ public class WorkingSetCreationService {
                 }
                 trackerQueries.findDefaultTrackerId(parent, spaceId, classificationId)
                         .flatMap(trackers::findById).ifPresent(tracker -> {
-                            TreeSet<Long> selection = tracker.sharingMode() == SharingMode.SHARED ? shared : unshared;
+                            TreeSet<Long> selection = tracker.shared() ? shared : unshared;
                             if (selection.add(tracker.trackerId())) {
                                 automatic.add(tracker.trackerId());
                             }

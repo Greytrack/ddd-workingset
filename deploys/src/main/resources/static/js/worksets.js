@@ -366,7 +366,7 @@ function renderTrackerTree(trackers, boundIds) {
            aria-current="${Boolean(selected)}" data-depth="${depth}"
            style="padding-left:${8 + Math.min(depth, 8) * 14}px" title="${escapeHtml(tracker.trackerId)}">
         <span class="tracker-label">${escapeHtml(trackerName)}</span>
-        <span class="badge ${tracker.sharingMode === 'SHARED' ? 'shared' : 'unshared'}">${tracker.sharingMode === 'SHARED' ? '共享' : '非共享'}</span>
+        <span class="badge ${tracker.shared ? 'shared' : 'unshared'}">${tracker.shared ? '共享' : '非共享'}</span>
         ${tracker.isDefault ? '<span class="badge">默认</span>' : ''}
         ${bound ? '' : '<span class="badge unbound">未绑定</span>'}
       </button>` + kids.map((child) => walk(child, depth + 1)).join('');
@@ -438,7 +438,7 @@ async function selectTracker(trackerId, {keepFilter = false} = {}) {
 function renderTracker() {
     const tracker = state.selectedTracker;
     const bound = tracker && (state.bindings?.trackers || []).some((item) => item.trackerId === tracker.trackerId);
-    const canCompare = tracker?.sharingMode === 'UNSHARED' && tracker.classificationId !== FOLDER_CLASSIFICATION_ID
+    const canCompare = tracker?.shared === false && tracker.classificationId !== FOLDER_CLASSIFICATION_ID
         && (bound || state.selectedWs === '1');
     $('#itemActions').classList.toggle('hidden', !bound && !canCompare);
     $('[data-action="new-requirement"]').classList.toggle('hidden', !bound);

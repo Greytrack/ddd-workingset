@@ -57,11 +57,11 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 |----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 身份键   | `(workingSetId, trackerId)`，同一 WorkingSet 内不重复纳入（POL-012）                                                                                  |
 | 槽位键   | `(workingSetId, productSpaceId, classificationId)` 可绑定多个 Tracker，有效范围内至多一个 `is_default`（INV-056，T6-F 重述；Shared 默认来自根工作集） |
-| 必需属性 | workingSetId、trackerId、productSpaceId、classificationId、sharingMode、建立方式（Shared 复用 / 非共享派生）                                          |
+| 必需属性 | workingSetId、trackerId、productSpaceId、classificationId、shared、建立方式（Shared 复用 / 非共享派生）                                          |
 | TB-1     | 建立前必须存在同 WS 的 SpaceBinding（INV-053）                                                                                                        |
 | TB-2     | 绑定的 `productSpaceId` 与 Tracker 的 `productSpaceId` 一致（INV-054）                                                                                |
 | TB-3     | Shared：`trackerId` 与上游聚合相同；非共享：新 Tracker 身份 + 直接 `sourceId`（POL-013/INV-057）                                                      |
-| TB-4     | `sharingMode` 必须与 Classification 的共享特性相容（POL-003）                                                                                         |
+| TB-4     | 布尔字段 `shared` 必须与 Classification 的共享特性相容（POL-003）                                                                                         |
 
 ### 3.3 默认纳入的分类
 
@@ -106,7 +106,7 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 
 ### 4.4 新建原生跟踪分类（Tracker）
 
-- `GET /api/worksets/metadata/classifications` 返回可选的 `classificationId` 及元数据的 `sharingMode`
+- `GET /api/worksets/metadata/classifications` 返回可选的 `classificationId` 及元数据的 布尔字段 `shared`
   ，供创建表单按 [POL-003](../03-rules.md) 显示可选共享方式。
 - `POST /v1/trackers` 仍只允许在默认工作集创建业务原生 Tracker，产品空间必须已绑定。Tracker
   独立提交后发布 `TrackerCreatedEvent`，监听器另行保存 WorkingSet 绑定；`201`

@@ -66,7 +66,7 @@ public interface WorkingSetQueryMapper {
             SELECT t.id AS tracker_id, t.name, NULLIF(t.parent_id, 0) AS parent_id,
                    t.source_branch_id AS source_id, t.work_space AS product_space_id,
                    t.tracker_class AS classification_id,
-                   CASE t.share WHEN 1 THEN 'SHARED' ELSE 'UNSHARED' END AS sharing_mode,
+                   COALESCE(t.share = 1, FALSE) AS shared,
                    t.is_default = 1 AS is_default
             FROM air_inst_tracker_rev t
             WHERE t.delete_flag = 0
@@ -80,7 +80,7 @@ public interface WorkingSetQueryMapper {
     List<TrackerSummary> findTrackers(@Param("id") long id);
 
     @Select("""
-            SELECT classification_id, sharing_mode, name, base_class_id, class_id
+            SELECT classification_id, sharing_mode = 'SHARED' AS shared, name, base_class_id, class_id
             FROM classifications ORDER BY classification_id
             """)
     List<ClassificationSummary> findClassifications();
@@ -95,7 +95,7 @@ public interface WorkingSetQueryMapper {
     List<SpaceBindingSummary> findSpaceBindings(@Param("id") long id);
 
     @Select("""
-            SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode, b.origin, b.shown
+            SELECT b.tracker_id, b.product_space_id, b.classification_id, b.sharing_mode = 'SHARED' AS shared, b.origin, b.shown
             FROM tracker_bindings b
             JOIN air_inst_tracker_rev t ON t.id = b.tracker_id AND t.work_space = b.product_space_id
             WHERE b.working_set_id = #{id} AND t.delete_flag = 0

@@ -5,7 +5,6 @@ import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.businessframework.domain.numbering.TrackerNumberGenerator;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +44,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
                 rs.getLong("tracker_class"),
                 rs.getLong("base_class"),
                 rs.getLong("class"),
-                rs.getInt("share") == 1 ? SharingMode.SHARED : SharingMode.UNSHARED,
+                rs.getInt("share") == 1,
                 optionalId(rs, "parent_id"),
                 rs.getInt("is_default") == 1,
                 createdBy,
@@ -171,7 +170,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
         Long parent = value(tracker.parentId());
         Long source = value(tracker.sourceId());
         long workset = tracker.workingSetId();
-        int shared = tracker.sharingMode() == SharingMode.SHARED ? 1 : 0;
+        int shared = tracker.shared() ? 1 : 0;
         int defaultFlag = tracker.isDefault() ? 1 : 0;
         jdbc.update("""
                         INSERT INTO air_inst_tracker_rev (id, instance_id, common_id, workingset_id, work_space,

@@ -62,7 +62,7 @@ async function openMerge() {
             id === '1' ? null : api(base + '/bindings')
         ]);
         const boundIds = new Set(bindings?.trackers.map((binding) => binding.trackerId));
-        return trackers.filter((tracker) => tracker.sharingMode === 'UNSHARED'
+        return trackers.filter((tracker) => !tracker.shared
             && (id === '1' || boundIds.has(tracker.trackerId))
             && tracker.trackerId === selected.sourceId)
             .map((tracker) => ({workingSetId: id, trackerId: tracker.trackerId, name: tracker.name}));

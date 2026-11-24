@@ -8,7 +8,6 @@ import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.
 import com.airedgesoft.sharedkernel.businessframework.application.query.LiteBusinessObjectProvider;
 import com.airedgesoft.sharedkernel.productspace.application.command.ProductSpaceCommandService;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController;
@@ -245,7 +244,7 @@ class TrackerDefaultAcceptanceTest {
         String spaceId = createSpace();
         TrackerView tracker = rest.postForEntity("/api/worksets/1/trackers",
                 Map.of("productSpaceId", spaceId, "classificationId", "14010101",
-                        "sharingMode", "UNSHARED", "name", "变更前"), TrackerView.class).getBody();
+                        "shared", false, "name", "变更前"), TrackerView.class).getBody();
         long id = Long.parseLong(tracker.trackerId());
         RestClient client = RestClient.builder().baseUrl(rest.getRootUri())
                 .requestFactory(new JdkClientHttpRequestFactory()).build();
@@ -281,7 +280,7 @@ class TrackerDefaultAcceptanceTest {
         try {
             Tracker tracker = new Tracker(id, "projection collision", null, 1L,
                     space, classifications.findClassification(14010101L).orElseThrow(),
-                    SharingMode.UNSHARED, null, false, 419436436619264L);
+                    false, null, false, 419436436619264L);
             assertThrows(DataIntegrityViolationException.class,
                     () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
@@ -300,7 +299,7 @@ class TrackerDefaultAcceptanceTest {
         Long id = Long.valueOf(fixtureId("TRACKER-ROLLBACK-" + suffix));
         Tracker tracker = new Tracker(id, "x".repeat(501), null, 1L,
                 space, classifications.findClassification(14010101L).orElseThrow(),
-                SharingMode.UNSHARED, null, false, 419436436619264L);
+                false, null, false, 419436436619264L);
 
         assertThrows(DataIntegrityViolationException.class,
                 () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
@@ -315,7 +314,7 @@ class TrackerDefaultAcceptanceTest {
         String spaceId = createSpace();
         ResponseEntity<TrackerView> response = rest.postForEntity("/api/worksets/1/trackers",
                 Map.of("productSpaceId", spaceId, "name", "第二个文件夹分类 Tracker",
-                        "classificationId", "10070101", "sharingMode", "UNSHARED"), TrackerView.class);
+                        "classificationId", "10070101", "shared", false), TrackerView.class);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         TrackerView tracker = response.getBody();
@@ -336,17 +335,18 @@ class TrackerDefaultAcceptanceTest {
         ClassificationView[] classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
         assertTrue(Arrays.stream(classifications).anyMatch(classification ->
                 sharedClassification.equals(classification.classificationId())
-                        && classification.sharingMode() == SharingMode.SHARED));
+                        && classification.shared()));
 
         String url = "/api/worksets/1/trackers";
-        for (SharingMode mode : SharingMode.values()) {
-            Map<String, String> request = Map.of("productSpaceId", spaceId, "name", "项目-" + mode, "classificationId",
-                    "14010101", "sharingMode", mode.name());
+        for (boolean shared : List.of(true, false)) {
+            String name = shared ? "共享项目" : "非共享项目";
+            Map<String, Object> request = Map.of("productSpaceId", spaceId, "name", name, "classificationId",
+                    "14010101", "shared", shared);
             ResponseEntity<TrackerView> response = rest.postForEntity(url, request, TrackerView.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
             TrackerView tracker = response.getBody();
-            assertEquals(mode.name(), tracker.sharingMode());
-            assertEquals("项目-" + mode, tracker.name());
+            assertEquals(shared, tracker.shared());
+            assertEquals(name, tracker.name());
             assertFalse(tracker.isDefault());
             await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
                 BindingsView bindings = rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class);
@@ -357,7 +357,7 @@ class TrackerDefaultAcceptanceTest {
                     .getStatusCode());
             assertEquals(HttpStatus.CONFLICT, rest.postForEntity(url, request, Map.class).getStatusCode());
 
-            if (mode == SharingMode.SHARED) {
+            if (shared) {
                 FixtureIds.insertWorkingSet(jdbc, "1", child);
                 FixtureIds.extendWithRootFolder(rest, jdbc, child, spaceId);
                 FixtureIds.extendScope(rest, child,
@@ -371,15 +371,15 @@ class TrackerDefaultAcceptanceTest {
                         request, Map.class).getStatusCode());
             }
         }
-        Map<String, String> allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
-                sharedClassification, "sharingMode", "SHARED");
+        Map<String, Object> allowed = Map.of("productSpaceId", spaceId, "name", "仅共享", "classificationId",
+                sharedClassification, "shared", true);
         ResponseEntity<TrackerView> allowedResponse = rest.postForEntity(url, allowed, TrackerView.class);
         assertEquals(HttpStatus.CREATED, allowedResponse.getStatusCode());
         String allowedTrackerId = allowedResponse.getBody().trackerId();
         await().atMost(Duration.ofSeconds(8)).until(() -> rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class)
                 .trackers().stream().anyMatch(binding -> allowedTrackerId.equals(binding.trackerId())));
-        Map<String, String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
-                sharedClassification, "sharingMode", "UNSHARED");
+        Map<String, Object> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
+                sharedClassification, "shared", false);
         ResponseEntity<Map> refusal = rest.postForEntity(url, rejected, Map.class);
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, refusal.getStatusCode());
         assertEquals("SharingModeMismatch", refusal.getBody().get("reason"));
@@ -457,7 +457,7 @@ class TrackerDefaultAcceptanceTest {
                 "测试分类", 11L, 111L);
         assertThrows(DomainException.class, () -> new Tracker(
                 Long.valueOf(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
-                Long.valueOf(child), space.numericId(), classification, SharingMode.UNSHARED, null, false));
+                Long.valueOf(child), space.numericId(), classification, false, null, false));
     }
 
     @Test

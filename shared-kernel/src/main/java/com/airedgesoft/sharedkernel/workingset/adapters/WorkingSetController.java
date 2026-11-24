@@ -12,7 +12,6 @@ import com.airedgesoft.sharedkernel.workingset.application.command.DeleteWorking
 import com.airedgesoft.sharedkernel.businessframework.application.query.GetWorkingsetQuery;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ListWorkingsetsQuery;
 import com.airedgesoft.sharedkernel.businessframework.application.query.QWorkingset;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.adapters.self.CreateChildRequest;
 import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCommandService;
 import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetDeletionService;
@@ -281,11 +280,11 @@ public class WorkingSetController {
         }
     }
 
-    public record ClassificationView(String classificationId, SharingMode sharingMode, String name,
+    public record ClassificationView(String classificationId, boolean shared, String name,
                                      String baseClassId, String classId) {
         static ClassificationView from(ClassificationSummary summary) {
             return new ClassificationView(String.valueOf(summary.classificationId()),
-                    SharingMode.valueOf(summary.sharingMode()), summary.name(),
+                    summary.shared(), summary.name(),
                     String.valueOf(summary.baseClassId()), String.valueOf(summary.classId()));
         }
     }
@@ -298,11 +297,11 @@ public class WorkingSetController {
     }
 
     public record TrackerBindingView(String trackerId, String productSpaceId, String classificationId,
-                                     String sharingMode, String origin, boolean shown) {
+                                     boolean shared, String origin, boolean shown) {
         static TrackerBindingView from(TrackerBindingSummary summary) {
             return new TrackerBindingView(String.valueOf(summary.trackerId()),
                     String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
-                    summary.sharingMode(), summary.origin(), summary.shown());
+                    summary.shared(), summary.origin(), summary.shown());
         }
     }
 
@@ -314,13 +313,13 @@ public class WorkingSetController {
     }
 
     public record TrackerView(String trackerId, String name, String parentId, String sourceId, String productSpaceId,
-                              String classificationId, String sharingMode, boolean isDefault) {
+                              String classificationId, boolean shared, boolean isDefault) {
         static TrackerView from(TrackerSummary summary) {
             return new TrackerView(String.valueOf(summary.trackerId()), summary.name(),
                     summary.parentId() == null ? null : String.valueOf(summary.parentId()),
                     summary.sourceId() == null ? null : String.valueOf(summary.sourceId()),
                     String.valueOf(summary.productSpaceId()), String.valueOf(summary.classificationId()),
-                    summary.sharingMode(), summary.isDefault());
+                    summary.shared(), summary.isDefault());
         }
     }
 }

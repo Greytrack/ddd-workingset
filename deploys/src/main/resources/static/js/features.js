@@ -379,7 +379,7 @@ async function loadCreateScope(parentId) {
             const tracker = trackerById.get(binding.trackerId) || {
                 trackerId: binding.trackerId,
                 name: binding.trackerId,
-                sharingMode: binding.sharingMode
+                shared: binding.shared
             };
             bySpace.get(binding.productSpaceId).push(tracker);
         });
@@ -406,14 +406,14 @@ async function loadCreateScope(parentId) {
 }
 
 function renderScopeSpace(space) {
-    const shared = space.trackers.filter((tracker) => tracker.sharingMode === 'SHARED');
-    const unshared = space.trackers.filter((tracker) => tracker.sharingMode !== 'SHARED');
+    const shared = space.trackers.filter((tracker) => tracker.shared);
+    const unshared = space.trackers.filter((tracker) => !tracker.shared);
     const trackerRows = (list, name, badgeClass) => list.length
         ? list.map((tracker) => `
       <label class="scope-tracker">
         <input type="checkbox" name="${name}" value="${escapeHtml(tracker.trackerId)}" data-space-id="${escapeHtml(space.productSpaceId)}" checked>
         <span class="scope-tracker-name">${escapeHtml(tracker.name || shortId(tracker.trackerId))}<span class="check-id">${escapeHtml(tracker.trackerId)}</span></span>
-        <span class="badge ${badgeClass}">${escapeHtml(tracker.sharingMode)}</span>
+        <span class="badge ${badgeClass}">${tracker.shared ? '共享' : '非共享'}</span>
       </label>`).join('')
         : '<div class="scope-empty">无</div>';
     return `<div class="scope-space" data-scope-space="${escapeHtml(space.productSpaceId)}">
@@ -654,7 +654,7 @@ async function openExtendWorkset() {
         scope.innerHTML = groups.size ? `<div class="scope-tree">${[...groups].map(([spaceId, trackers]) =>
             `<fieldset class="extension-group"><legend>${escapeHtml(spaceNames.get(spaceId) || spaceId)}</legend>
         ${trackers.map((tracker) => {
-                const shared = tracker.sharingMode === 'SHARED';
+                const shared = tracker.shared;
                 const included = (shared ? targetBound : derivedSources).has(tracker.trackerId);
                 return `<label class="scope-tracker${included ? ' already-included' : ''}">
             <input type="checkbox" name="trackerIds" value="${escapeHtml(tracker.trackerId)}"${included ? ' disabled' : ''}>
@@ -697,7 +697,7 @@ async function openTrackerCreate() {
           <div class="field"><label for="trackerClassification">所属分类</label>
             <select id="trackerClassification" name="classification" required disabled><option value="">正在加载分类…</option></select></div>
           <div class="field"><label for="trackerSharing">共享方式</label>
-            <select id="trackerSharing" name="sharing" required disabled><option value="">请先选择所属分类</option></select></div>
+            <input id="trackerSharing" name="sharing" value="请先选择所属分类" readonly></div>
         </div>
         <div class="form-error" role="alert"></div>
       </div>
@@ -709,16 +709,9 @@ async function openTrackerCreate() {
     form.dataset.productSpaceId = space.productSpaceId;
     form.trackerName.focus();
     form.classification.addEventListener('change', () => {
-        const mode = form.classification.selectedOptions[0]?.dataset.mode;
-        form.sharing.replaceChildren();
-        if (mode) {
-            if (mode === 'UNSHARED') form.sharing.add(new Option('非共享', 'UNSHARED'));
-            form.sharing.add(new Option('共享', 'SHARED'));
-        } else {
-            form.sharing.add(new Option('请先选择所属分类', ''));
-        }
-        form.sharing.disabled = !mode;
-        form.querySelector('[type="submit"]').disabled = !mode;
+        const shared = form.classification.selectedOptions[0]?.dataset.shared;
+        form.sharing.value = shared === undefined ? '请先选择所属分类' : shared === 'true' ? '共享' : '非共享';
+        form.querySelector('[type="submit"]').disabled = shared === undefined;
     });
     try {
         const classifications = (await api('/api/worksets/metadata/classifications'))
@@ -727,7 +720,7 @@ async function openTrackerCreate() {
         form.classification.replaceChildren(new Option(classifications.length ? '选择所属分类' : '暂无可用分类', ''));
         for (const classification of classifications) {
             const option = new Option(classification.name || classification.classificationId, classification.classificationId);
-            option.dataset.mode = classification.sharingMode;
+            option.dataset.shared = String(classification.shared);
             form.classification.add(option);
         }
         form.classification.disabled = !classifications.length;
@@ -752,7 +745,6 @@ async function submitTracker(form) {
     submit.disabled = true;
     submit.textContent = '创建中…';
     form.classification.disabled = true;
-    form.sharing.disabled = true;
     try {
         const created = await api('/v1/trackers', {
             method: 'POST',
@@ -770,7 +762,7 @@ async function submitTracker(form) {
                 state.trackers.push({
                     trackerId: created.id, name: created.displayName, parentId: created.parentId,
                     productSpaceId: created.workSpaceId, classificationId: created.trackerClassId,
-                    sharingMode: form.sharing.value
+                    shared: form.classification.selectedOptions[0]?.dataset.shared === 'true'
                 });
             }
             if (!state.bindings.trackers.some((binding) => binding.trackerId === created.id)) {
@@ -788,7 +780,6 @@ async function submitTracker(form) {
         submit.disabled = false;
         submit.textContent = '创建';
         form.classification.disabled = false;
-        form.sharing.disabled = false;
     }
 }
 

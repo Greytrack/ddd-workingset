@@ -4,7 +4,6 @@ import com.airedgesoft.alm.requirement.application.query.model.RequirementDetail
 import com.airedgesoft.alm.requirement.application.query.provider.RequirementQueryProvider;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -91,7 +90,7 @@ public class RequirementQueryService {
         if (tracker.workingSetId().equals(workingSetId)) {
             return true;
         }
-        if (tracker.sharingMode() != SharingMode.SHARED) {
+        if (!tracker.shared()) {
             return false;
         }
         return workingSets.findById(workingSetId)

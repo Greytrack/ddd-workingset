@@ -10,7 +10,6 @@ import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerCreatedEvent;
@@ -43,21 +42,21 @@ public class TrackerCommandService {
      */
     @Transactional
     public Tracker create(Long id, String spaceId, String name, Long classificationId,
-                          SharingMode sharingMode) {
-        return create(id, spaceId, name, classifications.requireClassification(classificationId), sharingMode);
+                          boolean shared) {
+        return create(id, spaceId, name, classifications.requireClassification(classificationId), shared);
     }
 
     /**
-     * 在默认工作集创建业务原生 Tracker；共享模式取分类的共享策略（{@code POST /v1/trackers} 契约不带 sharingMode）。
+     * 在默认工作集创建业务原生 Tracker；共享模式取分类的共享策略（{@code POST /v1/trackers} 契约不带 shared）。
      */
     @Transactional
     public Tracker create(Long id, String spaceId, String name, Long classificationId) {
         ClassSnapshot classification = classifications.requireClassification(classificationId);
-        return create(id, spaceId, name, classification, classification.sharingMode());
+        return create(id, spaceId, name, classification, classification.isShared());
     }
 
     private Tracker create(Long id, String spaceId, String name, ClassSnapshot classification,
-                           SharingMode sharingMode) {
+                           boolean shared) {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw new DomainException(BindingResCode.WORKING_SET_NOT_WRITABLE, "只允许在默认工作集新建跟踪分类");
         }
@@ -66,10 +65,10 @@ public class TrackerCommandService {
         ProductSpace space = productSpaceRepository.findById(spaceId)
                 .orElseThrow(() -> new DomainException(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
         Tracker tracker = Tracker.original(Ids.nextId(), name, space,
-                classification, sharingMode, AuthorizationScope.currentUserId());
+                classification, shared, AuthorizationScope.currentUserId());
         trackerRepository.save(tracker);
         events.publishEvent(new TrackerCreatedEvent(
-                tracker.trackerId(), workingSet.id(), space.id(), String.valueOf(classification.getId()), sharingMode));
+                tracker.trackerId(), workingSet.id(), space.id(), String.valueOf(classification.getId()), shared));
         return tracker;
     }
 

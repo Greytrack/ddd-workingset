@@ -203,18 +203,9 @@ public class ClassSnapshot implements ClassificationFacts {
     return shared;
   }
 
-  /**
-   * 共享策略的模式表达（Tracker / 工作集绑定创作用）：{@link #shared} 布尔位还原为模式。
-   */
-  public SharingMode sharingMode() {
-    return shared ? SharingMode.SHARED : SharingMode.UNSHARED;
-  }
-
-  /**
-   * 分类是否接受所需共享模式：请求 SHARED 恒相容；请求 UNSHARED 仅当分类未置共享位时相容。
-   */
-  public boolean allows(SharingMode requested) {
-    return sharingMode().allows(requested);
+  /** 共享绑定始终相容，非共享绑定要求分类也为非共享。 */
+  public boolean allows(boolean requestedShared) {
+    return requestedShared || !shared;
   }
 
   public boolean isSubclass() {

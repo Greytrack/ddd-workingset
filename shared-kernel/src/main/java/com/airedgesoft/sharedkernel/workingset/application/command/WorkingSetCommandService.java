@@ -11,7 +11,6 @@ import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
@@ -44,7 +43,7 @@ public class WorkingSetCommandService {
     private final ClassificationQueryProvider classifications;
 
     private static void requireUnshared(Tracker source) {
-        if (source.sharingMode() != SharingMode.UNSHARED) {
+        if (source.shared()) {
             throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, source.classificationId());
         }
     }
@@ -54,7 +53,7 @@ public class WorkingSetCommandService {
         // 空间成员关系由 TrackerBinding 投影，新增空间必须带上已派生的必带 Tracker。
         if (!requiredClassifications.stream().allMatch(classification -> candidates.stream()
                 .map(TrackerToBind::tracker)
-                .anyMatch(tracker -> tracker.sharingMode() == SharingMode.UNSHARED
+                .anyMatch(tracker -> !tracker.shared()
                         && classification.equals(tracker.numericClassificationId())))) {
             throw new DomainException(BindingResCode.TRACKER_NOT_FOUND, spaceId);
         }
@@ -168,11 +167,11 @@ public class WorkingSetCommandService {
 
         for (String sourceId : request.unsharedParentTrackerIds()) {
             if (!failedCopies.contains(sourceId)) {
-                collectBinding(target, sourceId, SharingMode.UNSHARED, bySpace, failures);
+                collectBinding(target, sourceId, false, bySpace, failures);
             }
         }
         for (String sourceId : request.sharedTrackerIds()) {
-            collectBinding(target, sourceId, SharingMode.SHARED, bySpace, failures);
+            collectBinding(target, sourceId, true, bySpace, failures);
         }
 
         boolean changed = false;
@@ -191,7 +190,7 @@ public class WorkingSetCommandService {
                 for (TrackerToBind candidate : candidates) {
                     Tracker tracker = candidate.tracker();
                     if (!target.hasTrackerBinding(tracker.trackerId())) {
-                        target.bindTracker(tracker, candidate.classification(), tracker.sharingMode());
+                        target.bindTracker(tracker, candidate.classification(), tracker.shared());
                         changed = true;
                     }
                 }
@@ -207,7 +206,7 @@ public class WorkingSetCommandService {
         return new BindingResult(changed, failures);
     }
 
-    private void collectBinding(WorkingSet target, String sourceId, SharingMode mode,
+    private void collectBinding(WorkingSet target, String sourceId, boolean shared,
                                 Map<String, List<TrackerToBind>> bySpace, List<Failure> failures) {
         Long id = Long.valueOf(sourceId);
         String spaceId = null;
@@ -218,10 +217,10 @@ public class WorkingSetCommandService {
             if (scope == null) {
                 throw new DomainException(BindingResCode.MISSING_SPACE_BINDING, spaceId);
             }
-            Tracker tracker = mode == SharingMode.SHARED ? source : trackers.findDerivedTracker(target.id(), id)
+            Tracker tracker = shared ? source : trackers.findDerivedTracker(target.id(), id)
                     .orElseThrow(() -> new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceId));
             ClassSnapshot classification = classifications.requireClassification(tracker.classificationId());
-            if (tracker.sharingMode() != mode || !classification.allows(mode)) {
+            if (tracker.shared() != shared || !classification.allows(shared)) {
                 throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, String.valueOf(classification.getId()));
             }
             scope.add(new TrackerToBind(tracker, classification));

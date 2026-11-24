@@ -1,7 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.application;
 
 
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
@@ -42,7 +41,7 @@ class RelationEventStepTest {
                 ClassSnapshot.build(266673196957632L, false, "测试分类", 11L, 111L), null);
         Tracker child = Tracker.derived(childId, parent, target, true);
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
-                List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
+                List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", false,
                         TrackerOrigin.UNSHARED_DERIVATION)));
         LightTrackerItem item = LightTrackerItem.derive(Long.valueOf("261158455371712"), Long.valueOf("265506033508288"), childId, target, 3,
                 Long.valueOf("260574482192320"), 3, 42L, 14010101L);
@@ -86,7 +85,7 @@ class RelationEventStepTest {
                 ClassSnapshot.build(266673196957632L, false, "测试分类", 11L, 111L), null);
         Tracker child = Tracker.derived(childId, parent, target, true);
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
-                List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
+                List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", false,
                         TrackerOrigin.UNSHARED_DERIVATION)));
         LightTrackerItem item = LightTrackerItem.derive(Long.valueOf("261158455371712"), Long.valueOf("265506033508288"), childId, target, 3,
                 Long.valueOf("260574482192320"), 3, 42L, 14010101L);

@@ -7,7 +7,6 @@ import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
@@ -98,11 +97,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                 WorkingSet.SpaceOrigin.valueOf(rs.getString("origin")),
                 WorkingSet.SpaceState.valueOf(rs.getString("state"))), id);
         List<WorkingSet.TrackerBinding> trackers = jdbc.query("""
-                SELECT tracker_id, product_space_id, classification_id, sharing_mode, origin, shown FROM tracker_bindings
+                SELECT tracker_id, product_space_id, classification_id, sharing_mode = 'SHARED' AS shared, origin, shown FROM tracker_bindings
                 WHERE working_set_id = ? ORDER BY product_space_id, classification_id
                 """, (rs, row) -> new WorkingSet.TrackerBinding(id, rs.getLong("tracker_id"),
                 rs.getLong("product_space_id"), rs.getLong("classification_id"),
-                SharingMode.valueOf(rs.getString("sharing_mode")),
+                rs.getBoolean("shared"),
                 WorkingSet.TrackerOrigin.valueOf(rs.getString("origin")), rs.getBoolean("shown")), id);
         Object[] header = rows.get(0);
         String parent = (String) header[0];

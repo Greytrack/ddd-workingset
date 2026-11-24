@@ -3,7 +3,6 @@ package com.airedgesoft.sharedkernel.workingset.domain.workingset;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetDeleted;
@@ -240,7 +239,7 @@ public final class WorkingSet {
             throw new DomainException(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
         }
         trackers.put(trackerId, new TrackerBinding(id, trackerId, binding.numericProductSpaceId(),
-                binding.numericClassificationId(), binding.sharingMode(), binding.origin(), shown));
+                binding.numericClassificationId(), binding.shared(), binding.origin(), shown));
     }
 
     public SpaceBinding bindSpace(ProductSpace space) {
@@ -303,23 +302,23 @@ public final class WorkingSet {
         boolean ownedByParent = parentId.equals(source.workingSetId());
         // 默认根的原生 Tracker 直接来自平台投影。子工作集的有效范围由绑定定义。
         boolean inParentRange = DEFAULT_ID.equals(parentId) ? ownedByParent : boundInParent;
-        if (!inParentRange || (source.sharingMode() == SharingMode.UNSHARED && !ownedByParent)) {
+        if (!inParentRange || (!source.shared() && !ownedByParent)) {
             throw new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(source.trackerId()));
         }
     }
 
-    public TrackerBinding bindTracker(Tracker tracker, ClassSnapshot classification, SharingMode requestedMode) {
+    public TrackerBinding bindTracker(Tracker tracker, ClassSnapshot classification, boolean requestedShared) {
         requireSpaceBinding(tracker.productSpaceId().toString());
         if (!tracker.classificationId().equals(String.valueOf(classification.getId()))
-                || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
+                || tracker.shared() != requestedShared || !classification.allows(requestedShared)) {
             throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, String.valueOf(classification.getId()));
         }
         if (trackers.containsKey(tracker.trackerId())) {
             throw new DomainException(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
         }
-        TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
+        TrackerOrigin origin = requestedShared ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
         TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.getId(),
-                requestedMode, origin);
+                requestedShared, origin);
         trackers.put(binding.trackerId(), binding);
         return binding;
     }
@@ -350,17 +349,17 @@ public final class WorkingSet {
 
     @Entity
     public record TrackerBinding(Long workingSetId, Long trackerId, Long numericProductSpaceId,
-                                 Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin,
+                                 Long numericClassificationId, boolean shared, TrackerOrigin origin,
                                  boolean shown) {
         public TrackerBinding(Long workingSetId, Long trackerId, Long numericProductSpaceId,
-                              Long numericClassificationId, SharingMode sharingMode, TrackerOrigin origin) {
-            this(workingSetId, trackerId, numericProductSpaceId, numericClassificationId, sharingMode, origin, true);
+                              Long numericClassificationId, boolean shared, TrackerOrigin origin) {
+            this(workingSetId, trackerId, numericProductSpaceId, numericClassificationId, shared, origin, true);
         }
 
         public TrackerBinding(Long workingSetId, Long trackerId, String productSpaceId,
-                              String classificationId, SharingMode sharingMode, TrackerOrigin origin) {
+                              String classificationId, boolean shared, TrackerOrigin origin) {
             this(workingSetId, trackerId, Long.valueOf(productSpaceId), Long.valueOf(classificationId),
-                    sharingMode, origin);
+                    shared, origin);
         }
 
         public String productSpaceId() {

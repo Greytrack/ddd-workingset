@@ -7,7 +7,6 @@ import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -83,7 +82,7 @@ public class RequirementCommandService {
                 .ifPresent(this::requireWorkingSet);
         if (requestedWorkingSetId != null) {
             tracker.ifPresent(current -> {
-                if (current.sharingMode() == SharingMode.UNSHARED
+                if (!current.shared()
                         && !current.workingSetId().equals(requestedWorkingSetId)) {
                     throw new DomainException(FailureReason.NOT_INCLUDED,
                             "tracker " + trackerId + " is not included in working set "
@@ -92,7 +91,7 @@ public class RequirementCommandService {
             });
         }
         boolean defaultWorkingSet = tracker
-                .map(current -> current.sharingMode() == SharingMode.SHARED
+                .map(current -> current.shared()
                         || WorkingSet.DEFAULT_ID.equals(current.workingSetId()))
                 .orElse(false);
         long local = Ids.nextId();

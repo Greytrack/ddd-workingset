@@ -236,7 +236,7 @@ class BindingAcceptanceTest {
         extendShared(grandchild, shared);
 
         assertEquals(shared, rest.getForObject("/v1/workingsets/" + grandchild + "/bindings", BindingsView.class)
-                .trackers().stream().filter(binding -> "SHARED".equals(binding.sharingMode()))
+                .trackers().stream().filter(binding -> binding.shared())
                 .findFirst().orElseThrow().trackerId());
     }
 

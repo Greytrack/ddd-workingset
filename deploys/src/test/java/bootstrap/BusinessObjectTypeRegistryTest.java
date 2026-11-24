@@ -2,7 +2,6 @@ package bootstrap;
 
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -39,7 +38,7 @@ class BusinessObjectTypeRegistryTest {
 
     private static Tracker tracker(long classificationId, long baseClassId, long classId) {
         return Tracker.reconstitute(TRACKER, TRACKER, "tracker", null, Long.valueOf("1"), 10L,
-                classificationId, baseClassId, classId, SharingMode.UNSHARED, null, false);
+                classificationId, baseClassId, classId, false, null, false);
     }
 
     private static BusinessObjectTypeAdapter requirementAdapter() {

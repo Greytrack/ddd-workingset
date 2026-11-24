@@ -5,7 +5,6 @@ import com.airedgesoft.alm.requirement.application.command.RequirementCommandSer
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -41,10 +40,10 @@ class RequirementCreateScopeTest {
             repository, new ObjectMapper(), mock(ApplicationEventPublisher.class), trackers,
             workingSets, mock(LightTrackerItemRepository.class));
 
-    private static Tracker tracker(String workingSetId, SharingMode sharingMode) {
+    private static Tracker tracker(String workingSetId, boolean shared) {
         Tracker tracker = mock(Tracker.class);
         when(tracker.workingSetId()).thenReturn(Long.valueOf(workingSetId));
-        when(tracker.sharingMode()).thenReturn(sharingMode);
+        when(tracker.shared()).thenReturn(shared);
         return tracker;
     }
 
@@ -58,7 +57,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void default_working_set_uses_the_same_snowflake_for_both_ids() {
-        Tracker tracker = tracker("1", SharingMode.UNSHARED);
+        Tracker tracker = tracker("1", false);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         Requirement created = service.create(TRACKER, Long.valueOf("1"), "A", "d", REVISION);
@@ -68,7 +67,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void non_default_working_set_uses_two_distinct_ids() {
-        Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
+        Tracker tracker = tracker("259712159403968", false);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         Requirement created = service.create(TRACKER, Long.valueOf("259712159403968"), "A", "d", REVISION);
@@ -78,7 +77,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void unshared_tracker_must_be_created_from_its_own_working_set() {
-        Tracker tracker = tracker("259712159403968", SharingMode.UNSHARED);
+        Tracker tracker = tracker("259712159403968", false);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         DomainException failure = assertThrows(DomainException.class,
@@ -89,7 +88,7 @@ class RequirementCreateScopeTest {
 
     @Test
     void shared_tracker_can_be_created_from_any_working_set() {
-        Tracker tracker = tracker("1", SharingMode.SHARED);
+        Tracker tracker = tracker("1", true);
         when(trackers.findById(TRACKER)).thenReturn(Optional.of(tracker));
 
         Requirement created = service.create(TRACKER, Long.valueOf("259712159403968"), "A", "d", REVISION);

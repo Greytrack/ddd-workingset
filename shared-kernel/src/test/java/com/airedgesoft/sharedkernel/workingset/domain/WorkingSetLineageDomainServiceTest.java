@@ -4,7 +4,6 @@ import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasificatio
 
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
@@ -31,9 +30,9 @@ class WorkingSetLineageDomainServiceTest {
     @Test
     void allowsDirectParentChildInEitherDirectionAndExcludesSharedTrackers() {
         TrackerBinding shared = new TrackerBinding(childId, Long.valueOf("259191613022144"), "259944010602432", "258520000000031",
-                SharingMode.SHARED, TrackerOrigin.SHARED_REUSE);
+                true, TrackerOrigin.SHARED_REUSE);
         TrackerBinding unshared = new TrackerBinding(childId, Long.valueOf("267052500774848"), "259944010602432", "258520000000032",
-                SharingMode.UNSHARED, TrackerOrigin.UNSHARED_DERIVATION);
+                false, TrackerOrigin.UNSHARED_DERIVATION);
         SpaceBinding space = new SpaceBinding(childId, "259944010602432", SpaceOrigin.EXPLICIT, SpaceState.ACTIVE);
         WorkingSet child = new WorkingSet(childId, root.id(), List.of(space), List.of(shared, unshared));
         WorkingSet grandchild = WorkingSet.child(grandchildId, child.id());
