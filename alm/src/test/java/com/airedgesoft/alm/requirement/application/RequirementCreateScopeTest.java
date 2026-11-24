@@ -5,10 +5,10 @@ import com.airedgesoft.alm.requirement.application.command.RequirementCommandSer
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;

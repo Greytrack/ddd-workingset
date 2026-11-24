@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TrackerTest {
     @Test
     void descendantsKeepFamilyIdentityAndLinkToTheirImmediateSource() {
-        ClassSnapshot classification = ClassSnapshot.forTracker(301L, false, "分类",
+        ClassSnapshot classification = ClassSnapshot.build(301L, false, "分类",
                 11L, 111L);
         Tracker root = Tracker.original(Long.valueOf(101), new ProductSpace("201"),
                 classification, null);

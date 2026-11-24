@@ -21,7 +21,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public final class RequirementMaterializationService {
+public class RequirementMaterializationService {
     private final RequirementRepository repository;
     private final RequirementSnapshotStore snapshotStore;
 

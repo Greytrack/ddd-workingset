@@ -1,6 +1,7 @@
 package bootstrap;
 
 import com.airedgesoft.alm.requirement.application.eventhandler.RequirementMergeApprovedListener;
+import com.airedgesoft.sharedkernel.tracker.adapters.MergeController;
 import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryApprovedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.util.AopTestUtils;
@@ -12,7 +13,6 @@ import com.airedgesoft.alm.requirement.application.command.RequirementCommandSer
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.workingset.adapters.MergeController.ComparisonPage;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController;
 import com.airedgesoft.sharedkernel.workingset.application.command.MergeExecutionService;
 import com.airedgesoft.sharedkernel.workingset.application.command.MergeExecutionService.EntryRequest;
@@ -114,7 +114,7 @@ class MergeAcceptanceTest {
                 "decision", Map.of("fields", fields, "markAsMerged", mark));
     }
 
-    private static Difference diff(ComparisonPage page, String family) {
+    private static Difference diff(MergeController.ComparisonPage page, String family) {
         return page.differences().stream().filter(item -> family.equals(Long.toString(item.family()))).findFirst().orElseThrow();
     }
 
@@ -203,7 +203,7 @@ class MergeAcceptanceTest {
         seed(sourceTracker, edit, "source");
         String editedId = seed(targetTracker, edit, "target");
 
-        ComparisonPage compared = compare(source, target);
+        MergeController.ComparisonPage compared = compare(source, target);
         assertEquals(Presence.ABSENT, diff(compared, add).target().presence());
         assertEquals(Presence.ABSENT, diff(compared, remove).source().presence());
         assertEquals(ChangeKind.ADDED, diff(compared, add).kind());
@@ -232,7 +232,7 @@ class MergeAcceptanceTest {
 
         // Soft deletion is shown as an addition but preserves the original target identity.
         seed(sourceTracker, remove, "present again");
-        ComparisonPage afterDelete = compare(source, target);
+        MergeController.ComparisonPage afterDelete = compare(source, target);
         Difference recoverable = diff(afterDelete, remove);
         assertEquals(ChangeKind.ADDED, recoverable.kind());
         assertEquals(Presence.DELETED, recoverable.target().presence());
@@ -255,7 +255,7 @@ class MergeAcceptanceTest {
         String source = seed(rootTracker, edited, "source title");
         jdbc.update("UPDATE air_inst_requirement_rev SET description = 'source description' WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", source);
         String target = seed(childTracker, edited, "target title");
-        ComparisonPage first = compare("1", child);
+        MergeController.ComparisonPage first = compare("1", child);
         Difference update = diff(first, edited);
         String round = submit(child, first, existence(diff(first, added), "IGNORED"),
                 existence(diff(first, deleted), "IGNORED"), Map.of("evidence", update,
@@ -268,7 +268,7 @@ class MergeAcceptanceTest {
         assertEquals(0, confirmations(round, added));
         assertEquals(0, confirmations(round, deleted));
         assertEquals(0, confirmations(round, edited));
-        ComparisonPage next = compare("1", child);
+        MergeController.ComparisonPage next = compare("1", child);
         assertNotNull(diff(next, added));
         assertNotNull(diff(next, deleted));
         assertEquals(List.of("description"), diff(next, edited).fields());
@@ -283,7 +283,7 @@ class MergeAcceptanceTest {
         String family = id("async");
         seed(rootTracker, family, "source");
         String target = seed(childTracker, family, "target");
-        ComparisonPage compared = compare("1", child);
+        MergeController.ComparisonPage compared = compare("1", child);
         Difference difference = diff(compared, family);
         ResponseEntity<MergeRound> response = rest.postForEntity(ws(child) + "/merge-rounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", "async-" + family,
@@ -380,7 +380,7 @@ class MergeAcceptanceTest {
     void failedSubmissionLeavesNoRoundBehind() {
         String family = id("failed-submit");
         String source = seed(rootTracker, family, "failed submit probe");
-        ComparisonPage frozen = compare("1", child);
+        MergeController.ComparisonPage frozen = compare("1", child);
         change(source, "changed before submit", 0);
         String requestId = id("failed-submit-request");
         Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
@@ -433,7 +433,7 @@ class MergeAcceptanceTest {
 
     private void assertNativeMergeBack(String parent, String sourceWs, String parentTracker, String sourceTracker) {
         RequirementView source = createRequirement(sourceWs, sourceTracker, "native child item");
-        ComparisonPage comparison = compare(sourceWs, parent, sourceTracker, parentTracker);
+        MergeController.ComparisonPage comparison = compare(sourceWs, parent, sourceTracker, parentTracker);
         Difference difference = diff(comparison, source.commonId());
         assertEquals(Presence.ABSENT, difference.target().presence());
         String round = submit(parent, comparison, existence(difference, "ACCEPT"));
@@ -458,11 +458,11 @@ class MergeAcceptanceTest {
         assertStatus(HttpStatus.NO_CONTENT,
                 rest.postForEntity("/api/requirements/" + parentLocal + "/delete", null, Void.class));
         assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + parentLocal, Map.class));
-        ComparisonPage afterDelete = compare(sourceWs, parent, sourceTracker, parentTracker);
+        MergeController.ComparisonPage afterDelete = compare(sourceWs, parent, sourceTracker, parentTracker);
         Difference absent = diff(afterDelete, source.commonId());
         assertEquals(Presence.DELETED, absent.target().presence());
         assertTrue(submitFails(parent, afterDelete, existence(absent, "RESTORE")));
-        ComparisonPage fresh = compare(sourceWs, parent, sourceTracker, parentTracker);
+        MergeController.ComparisonPage fresh = compare(sourceWs, parent, sourceTracker, parentTracker);
         String restoreRound = submit(parent, fresh, existence(diff(fresh, source.commonId()), "ACCEPT"));
         MergeRound.ApplyResult restored = awaitResult(restoreRound);
         assertEquals(State.Succeeded, restored.state(), restored::toString);
@@ -481,8 +481,8 @@ class MergeAcceptanceTest {
     @Test
     void secondRoundWithRacedEvidenceCannotCommitTheSameFamilyTwice() {
         RequirementView source = createRequirement(child, childTracker, "raced child item");
-        ComparisonPage first = compare(child, "1");
-        ComparisonPage stale = compare(child, "1");
+        MergeController.ComparisonPage first = compare(child, "1");
+        MergeController.ComparisonPage stale = compare(child, "1");
         String firstRound = submit("1", first, existence(diff(first, source.commonId()), "ACCEPT"));
         assertEquals(Outcome.Confirmed, awaitResult(firstRound).itemResults().get(0).outcome());
         assertEquals("StaleEvidence", submitFailure("1", stale, existence(diff(stale, source.commonId()), "ACCEPT")));
@@ -505,19 +505,19 @@ class MergeAcceptanceTest {
         String edit = id("edit");
         String source = seed(rootTracker, edit, "source");
         String target = seed(childTracker, edit, "target");
-        ComparisonPage frozen = compare("1", child);
+        MergeController.ComparisonPage frozen = compare("1", child);
         change(source, "changed before submit", 0);
         assertEquals("StaleEvidence",
                 submitFailure(child, frozen, field(diff(frozen, edit), "ACCEPT", false)));
 
         change(source, "latest source", 1);
-        ComparisonPage fresh = compare("1", child);
+        MergeController.ComparisonPage fresh = compare("1", child);
         String round = submit(child, fresh, field(diff(fresh, edit), "ACCEPT", false));
         assertEquals(State.Succeeded, awaitResult(round).state());
         assertEquals("latest source", requirement(target).title());
 
         change(source, "different", 2);
-        ComparisonPage beforeRevision = compare("1", child);
+        MergeController.ComparisonPage beforeRevision = compare("1", child);
         requirements.upgradeRevision(Long.valueOf(target), Long.valueOf(1));
         assertEquals("StaleEvidence",
                 submitFailure(child, beforeRevision, field(diff(beforeRevision, edit), "ACCEPT", false)));
@@ -558,10 +558,10 @@ class MergeAcceptanceTest {
         String rejectedTarget = seed(childTracker, rejected, "target");
         seed(rootTracker, deferred, "source");
         seed(childTracker, deferred, "target");
-        ComparisonPage comparison = compare("1", child);
+        MergeController.ComparisonPage comparison = compare("1", child);
         assertTrue(submitFails(child, comparison, field(diff(comparison, deferred), "DEFER", true)));
         jdbc.update("UPDATE air_inst_requirement_rev SET name = '', lock_version = 1 WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", rejectedSource);
-        ComparisonPage withInvalidSource = compare("1", child);
+        MergeController.ComparisonPage withInvalidSource = compare("1", child);
         String round = submit(child, withInvalidSource, field(diff(withInvalidSource, keep), "IGNORED", true),
                 field(diff(withInvalidSource, rejected), "ACCEPT", false),
                 field(diff(withInvalidSource, deferred), "IGNORED", false));
@@ -579,10 +579,10 @@ class MergeAcceptanceTest {
         assertNotNull(checkpoint.localIdB());
         assertTrue(kept.equals(Long.toString(checkpoint.localIdA())) || kept.equals(Long.toString(checkpoint.localIdB())));
         change(kept, "changed after checkpoint", 0);
-        ComparisonPage afterCheckpointEdit = compare("1", child);
+        MergeController.ComparisonPage afterCheckpointEdit = compare("1", child);
         assertFalse(afterCheckpointEdit.differences().stream().anyMatch(item -> keep.equals(Long.toString(item.family()))));
         change(rejectedSource, "valid on retry", 1);
-        ComparisonPage retryComparison = compare("1", child);
+        MergeController.ComparisonPage retryComparison = compare("1", child);
         assertFalse(retryComparison.differences().stream().anyMatch(item -> keep.equals(Long.toString(item.family()))));
         String retryRound = submit(child, retryComparison, field(diff(retryComparison, rejected), "ACCEPT", false));
         assertEquals(1, awaitResult(retryRound).summary().applied());
@@ -601,7 +601,7 @@ class MergeAcceptanceTest {
         String laterFamily = id("resume-later");
         seed(rootTracker, laterFamily, "later accepted");
         String laterTarget = seed(childTracker, laterFamily, "later before");
-        ComparisonPage allDifferences = compare("1", child);
+        MergeController.ComparisonPage allDifferences = compare("1", child);
 
         String round = submit(child, allDifferences, field(diff(allDifferences, family), "ACCEPT", true),
                 field(diff(allDifferences, laterFamily), "ACCEPT", false));
@@ -672,7 +672,7 @@ class MergeAcceptanceTest {
                 WHERE local_id = ?
                 """, parentLocal);
 
-        ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
+        MergeController.ComparisonPage compared = compare(child, grandchild, childTracker, grand.trackerId());
         Difference item = diff(compared, anchor);
         assertEquals(Long.toString(grand.item().localId()), Long.toString(item.target().localId()));
         assertFalse(item.target().localId().equals(item.target().contentId()));
@@ -737,10 +737,10 @@ class MergeAcceptanceTest {
         String family = id("direction-agnostic");
         seed(rootTracker, family, "source");
         seed(childTracker, family, "target");
-        ComparisonPage forward = compare("1", child);
+        MergeController.ComparisonPage forward = compare("1", child);
         assertEquals(State.Succeeded, awaitResult(submit(child, forward,
                 field(diff(forward, family), "ACCEPT", false))).state());
-        ComparisonPage backward = compare(child, "1");
+        MergeController.ComparisonPage backward = compare(child, "1");
         assertFalse(backward.differences().stream().anyMatch(item -> family.equals(Long.toString(item.family()))));
     }
 
@@ -823,7 +823,7 @@ class MergeAcceptanceTest {
         TrackerPair second = new TrackerPair(Long.valueOf("1"), Long.valueOf(secondRoot),
                 Long.valueOf(child), Long.valueOf(secondChild));
 
-        ComparisonPage page = compare("1", child);
+        MergeController.ComparisonPage page = compare("1", child);
         assertEquals(List.of(first), page.candidates());
         assertEquals(List.of(firstFamily), page.differences().stream().map(d -> Long.toString(d.family())).toList());
         assertEquals(List.of(second), compare("1", child, secondRoot, secondChild).candidates());
@@ -855,7 +855,7 @@ class MergeAcceptanceTest {
         String other = id("competing-family");
         seed(rootTracker, other, "other source");
         seed(childTracker, other, "other target");
-        ComparisonPage first = compare("1", child);
+        MergeController.ComparisonPage first = compare("1", child);
         String constraint = "test_checkpoint_" + suffix.replace("-", "");
         jdbc.execute("ALTER TABLE air_ws_items_merge_index ADD CONSTRAINT " + constraint
                 + " CHECK (common_id <> " + Long.parseLong(family) + ") NOT VALID");
@@ -874,7 +874,7 @@ class MergeAcceptanceTest {
             assertEquals(State.Running, roundState(firstRound).state());
             Assertions.assertNull(roundState(firstRound).entries().get(0).result());
             assertTrue(checkpoints.findLatest(key).isEmpty());
-            ComparisonPage competing = compare("1", child);
+            MergeController.ComparisonPage competing = compare("1", child);
             assertEquals("PairMergeInProgress", submitFailure(child, competing,
                     field(diff(competing, other), "IGNORED", true)));
         } finally {
@@ -886,7 +886,7 @@ class MergeAcceptanceTest {
         assertEquals(appliedVersion, requirement(target).lockVersion());
 
         jdbc.update("UPDATE air_inst_requirement_rev SET revision = 4, name = 'source revised' WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)", source);
-        ComparisonPage next = compare("1", child);
+        MergeController.ComparisonPage next = compare("1", child);
         String secondRound = submit(child, next, field(diff(next, family), "IGNORED", true));
         assertEquals(State.Succeeded, awaitResult(secondRound).state());
         MergeCheckpoint latest = checkpoints.findLatest(key).orElseThrow();
@@ -990,7 +990,7 @@ class MergeAcceptanceTest {
                 new HttpEntity<>(Map.of("title", title, "expectedLockVersion", lock)), RequirementView.class));
     }
 
-    private ComparisonPage compare(String source, String target) {
+    private MergeController.ComparisonPage compare(String source, String target) {
         return "1".equals(source) ? compare(source, target, rootTracker, childTracker)
                 : compare(source, target, childTracker, rootTracker);
     }
@@ -1000,14 +1000,14 @@ class MergeAcceptanceTest {
                 + "&targetTrackerId=" + targetTracker;
     }
 
-    private ComparisonPage compare(String source, String target, String sourceTracker, String targetTracker) {
-        ResponseEntity<ComparisonPage> response = rest.postForEntity(comparePath(source, target, sourceTracker, targetTracker), null, ComparisonPage.class);
+    private MergeController.ComparisonPage compare(String source, String target, String sourceTracker, String targetTracker) {
+        ResponseEntity<MergeController.ComparisonPage> response = rest.postForEntity(comparePath(source, target, sourceTracker, targetTracker), null, MergeController.ComparisonPage.class);
         assertStatus(HttpStatus.OK, response);
         return response.getBody();
     }
 
     @SafeVarargs
-    private final String submit(String target, ComparisonPage compared, Map<String, Object>... entries) {
+    private final String submit(String target, MergeController.ComparisonPage compared, Map<String, Object>... entries) {
         ResponseEntity<MergeRound> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
@@ -1029,7 +1029,7 @@ class MergeAcceptanceTest {
     }
 
     @SafeVarargs
-    private final boolean submitFails(String target, ComparisonPage compared, Map<String, Object>... entries) {
+    private final boolean submitFails(String target, MergeController.ComparisonPage compared, Map<String, Object>... entries) {
         ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
@@ -1038,7 +1038,7 @@ class MergeAcceptanceTest {
     }
 
     @SafeVarargs
-    private final String submitFailure(String target, ComparisonPage compared, Map<String, Object>... entries) {
+    private final String submitFailure(String target, MergeController.ComparisonPage compared, Map<String, Object>... entries) {
         ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
                 "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),

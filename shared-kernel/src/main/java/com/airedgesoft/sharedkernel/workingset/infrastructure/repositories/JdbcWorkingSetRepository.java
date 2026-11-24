@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.infrastructure.repositories;
 
+import com.airedgesoft.lib.restful.etag.EtagContext;
 import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
@@ -78,11 +79,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
     }
 
     private Optional<WorkingSet> loadWorkingSet(Long id) {
-        String sql = "SELECT NULLIF(parent_id, 0), name, COALESCE(color, '#FFFF'), owner, updated_by"
+        String sql = "SELECT NULLIF(parent_id, 0), name, COALESCE(color, '#FFFF'), owner, updated_by, lock_version"
                 + " FROM air_inst_workingset WHERE id = ? AND delete_flag = 0";
         List<Object[]> rows = jdbc.query(sql,
                 (rs, row) -> new Object[]{rs.getString(1), rs.getString(2), rs.getString(3),
-                        rs.getObject(4, Long.class), rs.getString(5)},
+                        rs.getObject(4, Long.class), rs.getString(5), rs.getObject(6, Long.class)},
                 id);
         if (rows.isEmpty()) {
             return Optional.empty();
@@ -106,8 +107,10 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         Object[] header = rows.get(0);
         String parent = (String) header[0];
         String name = (String) header[1];
-        return Optional.of(new WorkingSet(id, parent == null ? null : Long.valueOf(parent), name,
-                (String) header[2], spaces, trackers, (Long) header[3], (String) header[4]));
+        WorkingSet workingSet = new WorkingSet(id, parent == null ? null : Long.valueOf(parent), name,
+                (String) header[2], spaces, trackers, (Long) header[3], (String) header[4]);
+        EtagContext.recordLoaded("workingsets/" + id, workingSet, (Long) header[5]);
+        return Optional.of(workingSet);
     }
 
     private void requireReady(Long id) {
@@ -138,15 +141,17 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
         String actor = requireActor(workingSet.actor());
         long now = System.currentTimeMillis();
         int deleteFlag = workingSet.deleted() ? 1 : 0;
-        int updated = jdbc.update("""
+        List<Long> versions = jdbc.query("""
                 UPDATE air_inst_workingset
                 SET name = ?, color = ?, delete_flag = ?, lock_version = COALESCE(lock_version, 0) + 1,
                     updated_by = ?, updated_time = ?
                 WHERE id = ? AND delete_flag = 0
-                """, workingSet.name(), workingSet.color(), deleteFlag, actor, now, id);
-        if (updated != 1) {
+                RETURNING lock_version
+                """, (rs, row) -> rs.getLong(1), workingSet.name(), workingSet.color(), deleteFlag, actor, now, id);
+        if (versions.isEmpty()) {
             throw new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
         }
+        EtagContext.recordSaved("workingsets/" + id, workingSet, versions.get(0));
         jdbc.update("""
                 UPDATE air_inst_common
                 SET name = ?, delete_flag = ?, updated_by = ?, updated_time = ?

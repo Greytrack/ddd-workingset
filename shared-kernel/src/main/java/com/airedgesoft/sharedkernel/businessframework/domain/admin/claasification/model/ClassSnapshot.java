@@ -5,6 +5,7 @@ import com.airedgesoft.sharedkernel.businessframework.domain.admin.table.TableSn
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.ClassificationFacts;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.*;
 
@@ -18,8 +19,23 @@ import java.util.*;
  * <b>过渡期定位</b>（用户拍板）：v4 分类元数据未重建前，本快照即分类元数据的过渡模型——同时承担分类视图（{@link ClassificationFacts}）
  * 与落库父类推导（{@link #getBaseClassId()}）的职责；v4 元数据重建后随 bridge 退役。
  */
+@NoArgsConstructor
 @Data
 public class ClassSnapshot implements ClassificationFacts {
+
+  /** Builds the classification metadata needed by the Tracker catalog. */
+  public static ClassSnapshot build(Long id, boolean shared, String name, Long baseClassId, Long classId) {
+    if (id == null || id <= 0) {
+      throw new IllegalArgumentException("classificationId must be positive");
+    }
+    ClassSnapshot snapshot = new ClassSnapshot();
+    snapshot.setId(id);
+    snapshot.setName(name);
+    snapshot.setClassId(classId);
+    snapshot.setBaseClassId(baseClassId);
+    snapshot.setShared(shared);
+    return snapshot;
+  }
 
   /**
    * 分类节点 ID
@@ -162,8 +178,6 @@ public class ClassSnapshot implements ClassificationFacts {
    * 子项页签是否启用（v3 {@code TableSubItems} 页签 enabled）
    */
   private boolean subItemsTabEnabled;
-
-  // —— 与 v3 同名方法，保持调用点零改动 ——
 
   public String getAPIID() {
     return apiId;

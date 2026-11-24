@@ -1,6 +1,6 @@
 package bootstrap;
 
-import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.WorkingSetView;
+import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCommandService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +13,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * 工作集名称与颜色是可编辑的展示属性，不改变谱系与绑定范围。
@@ -29,9 +31,11 @@ class WorkingSetPresentationAcceptanceTest {
     private TestRestTemplate rest;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private WorkingSetCommandService commands;
 
     private static String path(String id) {
-        return "/api/worksets/" + id;
+        return "/v1/workingsets/" + id;
     }
 
     @AfterEach
@@ -46,16 +50,16 @@ class WorkingSetPresentationAcceptanceTest {
     void editsDisplayNameAndColorWithoutChangingLineage() {
         String id = create("1", "原名称", "#2468AC");
 
-        ResponseEntity<WorkingSetView> response = patch(id, Map.of("name", "新名称", "color", "#0d9488"));
+        ResponseEntity<Map> response = patch(id, Map.of("displayName", "新名称", "color", "#0d9488"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("新名称", response.getBody().name());
-        assertEquals("#0D9488", response.getBody().color());
-        assertEquals("1", response.getBody().parentWorkingSetId());
+        assertEquals("新名称", response.getBody().get("displayName"));
+        assertEquals("#0D9488", response.getBody().get("color"));
+        assertEquals("1", response.getBody().get("parentId"));
 
-        WorkingSetView reloaded = rest.getForObject(path(id), WorkingSetView.class);
-        assertEquals("新名称", reloaded.name());
-        assertEquals("#0D9488", reloaded.color());
+        Map<?, ?> reloaded = rest.getForObject(path(id), Map.class);
+        assertEquals("新名称", reloaded.get("displayName"));
+        assertEquals("#0D9488", reloaded.get("color"));
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*) FROM air_inst_workingset WHERE id = ? AND name = ? AND color = ?
                 """, Integer.class, Long.valueOf(id), "新名称", "#0D9488"));
@@ -68,30 +72,32 @@ class WorkingSetPresentationAcceptanceTest {
     void keepsOmittedFieldAndRejectsInvalidEdits() {
         String id = create("1", "原名称", "#2468AC");
 
-        ResponseEntity<WorkingSetView> colorOnly = patch(id, Map.of("color", "#E88434"));
+        ResponseEntity<Map> colorOnly = patch(id, Map.of("color", "#E88434"));
         assertEquals(HttpStatus.OK, colorOnly.getStatusCode());
-        assertEquals("原名称", colorOnly.getBody().name());
-        assertEquals("#E88434", colorOnly.getBody().color());
+        assertEquals("原名称", colorOnly.getBody().get("displayName"));
+        assertEquals("#E88434", colorOnly.getBody().get("color"));
 
-        assertEquals(HttpStatus.BAD_REQUEST, patch(id, Map.of("name", "   ")).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, patch(id, Map.of("displayName", "   ")).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST, patch(id, Map.of("color", "red")).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST, patch(id, Map.of()).getStatusCode());
-        assertEquals(HttpStatus.NOT_FOUND, patch("258520000000099", Map.of("name", "不存在")).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, patch("258520000000099", Map.of("displayName", "不存在")).getStatusCode());
     }
 
     private String create(String parent, String name, String color) {
-        ResponseEntity<WorkingSetView> response = rest.postForEntity(path(parent) + "/children",
-                Map.of("name", name, "color", color), WorkingSetView.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        String id = response.getBody().workingSetId();
+        String id = commands.createChildWorkingSet(Long.valueOf(parent), name, color).id().toString();
         created.add(id);
         return id;
     }
 
-    private ResponseEntity<WorkingSetView> patch(String id, Map<String, ?> body) {
-        return restClient().patch().uri("/api/worksets/{id}", id).body(body)
+    private ResponseEntity<Map> patch(String id, Map<String, ?> body) {
+        Map<String, Object> requestBody = new LinkedHashMap<>(body);
+        ResponseEntity<Map> current = rest.getForEntity(path(id), Map.class);
+        Object version = current.getStatusCode().is2xxSuccessful() ? current.getBody().get("lockedVersion") : 1L;
+        assertNotNull(version);
+        requestBody.put("lockedVersion", version);
+        return restClient().patch().uri(path(id)).body(requestBody)
                 .exchange((request, response) ->
-                        ResponseEntity.status(response.getStatusCode()).body(response.bodyTo(WorkingSetView.class)));
+                        ResponseEntity.status(response.getStatusCode()).body(response.bodyTo(Map.class)));
     }
 
     private RestClient restClient() {

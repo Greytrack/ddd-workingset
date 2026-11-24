@@ -24,7 +24,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public final class RequirementMergeWriter {
+public class RequirementMergeWriter {
     private final RequirementMutationStore repository;
     private final RequirementCommandService requirements;
 

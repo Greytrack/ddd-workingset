@@ -15,7 +15,7 @@ public interface WorkingSetQueryMapper {
 
     @Select("""
             SELECT id AS working_set_id, NULLIF(parent_id, 0) AS parent_working_set_id, name,
-                   (id = 1) AS default_working_set, COALESCE(color, '#FFFF') AS color
+                   (id = 1) AS default_working_set, COALESCE(color, '#FFFF') AS color, lock_version
             FROM air_inst_workingset WHERE id = #{id} AND delete_flag = 0
             """)
     WorkingSetSummary find(@Param("id") long id);

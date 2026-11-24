@@ -4,6 +4,7 @@ package bootstrap;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.BindingsView;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.TrackerView;
+import com.airedgesoft.sharedkernel.businessframework.application.query.QWorkingset;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetCreationController.CreationView;
 import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCreationService;
@@ -141,7 +142,7 @@ class WorkingSetCreationAcceptanceTest {
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                         assertEquals(Status.Running, task(task).status()));
 
-                ResponseEntity<Map> preparing = rest.getForEntity("/api/worksets/" + child, Map.class);
+                ResponseEntity<Map> preparing = rest.getForEntity("/v1/workingsets/" + child, Map.class);
                 assertEquals(HttpStatus.CONFLICT, preparing.getStatusCode());
                 assertEquals("PREPARING", preparing.getBody().get("reason"));
                 ResponseEntity<Map> use = rest.postForEntity("/api/worksets/" + child + "/children",
@@ -166,7 +167,7 @@ class WorkingSetCreationAcceptanceTest {
                 assertEquals(Status.Succeeded, task(task).status()));
         assertEquals(1, task(task).progress().succeeded());
         assertNotNull(task(task).completedAt());
-        assertEquals("1", rest.getForObject("/api/worksets/" + child, WorkingSetView.class).parentWorkingSetId());
+        assertEquals("1", rest.getForObject("/v1/workingsets/" + child, QWorkingset.class).parentId());
         assertEquals(task, rest.postForEntity(CREATIONS, request, CreationView.class).getBody().creationId());
         ResponseEntity<Map> differentRequest = rest.postForEntity(CREATIONS,
                 new Request("1", child, request.requestId(), List.of(), List.of(), List.of(), "另一个名称"), Map.class);
@@ -185,7 +186,7 @@ class WorkingSetCreationAcceptanceTest {
         WorkingSetCreation.Failure failure = task(id).failures().get(0);
         assertEquals("CREATE_WORKING_SET", failure.stage().name());
         assertEquals("WorkingSetNotFound", failure.reason());
-        assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/v1/workingsets/" + child, Map.class).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity(CREATIONS + "/258519859202017", Map.class).getStatusCode());
     }
 
@@ -311,8 +312,8 @@ class WorkingSetCreationAcceptanceTest {
         String id = submit(new Request("1", child, "named", List.of(), List.of(), List.of(),
                 "自定义工作集", Mode.CREATE, "#90abcdef"));
         awaitStatus(id, Status.Succeeded);
-        WorkingSetView result = rest.getForObject("/api/worksets/" + child, WorkingSetView.class);
-        assertEquals("自定义工作集", result.name());
+        QWorkingset result = rest.getForObject("/v1/workingsets/" + child, QWorkingset.class);
+        assertEquals("自定义工作集", result.displayName());
         assertEquals("#90ABCDEF", result.color());
     }
 
@@ -322,7 +323,7 @@ class WorkingSetCreationAcceptanceTest {
         DomainException failure = assertThrows(DomainException.class, () ->
                 creations.submit(new Request("1", child, "existing-target", List.of(), List.of(), List.of())));
         assertEquals(BindingResCode.WORKING_SET_ALREADY_EXISTS, failure.getResCode());
-        assertEquals(HttpStatus.OK, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
+        assertEquals(HttpStatus.OK, rest.getForEntity("/v1/workingsets/" + child, Map.class).getStatusCode());
     }
 
     @Test
@@ -369,7 +370,7 @@ class WorkingSetCreationAcceptanceTest {
                     assertEquals(1, jdbc.queryForObject(
                             "SELECT count(*) FROM working_sets WHERE working_set_id = ?", Integer.class, child));
                 });
-                ResponseEntity<Map> ordinary = rest.getForEntity("/api/worksets/" + child, Map.class);
+                ResponseEntity<Map> ordinary = rest.getForEntity("/v1/workingsets/" + child, Map.class);
                 assertEquals(HttpStatus.CONFLICT, ordinary.getStatusCode());
                 assertEquals("PREPARING", ordinary.getBody().get("reason"));
                 assertFalse(rest.getForObject("/api/worksets/1/children", List.class).contains(child));
@@ -740,7 +741,7 @@ class WorkingSetCreationAcceptanceTest {
                 id = extension(List.of(unshared));
                 await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                         assertEquals(Stage.COPY_UNSHARED_TRACKERS, task(id).stage()));
-                ResponseEntity<Map> visible = rest.getForEntity("/api/worksets/" + child, Map.class);
+                ResponseEntity<Map> visible = rest.getForEntity("/v1/workingsets/" + child, Map.class);
                 assertEquals(HttpStatus.OK, visible.getStatusCode());
             } finally {
                 connection.rollback();
@@ -859,7 +860,7 @@ class WorkingSetCreationAcceptanceTest {
                 VALUES (?, ?, ?, ?, 'Running', CAST(? AS jsonb), now())
                 """, id, parent, child, request.requestId(), mapper.writeValueAsString(creation));
 
-        ResponseEntity<Map> response = rest.exchange("/api/worksets/" + parent, HttpMethod.DELETE, null, Map.class);
+        ResponseEntity<Map> response = rest.exchange("/v1/workingsets/" + parent, HttpMethod.DELETE, null, Map.class);
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("WorkingSetHasChildren", response.getBody().get("reason"));
         assertEquals(List.of(child), response.getBody().get("childWorkingSetIds"));

@@ -124,7 +124,8 @@ public class WorkingSetCommandService {
         if (name == null && color == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "name or color is required");
         }
-        WorkingSet target = writable(id);
+        WorkingSet target = workingSets.findByIdForUpdate(id)
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
         if (name != null) {
             target.rename(name);
         }

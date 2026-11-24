@@ -48,11 +48,11 @@ function applySelectedWorksetTheme() {
 
 /** 用编辑结果刷新本地树、主题与顶部/范围/Item 中的工作集名称。 */
 function applyWorksetEdit(updated) {
-    const node = findNode(state.worksets, updated.workingSetId);
+    const node = findNode(state.worksets, updated.id);
     if (node) node.ws = {...(node.ws || {}), ...updated};
     renderWorksetTree();
-    if (state.selectedWs !== updated.workingSetId) return;
-    $('#activeWorkset').textContent = worksetLabel(updated.workingSetId);
+    if (state.selectedWs !== updated.id) return;
+    $('#activeWorkset').textContent = worksetLabel(updated.id);
     applySelectedWorksetTheme();
     renderSpaceTrackers();
     renderTracker();
@@ -91,7 +91,7 @@ async function loadWorksetTree() {
         seen.add(id);
         let ws;
         try {
-            ws = await api('/api/worksets/' + encodeURIComponent(id));
+            ws = await api('/v1/workingsets/' + encodeURIComponent(id));
         } catch (error) {
             return {id, error, children: []};
         }
@@ -125,7 +125,7 @@ function renderWorksetTree() {
         row.setAttribute('aria-current', state.selectedWs === node.id ? 'true' : 'false');
         row.title = node.id;
         row.style.paddingLeft = (9 + Math.min(depth, 10) * 14) + 'px';
-        const label = node.ws?.name || (node.ws?.defaultWorkingSet ? '默认工作集 (1)' : shortId(node.id));
+        const label = node.ws?.displayName || (node.id === '1' ? '默认工作集 (1)' : shortId(node.id));
         row.innerHTML = `<span class="tree-dot"></span><span class="tree-label">${escapeHtml(label)}</span>` +
             (node.children.length ? `<span class="badge count">${node.children.length}</span>` : '') +
             (node.error ? '<span class="badge unbound">不可用</span>' : '');
@@ -185,7 +185,7 @@ async function selectWorkset(id, {autoSelect = true} = {}) {
 function worksetLabel(id, fallback = shortId(id)) {
     const node = findNode(state.worksets, id);
     const ws = node?.ws;
-    return ws?.name || (ws?.defaultWorkingSet ? '默认工作集' : fallback);
+    return ws?.displayName || (String(id) === '1' ? '默认工作集' : fallback);
 }
 
 function currentSpaces() {

@@ -480,7 +480,7 @@ async function submitCreateWorkset(form) {
                 unsharedParentTrackerIds: trackerValues('unsharedParentTrackerIds')
             })
         });
-        const parentName = findNode(state.worksets, parentId)?.ws?.name || shortId(parentId);
+        const parentName = findNode(state.worksets, parentId)?.ws?.displayName || shortId(parentId);
         const targetId = creation.targetWorkingSetId;
         addTask(creation, {targetId, targetName: workspaceName || targetId, parentId, parentName});
         closeModal();
@@ -504,7 +504,7 @@ function openWorksetEdit() {
         <div class="field">
           <label for="editName">工作集名称</label>
           <input id="editName" name="name" maxlength="255" required
-            value="${escapeHtml(ws.name || '')}" placeholder="例如：动力系统 V2 需求工作集">
+            value="${escapeHtml(ws.displayName || '')}" placeholder="例如：动力系统 V2 需求工作集">
         </div>
         ${worksetColorField('edit', color)}
         <div class="form-error" role="alert"></div>
@@ -540,10 +540,11 @@ async function submitWorksetEdit(form) {
     submit.disabled = true;
     submit.textContent = '保存中…';
     try {
-        const updated = await api('/api/worksets/' + encodeURIComponent(workingSetId), {
+        const lockedVersion = findNode(state.worksets, workingSetId)?.ws?.lockedVersion;
+        const updated = await api('/v1/workingsets/' + encodeURIComponent(workingSetId), {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name, color: color.hex})
+            body: JSON.stringify({displayName: name, color: color.hex, lockedVersion})
         });
         applyWorksetEdit(updated);
         if (form.isConnected) closeModal();
@@ -559,7 +560,7 @@ async function submitWorksetEdit(form) {
 /* ---------- extend working set ---------- */
 async function openExtendWorkset() {
     const targetId = state.selectedWs;
-    const parentId = findNode(state.worksets, targetId)?.ws?.parentWorkingSetId;
+    const parentId = findNode(state.worksets, targetId)?.ws?.parentId;
     if (!parentId) return;
     const targetName = worksetLabel(targetId);
     const parentName = worksetLabel(parentId);

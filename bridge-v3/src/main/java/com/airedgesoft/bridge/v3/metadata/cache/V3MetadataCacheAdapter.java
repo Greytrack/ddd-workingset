@@ -2,6 +2,7 @@ package com.airedgesoft.bridge.v3.metadata.cache;
 
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.attribute.AttributeSnapshot;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.criteria.definition.CriteriaSnapshot;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.metadata.MetadataCachePort;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.metadata.model.NodeSnapshot;
@@ -11,7 +12,6 @@ import com.airedgesoft.sharedkernel.businessframework.domain.admin.relationship.
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.role.RoleSnapshot;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.table.TableSnapshot;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.tracker.TrackerPermissionSnapshot;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import jakarta.annotation.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -28,10 +28,13 @@ public class V3MetadataCacheAdapter implements MetadataCachePort {
     @Resource
     private JdbcTemplate jdbc;
 
-
     private static final RowMapper<ClassSnapshot> CLASSIFICATION = (row, position) ->
-            ClassSnapshot.forTracker(row.getLong(1), SharingMode.valueOf(row.getString(2)) == SharingMode.SHARED, row.getString(3),
-                    row.getLong(4), row.getLong(5));
+            ClassSnapshot.build(row.getLong(1),
+                    SharingMode.valueOf(row.getString(2)) == SharingMode.SHARED,
+                    row.getString(3),
+                    row.getLong(4),
+                    row.getLong(5));
+
     private static final String SELECT = "SELECT classification_id, sharing_mode, name, base_class_id, class_id FROM classifications";
 
     @Override

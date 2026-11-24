@@ -1,6 +1,7 @@
 package com.airedgesoft.sharedkernel.workingset.application;
 
 
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
@@ -12,7 +13,6 @@ import com.airedgesoft.sharedkernel.workingset.application.query.provider.Relati
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.RelationSourceQueryProvider.AssociationFact;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.RelationSourceQueryProvider.ReferenceFact;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.*;
 import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
@@ -39,7 +39,7 @@ class RelationEventStepTest {
     @Test
     void publishesCreationAssociationAndRepairForEveryIndexedItem() {
         Tracker parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
-                ClassSnapshot.forTracker(266673196957632L, false, "测试分类", 11L, 111L), null);
+                ClassSnapshot.build(266673196957632L, false, "测试分类", 11L, 111L), null);
         Tracker child = Tracker.derived(childId, parent, target, true);
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,
@@ -83,7 +83,7 @@ class RelationEventStepTest {
     @Test
     void recordsFailureWithoutThrowingWhenRelationSourceFails() {
         Tracker parent = Tracker.original(parentId, new ProductSpace("259944010602432"),
-                ClassSnapshot.forTracker(266673196957632L, false, "测试分类", 11L, 111L), null);
+                ClassSnapshot.build(266673196957632L, false, "测试分类", 11L, 111L), null);
         Tracker child = Tracker.derived(childId, parent, target, true);
         WorkingSet workingSet = new WorkingSet(target, WorkingSet.DEFAULT_ID, List.of(),
                 List.of(new TrackerBinding(target, childId, "259944010602432", "266673196957632", SharingMode.UNSHARED,

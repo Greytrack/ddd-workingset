@@ -4,12 +4,12 @@ import com.airedgesoft.alm.requirement.application.query.model.RequirementDetail
 import com.airedgesoft.alm.requirement.application.query.provider.RequirementQueryProvider;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemSummary;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItem;
 import com.airedgesoft.sharedkernel.workingset.domain.lighttrackeritem.LightTrackerItemRepository;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;

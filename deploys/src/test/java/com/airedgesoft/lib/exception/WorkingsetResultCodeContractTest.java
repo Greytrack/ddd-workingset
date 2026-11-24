@@ -28,25 +28,24 @@ class WorkingsetResultCodeContractTest {
     }
 
     @Test
-    void bindingFailureResponseKeepsItsPublicReasonAndContext() {
-        DomainException error = new DomainException(BindingResCode.WORKING_SET_HAS_CHILDREN,
-                "42", Map.of("childWorkingSetIds", List.of("43")));
+    void bindingFailureResponseKeepsItsPublicReasonAndStandardMessage() {
+        DomainException error = new DomainException(BindingResCode.WORKING_SET_HAS_CHILDREN);
 
         ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
 
         assertEquals(409, response.getStatusCode().value());
-        assertEquals(Map.of("code", 1207, "reason", "WorkingSetHasChildren", "message", "42",
-                "childWorkingSetIds", List.of("43")), response.getBody());
+        assertEquals(Map.of("code", 1207, "reason", "WorkingSetHasChildren",
+                "message", "Working set has children"), response.getBody());
     }
 
     @Test
     void mergeFailureResponseKeepsItsPublicReasonAndFallbackMessage() {
-        DomainException error = new DomainException(MergeResCode.STALE_EVIDENCE, null);
+        DomainException error = new DomainException(MergeResCode.STALE_EVIDENCE);
 
         ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
 
         assertEquals(409, response.getStatusCode().value());
-        assertEquals(Map.of("code", 1306, "reason", "StaleEvidence", "message", "StaleEvidence"), response.getBody());
+        assertEquals(Map.of("code", 1306, "reason", "StaleEvidence", "message", "Stale evidence"), response.getBody());
     }
 
     @Test

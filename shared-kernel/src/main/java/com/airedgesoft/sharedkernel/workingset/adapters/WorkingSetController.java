@@ -1,6 +1,8 @@
 package com.airedgesoft.sharedkernel.workingset.adapters;
 
 import com.airedgesoft.lib.restful.etag.EtagResource;
+import com.airedgesoft.lib.restful.etag.EtagSupport;
+import com.airedgesoft.lib.restful.etag.Etagged;
 import com.airedgesoft.lib.restful.lro.LroOperation;
 import com.airedgesoft.lib.restful.lro.OperationStore;
 import com.airedgesoft.lib.restful.pagination.Page;
@@ -99,9 +101,10 @@ public class WorkingSetController {
                     @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))})})
     @GetMapping("/{id}")
     @EtagResource("id")
-    public QWorkingset get(@PathVariable("id") String id) {
+    public Etagged<QWorkingset> get(@PathVariable("id") String id) {
         GetWorkingsetQuery query = new GetWorkingsetQuery(id);
-        return toView(queries.find(Long.valueOf(id)));
+        WorkingSetSummary summary = queries.find(Long.valueOf(id));
+        return Etagged.of(toView(summary), EtagSupport.generationOf(summary.lockVersion()));
     }
 
     @Operation(operationId = "workingsetUpdate", summary = "编辑工作集基本信息（掩码白名单 displayName/owner/description/color；updateMask 可选：省略=全部已填充字段、*=全量替换、空串=no-op；未知字段/空路径段 400；lockedVersion 必填，缺失 400；不一致 409；默认工作集只读 409）")

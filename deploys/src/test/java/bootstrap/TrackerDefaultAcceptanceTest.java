@@ -1,15 +1,14 @@
 package bootstrap;
 
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
-
 
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObject;
 import com.airedgesoft.sharedkernel.businessframework.application.query.LiteBusinessObjectProvider;
-import com.airedgesoft.sharedkernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
+import com.airedgesoft.sharedkernel.productspace.application.command.ProductSpaceCommandService;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController;
@@ -18,6 +17,7 @@ import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.Cla
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.TrackerView;
 import com.airedgesoft.sharedkernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharedkernel.workingset.application.query.model.TrackerBindingSummary;
+import com.airedgesoft.sharedkernel.workingset.application.query.model.WorkingSetBindings;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation;
@@ -98,7 +98,7 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void readsFolderTrackerBindingsWithClassificationMetadataWithoutFolderColumn() {
-        String space = createSpace("1");
+        String space = createSpace();
         transactions.executeWithoutResult(status -> {
             jdbc.execute("""
                     CREATE TEMP TABLE classifications ON COMMIT DROP AS
@@ -112,7 +112,7 @@ class TrackerDefaultAcceptanceTest {
             TrackerBindingSummary folder = bindings.stream().filter(binding -> binding.classificationId().equals(10070101L))
                     .findFirst().orElseThrow();
             assertTrue(bindings.stream().anyMatch(binding -> !binding.classificationId().equals(10070101L)));
-            assertEquals(10070101L, classifications.findClassification("10070101").orElseThrow().getId());
+            assertEquals(10070101L, classifications.findClassification(10070101L).orElseThrow().getId());
 
             jdbc.update("DELETE FROM pg_temp.classifications WHERE classification_id = ?", 10070101L);
             Tracker tracker = trackerRepository.lockTracker(folder.trackerId()).orElseThrow();
@@ -126,7 +126,7 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void creatingProductSpacePublishesDefaultTrackerBindingsAndItemReadAccess() {
-        String spaceId = createSpace("1");
+        String spaceId = createSpace();
         assertTrue(jdbc.queryForObject("""
                 SELECT count(*) > 1 AND count(*) = count(DISTINCT xmin::text)
                 FROM air_inst_tracker_rev WHERE work_space = ? AND is_default = 1
@@ -195,7 +195,7 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void keepsSpaceMountedWithOnlyItsLocalFolderEvenWhenHidden() {
-        String space = createSpace("1");
+        String space = createSpace();
         FixtureIds.insertWorkingSet(jdbc, "1", child);
         long folder = jdbc.queryForObject("""
                 SELECT tracker_id FROM trackers
@@ -213,9 +213,9 @@ class TrackerDefaultAcceptanceTest {
                 VALUES (?, ?, ?, 10070101, 'UNSHARED', 'UNSHARED_DERIVATION')
                 """, child, childFolder, space);
         String path = "/api/worksets/" + child;
-        String visibility = path + "/product-spaces/" + space + "/trackers/" + childFolder + "/visibility";
-        HttpStatusCode wrongSpace = client.patch().uri(path + "/product-spaces/" + fixtureId("other-" + space)
-                        + "/trackers/" + childFolder + "/visibility")
+        String trackerVisibility = "/trackers/" + childFolder + "/visibility?workingSetId=" + child;
+        String visibility = "/v1/productSpaces/" + space + trackerVisibility;
+        HttpStatusCode wrongSpace = client.patch().uri("/v1/productSpaces/" + fixtureId("other-" + space) + trackerVisibility)
                 .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, wrongSpace);
         HttpStatusCode oldRoute = client.patch().uri(path + "/trackers/" + childFolder + "/visibility")
@@ -232,7 +232,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
-        HttpStatusCode deletion = client.delete().uri("/api/worksets/1/product-spaces/" + space)
+        HttpStatusCode deletion = client.delete().uri("/v1/productSpaces/" + space)
                 .exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.CONFLICT, deletion);
         assertEquals(1, rest.getForObject(path + "/bindings", BindingsView.class).spaces().size());
@@ -242,7 +242,7 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void renamingTrackerUpdatesBothRowsAndDoesNotChangeIdentity() {
-        String spaceId = createSpace("1");
+        String spaceId = createSpace();
         TrackerView tracker = rest.postForEntity("/api/worksets/1/trackers",
                 Map.of("productSpaceId", spaceId, "classificationId", "14010101",
                         "sharingMode", "UNSHARED", "name", "变更前"), TrackerView.class).getBody();
@@ -274,13 +274,13 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void commonIdentityCollisionRollsBackBothTrackerRows() {
-        long space = Long.parseLong(createSpace("1"));
+        long space = Long.parseLong(createSpace());
         Long id = Long.valueOf(fixtureId("COMMON-COLLISION-" + suffix));
         jdbc.update("INSERT INTO air_inst_common (id, base_class, class, type) VALUES (?, 1003, 100301, 10030101)",
                 id);
         try {
             Tracker tracker = new Tracker(id, "projection collision", null, 1L,
-                    space, classifications.findClassification("14010101").orElseThrow(),
+                    space, classifications.findClassification(14010101L).orElseThrow(),
                     SharingMode.UNSHARED, null, false, 419436436619264L);
             assertThrows(DataIntegrityViolationException.class,
                     () -> transactions.executeWithoutResult(status -> trackerRepository.save(tracker)));
@@ -296,10 +296,10 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void rejectedCompatibilityRowRollsBackRootInsert() {
-        long space = Long.parseLong(createSpace("1"));
+        long space = Long.parseLong(createSpace());
         Long id = Long.valueOf(fixtureId("TRACKER-ROLLBACK-" + suffix));
         Tracker tracker = new Tracker(id, "x".repeat(501), null, 1L,
-                space, classifications.findClassification("14010101").orElseThrow(),
+                space, classifications.findClassification(14010101L).orElseThrow(),
                 SharingMode.UNSHARED, null, false, 419436436619264L);
 
         assertThrows(DataIntegrityViolationException.class,
@@ -312,7 +312,7 @@ class TrackerDefaultAcceptanceTest {
 
     @Test
     void createsAndDeletesAnAdditionalTrackerInTheDefaultIncludedClassification() {
-        String spaceId = createSpace("1");
+        String spaceId = createSpace();
         ResponseEntity<TrackerView> response = rest.postForEntity("/api/worksets/1/trackers",
                 Map.of("productSpaceId", spaceId, "name", "第二个文件夹分类 Tracker",
                         "classificationId", "10070101", "sharingMode", "UNSHARED"), TrackerView.class);
@@ -332,7 +332,7 @@ class TrackerDefaultAcceptanceTest {
     @Test
     void createsAndBindsNamedTrackersUsingClassificationSharingRules() {
         FixtureIds.insertClassification(jdbc, sharedClassification, "SHARED");
-        String spaceId = createSpace("1");
+        String spaceId = createSpace();
         ClassificationView[] classifications = rest.getForObject("/api/worksets/metadata/classifications", ClassificationView[].class);
         assertTrue(Arrays.stream(classifications).anyMatch(classification ->
                 sharedClassification.equals(classification.classificationId())
@@ -430,9 +430,9 @@ class TrackerDefaultAcceptanceTest {
     }
 
     @Test
-    void productSpaceCreationFromNonDefaultEntryStillTargetsDefaultWorkingSet() {
+    void productSpaceCreationTargetsOnlyDefaultWorkingSet() {
         FixtureIds.insertWorkingSet(jdbc, "1", child);
-        String spaceId = createSpace(child);
+        String spaceId = createSpace();
 
         int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications WHERE classification_id NOT IN (10030101, 10080101, 10090101)", Integer.class);
         assertEquals(classifications, jdbc.queryForObject("""
@@ -442,22 +442,22 @@ class TrackerDefaultAcceptanceTest {
                 SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = ?
                 """, Integer.class, spaceId, child));
 
-        BindingsView defaultBindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
-        assertTrue(defaultBindings.spaces().stream().anyMatch(binding -> spaceId.equals(binding.productSpaceId())),
+        WorkingSetBindings defaultBindings = workingSetQueries.findBindings(1L);
+        assertTrue(defaultBindings.spaces().stream().anyMatch(binding -> Long.valueOf(spaceId).equals(binding.productSpaceId())),
                 "default working set should own the projected space binding");
-        BindingsView childBindings = rest.getForObject("/api/worksets/" + child + "/bindings", BindingsView.class);
-        assertTrue(childBindings.spaces().stream().noneMatch(binding -> spaceId.equals(binding.productSpaceId())),
+        WorkingSetBindings childBindings = workingSetQueries.findBindings(Long.valueOf(child));
+        assertTrue(childBindings.spaces().stream().noneMatch(binding -> Long.valueOf(spaceId).equals(binding.productSpaceId())),
                 "product space must not be projected into the child working set");
     }
 
     @Test
     void originalTrackerCannotBeCreatedInChildWorkingSet() {
         ProductSpace space = new ProductSpace(fixtureId("space-domain-" + suffix), "domain");
-        ClassSnapshot classification = ClassSnapshot.forTracker(258831141156800L, false,
+        ClassSnapshot classification = ClassSnapshot.build(258831141156800L, false,
                 "测试分类", 11L, 111L);
         assertThrows(DomainException.class, () -> new Tracker(
                 Long.valueOf(fixtureId("tracker-domain-" + suffix)), "子工作集原生 Tracker", null,
-                Long.valueOf(child), space.numericId(), classification, SharingMode.from(classification), null, false));
+                Long.valueOf(child), space.numericId(), classification, SharingMode.UNSHARED, null, false));
     }
 
     @Test
@@ -494,20 +494,19 @@ class TrackerDefaultAcceptanceTest {
         }
     }
 
-    private String createSpace(String workingSet) {
-        ResponseEntity<ProductSpaceView> response = rest.postForEntity("/api/worksets/" + workingSet + "/product-spaces",
-                Map.of("name", "新空间-" + suffix),
-                ProductSpaceView.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        String id = response.getBody().productSpaceId();
+    @Autowired
+    private ProductSpaceCommandService productSpaces;
+
+    private String createSpace() {
+        String id = productSpaces.create("新空间-" + suffix).id();
         testSpaces.add(id);
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
             int classifications = jdbc.queryForObject("SELECT count(*) FROM classifications WHERE classification_id NOT IN (10030101, 10080101, 10090101)", Integer.class);
             assertEquals(classifications, jdbc.queryForObject(
                     "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
                     Integer.class, id));
-            BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
-            assertTrue(bindings.spaces().stream().anyMatch(binding -> id.equals(binding.productSpaceId())));
+            assertTrue(workingSetQueries.findBindings(1L).spaces().stream()
+                    .anyMatch(binding -> Long.valueOf(id).equals(binding.productSpaceId())));
         });
         return id;
     }

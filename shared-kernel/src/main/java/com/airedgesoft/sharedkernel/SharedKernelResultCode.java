@@ -99,7 +99,42 @@ public enum SharedKernelResultCode implements DomainResCode {
     EVENT_STATE_INVALID(DomainErrorType.CONFLICT, 300100034, "事件状态不一致: %s"),
     PERSISTENCE_SERIALIZATION_FAILED(DomainErrorType.INTERNAL, 300100035, "持久化状态序列化失败: %s"),
     PERSISTENCE_STATE_INVALID(DomainErrorType.INTERNAL, 300100036, "持久化状态非法: %s"),
-    ;
+    // ==================== 属性值校验（v3 CommonResultCode 迁移：必填/文本/列表/数值/日期/图片/级联，2026-11-24） ====================
+
+    /** 必填违例（v3 10001041）。 */
+    COLUMN_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100060, "属性：%s不能为空"),
+    /** 文本规则 / 日期规则不合法（v3 10001042）。 */
+    COLUMN_TEXT_RULE_MATCH_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100061, "属性：%s的值不合法"),
+    /** 文本 / 富文本长度超长（v3 10001043）。 */
+    COLUMN_TEXT_LENGTH_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100062,
+            "属性：%s的值长度超长，系统允许最大长度为%s"),
+    /** 单选列表项不在列表值中（v3 10001050）。 */
+    COLUMN_LIST_VALUE_NOT_MATCH_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100063, "属性：%s的值不在%s列表值中"),
+    /** 单选列表项在列表中未启用（v3 10001053）。 */
+    COLUMN_LIST_VALUE_UN_ENABLED_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100064, "属性：%s的值在列表%s中未启用"),
+    /** 数值小数位数超长（v3 10001046）。 */
+    COLUMN_NUMBER_DIGITS_MATCH_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100065,
+            "属性：%s的值小数点位数超长，系统允许最大长度为%s"),
+    /** 数值不允许为 0（v3 10001047）。 */
+    COLUMN_NUMBER_CAN_NOT_ZERO_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100066, "属性：%s的值不能为0"),
+    /** 数值小于下限（v3 10001048）。 */
+    COLUMN_NUMBER_CAN_NOT_LESS_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100067, "属性：%s的值不能小于%s"),
+    /** 数值大于上限（v3 10001049）。 */
+    COLUMN_NUMBER_CAN_NOT_GREATER_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100068, "属性：%s的值不能大于%s"),
+    /** 开始日期晚于结束日期（v3 10001055）。 */
+    COLUMN_START_DATE_NOT_GE_END_DATE_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100069,
+            "属性：%s 开始日期不能大于结束日期"),
+    /** 图片不允许多选（v3 10001056）。 */
+    COLUMN_IMAGE_CANNOT_MULTIPLE_SELECT(DomainErrorType.INVALID_ARGUMENT, 300100070, "属性：%s不允许多选"),
+    /** 图片上传数量超限（v3 10001057）。 */
+    COLUMN_IMAGE_UPLOAD_FILE_NUMBER_EXCEED(DomainErrorType.INVALID_ARGUMENT, 300100071, "属性：%s上传数量超出限制"),
+    /** 图片格式不在允许列表（v3 10001058）。 */
+    COLUMN_IMAGE_FORMAT_NOT_ALLOWED(DomainErrorType.INVALID_ARGUMENT, 300100072, "属性：%s上传格式不允许，允许格式为%s"),
+    /** 图片单文件大小超限（v3 10001059）。 */
+    COLUMN_IMAGE_FILE_SIZE_EXCEED(DomainErrorType.INVALID_ARGUMENT, 300100073, "属性：%s上传大小超出限制，允许最大为%s"),
+    /** 级联从值不在主属性当前值的可选范围内（v3 10001070）。 */
+    CASCADE_FROM_VALUE_NOT_ALLOWED_ERROR(DomainErrorType.INVALID_ARGUMENT, 300100074,
+            "属性：%s的值不在主属性当前值的可选范围内");
 
     private final DomainErrorType type;
     private final int code;
