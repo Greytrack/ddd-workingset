@@ -1,10 +1,11 @@
-package com.airedgesoft.sharedkernel.businessframework.infrastructure.repository;
+package com.airedgesoft.sharedkernel.businessframework.infrastructure.businessobject;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.SharedKernelResultCode;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.builder.BusinessObjectBuilder;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.builder.BusinessObjectBuilderRegistry;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Optional;
@@ -23,8 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * <b>回退接缝</b>：本实现只提供精确查找；回退链（父节点解析）与回退编排在 bridge-v3 的装饰器中完成（2026-11-16 用户拍板）， 注册中心模型本期不改。
  */
-@Slf4j
 public class BusinessObjectBuilderRegistryImpl implements BusinessObjectBuilderRegistry {
+
+    private static final Logger log = LoggerFactory.getLogger(BusinessObjectBuilderRegistryImpl.class);
 
     private final Map<Long, BusinessObjectBuilder<?>> builders = new ConcurrentHashMap<>();
 
