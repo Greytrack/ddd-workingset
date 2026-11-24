@@ -116,7 +116,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                       AND COALESCE(result->'request'->>'mode', 'CREATE') = 'CREATE')
                 """, Boolean.class, id));
         if (preparing) {
-            throw DomainException.withMessage(FailureReason.PREPARING, Long.toString(id));
+            throw new DomainException(FailureReason.PREPARING, Long.toString(id));
         }
     }
 
@@ -144,7 +144,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                 WHERE id = ? AND delete_flag = 0
                 """, workingSet.name(), workingSet.color(), deleteFlag, actor, now, id);
         if (updated != 1) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
+            throw new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
         }
         jdbc.update("""
                 UPDATE air_inst_common
@@ -170,7 +170,7 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                         """, id, id, id, id, workingSet.parentWorkingSetId(), workingSet.name(), "WS-" + id,
                 workingSet.color(), owner, auditActor, now, auditActor, now) == 1;
         if (!inserted) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, Long.toString(workingSet.id()));
+            throw new DomainException(BindingResCode.WORKING_SET_ALREADY_EXISTS, Long.toString(workingSet.id()));
         }
         commonInstances.save(new AirInstCommonPo(id, 1008L, 100801L, 10080101L, null,
                 "WS-" + id, workingSet.name(), null, null, 1L, 0, 0L, auditActor, now, auditActor, now,

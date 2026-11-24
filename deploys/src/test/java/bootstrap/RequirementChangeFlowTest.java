@@ -68,7 +68,7 @@ class RequirementChangeFlowTest {
     @Test
     void rejectsBusinessEditingBeforeOwningWorkingSetIsReady() {
         when(workingSets.findById(WorkingSet.DEFAULT_ID))
-                .thenThrow(DomainException.withMessage(FailureReason.PREPARING, "1"));
+                .thenThrow(new DomainException(FailureReason.PREPARING, "1"));
         DomainException rejected = assertThrows(DomainException.class,
                 () -> service.changeTitle(L0, "B", Long.valueOf(0)));
         assertEquals(FailureReason.PREPARING, rejected.getResCode());

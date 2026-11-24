@@ -42,6 +42,59 @@ public enum SharedKernelResultCode implements DomainResCode {
     ATTRIBUTE_VALUE_FORMAT_INVALID(DomainErrorType.INVALID_ARGUMENT, 300100030, "属性值格式非法（%s）: %s"),
     ORDER_INDEX_INVALID(DomainErrorType.INVALID_ARGUMENT, 300100031, "位置值非法: %s"),
     CREATE_WORKINGSET_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100032, "CreateInput.workingsetId 不能为空"),
+
+    // ==================== 引用行公共域（独立聚合根落 shared-kernel，2026-11-19 用户裁定） ====================
+
+    /** 引用方已删除（编辑守卫前置）。 */
+    REFERENCE_SOURCE_DELETED(DomainErrorType.CONFLICT, 300100033, "引用方已删除: %s"),
+    /** 引用编辑必须先签出（口径 15；未签出含历史版次一律拒绝）。 */
+    REFERENCE_REQUIRES_CHECKOUT(DomainErrorType.CONFLICT, 300100034, "引用方未签出，不能编辑引用: 需求=%s, 当前版次=R%s"),
+    /** 单次引用操作超过 200 行（口径 14）。 */
+    REFERENCE_BATCH_LIMIT_EXCEEDED(DomainErrorType.INVALID_ARGUMENT, 300100035, "单次引用操作超过 200 行: %s"),
+    /** 判重拒绝（裁决 5，推翻口径 12）：同一引用属性下同一目标不重复挂出。 */
+    REFERENCE_DUPLICATED(DomainErrorType.CONFLICT, 300100036, "引用重复: 需求=%s, 目标=%s, 目标版次=%s"),
+    /** 提交集合内部重复（裁决 5）。 */
+    REFERENCE_INPUT_DUPLICATED(DomainErrorType.INVALID_ARGUMENT, 300100037, "提交的引用目标内部重复: 需求=%s"),
+    /** TargetRevision 钉住态缺版次。 */
+    REFERENCE_TARGET_REVISION_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100038, "钉住目标版次必须给出版次号: %s"),
+    /** TargetRevision 跟随最新态携带版次。 */
+    REFERENCE_TARGET_REVISION_FORBIDDEN(DomainErrorType.INVALID_ARGUMENT, 300100039, "跟随最新不携带版次号: %s"),
+    /** 引用版次记录版次号非法。 */
+    REFERENCE_REVISION_INVALID(DomainErrorType.INVALID_ARGUMENT, 300100040, "引用版次号必须 >= 1: %s"),
+    /** 引用只支持 RowMark 三态。 */
+    REFERENCE_MARK_UNSUPPORTED(DomainErrorType.INVALID_ARGUMENT, 300100041, "引用不支持该行标记: %s"),
+    /** 引用类型未知。 */
+    REFERENCE_TYPE_UNKNOWN(DomainErrorType.INVALID_ARGUMENT, 300100042, "未知的引用类型 code: %s"),
+
+    // ==================== 关联行公共域（独立聚合根落 shared-kernel，2026-11-23 用户裁定） ====================
+
+    /** 关联行两端必填。 */
+    ASSOCIATION_ENDPOINTS_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100043,
+            "关联行必须指定源与目标: sourceId=%s, targetId=%s"),
+    /** 源端对象已删除。 */
+    ASSOCIATION_SOURCE_DELETED(DomainErrorType.CONFLICT, 300100044, "关联源端已删除: %s"),
+    /** 目标端对象已删除。 */
+    ASSOCIATION_TARGET_DELETED(DomainErrorType.CONFLICT, 300100045, "关联目标端已删除: %s"),
+    /** 端对象不存在。 */
+    ASSOCIATION_END_NOT_FOUND(DomainErrorType.NOT_FOUND, 300100046, "关联端对象不存在: %s"),
+    /** 端对象分类与声明的 type 不符。 */
+    ASSOCIATION_END_TYPE_MISMATCH(DomainErrorType.INVALID_ARGUMENT, 300100047, "关联端对象分类不符: 对象=%s, 声明=%s, 实际=%s"),
+    /** 待操作行缺席。 */
+    ASSOCIATION_ROW_NOT_FOUND(DomainErrorType.NOT_FOUND, 300100048, "关联行不存在: %s"),
+    /** 待操作行不属于该源对象。 */
+    ASSOCIATION_ROW_NOT_OWNED(DomainErrorType.CONFLICT, 300100049, "关联行不属于该源对象: 行=%s, 源=%s"),
+    /** 规则渲染名必填。 */
+    ASSOCIATION_RULE_NAME_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100050, "关联规则必须给出渲染名"),
+    /** 规则动作 ASSIGN 缺规则值。 */
+    ASSOCIATION_RULE_REQUIRED(DomainErrorType.INVALID_ARGUMENT, 300100051, "规则设置动作必须携带规则: 行=%s"),
+    /** 合并基线版次不存在。 */
+    ASSOCIATION_BASELINE_REVISION_NOT_FOUND(DomainErrorType.NOT_FOUND, 300100052, "合并基线版次不存在: 对象=%s, R%s"),
+    /** 关联 wire 代码非法（类型/传播/规则动作/端）。 */
+    ASSOCIATION_CODE_INVALID(DomainErrorType.INVALID_ARGUMENT, 300100053, "关联参数非法: %s=%s"),
+    /** 目标已挂载（单条新增静默剔除后无新建行）。 */
+    ASSOCIATION_ALREADY_MOUNTED(DomainErrorType.CONFLICT, 300100054, "关联目标已挂载: 源=%s, 目标=%s"),
+    /** 版次动作结果形态非法（{@code RevisionChangeSet} 自校验）。 */
+    REVISION_CHANGE_SET_INVALID(DomainErrorType.CONFLICT, 300100055, "版次动作结果形态非法: %s"),
     EVENT_TARGET_NOT_FOUND(DomainErrorType.NOT_FOUND, 300100033, "事件目标不存在: %s"),
     EVENT_STATE_INVALID(DomainErrorType.CONFLICT, 300100034, "事件状态不一致: %s"),
     PERSISTENCE_SERIALIZATION_FAILED(DomainErrorType.INTERNAL, 300100035, "持久化状态序列化失败: %s"),

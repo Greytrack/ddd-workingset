@@ -1,7 +1,7 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue;
 
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
-import com.airedgesoft.plm.tools.infrastructure.utils.JsonUtil;
+import com.airedgesoft.lib.util.JsonUtil;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 
 import java.util.List;
 

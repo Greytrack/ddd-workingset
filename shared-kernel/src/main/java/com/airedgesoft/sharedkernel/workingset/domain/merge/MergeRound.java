@@ -45,10 +45,10 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public MergeRound register(Entry entry) {
         if (state != State.Preparing) {
-            throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
+            throw new DomainException(MergeResCode.ROUND_CLOSED, id());
         }
         if (entries.stream().anyMatch(existing -> existing.evidence().family().equals(entry.evidence().family()))) {
-            throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "duplicate item family in one round");
+            throw new DomainException(MergeResCode.INVALID_DECISION, "duplicate item family in one round");
         }
         ArrayList<MergeRound.Entry> updated = new ArrayList<>(entries);
         updated.add(entry);
@@ -68,7 +68,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public MergeRound finishApplied(String entryId, String operation, MergeCommitReceipt receipt) {
         Entry entry = entries.stream().filter(candidate -> candidate.id().equals(entryId)).findFirst()
-                .orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, entryId));
+                .orElseThrow(() -> new DomainException(MergeResCode.ROUND_NOT_FOUND, entryId));
         boolean confirm = entry.decision().confirmsOnSuccess(entry.evidence());
         String businessRef = receipt.businessRef() == null ? null : Long.toString(receipt.businessRef());
         ItemResult itemResult = new ItemResult(entryId, confirm ? Outcome.Confirmed : Outcome.Applied,
@@ -79,7 +79,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     private MergeRound finishEntry(String entryId, ItemResult itemResult, Confirmation confirmation) {
         if (state != State.Running) {
-            throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
+            throw new DomainException(MergeResCode.ROUND_CLOSED, id());
         }
         List<Entry> updated = entries.stream().map(candidate -> candidate.id().equals(entryId)
                 ? candidate.finish(itemResult, confirmation) : candidate).toList();
@@ -98,7 +98,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
     public MergeRound complete(long completedAt) {
         if (state != State.Running || awaitingResults()) {
-            throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
+            throw new DomainException(MergeResCode.ROUND_CLOSED, id());
         }
         List<MergeRound.ItemResult> results = entries.stream().map(Entry::result).toList();
         long successful = results.stream().filter(ItemResult::succeeded).count();
@@ -130,11 +130,11 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
 
         Entry finish(ItemResult result, Confirmation confirmation) {
             if (this.result != null) {
-                throw DomainException.withMessage(MergeResCode.ROUND_CLOSED, id());
+                throw new DomainException(MergeResCode.ROUND_CLOSED, id());
             }
             boolean required = result.succeeded() && decision.confirmsOnSuccess(evidence);
             if (required != (confirmation != null) || required != (result.outcome() == Outcome.Confirmed)) {
-                throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "confirmation must match the applied entry");
+                throw new DomainException(MergeResCode.INVALID_DECISION, "confirmation must match the applied entry");
             }
             return new Entry(numericId, evidence, decision, result, requested, confirmation);
         }

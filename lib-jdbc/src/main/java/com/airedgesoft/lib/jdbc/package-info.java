@@ -2,16 +2,16 @@
  * 聚合 JDBC 持久化流程：仓储决定如何加载领域对象和生成计划，本包协调事务内身份、CAS 与 SQL 执行。
  *
  * <p>
- * 从 {@link com.airedgesoft.lib.jdbc.AggregateMapping} 阅读接入配置：onLoad 接收原始快照并返回领域对象， onCreate 返回插入计划，onUpdate
+ * 从 {@link AggregateMapping} 阅读接入配置：onLoad 接收原始快照并返回领域对象， onCreate 返回插入计划，onUpdate
  * 只接收领域终态，由仓储重新读库并核验对象携带的旧版本，返回更新或无变化计划。 三个 hook 直接指向仓储方法，不强制投影、贡献、审计等内部步骤。
  *
  * <p>
- * {@link com.airedgesoft.lib.jdbc.JdbcWritePlanner} 是可选纯工具，供仓储复用列差异、复制和审计归并； 也可以直接构造计划。它不注册 hook、不重建领域对象、不执行 SQL。
- * {@link com.airedgesoft.lib.jdbc.JdbcRowMapping} 共用列类型与字段提取声明。
+ * {@link JdbcWritePlanner} 是可选纯工具，供仓储复用列差异、复制和审计归并； 也可以直接构造计划。它不注册 hook、不重建领域对象、不执行 SQL。
+ * {@link JdbcRowMapping} 共用列类型与字段提取声明。
  *
  * <p>
- * 软删除写路径为<b>仓储显式语句</b>，无 SQL 自动改写通道：裸 JdbcTemplate 写模型走 {@link com.airedgesoft.lib.jdbc.JdbcSoftDelete}
- * （列模型由调用方声明）；Spring Data JDBC 写模型走 {@link com.airedgesoft.lib.jdbc.AggregateSoftDelete}（表 / 主键 / 版本列取自实体元数据， 软删 /
+ * 软删除写路径为<b>仓储显式语句</b>，无 SQL 自动改写通道：裸 JdbcTemplate 写模型走 {@link JdbcSoftDelete}
+ * （列模型由调用方声明）；Spring Data JDBC 写模型走 {@link AggregateSoftDelete}（表 / 主键 / 版本列取自实体元数据， 软删 /
  * 恢复同语句推进版本）。删除语义是领域决策，由仓储语句明说；读取侧的存活过滤注入与请求级放行属查询通道关注点，不在本库职责内。
  *
  * <p>

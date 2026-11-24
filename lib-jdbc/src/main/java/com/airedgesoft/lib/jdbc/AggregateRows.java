@@ -13,8 +13,10 @@ public record AggregateRows(StoredRow root, List<StoredRow> children) {
     /**
      * 冻结聚合加载快照，保留根行和子行的原始存储值。
      *
-     * @param root     已加载的非空根行，根不存在时应由读取端返回 Optional.empty
-     * @param children 归属于该聚合的已加载子行；复制列表以隔离外部修改
+     * @param root
+     *            已加载的非空根行，根不存在时应由读取端返回 Optional.empty
+     * @param children
+     *            归属于该聚合的已加载子行；复制列表以隔离外部修改
      */
     public AggregateRows {
         // 根不存在由读取端返回 Optional.empty 表达；拒绝“有快照但没有根”的半装配状态。

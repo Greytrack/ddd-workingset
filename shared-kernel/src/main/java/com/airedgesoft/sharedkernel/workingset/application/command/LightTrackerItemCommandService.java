@@ -2,7 +2,7 @@ package com.airedgesoft.sharedkernel.workingset.application.command;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
-import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
+import com.airedgesoft.sharedkernel.businessframework.application.query.LiteBusinessObjectProvider;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -68,7 +68,7 @@ public class LightTrackerItemCommandService {
 
     private LightTrackerItem lockItemForRevisionChange(Long localId) {
         return lightTrackerItemRepository.findByIdForUpdate(localId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND,
                         "item index missing for committed revision: " + localId));
     }
 
@@ -127,7 +127,7 @@ public class LightTrackerItemCommandService {
             return;
         }
         Tracker tracker = trackerRepository.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
                 tracker.productSpaceId(), tracker.numericClassificationId(), tracker.classId(), Long.toString(AuthorizationScope.currentUserId()));
         if (effectiveFlags != null) {
@@ -141,7 +141,7 @@ public class LightTrackerItemCommandService {
 
     private void switchToLocalContent(Long localId, Integer revision) {
         LightTrackerItem item = lightTrackerItemRepository.findByIdForUpdate(localId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND,
                         "target variant disappeared: " + localId));
         if (!item.materialized()) {
             item.switchToLocalBacked(revision);

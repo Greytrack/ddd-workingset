@@ -30,7 +30,7 @@ public class WorkingSetQueryService {
     public WorkingSetSummary find(Long id) {
         requireReady(id);
         return query.find(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -44,7 +44,7 @@ public class WorkingSetQueryService {
         find(id);
         List<Long> ancestors = query.findAncestors(id);
         if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.equals(ancestors.getLast())) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
+            throw new DomainException(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
         }
         return ancestors;
     }
@@ -69,7 +69,7 @@ public class WorkingSetQueryService {
     private void requireReady(Long id) {
         Objects.requireNonNull(id, "workingSetId");
         if (query.isPreparing(id)) {
-            throw DomainException.withMessage(FailureReason.PREPARING, Long.toString(id));
+            throw new DomainException(FailureReason.PREPARING, Long.toString(id));
         }
     }
 }

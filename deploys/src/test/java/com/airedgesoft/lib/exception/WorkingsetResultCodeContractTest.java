@@ -29,7 +29,7 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void bindingFailureResponseKeepsItsPublicReasonAndContext() {
-        DomainException error = DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN,
+        DomainException error = new DomainException(BindingResCode.WORKING_SET_HAS_CHILDREN,
                 "42", Map.of("childWorkingSetIds", List.of("43")));
 
         ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
@@ -41,7 +41,7 @@ class WorkingsetResultCodeContractTest {
 
     @Test
     void mergeFailureResponseKeepsItsPublicReasonAndFallbackMessage() {
-        DomainException error = DomainException.withMessage(MergeResCode.STALE_EVIDENCE, null);
+        DomainException error = new DomainException(MergeResCode.STALE_EVIDENCE, null);
 
         ResponseEntity<?> response = new ApiExceptionHandler().handleDomainFailure(error);
 

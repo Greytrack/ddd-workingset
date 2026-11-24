@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,17 +34,77 @@ import java.util.stream.Collectors;
  * 主键冲突）；加载快照同时提供 CAS 基线版本。
  */
 public final class JdbcAggregateStore {
-    private static final Map<Class<?>, AggregateLifecycleListener> GLOBAL_LISTENERS = new ConcurrentHashMap<>();
+    private static final Set<AggregateLifecycleListener> GLOBAL_LISTENERS = java.util.Collections
+            .newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
+    /**
+     * 注册全局聚合生命周期监听器（解耦基础设施与上层观测）。<b>按实例身份去重</b>：同一实例重复注册幂等，同实现类的不同实例可共存 （注册表不再按实现类顶替）。
+     *
+     * <p>
+     * 注册表为 JVM 级静态状态，对全部 Store 实例生效，前提是单宿主单上下文。宿主应注册与自身生命周期一致的<b>单例实例</b>， 并在销毁时经 {@link #unregisterListener}
+     * 注销；<b>每次注册都新建实例会累积重复触发</b>。
+     *
+     * @param listener
+     *            待注册的监听器实例；null 时静默忽略
+     */
+    public static void registerListener(AggregateLifecycleListener listener) {
+        if (listener == null) {
+            return;
+        }
+        GLOBAL_LISTENERS.add(listener);
+    }
+
+    /**
+     * 注销全局聚合生命周期监听器（按实例移除）。
+     *
+     * @param listener
+     *            待注销的监听器实例；null 时静默忽略
+     */
+    public static void unregisterListener(AggregateLifecycleListener listener) {
+        if (listener != null) {
+            GLOBAL_LISTENERS.remove(listener);
+        }
+    }
+
     private final Object resourceKey = new Object();
     private final TransactionTemplate existingTransaction;
     private final JdbcWriteExecutor executor;
     private final NamedParameterJdbcTemplate reader;
 
+    private static final class Entries<A, ID> {
+        final Map<ID, A> identities = new HashMap<>();
+        final Map<A, SaveState> objects = new IdentityHashMap<>();
+        /**
+         * 事务上下文持有的加载版本：key 存在 = 已有对象（即使值为 null，表示旧库 NULL 版本）； key 不存在 = 本事务未加载过，按新建处理。领域对象不持有该技术字段。
+         */
+        final Map<ID, Long> versions = new HashMap<>();
+
+        /**
+         * 事务结束后清除身份、保存状态与加载版本，避免跨事务复用。
+         */
+        void clear() {
+            identities.clear();
+            objects.clear();
+            versions.clear();
+        }
+    }
+
+    private enum SaveState {
+        LOADED, SAVED
+    }
+
+    private static final class State {
+        final Map<AggregateMapping<?, ?>, Entries<?, ?>> mappings = new IdentityHashMap<>();
+        boolean invalid;
+    }
+
     /**
      * 装配查询和执行组件，只参与调用方已开启的事务。
      *
-     * @param transactionManager 与 JDBC 数据源配套的事务管理器，用于强制参与已有事务并传播回滚状态
-     * @param jdbc               与外层事务共用数据源的 JdbcTemplate
+     * @param transactionManager
+     *            与 JDBC 数据源配套的事务管理器，用于强制参与已有事务并传播回滚状态
+     * @param jdbc
+     *            与外层事务共用数据源的 JdbcTemplate
      */
     public JdbcAggregateStore(PlatformTransactionManager transactionManager, JdbcTemplate jdbc) {
         executor = new JdbcWriteExecutor(Objects.requireNonNull(jdbc, "JDBC 执行器不能为空"));
@@ -56,30 +115,43 @@ public final class JdbcAggregateStore {
     }
 
     /**
-     * 注册全局聚合生命周期监听器（解耦基础设施与上层观测）。<b>按实现类幂等</b>：同类型重复注册（如 Spring 上下文刷新）以 {@code ConcurrentHashMap.put}
-     * 原子替换既有实例——防累积重复触发，并发注册也不残留双份。 注册表为 JVM 级静态状态，前提是单宿主单上下文； 监听器随宿主生命周期经 {@link #unregisterListener} 注销。
+     * 仅支持已声明 BIGINT 列的集合过滤；表列标识符受控，业务值全部通过参数绑定。
+     *
+     * @param table
+     *            声明读取表、列名和 JDBC 类型的元数据
+     * @param filterColumn
+     *            用于 IN 过滤的已声明 BIGINT 列名
+     * @param ids
+     *            非空引用且不含 null 的过滤值集合；空集合不执行查询
+     * @return 仅含声明列的原始行列表，保留 SQL NULL；不保证查询顺序
      */
-    public static void registerListener(AggregateLifecycleListener listener) {
-        if (listener == null) {
-            return;
+    public List<StoredRow> findAll(TableMapping table, String filterColumn, Collection<Long> ids) {
+        // 当前只需要按根 ID/归属 ID 批量装配；限制为声明的 BIGINT 列，不开放任意条件 SQL。
+        Column filter = table.columns().get(filterColumn);
+        if (filter == null || filter.jdbcType() != Types.BIGINT) {
+            throw new IllegalArgumentException("读取过滤列必须声明为 BIGINT: " + filterColumn);
         }
-        GLOBAL_LISTENERS.put(listener.getClass(), listener);
-    }
-
-    /**
-     * 注销全局聚合生命周期监听器。
-     */
-    public static void unregisterListener(AggregateLifecycleListener listener) {
-        if (listener != null) {
-            GLOBAL_LISTENERS.remove(listener.getClass(), listener);
-        }
+        // 发出 SQL 前检查全部列类型，避免等到某一行转换时才发现声明不受支持。
+        table.columns().values().forEach(column -> javaType(column.jdbcType()));
+        List<Long> keys = List.copyOf(ids);
+        // 空批次不生成 IN ()，也不借空输入触发无范围查询。
+        if (keys.isEmpty())
+            return List.of();
+        // 标识符来自已校验的表/列声明；仅查询已知列，未知扩展列不会进入快照值类型体系。
+        String columns = table.columns().values().stream().map(Column::quoted).collect(Collectors.joining(", "));
+        String sql = "SELECT " + columns + " FROM \"" + table.table().sqlName() + "\" WHERE " + filter.quoted()
+                + " IN (:ids)";
+        // 集合由 NamedParameterJdbcTemplate 展开并绑定，业务 ID 不参与 SQL 文本拼接。
+        return reader.query(sql, Map.of("ids", keys), (result, index) -> read(result, table));
     }
 
     /**
      * 将结果集当前行读取为保留 SQL NULL 的不可变快照。
      *
-     * @param result 已定位到当前行的 JDBC 结果集
-     * @param table  决定读取列及类型的表声明
+     * @param result
+     *            已定位到当前行的 JDBC 结果集
+     * @param table
+     *            决定读取列及类型的表声明
      * @return 当前行所有声明列的原始值快照
      */
     private static StoredRow read(ResultSet result, TableMapping table) throws SQLException {
@@ -95,8 +167,10 @@ public final class JdbcAggregateStore {
     /**
      * 按声明类型读取标量并恢复 SQL NULL，整数收窄时拒绝溢出。
      *
-     * @param result 已定位到当前行的 JDBC 结果集
-     * @param column 待读取的列名与 JDBC 类型
+     * @param result
+     *            已定位到当前行的 JDBC 结果集
+     * @param column
+     *            待读取的列名与 JDBC 类型
      * @return 声明类型对应的包装值或表示 SQL NULL 的 null
      */
     private static Object readValue(ResultSet result, Column column) throws SQLException {
@@ -142,7 +216,8 @@ public final class JdbcAggregateStore {
     /**
      * 明确支持的标量范围，和存储行/写入值保持一致；遇到 jsonb、数组等类型时先设计其表示再接入。
      *
-     * @param jdbcType 声明的 java.sql.Types 类型值
+     * @param jdbcType
+     *            声明的 java.sql.Types 类型值
      * @return 对应的 Java 包装类型；不支持的 JDBC 类型抛出 IllegalArgumentException
      */
     private static Class<?> javaType(int jdbcType) {
@@ -165,120 +240,131 @@ public final class JdbcAggregateStore {
     }
 
     /**
-     * 核验事务内身份并占用一次保存机会，再按 ID/锁版本选择创建或更新路径。
+     * 一次 {@link #save} 的执行回执：只描述<b>当前事务内已执行的 DML</b>，既不表示事务已提交，也不缓存旧值或提前回填领域版本。
      *
-     * @param <A>       领域聚合类型
-     * @param <ID>      聚合身份类型
-     * @param mapping   提取领域身份的映射实例
-     * @param aggregate 待保存的对象引用
-     * @param entries   当前事务的身份与保存状态，不包含数据库原始行
-     * @return true 表示按 ID/锁版本判定的新对象，false 表示需要由仓储重新读库的已有对象
+     * <p>
+     * 两种形态且必须二选一：
+     *
+     * <ul>
+     * <li>{@link Unchanged}：计划编译结果为 {@code NoChanges}——字段无净变化，<b>未产生任何 DML</b>（更新路径的合法结果，不是失败）；
+     * <li>{@link Applied}：至少执行了一条 DML，由 {@link Applied#kind()} 区分创建与更新。
+     * </ul>
+     *
+     * <p>
+     * 调用方的分支只有两件事可做：①{@code Applied} 时才补写聚合之外的附属表；②{@code kind()==CREATED} 时才做「仅首次落库」的补齐动作。 已失改状态不能以回执为准，一切以事务是否提交为准。
      */
-    private static <A, ID> boolean prepare(AggregateMapping<A, ID> mapping, A aggregate, Entries<A, ID> entries) {
-        SaveState previous = entries.objects.get(aggregate);
-        if (previous == SaveState.SAVED)
-            throw new IllegalStateException("同一事务不能重复保存聚合");
-        ID id = mapping.identity(aggregate);
-        if (previous == null) {
-            claim(entries, id, aggregate);
-        } else if (entries.identities.get(id) != aggregate) {
-            throw new IllegalStateException("聚合身份不能变化");
+    public sealed interface Receipt {
+        /** 字段无净变化：未取审计、未写 SQL、未递增根版本。 */
+        record Unchanged() implements Receipt {
         }
-        // 回调之前登记，阻止递归保存；不缓存回调查询到的数据库行。
-        entries.objects.put(aggregate, SaveState.SAVED);
-        // 新建 = 本事务未加载过该身份；已有对象必须先加载（仓储保存前重读快照的既有约束）。
-        return id == null || !entries.versions.containsKey(id);
-    }
-
-    /**
-     * 独占登记聚合身份，阻止同一事务出现多个可写对象。
-     *
-     * @param <A>       领域聚合类型
-     * @param <ID>      聚合身份类型
-     * @param entries   当前事务内该映射的身份记录
-     * @param id        对象占用的稳定聚合身份
-     * @param aggregate 占用该身份的对象引用；身份已登记时拒绝重复登记
-     */
-    private static <A, ID> void claim(Entries<A, ID> entries, ID id, A aggregate) {
-        if (entries.identities.putIfAbsent(id, aggregate) != null) {
-            throw new IllegalStateException("一个事务内同一映射同一身份只能有一个写对象");
+        /** 实际写入的操作种类；{@code Unchanged} 不属于本枚举。 */
+        enum Kind {
+            /** 首次落库：根行 INSERT + 首版次行 INSERT，无根 CAS，根版本为 0。 */
+            CREATED,
+            /** 已加载聚合的更新：含一次根 CAS 及其余计划行操作。 */
+            UPDATED
         }
-    }
-
-    /**
-     * 按映射实例隔离事务记录，将类型擦除限制在统一入口。
-     *
-     * @param <A>     领域聚合类型
-     * @param <ID>    聚合身份类型
-     * @param state   当前事务的持久化上下文
-     * @param mapping 查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @return 当前映射专属的事务记录，不存在时创建
-     */
-    @SuppressWarnings("unchecked")
-    private static <A, ID> Entries<A, ID> entries(State state, AggregateMapping<A, ID> mapping) {
-        // 每个不可变 AggregateMapping 实例只创建同一泛型组合的 Entries，类型擦除仅封装在此处。
-        return (Entries<A, ID>) state.mappings.computeIfAbsent(mapping, ignored -> new Entries<>());
-    }
-
-    /**
-     * 仅支持已声明 BIGINT 列的集合过滤；表列标识符受控，业务值全部通过参数绑定。
-     *
-     * @param table        声明读取表、列名和 JDBC 类型的元数据
-     * @param filterColumn 用于 IN 过滤的已声明 BIGINT 列名
-     * @param ids          非空引用且不含 null 的过滤值集合；空集合不执行查询
-     * @return 仅含声明列的原始行列表，保留 SQL NULL；不保证查询顺序
-     */
-    public List<StoredRow> findAll(TableMapping table, String filterColumn, Collection<Long> ids) {
-        // 当前只需要按根 ID/归属 ID 批量装配；限制为声明的 BIGINT 列，不开放任意条件 SQL。
-        Column filter = table.columns().get(filterColumn);
-        if (filter == null || filter.jdbcType() != Types.BIGINT) {
-            throw new IllegalArgumentException("读取过滤列必须声明为 BIGINT: " + filterColumn);
+        /**
+         * 已执行写入的回执。
+         *
+         * @param kind
+         *            新增或更新；决定调用方是否做「仅首次落库」的补齐动作
+         * @param rootVersion
+         *            执行后的根 {@code lock_version}：新增恒为 0，更新为 CAS 递增后的新值；调用方据此写 ETag，不得假定为 {@code 加载值+1}
+         * @param affectedRows
+         *            计划内的行操作计数（非数据库实际影响行数）：新增＝根 + 子行 INSERT，更新＝根 CAS + 后续操作
+         */
+        record Applied(Kind kind, long rootVersion, int affectedRows) implements Receipt {
+            /**
+             * 校验保存回执具备操作种类、有效根版本和至少一行写入结果。
+             *
+             * @param kind
+             *            非空的新增或更新标记
+             * @param rootVersion
+             *            执行后的非负根锁版本
+             * @param affectedRows
+             *            计划执行涉及的行操作计数；更新时包含一次根 CAS，至少为 1
+             */
+            public Applied {
+                if (kind == null || rootVersion < 0 || affectedRows < 1)
+                    throw new IllegalArgumentException("保存回执不完整");
+            }
         }
-        // 发出 SQL 前检查全部列类型，避免等到某一行转换时才发现声明不受支持。
-        table.columns().values().forEach(column -> javaType(column.jdbcType()));
-        List<Long> keys = List.copyOf(ids);
-        // 空批次不生成 IN ()，也不借空输入触发无范围查询。
-        if (keys.isEmpty())
-            return List.of();
-        // 标识符来自已校验的表/列声明；仅查询已知列，未知扩展列不会进入快照值类型体系。
-        String columns = table.columns().values().stream().map(Column::quoted).collect(Collectors.joining(", "));
-        String sql = "SELECT " + columns + " FROM \"" + table.table().sqlName() + "\" WHERE " + filter.quoted()
-                + " IN (:ids)";
-        // 集合由 NamedParameterJdbcTemplate 展开并绑定，业务 ID 不参与 SQL 文本拼接。
-        return reader.query(sql, Map.of("ids", keys), (result, index) -> read(result, table));
     }
 
     /**
      * 按 ID 与可空锁版本选择创建或更新 hook；已有对象由仓储重新读库并核对版本。
      *
-     * @param <A>       领域聚合类型
-     * @param <ID>      聚合身份类型
-     * @param mapping   查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param aggregate 待保存对象；新建/更新由本事务是否加载过该身份判定，领域对象不携带版本
-     * @return 当前事务内的执行回执；包含无变化结果，不代表外层事务已提交
+     * <p>
+     * 一次调用串联：事务上下文登记与单次保存预占 → 新增/更新分流（{@link AggregateMapping#createPlan} / {@link AggregateMapping#updatePlan}） → SQL
+     * 执行 → 回写本事务加载版本并广播生命周期事件（仅 {@link Receipt.Applied} 才广播）。
+     *
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param aggregate
+     *            待保存对象；新建/更新由本事务是否加载过该身份判定，领域对象不携带版本
+     * @return 本事务内的执行回执：{@link Receipt.Unchanged} 表示无净变化未产生 DML，{@link Receipt.Applied}
+     *         表示实际写入（仓储据此补写聚合之外的附属表）；两者均不代表外层事务已提交
      */
     public <A, ID> Receipt save(AggregateMapping<A, ID> mapping, A aggregate) {
+        return save(mapping, aggregate, AggregateMapping.HookContext.none());
+    }
+
+    /**
+     * 保存聚合（带调用期上下文）：上下文只参与本次调用的计划编译，lib-jdbc 不解释其含义。
+     *
+     * @param mapping
+     *            查询、重建与保存共用的映射实例
+     * @param aggregate
+     *            待保存聚合
+     * @param context
+     *            调用期上下文（如操作人），透传给 onCreate/onUpdate
+     * @return 事务内执行回执，不代表已提交
+     */
+    public <A, ID> Receipt save(AggregateMapping<A, ID> mapping, A aggregate, AggregateMapping.HookContext context) {
+        AggregateMapping.HookContext planContext = context == null
+                ? AggregateMapping.HookContext.none()
+                : context;
         ID id = mapping.identity(aggregate);
         Receipt receipt = save(mapping, aggregate,
                 (current, isNew) -> isNew
-                        ? execute(mapping.createPlan(current))
-                        : execute(mapping.updatePlan(current, loadedVersion(mapping, id))));
+                        ? execute(mapping.createPlan(current, planContext))
+                        : execute(mapping.updatePlan(current, loadedVersion(mapping, id), planContext)));
         // 保存成功后回写本事务的加载版本：Create 为 0；Update 为 CAS 递增后的版本；Unchanged 保持加载值。
         if (receipt instanceof Receipt.Applied applied) {
             State state = state(false);
             if (state != null) {
                 entries(state, mapping).versions.put(id, applied.rootVersion());
             }
-            for (AggregateLifecycleListener listener : GLOBAL_LISTENERS.values()) {
-                listener.onSaved(id, aggregate, applied.rootVersion());
-            }
+            // 实际写入才广播；Unchanged 不产生生命周期事件。
+            AggregateLifecycleEvent.Kind kind = applied.kind() == Receipt.Kind.CREATED
+                    ? AggregateLifecycleEvent.Kind.CREATED
+                    : AggregateLifecycleEvent.Kind.UPDATED;
+            notifyListeners(new AggregateLifecycleEvent(kind, mapping, id, aggregate, applied.rootVersion()));
         }
         return receipt;
     }
 
     /**
-     * 当前事务上下文记录的加载版本（未加载 → null）。
+     * 向全部已注册监听器广播生命周期事件，按注册迭代顺序逐个调用。
+     *
+     * <p>
+     * 监听器异常直接向上传播，使本次写入失败并标记事务回滚——加载期的版本断言依赖这一行为。顺序无契约（迭代顺序取决于注册表的哈希布局）， 监听器不得依赖彼此的先后。
+     *
+     * @param event
+     *            已构造完整、非空的生命周期事件
      */
+    private static void notifyListeners(AggregateLifecycleEvent event) {
+        for (AggregateLifecycleListener listener : GLOBAL_LISTENERS) {
+            listener.onEvent(event);
+        }
+    }
+
+    /** 当前事务上下文记录的加载版本（未加载 → null）。 */
     private <A, ID> Long loadedVersion(AggregateMapping<A, ID> mapping, ID id) {
         State state = state(false);
         return state == null ? null : entries(state, mapping).versions.get(id);
@@ -287,7 +373,8 @@ public final class JdbcAggregateStore {
     /**
      * 执行新增、无变化或先根 CAS 后子行操作的更新计划。
      *
-     * @param plan 映射编译后的不可变聚合写入计划
+     * @param plan
+     *            映射编译后的不可变聚合写入计划
      * @return 事务内执行回执；根 CAS 冲突时中止后续行操作
      */
     private Receipt execute(AggregateMapping.Plan plan) {
@@ -308,15 +395,20 @@ public final class JdbcAggregateStore {
     /**
      * 写事务中复用同一身份的对象，避免两份可变副本相互覆盖；只缓存领域对象以复用身份，不缓存原始行；后续保存由更新 hook 重新读库。
      *
-     * @param <A>     领域聚合类型
-     * @param <ID>    聚合身份类型
-     * @param mapping 查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param id      请求的聚合身份；null 直接返回空结果
-     * @param loader  缓存未命中时按请求身份加载原始记录的函数
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param id
+     *            请求的聚合身份；null 直接返回空结果
+     * @param loader
+     *            缓存未命中时按请求身份加载原始记录的函数
      * @return 匹配身份的聚合；身份为空或原始记录不存在时为空
      */
     public <A, ID> Optional<A> findById(AggregateMapping<A, ID> mapping, ID id,
-                                        Function<ID, Optional<AggregateRows>> loader) {
+            Function<ID, Optional<AggregateRows>> loader) {
         if (id == null) {
             return Optional.empty();
         }
@@ -340,15 +432,20 @@ public final class JdbcAggregateStore {
     /**
      * 写事务内同一身份复用同一对象，避免两份可变副本各自修改后相互覆盖。结果保留输入顺序和重复项。
      *
-     * @param <A>     领域聚合类型
-     * @param <ID>    聚合身份类型
-     * @param mapping 查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param ids     请求身份集合；null 或空集合返回空列表，null 身份被忽略
-     * @param loader  批量加载尚未缓存的去重身份；不得返回未请求或重复身份
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param ids
+     *            请求身份集合；null 或空集合返回空列表，null 身份被忽略
+     * @param loader
+     *            批量加载尚未缓存的去重身份；不得返回未请求或重复身份
      * @return 按输入顺序排列的已找到聚合列表，忽略未找到的身份并保留重复项
      */
     public <A, ID> List<A> findByIds(AggregateMapping<A, ID> mapping, Collection<ID> ids,
-                                     Function<Collection<ID>, ? extends Iterable<AggregateRows>> loader) {
+            Function<Collection<ID>, ? extends Iterable<AggregateRows>> loader) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
@@ -391,10 +488,14 @@ public final class JdbcAggregateStore {
     /**
      * 调用仓储加载 hook 并缓存领域对象；不保留传入的原始行。
      *
-     * @param <A>     领域聚合类型
-     * @param <ID>    聚合身份类型
-     * @param mapping 查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param stored  尚未施加领域默认值的原始加载记录
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param stored
+     *            尚未施加领域默认值的原始加载记录
      * @return 身份与原始记录一致的重建聚合
      */
     private <A, ID> A reconstruct(AggregateMapping<A, ID> mapping, AggregateRows stored) {
@@ -409,8 +510,9 @@ public final class JdbcAggregateStore {
             // putIfAbsent 防御性保证即便绕过缓存二次装载也不会以较新版本覆盖既有基线（§6.7 规则 5）
             entries(state, mapping).versions.putIfAbsent(id, version);
         }
-        for (AggregateLifecycleListener listener : GLOBAL_LISTENERS.values()) {
-            listener.onLoaded(id, aggregate, version);
+        for (AggregateLifecycleListener listener : GLOBAL_LISTENERS) {
+            listener.onEvent(
+                    new AggregateLifecycleEvent(AggregateLifecycleEvent.Kind.LOADED, mapping, id, aggregate, version));
         }
         return aggregate;
     }
@@ -418,10 +520,14 @@ public final class JdbcAggregateStore {
     /**
      * 查询当前写事务的身份缓存，失效上下文会拒绝访问。
      *
-     * @param <A>     领域聚合类型
-     * @param <ID>    聚合身份类型
-     * @param mapping 查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param id      需要复用的聚合身份
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param id
+     *            需要复用的聚合身份
      * @return 缓存中的同一聚合对象；无写事务或未命中时为空
      */
     <A, ID> Optional<A> cached(AggregateMapping<A, ID> mapping, ID id) {
@@ -432,10 +538,14 @@ public final class JdbcAggregateStore {
     /**
      * 在写事务中按身份复用领域对象；只读和无事务读取不建立身份缓存。
      *
-     * @param <A>       领域聚合类型
-     * @param <ID>      聚合身份类型
-     * @param mapping   查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param aggregate 待保存对象；新建/更新由本事务是否加载过该身份判定，领域对象不携带版本
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param aggregate
+     *            待保存对象；新建/更新由本事务是否加载过该身份判定，领域对象不携带版本
      */
     <A, ID> void loaded(AggregateMapping<A, ID> mapping, A aggregate) {
         State state = state(false);
@@ -452,12 +562,18 @@ public final class JdbcAggregateStore {
     /**
      * 只参与外部写事务；回调返回不代表提交。任何写入失败均使所有映射失效，即使外层捕获异常也必须回滚。
      *
-     * @param <A>       领域聚合类型
-     * @param <ID>      聚合身份类型
-     * @param <R>       写入回调结果类型
-     * @param mapping   查询、重建与保存共用的映射实例，用于隔离事务内身份记录
-     * @param aggregate 待保存对象；新建/更新由本事务是否加载过该身份判定，领域对象不携带版本
-     * @param writer    接收聚合及是否按 ID/锁版本判定为新对象的回调；已有对象的数据由回调自行查询
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param <R>
+     *            写入回调结果类型
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @param aggregate
+     *            待保存对象；新建/更新由本事务是否加载过该身份判定，领域对象不携带版本
+     * @param writer
+     *            接收聚合及是否按 ID/锁版本判定为新对象的回调；已有对象的数据由回调自行查询
      * @return 写入回调结果；回调返回不代表事务已提交
      */
     <A, ID, R> R save(AggregateMapping<A, ID> mapping, A aggregate, BiFunction<A, Boolean, R> writer) {
@@ -486,9 +602,80 @@ public final class JdbcAggregateStore {
     }
 
     /**
+     * 核验事务内身份并占用一次保存机会，再按 ID/锁版本选择创建或更新路径。
+     *
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param mapping
+     *            提取领域身份的映射实例
+     * @param aggregate
+     *            待保存的对象引用
+     * @param entries
+     *            当前事务的身份与保存状态，不包含数据库原始行
+     * @return true 表示按 ID/锁版本判定的新对象，false 表示需要由仓储重新读库的已有对象
+     */
+    private static <A, ID> boolean prepare(AggregateMapping<A, ID> mapping, A aggregate, Entries<A, ID> entries) {
+        SaveState previous = entries.objects.get(aggregate);
+        if (previous == SaveState.SAVED)
+            throw new IllegalStateException("同一事务不能重复保存聚合");
+        ID id = mapping.identity(aggregate);
+        if (previous == null) {
+            claim(entries, id, aggregate);
+        } else if (entries.identities.get(id) != aggregate) {
+            throw new IllegalStateException("聚合身份不能变化");
+        }
+        // 回调之前登记，阻止递归保存；不缓存回调查询到的数据库行。
+        entries.objects.put(aggregate, SaveState.SAVED);
+        // 新建 = 本事务未加载过该身份；已有对象必须先加载（仓储保存前重读快照的既有约束）。
+        return id == null || !entries.versions.containsKey(id);
+    }
+
+    /**
+     * 独占登记聚合身份，阻止同一事务出现多个可写对象。
+     *
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param entries
+     *            当前事务内该映射的身份记录
+     * @param id
+     *            对象占用的稳定聚合身份
+     * @param aggregate
+     *            占用该身份的对象引用；身份已登记时拒绝重复登记
+     */
+    private static <A, ID> void claim(Entries<A, ID> entries, ID id, A aggregate) {
+        if (entries.identities.putIfAbsent(id, aggregate) != null) {
+            throw new IllegalStateException("一个事务内同一映射同一身份只能有一个写对象");
+        }
+    }
+
+    /**
+     * 按映射实例隔离事务记录，将类型擦除限制在统一入口。
+     *
+     * @param <A>
+     *            领域聚合类型
+     * @param <ID>
+     *            聚合身份类型
+     * @param state
+     *            当前事务的持久化上下文
+     * @param mapping
+     *            查询、重建与保存共用的映射实例，用于隔离事务内身份记录
+     * @return 当前映射专属的事务记录，不存在时创建
+     */
+    @SuppressWarnings("unchecked")
+    private static <A, ID> Entries<A, ID> entries(State state, AggregateMapping<A, ID> mapping) {
+        // 每个不可变 AggregateMapping 实例只创建同一泛型组合的 Entries，类型擦除仅封装在此处。
+        return (Entries<A, ID>) state.mappings.computeIfAbsent(mapping, ignored -> new Entries<>());
+    }
+
+    /**
      * 获取或初始化当前写事务上下文，并拒绝使用已失效状态。
      *
-     * @param required 是否强制要求外部写事务；true 时缺少事务抛异常，false 时返回 null
+     * @param required
+     *            是否强制要求外部写事务；true 时缺少事务抛异常，false 时返回 null
      * @return 有效写事务上下文；非强制且无可用写事务时为 null
      */
     private State state(boolean required) {
@@ -515,7 +702,8 @@ public final class JdbcAggregateStore {
     /**
      * 注册事务挂起、恢复和结束回调，隔离嵌套事务并清理保存资格。
      *
-     * @param state 与当前事务绑定、需要在挂起和结束时管理的上下文
+     * @param state
+     *            与当前事务绑定、需要在挂起和结束时管理的上下文
      */
     private void registerCleanup(State state) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -527,7 +715,6 @@ public final class JdbcAggregateStore {
                 // REQUIRES_NEW 必须拥有独立加载记录；内层不能借用外层身份缓存。
                 TransactionSynchronizationManager.unbindResource(resourceKey);
             }
-
             /**
              * 外层事务恢复时重新绑定其原有持久化上下文。
              */
@@ -535,7 +722,6 @@ public final class JdbcAggregateStore {
             public void resume() {
                 TransactionSynchronizationManager.bindResource(resourceKey, state);
             }
-
             /**
              * 事务提交或回滚后解绑并清除所有映射的身份及保存记录。
              *
@@ -551,58 +737,5 @@ public final class JdbcAggregateStore {
                 state.mappings.clear();
             }
         });
-    }
-
-    private enum SaveState {
-        LOADED, SAVED
-    }
-
-    /**
-     * 仅表示当前事务内的执行结果；提交由外层决定，调用方不能据此认定持久化已完成。
-     */
-    public sealed interface Receipt {
-        enum Kind {
-            CREATED, UPDATED
-        }
-
-        record Unchanged() implements Receipt {
-        }
-
-        record Applied(Kind kind, long rootVersion, int affectedRows) implements Receipt {
-            /**
-             * 校验保存回执具备操作种类、有效根版本和至少一行写入结果。
-             *
-             * @param kind         非空的新增或更新标记
-             * @param rootVersion  执行后的非负根锁版本
-             * @param affectedRows 计划执行涉及的行操作计数；更新时包含一次根 CAS，至少为 1
-             */
-            public Applied {
-                if (kind == null || rootVersion < 0 || affectedRows < 1)
-                    throw new IllegalArgumentException("保存回执不完整");
-            }
-        }
-    }
-
-    private static final class Entries<A, ID> {
-        final Map<ID, A> identities = new HashMap<>();
-        final Map<A, SaveState> objects = new IdentityHashMap<>();
-        /**
-         * 事务上下文持有的加载版本：key 存在 = 已有对象（即使值为 null，表示旧库 NULL 版本）； key 不存在 = 本事务未加载过，按新建处理。领域对象不持有该技术字段。
-         */
-        final Map<ID, Long> versions = new HashMap<>();
-
-        /**
-         * 事务结束后清除身份、保存状态与加载版本，避免跨事务复用。
-         */
-        void clear() {
-            identities.clear();
-            objects.clear();
-            versions.clear();
-        }
-    }
-
-    private static final class State {
-        final Map<AggregateMapping<?, ?>, Entries<?, ?>> mappings = new IdentityHashMap<>();
-        boolean invalid;
     }
 }

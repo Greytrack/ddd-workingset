@@ -1,22 +1,21 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories;
 
+import java.math.BigDecimal;
+import java.lang.reflect.RecordComponent;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import com.airedgesoft.lib.jdbc.JdbcRowMapping;
 import com.airedgesoft.sharedkernel.businessframework.application.command.OptionalFields;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionItem;
 import com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject.ColumnValueConverter;
-
-import java.lang.reflect.RecordComponent;
-import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * v3 共表「可选属性列」的列绑定机制：按 {@link OptionalFields} 的组件清单生成 {@link JdbcRowMapping.Binding}。
  *
  * <p>
  * <b>机制而非数据</b>：组件清单（150 列）来自命令契约，列→Java 类型按 v3 DDL 家族约定推出（{@code numeric*} 定点、 日期/列表族整型、其余文本）；
- * 取值一律委托 {@link LegacyFieldValues}。各 BC 无需重写这段反射与绑定样板。
  */
 public final class LegacyOptionalColumns {
 

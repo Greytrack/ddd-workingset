@@ -19,7 +19,7 @@ public record MergeDecision(Map<String, FieldAction> fields, ExistenceAction exi
     }
 
     private static DomainException invalid(String message) {
-        return DomainException.withMessage(MergeResCode.INVALID_DECISION, message);
+        return new DomainException(MergeResCode.INVALID_DECISION, message);
     }
 
     public boolean confirmsOnSuccess(Difference difference) {

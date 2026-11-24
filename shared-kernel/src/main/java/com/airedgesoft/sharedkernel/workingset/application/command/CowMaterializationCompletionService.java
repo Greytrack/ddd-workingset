@@ -36,7 +36,7 @@ public final class CowMaterializationCompletionService {
 
     private void switchToLocalBacked(TrackerItemMaterializationCompletedEvent event) {
         LightTrackerItem target = items.findByIdForUpdate(event.targetLocalId())
-                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "LightTrackerItem is missing"));
+                .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "LightTrackerItem is missing"));
         if (target.materialized()) {
             return;
         }
@@ -46,7 +46,7 @@ public final class CowMaterializationCompletionService {
                 || !target.revision().equals(request.targetRevision())
                 || !target.localId().equals(event.businessRef())
                 || !target.revision().equals(event.revision())) {
-            throw DomainException.withMessage(SharedKernelResultCode.EVENT_STATE_INVALID, "LightTrackerItem no longer matches the COW request");
+            throw new DomainException(SharedKernelResultCode.EVENT_STATE_INVALID, "LightTrackerItem no longer matches the COW request");
         }
         target.switchToLocalBacked(target.revision());
         items.save(target);
@@ -54,6 +54,6 @@ public final class CowMaterializationCompletionService {
 
     private TrackerItemMaterializationRequestedEvent requestFor(TrackerItemMaterializationCompletedEvent event) {
         return requests.find(event.eventId(), event.targetLocalId())
-                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "COW request is missing"));
+                .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND, "COW request is missing"));
     }
 }

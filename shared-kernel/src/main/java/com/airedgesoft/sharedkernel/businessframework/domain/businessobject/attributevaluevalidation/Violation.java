@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevaluevalidation;
-import com.airedgesoft.plm.tools.infrastructure.core.global.ResCode;
+
+import com.airedgesoft.lib.exception.ResCode;
 
 /**
  * 属性值校验违例（对应 IDDD-ch5.3 改造定稿 {@code Violation <<record 违例承载>>}）。

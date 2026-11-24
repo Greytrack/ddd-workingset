@@ -3,8 +3,8 @@ package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.att
 import com.airedgesoft.lib.exception.AttributeValueFormatException;
 import com.airedgesoft.lib.exception.DomainErrorType;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
 import com.airedgesoft.sharedkernel.SharedKernelResultCode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.*;
 

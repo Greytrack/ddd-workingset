@@ -1,6 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue;
 
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 
 import java.util.ArrayList;
 import java.util.List;

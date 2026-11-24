@@ -71,7 +71,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         } else {
             long expected = lockVersion - 1;
             Requirement current = lockById(requirement.localId())
-                    .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "Requirement no longer exists"));
+                    .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, "Requirement no longer exists"));
             if (current.lockVersion() != expected) {
                 throw new LockVersionConflictException(expected, current.lockVersion());
             }
@@ -115,7 +115,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                 requirement.lockVersion(), requirement.deleted() ? 1 : 0,
                 actor, now, actor, now, requirement.flags(), requirement.checkedOut() ? 1 : 0, requirement.trackerId());
         if (inserted != 1) {
-            throw DomainException.withMessage(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
+            throw new DomainException(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
                     "Tracker " + requirement.trackerId() + " is unavailable");
         }
         if (requirement.checkedOut()) {
@@ -163,7 +163,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
     public Requirement cancelCheckout(Requirement current) {
         Long instanceId = current.localId();
         Requirement latest = lockById(instanceId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "Requirement no longer exists"));
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, "Requirement no longer exists"));
         if (!latest.lockVersion().equals(current.lockVersion()) || !latest.revision().equals(current.revision())) {
             throw new LockVersionConflictException(current.lockVersion(), latest.lockVersion());
         }

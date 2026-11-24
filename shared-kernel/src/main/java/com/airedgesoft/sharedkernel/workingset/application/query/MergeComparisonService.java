@@ -37,7 +37,7 @@ public class MergeComparisonService {
                               Long targetTracker) {
         TrackerPair pair = new TrackerPair(source, sourceTracker, target, targetTracker);
         if (!evidence.candidates(source, target).contains(pair)) {
-            throw DomainException.withMessage(MergeResCode.NOT_ALLOWED, "trackers must form a direct derivation pair in the supplied working sets");
+            throw new DomainException(MergeResCode.NOT_ALLOWED, "trackers must form a direct derivation pair in the supplied working sets");
         }
         ArrayList<Difference> differences = new ArrayList<Difference>();
         Map<Long, Long> sources = evidence.familyIds(pair.source());

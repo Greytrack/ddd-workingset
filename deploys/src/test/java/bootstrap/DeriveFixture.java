@@ -31,21 +31,21 @@ final class DeriveFixture {
         if (!"1".equals(targetParent) && !exists(jdbc, """
                 SELECT 1 FROM tracker_bindings WHERE working_set_id = ? AND tracker_id = ?
                 """, Long.valueOf(targetParent), Long.valueOf(sourceTrackerId))) {
-            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceTrackerId);
+            throw new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceTrackerId);
         }
         if (!"UNSHARED".equals(source.get("sharing_mode"))) {
-            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, sourceTrackerId);
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, sourceTrackerId);
         }
         if (exists(jdbc, """
                 SELECT 1 FROM tracker_bindings
                 WHERE working_set_id = ? AND tracker_id IN
                     (SELECT tracker_id FROM trackers WHERE source_id = ?)
                 """, Long.valueOf(targetWorkingSet), Long.valueOf(sourceTrackerId))) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, sourceTrackerId);
+            throw new DomainException(BindingResCode.TRACKER_ALREADY_BOUND, sourceTrackerId);
         }
         if (!exists(jdbc, "SELECT 1 FROM space_bindings WHERE working_set_id = ? AND product_space_id = ?",
                 Long.valueOf(targetWorkingSet), Long.valueOf(source.get("product_space_id").toString()))) {
-            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, targetWorkingSet);
+            throw new DomainException(BindingResCode.MISSING_SPACE_BINDING, targetWorkingSet);
         }
 
         String trackerId = fixtureId("DERIVED-T-" + UUID.randomUUID());
@@ -88,7 +88,7 @@ final class DeriveFixture {
                 FROM trackers WHERE tracker_id = ?
                 """, Long.valueOf(trackerId));
         if (rows.isEmpty()) {
-            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, trackerId);
+            throw new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, trackerId);
         }
         return rows.getFirst();
     }
@@ -104,13 +104,13 @@ final class DeriveFixture {
                     FROM air_ws_items_index WHERE local_id = ?
                     """, Long.valueOf(sourceLocalId));
             if (rows.isEmpty()) {
-                throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
+                throw new DomainException(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
             }
             Map<String, Object> row = rows.getFirst();
             if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                     || !Long.toString(commonId).equals(row.get("common_id").toString())
                     || revision != ((Number) row.get("revision")).intValue()) {
-                throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
+                throw new DomainException(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
             }
             boolean materialized = (Boolean) row.get("materialized");
             return new Content(materialized ? sourceLocalId : row.get("source_local_id").toString(),
@@ -121,12 +121,12 @@ final class DeriveFixture {
                 ORDER BY revision DESC LIMIT 1
                 """, Long.valueOf(sourceLocalId));
         if (rows.isEmpty()) {
-            throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
+            throw new DomainException(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
         }
         Map<String, Object> row = rows.getFirst();
         if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                 || !Long.toString(commonId).equals(row.get("common_id").toString())) {
-            throw DomainException.withMessage(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
+            throw new DomainException(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);
         }
         return new Content(sourceLocalId, revision);
     }

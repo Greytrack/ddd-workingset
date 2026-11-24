@@ -161,7 +161,7 @@ public final class Tracker {
                                    SharingMode sharingMode, Long actor) {
         String normalizedName = normalizeName(name);
         if (!classification.allows(sharingMode)) {
-            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
         }
         return new Tracker(id, id, normalizedName, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
                 sharingMode, null, false, true, actor, actor);
@@ -290,13 +290,13 @@ public final class Tracker {
 
     public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {
         if (hasItems) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_HAS_ITEMS, Long.toString(trackerId));
+            throw new DomainException(BindingResCode.TRACKER_HAS_ITEMS, Long.toString(trackerId));
         }
         if (hasOrgChildren) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_HAS_ORG_CHILDREN, Long.toString(trackerId));
+            throw new DomainException(BindingResCode.TRACKER_HAS_ORG_CHILDREN, Long.toString(trackerId));
         }
         if (hasDerivedChildren) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_HAS_DERIVED_CHILDREN, Long.toString(trackerId));
+            throw new DomainException(BindingResCode.TRACKER_HAS_DERIVED_CHILDREN, Long.toString(trackerId));
         }
     }
 

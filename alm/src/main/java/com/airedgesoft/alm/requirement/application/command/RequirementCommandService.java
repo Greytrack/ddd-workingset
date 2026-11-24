@@ -53,7 +53,7 @@ public class RequirementCommandService {
 
     private static void requireActive(Requirement requirement) {
         if (requirement.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, Long.toString(requirement.localId()));
+            throw new DomainException(FailureReason.DELETED, Long.toString(requirement.localId()));
         }
     }
 
@@ -75,7 +75,7 @@ public class RequirementCommandService {
         }
         Optional<Tracker> tracker = trackers.findById(trackerId);
         if (tracker.isEmpty()) {
-            throw DomainException.withMessage(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
+            throw new DomainException(WorkingsetResultCode.DATA_INTEGRITY_CONFLICT,
                     "tracker not found or deleted: " + trackerId);
         }
         tracker.map(Tracker::workingSetId)
@@ -85,7 +85,7 @@ public class RequirementCommandService {
             tracker.ifPresent(current -> {
                 if (current.sharingMode() == SharingMode.UNSHARED
                         && !current.workingSetId().equals(requestedWorkingSetId)) {
-                    throw DomainException.withMessage(FailureReason.NOT_INCLUDED,
+                    throw new DomainException(FailureReason.NOT_INCLUDED,
                             "tracker " + trackerId + " is not included in working set "
                                     + requestedWorkingSetId);
                 }
@@ -153,12 +153,12 @@ public class RequirementCommandService {
 
     private void requireWorkingSet(Long id) {
         workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
     void requireTrackerWorkingSet(Long trackerId) {
         Tracker tracker = trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, Long.toString(trackerId)));
+                .orElseThrow(() -> new DomainException(BindingResCode.TRACKER_NOT_FOUND, Long.toString(trackerId)));
         requireWorkingSet(tracker.workingSetId());
     }
 
@@ -175,7 +175,7 @@ public class RequirementCommandService {
         Requirement source = load(target.sourceLocalId());
         requireActive(source);
         if (!source.revision().equals(target.sourceRevision())) {
-            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
+            throw new DomainException(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
         }
         return Requirement.create(target.localId(), target.commonId(), target.trackerId(),
                 source.title(), source.description(), target.revision(), source.version(), Long.toString(AuthorizationScope.currentUserId()));
@@ -238,7 +238,7 @@ public class RequirementCommandService {
     private Requirement load(Long localId) {
         Objects.requireNonNull(localId, "localId");
         return repository.findById(localId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + Long.toString(localId)));
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, "requirement not found: " + Long.toString(localId)));
     }
 
     private Requirement loadWritable(Long localId) {

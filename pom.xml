@@ -16,6 +16,8 @@
         <module>deploys</module>
         <module>lib-jdbc</module>
         <module>lib-id</module>
+        <module>lib-util</module>
+        <module>lib-restful</module>
         <module>bridge-v3</module>
     </modules>
 
@@ -35,6 +37,10 @@
         <guava.version>32.0.0-jre</guava.version>
         <!-- p6spy：JDBC 代理驱动，用于开发期控制台实时 SQL 日志 -->
         <p6spy.version>3.9.1</p6spy.version>
+        <!-- jodd-core：lib-util 的 JsonUtil 复用 StringPool / StringUtil（spring-boot BOM 不管理） -->
+        <jodd.version>5.1.6</jodd.version>
+        <!-- redisson：bridge-v3 的编号临界区分布式锁（与 lib-deps 目录保持同一版本） -->
+        <redisson.version>3.27.0</redisson.version>
     </properties>
 
     <dependencyManagement>
@@ -93,6 +99,11 @@
                 <groupId>p6spy</groupId>
                 <artifactId>p6spy</artifactId>
                 <version>${p6spy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

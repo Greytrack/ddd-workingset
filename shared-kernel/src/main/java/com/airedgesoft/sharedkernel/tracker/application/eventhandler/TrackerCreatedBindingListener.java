@@ -33,13 +33,13 @@ public class TrackerCreatedBindingListener {
             return;
         }
         WorkingSet workingSet = workingSets.findById(event.workingSetId())
-                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
+                .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "working set disappeared: " + event.workingSetId()));
         if (workingSet.hasTrackerBinding(event.trackerId())) {
             return;
         }
         Tracker tracker = trackers.findById(event.trackerId())
-                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
+                .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "tracker disappeared: " + event.trackerId()));
         workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), event.sharingMode());
         workingSet.audit(Long.toString(AuthorizationScope.currentUserId()));

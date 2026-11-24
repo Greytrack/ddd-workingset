@@ -1,5 +1,10 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import com.airedgesoft.lib.jdbc.AggregateMapping.Row;
 import com.airedgesoft.lib.jdbc.AggregateMapping.TableMapping;
 import com.airedgesoft.lib.jdbc.JdbcWritePlan.Value;
@@ -7,11 +12,6 @@ import com.airedgesoft.lib.jdbc.StoredRow;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.FieldValue;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionItem;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionNumber;
-
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * v3 共表「指针版次」的<b>行定位与行组装</b>公共机制：版次行身份、指针行、历史基线行、比较投影的行壳。
@@ -74,8 +74,6 @@ public final class RevisionRows {
     /**
      * 共享桶字段：版次行里「非版次控制」的属性值（v3 共表同列存储，按 {@code isVersioned} 回拆）。
      *
-     * @param row
-     *            版次行
      * @param fields
      *            行解析出的全部字段（键＝落库列名）
      * @param isVersioned

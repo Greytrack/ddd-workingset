@@ -1,16 +1,20 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.reference;
 
-import com.airedgesoft.lib.jdbc.StoredRow;
-import com.airedgesoft.sharedkernel.businessframework.domain.reference.Reference;
-import com.airedgesoft.sharedkernel.businessframework.domain.reference.ReferenceRepository;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import com.airedgesoft.sharedkernel.businessframework.domain.reference.Reference;
+import com.airedgesoft.sharedkernel.businessframework.domain.reference.ReferenceRepository;
+import com.airedgesoft.lib.jdbc.StoredRow;
 
 import static com.airedgesoft.sharedkernel.businessframework.infrastructure.reference.ReferenceStorage.TABLE;
-
 /**
  * 引用聚合仓储实现（Spring JDBC 直读直写现表 {@code air_inst_tab_reference}；继承传播怀疑父仓储——触发口径 8）。
  *

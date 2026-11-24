@@ -5,7 +5,7 @@ import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObject;
-import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
+import com.airedgesoft.sharedkernel.businessframework.application.query.LiteBusinessObjectProvider;
 import com.airedgesoft.sharedkernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;

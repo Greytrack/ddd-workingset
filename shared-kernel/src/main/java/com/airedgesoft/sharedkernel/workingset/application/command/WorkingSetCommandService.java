@@ -45,7 +45,7 @@ public class WorkingSetCommandService {
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {
-            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, source.classificationId());
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, source.classificationId());
         }
     }
 
@@ -56,7 +56,7 @@ public class WorkingSetCommandService {
                 .map(TrackerToBind::tracker)
                 .anyMatch(tracker -> tracker.sharingMode() == SharingMode.UNSHARED
                         && classification.equals(tracker.numericClassificationId())))) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, spaceId);
+            throw new DomainException(BindingResCode.TRACKER_NOT_FOUND, spaceId);
         }
     }
 
@@ -93,12 +93,12 @@ public class WorkingSetCommandService {
     // Called by the creation runner with the user-supplied display name.
     WorkingSet createChildForTask(Long parentId, Long newId, String name, String color, Long actor) {
         if (newId.equals(parentId)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
+            throw new DomainException(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
         workingSets.findByIdForChildCreation(parentId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(parentId)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(parentId)));
         if (queries.findAncestors(parentId).contains(newId)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
+            throw new DomainException(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
         Long owner = actor == null ? AuthorizationScope.currentUserId() : actor;
         WorkingSet child = WorkingSet.child(newId, parentId, name, color, owner, String.valueOf(owner));
@@ -111,7 +111,7 @@ public class WorkingSetCommandService {
             List<Long> existing = queries.findAncestors(newId).stream().toList();
             boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
             BindingResCode reason = differentParent ? BindingResCode.WORKING_SET_PARENT_IMMUTABLE : BindingResCode.WORKING_SET_ALREADY_EXISTS;
-            throw DomainException.withMessage(reason, Long.toString(newId));
+            throw new DomainException(reason, Long.toString(newId));
         }
         return child;
     }
@@ -141,7 +141,7 @@ public class WorkingSetCommandService {
      */
     private ProductSpace lockSpace(String spaceId) {
         return spaces.findByIdForBinding(spaceId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
+                .orElseThrow(() -> new DomainException(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
     }
 
 
@@ -181,7 +181,7 @@ public class WorkingSetCommandService {
             try {
                 ProductSpace space = lockSpace(spaceId);
                 if (!WorkingSet.DEFAULT_ID.equals(parent.id()) && !parent.hasSpaceBinding(spaceId)) {
-                    throw DomainException.withMessage(FailureReason.NOT_INCLUDED, spaceId);
+                    throw new DomainException(FailureReason.NOT_INCLUDED, spaceId);
                 }
                 if (!target.hasSpaceBinding(spaceId)) {
                     requireTrackerCopies(spaceId, candidates, requiredClassifications);
@@ -215,13 +215,13 @@ public class WorkingSetCommandService {
             spaceId = source.productSpaceId().toString();
             List<TrackerToBind> scope = bySpace.get(spaceId);
             if (scope == null) {
-                throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, spaceId);
+                throw new DomainException(BindingResCode.MISSING_SPACE_BINDING, spaceId);
             }
             Tracker tracker = mode == SharingMode.SHARED ? source : trackers.findDerivedTracker(target.id(), id)
-                    .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceId));
+                    .orElseThrow(() -> new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceId));
             Classification classification = classifications.requireClassification(tracker.classificationId());
             if (tracker.sharingMode() != mode || !classification.allows(mode)) {
-                throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
+                throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
             }
             scope.add(new TrackerToBind(tracker, classification));
         } catch (DomainException failure) {
@@ -235,7 +235,7 @@ public class WorkingSetCommandService {
         Tracker source = directParentTracker(target, parentTrackerId);
         requireUnshared(source);
         if (!selectedSpaces.contains(source.productSpaceId().toString())) {
-            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, source.productSpaceId().toString());
+            throw new DomainException(BindingResCode.MISSING_SPACE_BINDING, source.productSpaceId().toString());
         }
         if (trackers.findDerivedTracker(id, parentTrackerId).isPresent()) {
             return false;
@@ -251,19 +251,19 @@ public class WorkingSetCommandService {
 
     private WorkingSet lockTaskTarget(Long id) {
         return workingSets.findByIdForTaskWrite(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
     private WorkingSet writable(Long id) {
         return workingSets.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
     }
 
     private Tracker directParentTracker(WorkingSet target, Long id) {
         Long parentId = target.requireParentId();
         boolean boundInParent = !WorkingSet.DEFAULT_ID.equals(parentId) && writable(parentId).hasTrackerBinding(id);
         Tracker source = trackers.findById(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(id)));
+                .orElseThrow(() -> new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(id)));
         target.requireDirectParent(source, boundInParent);
         return source;
     }

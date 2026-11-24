@@ -57,7 +57,7 @@ public class DefaultBusinessObjectTypeRegistry implements BusinessObjectTypeRegi
         Tracker tracker = tracker(trackerId);
         BusinessObjectTypeAdapter adapter = byType.get(tracker.numericClassificationId());
         if (adapter == null) {
-            throw DomainException.withMessage(FailureReason.CAPABILITY_NOT_SUPPORTED,
+            throw new DomainException(FailureReason.CAPABILITY_NOT_SUPPORTED,
                     "No business object adapter for tracker classification "
                             + tracker.numericClassificationId() + " (tracker " + Long.toString(trackerId) + ")");
         }
@@ -68,12 +68,12 @@ public class DefaultBusinessObjectTypeRegistry implements BusinessObjectTypeRegi
     public BusinessObjectTypeAdapter forItem(Long localId) {
         return items.findById(localId)
                 .map(item -> forTracker(item.trackerId()))
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND,
                         "item index not found: " + localId));
     }
 
     private Tracker tracker(Long trackerId) {
         return trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, Long.toString(trackerId)));
     }
 }

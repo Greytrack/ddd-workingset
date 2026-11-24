@@ -1,7 +1,7 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.admin.attribute;
 
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
-import com.airedgesoft.plm.common.enums.list.YesOrNoListEnum;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.YesOrNoListEnum;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import lombok.Data;
 

@@ -1,6 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.builder;
 
-import com.airedgesoft.plm.tools.infrastructure.core.global.ResCode;
+import com.airedgesoft.lib.exception.ResCode;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.BusinessObject;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.FieldValue;

@@ -30,7 +30,7 @@ public class RequirementLifecycleService {
     private final RequirementCommandService commands;
 
     private static DomainException missing(Long id) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(id));
+        return new DomainException(FailureReason.NOT_FOUND, Long.toString(id));
     }
 
     /**
@@ -42,11 +42,11 @@ public class RequirementLifecycleService {
         commands.requireTrackerWorkingSet(current.trackerId());
         LifecycleResult decision = current.delete2(LifecycleCommand.locked("permanent delete"));
         if (!decision.succeeded()) {
-            throw DomainException.withMessage(RequirementResultCode.SOFT_DELETE_REQUIRED, Long.toString(id));
+            throw new DomainException(RequirementResultCode.SOFT_DELETE_REQUIRED, Long.toString(id));
         }
         // 扩展侧读取来源并写入依赖，永久删除侧检查依赖并删除来源。可串行化事务检测交错写入。
         if (items.hasSourceBackedDependents(id)) {
-            throw DomainException.withMessage(FailureReason.PREPARING, "Derived items still depend on source " + Long.toString(id));
+            throw new DomainException(FailureReason.PREPARING, "Derived items still depend on source " + Long.toString(id));
         }
         requirements.delete(current);
         eventPublisher.publishEvent(new CompleteDeleteEvent(id, current.trackerId(), System.currentTimeMillis()));

@@ -122,7 +122,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
     private void saveWithCurrentMember(LightTrackerItem item, String onConflict, EffectiveIndexStatus upgrade) {
         int affected = insert(item, onConflict, upgrade);
         if (affected != 1) {
-            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID, "Could not save item index " + item.localId());
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_STATE_INVALID, "Could not save item index " + item.localId());
         }
         saveCurrentMember(item);
     }
@@ -135,7 +135,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                     SELECT EXISTS (SELECT 1 FROM air_ws_items_index WHERE workingset_id = ? AND common_id = ?)
                     """, Boolean.class, item.workingSetId(), item.commonId()));
             if (!occupied) {
-                throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+                throw new DomainException(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
                         "Could not claim item index " + item.localId());
             }
             return false;
@@ -191,7 +191,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
                 status.flag1(), status.flag2(), status.flag3(), status.flag4(), status.flag5(),
                 item.localId(), item.revision());
         if (updated != 1) {
-            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
                     "Could not check in item index " + item.localId());
         }
     }
@@ -224,7 +224,7 @@ public class JdbcLightTrackerItemRepositoryImpl implements LightTrackerItemRepos
         if (updated != 1 || jdbc.update("""
                 DELETE FROM air_ws_items_revision_index WHERE local_id = ? AND revision = ?
                 """, item.localId(), status.removedRevision()) != 1) {
-            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
                     "Could not roll back item index " + item.localId());
         }
     }

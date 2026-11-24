@@ -27,7 +27,7 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
     }
 
     private static DomainException notFound(Long localId) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND,
+        return new DomainException(FailureReason.NOT_FOUND,
                 "requirement not found: " + Long.toString(localId));
     }
 
@@ -38,7 +38,7 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
             return content(current, revision);
         }
         return content(query.findRevision(localId, revision)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE,
+                .orElseThrow(() -> new DomainException(FailureReason.HISTORY_UNAVAILABLE,
                         "required revision is unavailable: " + revision)), revision);
     }
 
@@ -56,10 +56,10 @@ public class RequirementReadModelAdapter implements TrackerItemQueryProvider {
 
     private TrackerItemContent content(RequirementDetail detail, Integer revision) {
         if (detail.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, "requirement deleted: " + Long.toString(localId));
+            throw new DomainException(FailureReason.DELETED, "requirement deleted: " + Long.toString(localId));
         }
         if (detail.revision() != revision) {
-            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE,
+            throw new DomainException(FailureReason.HISTORY_UNAVAILABLE,
                     "required revision is unavailable: " + revision);
         }
         return new TrackerItemContent(revision, Map.of(

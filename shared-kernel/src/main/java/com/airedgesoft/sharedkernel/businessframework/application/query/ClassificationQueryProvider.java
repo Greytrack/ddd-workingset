@@ -12,7 +12,7 @@ public interface ClassificationQueryProvider {
 
     default Classification requireClassification(String id) {
         return findClassification(id).orElseThrow(() ->
-                DomainException.withMessage(FailureReason.NOT_FOUND, "分类不存在：" + id));
+                new DomainException(FailureReason.NOT_FOUND, "分类不存在：" + id));
     }
 
     List<Classification> findClassifications();

@@ -33,7 +33,7 @@ public final class RequirementMaterializationService {
                 || !Objects.equals(existing.title(), snapshot.title())
                 || !Objects.equals(existing.description(), snapshot.description())
                 || !Objects.equals(existing.version(), snapshot.version())) {
-            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED,
+            throw new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED,
                     "Existing target does not match materialization evidence");
         }
     }
@@ -43,17 +43,17 @@ public final class RequirementMaterializationService {
      */
     public void materialize(MaterializeRequest request, TargetIdentity target) {
         RequirementSnapshot snapshot = snapshotStore.find(request.snapshotRef())
-                .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot is missing"));
+                .orElseThrow(() -> new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot is missing"));
         if (!snapshot.localId().equals(request.sourceLocalId())
                 || !snapshot.revision().equals(request.beforeRevision())
                 || !snapshot.lockVersion().equals(request.beforeLockVersion())
                 || !snapshot.commonId().equals(request.commonId())) {
-            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot does not match event evidence");
+            throw new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Source snapshot does not match event evidence");
         }
         if (!target.localId().equals(request.targetLocalId())
                 || !target.trackerId().equals(request.targetTrackerId())
                 || !target.commonId().equals(request.commonId())) {
-            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target identity does not match materialization evidence");
+            throw new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target identity does not match materialization evidence");
         }
 
         if (target.materialized()) {
@@ -64,7 +64,7 @@ public final class RequirementMaterializationService {
         if (existing.isPresent()) {
             Requirement stored = existing.orElseThrow();
             if (!stored.hasMaterialized()) {
-                throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED,
+                throw new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED,
                         "Target business object is not materialized");
             }
             verifyExisting(stored, request, snapshot);
@@ -80,12 +80,12 @@ public final class RequirementMaterializationService {
      */
     public void verifyMaterializedTarget(TargetIdentity target) {
         Requirement existing = repository.findById(target.localId())
-                .orElseThrow(() -> DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business object is missing"));
+                .orElseThrow(() -> new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business object is missing"));
         if (!existing.hasMaterialized()
                 || !existing.commonId().equals(target.commonId())
                 || !existing.trackerId().equals(target.trackerId())
                 || !existing.revision().equals(target.revision())) {
-            throw DomainException.withMessage(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business identity does not match the receipt");
+            throw new DomainException(WorkingsetResultCode.MATERIALIZATION_REJECTED, "Target business identity does not match the receipt");
         }
     }
 }

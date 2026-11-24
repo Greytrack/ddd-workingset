@@ -43,7 +43,7 @@ public class RequirementQueryService {
     private final TrackerRepository trackers;
 
     private static DomainException notFound(Long localId) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, "requirement not found: " + Long.toString(localId));
+        return new DomainException(FailureReason.NOT_FOUND, "requirement not found: " + Long.toString(localId));
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -54,7 +54,7 @@ public class RequirementQueryService {
         }
         RequirementDetail detail = persisted.get();
         if (detail.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, Long.toString(localId));
+            throw new DomainException(FailureReason.DELETED, Long.toString(localId));
         }
         return detail;
     }
@@ -66,7 +66,7 @@ public class RequirementQueryService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<RequirementDetail> findByTracker(Long workingSetId, Long trackerId) {
         Tracker tracker = trackers.findById(trackerId)
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         if (!visibleIn(tracker, workingSetId)) {
             return List.of();
         }
@@ -105,14 +105,14 @@ public class RequirementQueryService {
                 .orElseThrow(() -> notFound(localId));
         Long workingSetId = target.workingSetId();
         workingSets.findById(workingSetId)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(workingSetId)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(workingSetId)));
         RequirementDetail source = query.find(target.sourceLocalId())
                 .orElseThrow(() -> notFound(target.sourceLocalId()));
         if (source.deleted()) {
-            throw DomainException.withMessage(FailureReason.DELETED, Long.toString(source.localId()));
+            throw new DomainException(FailureReason.DELETED, Long.toString(source.localId()));
         }
         if (!target.sourceRevision().equals(source.revision())) {
-            throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
+            throw new DomainException(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
         }
         return inheritedDetail(LightTrackerItemSummary.from(target), source);
     }

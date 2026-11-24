@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue;
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
+
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 
 /**
  * 属性值契约：全部属性种类（14 族）的携带值对象统一实现本接口。

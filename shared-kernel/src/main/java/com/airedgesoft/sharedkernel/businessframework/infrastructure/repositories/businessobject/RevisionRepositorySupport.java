@@ -1,12 +1,35 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
+
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import com.airedgesoft.lib.id.Ids;
-import com.airedgesoft.lib.jdbc.*;
-import com.airedgesoft.lib.jdbc.AggregateMapping.*;
+import com.airedgesoft.lib.jdbc.AggregateMapping;
+import com.airedgesoft.lib.jdbc.AggregateRows;
+import com.airedgesoft.lib.jdbc.AggregateMapping.Create;
+import com.airedgesoft.lib.jdbc.AggregateMapping.Row;
+import com.airedgesoft.lib.jdbc.AggregateMapping.Plan;
+import com.airedgesoft.lib.jdbc.AggregateMapping.Projection;
+import com.airedgesoft.lib.jdbc.AggregateMapping.TableMapping;
+import com.airedgesoft.lib.jdbc.JdbcAggregateStore;
 import com.airedgesoft.lib.jdbc.JdbcWritePlan.Value;
+import com.airedgesoft.lib.jdbc.JdbcWritePlanner;
 import com.airedgesoft.lib.jdbc.JdbcWritePlanner.Changes;
+import com.airedgesoft.lib.jdbc.StoredRow;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.BusinessObject;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.ClassificationFacts;
@@ -15,13 +38,6 @@ import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revi
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionItem;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionNumber;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.Revisionable;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 /**
  * 多版次对象的写侧仓储支撑（v3 共表「指针版次」模型）：在 {@link BusinessObjectRepositorySupport} 的根级骨架上，

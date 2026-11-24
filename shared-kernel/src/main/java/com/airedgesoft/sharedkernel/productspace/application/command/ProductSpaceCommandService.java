@@ -44,7 +44,7 @@ public class ProductSpaceCommandService {
     @Transactional
     public void delete(String id) {
         ProductSpace space = spaces.findByIdForDeletion(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, id));
+                .orElseThrow(() -> new DomainException(BindingResCode.PRODUCT_SPACE_NOT_FOUND, id));
         requireEmpty(space);
         ProductSpaceDeleted deleted = space.delete();
         spaces.save(space);
@@ -53,14 +53,14 @@ public class ProductSpaceCommandService {
 
     private void requireEmpty(ProductSpace space) {
         if (queries.hasWorkingSetBinding(space.id())) {
-            throw DomainException.withMessage(BindingResCode.SPACE_STILL_BOUND, space.id());
+            throw new DomainException(BindingResCode.SPACE_STILL_BOUND, space.id());
         }
         if (spaces.hasBusinessReferences(space)
                 || trackerQueries.findTrackerIdsInSpace(space.id()).stream().anyMatch(itemQueries::existsInTracker)) {
-            throw DomainException.withMessage(BindingResCode.SPACE_HAS_BUSINESS_REFERENCES, space.id());
+            throw new DomainException(BindingResCode.SPACE_HAS_BUSINESS_REFERENCES, space.id());
         }
         if (trackerQueries.hasActiveTrackersInSpace(space.id()) || trackerQueries.hasExternalTrackerReferences(space.id())) {
-            throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, space.id());
+            throw new DomainException(BindingResCode.SPACE_STILL_HAS_TRACKERS, space.id());
         }
     }
 

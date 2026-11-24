@@ -54,7 +54,7 @@ public class WorkingSetCreationService {
     private final TrackerQueryProvider trackerQueries;
 
     private static DomainException notFound(String id) {
-        return DomainException.withMessage(FailureReason.NOT_FOUND, "Creation task not found: " + id);
+        return new DomainException(FailureReason.NOT_FOUND, "Creation task not found: " + id);
     }
 
     private static boolean hasClassificationBinding(WorkingSet target, long spaceId, long classificationId) {
@@ -64,7 +64,7 @@ public class WorkingSetCreationService {
 
     private static void validateBaselines(Collection<Long> trackerIds, Map<Long, Long> overrides, long acceptedAt) {
         if (!trackerIds.containsAll(overrides.keySet()) || overrides.values().stream().anyMatch(time -> time > acceptedAt)) {
-            throw DomainException.withMessage(WorkingsetResultCode.BAD_REQUEST,
+            throw new DomainException(WorkingsetResultCode.BAD_REQUEST,
                     "Baseline time must reference a selected Tracker and cannot be in the future");
         }
     }
@@ -103,7 +103,7 @@ public class WorkingSetCreationService {
             return replayCreate(previous.orElseThrow(), request);
         }
         if (workingSets.findByIdForCreation(target).isPresent()) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, Long.toString(target));
+            throw new DomainException(BindingResCode.WORKING_SET_ALREADY_EXISTS, Long.toString(target));
         }
         // 准备中的父工作集拒绝受理；不存在的父工作集由创建阶段记录为任务失败。
         workingSets.findById(Long.valueOf(request.parentWorkingSetId()));
@@ -138,10 +138,10 @@ public class WorkingSetCreationService {
             if (active.get().request().requestId().equals(requestId)) {
                 return replayExtension(active.get(), target, submittedIds, baselineOverrides);
             }
-            throw DomainException.withMessage(FailureReason.PREPARING, Long.toString(target));
+            throw new DomainException(FailureReason.PREPARING, Long.toString(target));
         }
         WorkingSet targetSet = workingSets.findById(target)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(target)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(target)));
         Long parentId = targetSet.requireParentId();
         long acceptedAt = workingSetCreationRepository.acceptanceTime();
         validateBaselines(submittedIds, baselineOverrides, acceptedAt);
@@ -168,7 +168,7 @@ public class WorkingSetCreationService {
             if (source != null) spaces.add(source.productSpaceId().toString());
         }
         if (shared.isEmpty() && unshared.isEmpty() && spaces.isEmpty()) {
-            throw DomainException.withMessage(BindingResCode.NO_DERIVABLE_TRACKER, Long.toString(target));
+            throw new DomainException(BindingResCode.NO_DERIVABLE_TRACKER, Long.toString(target));
         }
         WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId, target, requestId,
                 spaces.stream().map(Long::valueOf).toList(), shared, unshared, targetSet.name(), Mode.EXTEND,
@@ -182,7 +182,7 @@ public class WorkingSetCreationService {
         }
         // 冲突插入已等待获胜事务提交，重新读取该请求键以区分重放与目标正在扩展。
         return replayExtension(workingSetCreationRepository.findByRequest(requestId)
-                        .orElseThrow(() -> DomainException.withMessage(FailureReason.PREPARING, Long.toString(target))),
+                        .orElseThrow(() -> new DomainException(FailureReason.PREPARING, Long.toString(target))),
                 target, submittedIds, baselineOverrides);
     }
 
@@ -224,7 +224,7 @@ public class WorkingSetCreationService {
                 || !explicit(saved.numericUnsharedTrackerIds(), saved).equals(requested.numericUnsharedTrackerIds())
                 || !Objects.equals(saved.name(), requested.name()) || !Objects.equals(saved.color(), requested.color())
                 || !saved.baselineOverrides().equals(requested.baselineOverrides())) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, requested.newWorkingSetId());
+            throw new DomainException(BindingResCode.WORKING_SET_ALREADY_EXISTS, requested.newWorkingSetId());
         }
         return existing;
     }
@@ -234,7 +234,7 @@ public class WorkingSetCreationService {
         Request saved = existing.request();
         if (saved.mode() != Mode.EXTEND || !saved.numericTargetWorkingSetId().equals(target)
                 || !saved.submittedExtensionTrackerIds().equals(submittedIds) || !saved.baselineOverrides().equals(overrides)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_ALREADY_EXISTS, Long.toString(target));
+            throw new DomainException(BindingResCode.WORKING_SET_ALREADY_EXISTS, Long.toString(target));
         }
         return existing;
     }
@@ -252,7 +252,7 @@ public class WorkingSetCreationService {
     public WorkingSet findTarget(String id) {
         WorkingSetCreation creation = find(id);
         return workingSets.findByIdForCreation(Long.valueOf(creation.request().newWorkingSetId()))
-                .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND,
+                .orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND,
                         "Working set is not created yet: " + creation.request().newWorkingSetId()));
     }
 

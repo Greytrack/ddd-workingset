@@ -56,7 +56,7 @@ public class MergeExecutionService {
     private static TrackerPair trackerPair(List<EntryRequest> decisions) {
         Difference evidence = decisions.getFirst().evidence();
         if (evidence == null) {
-            throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "evidence is required");
+            throw new DomainException(MergeResCode.INVALID_DECISION, "evidence is required");
         }
         TrackerPair pair = evidence.trackers();
         if (decisions.stream().anyMatch(request -> request.evidence() == null
@@ -68,7 +68,7 @@ public class MergeExecutionService {
 
     private static MergeRound matching(MergeRound round, Long source, Long target) {
         if (!round.source().equals(source) || !round.target().equals(target)) {
-            throw DomainException.withMessage(MergeResCode.CONFLICT, "requestId is already used by another merge round");
+            throw new DomainException(MergeResCode.CONFLICT, "requestId is already used by another merge round");
         }
         return round;
     }
@@ -93,7 +93,7 @@ public class MergeExecutionService {
             if (decision == FieldAction.ACCEPT) {
                 Object value = entry.evidence().source().fields().get(path);
                 if (value == null) {
-                    throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, path);
+                    throw new DomainException(FailureReason.HISTORY_UNAVAILABLE, path);
                 }
                 accepted.put(path, value);
             }
@@ -131,14 +131,14 @@ public class MergeExecutionService {
         MergeRound winner = mergeRepository.claim(prepared)
                 ? prepared
                 : mergeRepository.findByRequestId(requestId)
-                .orElseThrow(() -> DomainException.withMessage(MergeResCode.CONFLICT, requestId));
+                .orElseThrow(() -> new DomainException(MergeResCode.CONFLICT, requestId));
         if (!winner.id().equals(prepared.id())) {
             return matching(winner, source, target);
         }
         try {
             registerDecisions(prepared, decisions);
         } catch (DataIntegrityViolationException conflict) {
-            throw DomainException.withMessage(MergeResCode.PAIR_MERGE_IN_PROGRESS, Long.toString(pair.source()) + "/" + Long.toString(pair.target()));
+            throw new DomainException(MergeResCode.PAIR_MERGE_IN_PROGRESS, Long.toString(pair.source()) + "/" + Long.toString(pair.target()));
         }
         events.publishEvent(new MergeRoundSubmittedEvent(prepared.id()));
         return round(prepared.id());
@@ -153,22 +153,22 @@ public class MergeExecutionService {
         for (EntryRequest request : requests) {
             Difference frozen = request.evidence();
             if (frozen == null) {
-                throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "evidence is required");
+                throw new DomainException(MergeResCode.INVALID_DECISION, "evidence is required");
             }
             Comparison.TrackerPair pair = frozen.trackers();
             if (!pair.sourceWorkingSetId().equals(round.source())
                     || !pair.targetWorkingSetId().equals(round.target())) {
-                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
+                throw new DomainException(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
             }
             if (!candidates.contains(pair)) {
-                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
+                throw new DomainException(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
             }
             Difference current = evidence.current(frozen);
             if (!frozen.source().equals(current.source()) || !frozen.target().equals(current.target())) {
-                throw DomainException.withMessage(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
+                throw new DomainException(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));
             }
             if (request.decision() == null) {
-                throw DomainException.withMessage(MergeResCode.INVALID_DECISION, "decision is required");
+                throw new DomainException(MergeResCode.INVALID_DECISION, "decision is required");
             }
             request.decision().validate(frozen);
             updated = updated.register(new Entry(Long.toString(Ids.nextId()),
@@ -193,7 +193,7 @@ public class MergeExecutionService {
             return transaction.execute(status -> dispatch(id));
         } catch (DataAccessException | TransactionException failure) {
             log.error("Merge round {} could not dispatch apply requests", id, failure);
-            throw DomainException.withMessage(FailureReason.UNKNOWN, "execution progress unavailable: " + id);
+            throw new DomainException(FailureReason.UNKNOWN, "execution progress unavailable: " + id);
         }
     }
 
@@ -272,14 +272,14 @@ public class MergeExecutionService {
             return transaction.execute(status -> resolve(event));
         } catch (DataAccessException | TransactionException failure) {
             log.error("Merge round {} could not record entry {}", event.roundId(), event.entryId(), failure);
-            throw DomainException.withMessage(FailureReason.UNKNOWN, "execution result unavailable: " + event.entryId());
+            throw new DomainException(FailureReason.UNKNOWN, "execution result unavailable: " + event.entryId());
         }
     }
 
     private MergeRound.ApplyResult resolve(MergeEntryResolvedEvent event) {
         MergeRound round = round(event.roundId());
         Entry entry = round.entries().stream().filter(candidate -> candidate.id().equals(event.entryId()))
-                .findFirst().orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, event.entryId()));
+                .findFirst().orElseThrow(() -> new DomainException(MergeResCode.ROUND_NOT_FOUND, event.entryId()));
         if (entry.result() != null) {
             return round.result();
         }
@@ -319,7 +319,7 @@ public class MergeExecutionService {
     }
 
     private MergeRound round(String id) {
-        return mergeRepository.findById(id).orElseThrow(() -> DomainException.withMessage(MergeResCode.ROUND_NOT_FOUND, id));
+        return mergeRepository.findById(id).orElseThrow(() -> new DomainException(MergeResCode.ROUND_NOT_FOUND, id));
     }
 
     /**

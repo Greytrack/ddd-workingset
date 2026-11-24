@@ -21,6 +21,7 @@ import com.airedgesoft.plm.tools.infrastructure.utils.ObjectUtil;
 import com.airedgesoft.plm.tools.infrastructure.utils.RichTextContentUtil;
 import com.airedgesoft.plm.tools.infrastructure.utils.SpringContextUtils;
 import com.airedgesoft.plm.tools.infrastructure.utils.StringUtils;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.YesOrNoListEnum;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.AttributeValue;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.ImageItem;
@@ -40,7 +41,7 @@ import java.util.stream.Collectors;
  * {@code Object} 换为已解析的类型化字段，不再 {@code toString()} 再解析。
  */
 @Slf4j
-final class AttributeValidationSupport {
+final class AttributeValidationSupport implements IAttributeValidationSupport{
 
     /** 图片格式字典列表 id（air_sys_list_obj.id=10017，v3 硬编码口径）。 */
     private static final Long PICTURE_FORMAT_LIST_ID = 10017L;

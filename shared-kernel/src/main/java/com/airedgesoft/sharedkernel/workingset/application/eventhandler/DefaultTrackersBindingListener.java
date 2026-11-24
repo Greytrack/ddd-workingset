@@ -34,7 +34,7 @@ public class DefaultTrackersBindingListener {
             return;
         }
         WorkingSet workingSet = workingSets.findById(WorkingSet.DEFAULT_ID)
-                .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
+                .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "default working set disappeared"));
         if (!workingSet.hasSpaceBinding(spaceId)) {
             workingSet.bindSpace(space, WorkingSet.SpaceOrigin.RELATION);
@@ -44,7 +44,7 @@ public class DefaultTrackersBindingListener {
                 continue;
             }
             Tracker tracker = trackers.findById(trackerId)
-                    .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
+                    .orElseThrow(() -> new DomainException(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                             "tracker disappeared: " + Long.toString(trackerId)));
             workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.sharingMode());
         }

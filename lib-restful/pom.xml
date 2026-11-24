@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.airedgesoft</groupId>
+        <artifactId>ddd-workingset</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>lib-restful</artifactId>
+    <name>lib-restful</name>
+    <description>RESTful support toolkit for v4 BCs (idempotency, cursor paging, ETag, RFC 9457 problem details) — directory: lib-restful</description>
+    <dependencies>
+        <!-- 领域异常类型（幂等冲突 409/422 语义） -->
+        <dependency>
+            <groupId>com.airedgesoft</groupId>
+            <artifactId>lib-exception</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!-- 全域 ID 生成 SSOT（LRO operationId 与资源 ID 同源短雪花） -->
+        <dependency>
+            <groupId>com.airedgesoft</groupId>
+            <artifactId>lib-id</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.airedgesoft</groupId>
+            <artifactId>lib-jdbc</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!-- 自动装配（@AutoConfiguration + imports 机制；不依赖 BC 的 scanBasePackages） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <!-- RFC 9457 ProblemDetail（org.springframework.http） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <!-- HandlerInterceptor（Sunset 响应头）/ WebMvcConfigurer / @RestController 通用轮询端点（LRO） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+        </dependency>
+        <!-- @DryRun 事务回滚（TransactionAspectSupport）与事务状态探测 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+        <!-- Outbox 本地消息表 JDBC 实现（JdbcTemplate；版本由 spring-boot-dependencies BOM 管理） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
+        <!-- AES-GCM 加密游标 / Redis 幂等响应体序列化（版本由 lib-deps BOM 管理） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- MyBatis-Plus 软删除 InnerInterceptor（provided：仅读模型侧宿主具备 MyBatis-Plus 时激活，不传染） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-extension</artifactId>
+            <version>3.5.8</version>
+        </dependency>
+        <!-- Redisson 幂等存储（provided：宿主有 Redisson 时自动激活；本地 workshop 无 Redis 回退内存） -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 受控 JDBC 写入机制生命周期监听（provided：宿主引入 lib-jdbc 时激活 ETag 自动桥接） -->
+        <!-- Spring Data JDBC 实体生命周期回调（provided：宿主使用 Spring Data JDBC 写模型时激活并发代数自动观测） -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-jdbc</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <!-- @Aspect 切面（@Idempotent AOP 接入；版本由 lib-deps BOM 管理） -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+        <!-- 执行器 / 派发器诊断日志：只依赖 SLF4J API（绑定实现由应用提供） -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <!-- springdoc 定制器编译期依赖（provided：运行时由宿主 knife4j/springdoc 提供，不传染） -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <version>4.5.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-mapstruct-binding</artifactId>
+            <version>0.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- 断言匹配器（MockMvc jsonPath / content 断言；v4 adapters 契约测试用） -->
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <version>2.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit-pioneer</groupId>
+            <artifactId>junit-pioneer</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.5.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>4.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.5.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.38</version>
+        </dependency>
+        <!-- 读取 Idempotency-Key 请求头（由宿主 Web 容器提供，Spring Boot BOM 管版本） -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 单测断言（junit 由 airedge-backend 父 POM 全局提供） -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 单测内存库：OutboxStore JDBC 实现与 schema 片段真实验证 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 单测 HTTP 请求上下文：MockHttpServletRequest 真实承载 request attribute（EtagContext 请求级状态） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

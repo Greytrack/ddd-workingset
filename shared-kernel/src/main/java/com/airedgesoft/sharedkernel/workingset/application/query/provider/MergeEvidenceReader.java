@@ -42,7 +42,7 @@ public class MergeEvidenceReader {
     private static void putFamily(Map<Long, Long> families, Long family, Long id) {
         Long previous = families.putIfAbsent(family, id);
         if (previous != null && !previous.equals(id)) {
-            throw DomainException.withMessage(MergeResCode.CONFLICT, "multiple variants in family " + Long.toString(family));
+            throw new DomainException(MergeResCode.CONFLICT, "multiple variants in family " + Long.toString(family));
         }
     }
 
@@ -158,6 +158,6 @@ public class MergeEvidenceReader {
     }
 
     private WorkingSet workingSet(Long id) {
-        return workingSets.findById(id).orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(id)));
+        return workingSets.findById(id).orElseThrow(() -> new DomainException(FailureReason.NOT_FOUND, Long.toString(id)));
     }
 }

@@ -35,13 +35,13 @@ public class WorkingSetDeletionService {
     public void deleteWorkingSet(Long id) {
         WorkingSet.requireDeletable(id);
         WorkingSet workingSet = workingSets.findByIdForUpdate(id)
-                .orElseThrow(() -> DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
+                .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
         assertNoChildren(id);
         if (queries.hasBindings(id)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_STILL_BOUND, Long.toString(id));
+            throw new DomainException(BindingResCode.WORKING_SET_STILL_BOUND, Long.toString(id));
         }
         if (trackerQueries.hasOwnedTrackers(id)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_TRACKERS, Long.toString(id));
+            throw new DomainException(BindingResCode.WORKING_SET_HAS_TRACKERS, Long.toString(id));
         }
         WorkingSetDeleted deletedEvent = workingSet.delete(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(workingSet);
@@ -51,7 +51,7 @@ public class WorkingSetDeletionService {
     private void assertNoChildren(Long id) {
         List<String> children = queries.findActiveChildren(id).stream().map(Object::toString).toList();
         if (!children.isEmpty()) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_CHILDREN, Long.toString(id), Map.of("childWorkingSetIds", children));
+            throw new DomainException(BindingResCode.WORKING_SET_HAS_CHILDREN, Long.toString(id), Map.of("childWorkingSetIds", children));
         }
     }
 }

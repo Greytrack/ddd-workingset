@@ -82,7 +82,7 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     private static long requireActor(Long actor, Tracker tracker) {
         if (actor == null) {
-            throw DomainException.withMessage(WorkingsetResultCode.APPLICATION_DENIED,
+            throw new DomainException(WorkingsetResultCode.APPLICATION_DENIED,
                     "Tracker write requires an actor: " + Long.toString(tracker.trackerId()));
         }
         return actor;

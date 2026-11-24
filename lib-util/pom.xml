@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.airedgesoft</groupId>
+        <artifactId>ddd-workingset</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>lib-util</artifactId>
+    <name>lib-util</name>
+    <description>通用工具库（JSON / 字符串 / 时间等基础设施工具）— directory: lib-util</description>
+
+    <dependencies>
+        <!-- 审计例外：JsonUtil 复用 v3 infrastructure-tools 的
+             com.airedgesoft.plm.tools.infrastructure.core.constant.AirEdgeConstants、
+             utils.support.AirEdgeJavaTimeModule、utils.Exceptions / DateUtil。
+             与 lib-exception 依赖 AirAPI / infrastructure-tools 同口径：迁移期直接复用 v3 工具类，
+             待 v4 落地自建同类常量/时间模块后应改为本地实现并移除此依赖。
+             版本由 lib-deps BOM 管理（backend 先于 v4 构建 install）。 -->
+        <!-- jodd.util.StringPool / StringUtil（JsonUtil 使用；本仓库 root pom 未 import lib-deps BOM，故此处显式钉版本） -->
+        <dependency>
+            <groupId>org.jodd</groupId>
+            <artifactId>jodd-core</artifactId>
+            <version>${jodd.version}</version>
+        </dependency>
+        <!-- ObjectMapper / JsonNode / SerializationFeature（版本由 lib-deps BOM 管理） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- JsonParser / JsonReadFeature / TypeReference / JsonProcessingException -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+      <!-- jackson 2.x -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+      </dependency>
+        <!-- com.google.common.collect.Lists（版本由 lib-deps BOM 管理） -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <!-- @Getter / @Slf4j：公共库编译期注解处理器，不传递给消费方 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- @Slf4j 生成的 LoggerFactory / Logger（公共库只依赖 SLF4J API，绑定实现由应用提供） -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <!-- org.springframework.util.StringUtils / ObjectUtils / lang.Nullable（版本由 spring-boot-dependencies BOM 管理） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+        </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jsr310</artifactId>
+      </dependency>
+    </dependencies>
+
+</project>

@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue;
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
+
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 
 /**
  * 值对象：单选列表（纯类型化字段，权威为 {@link #itemKey}）。

@@ -67,7 +67,7 @@ public final class WorkingSet {
             throw new IllegalArgumentException("Working set IDs must be positive");
         }
         if (id.equals(parentWorkingSetId)) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
+            throw new DomainException(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
         }
         if (DEFAULT_ID.equals(id) != (parentWorkingSetId == null)) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "only the default Working Set has no parent");
@@ -128,7 +128,7 @@ public final class WorkingSet {
 
     public static void requireDeletable(Long id) {
         if (DEFAULT_ID.equals(id)) {
-            throw DomainException.withMessage(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, Long.toString(id));
+            throw new DomainException(BindingResCode.DEFAULT_WORKING_SET_UNDELETABLE, Long.toString(id));
         }
     }
 
@@ -138,7 +138,7 @@ public final class WorkingSet {
     public WorkingSetDeleted delete(String actor) {
         requireDeletable(id);
         if (deleted) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
+            throw new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id));
         }
         audit(actor);
         deleted = true;
@@ -237,7 +237,7 @@ public final class WorkingSet {
     public void setTrackerShown(long spaceId, Long trackerId, boolean shown) {
         TrackerBinding binding = trackerBinding(trackerId);
         if (binding.numericProductSpaceId() != spaceId) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
+            throw new DomainException(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
         }
         trackers.put(trackerId, new TrackerBinding(id, trackerId, binding.numericProductSpaceId(),
                 binding.numericClassificationId(), binding.sharingMode(), binding.origin(), shown));
@@ -250,7 +250,7 @@ public final class WorkingSet {
     public SpaceBinding bindSpace(ProductSpace space, SpaceOrigin origin) {
         WorkingSet.SpaceBinding binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
         if (spaces.putIfAbsent(space.id(), binding) != null) {
-            throw DomainException.withMessage(BindingResCode.ALREADY_BOUND, space.id());
+            throw new DomainException(BindingResCode.ALREADY_BOUND, space.id());
         }
         return binding;
     }
@@ -258,7 +258,7 @@ public final class WorkingSet {
     public TrackerBinding trackerBinding(Long trackerId) {
         WorkingSet.TrackerBinding binding = trackers.get(trackerId);
         if (binding == null) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
+            throw new DomainException(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
         }
         return binding;
     }
@@ -270,16 +270,16 @@ public final class WorkingSet {
 
     public void removeSpace(String spaceId) {
         if (trackers.values().stream().anyMatch(binding -> binding.productSpaceId().equals(spaceId))) {
-            throw DomainException.withMessage(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);
+            throw new DomainException(BindingResCode.SPACE_STILL_HAS_TRACKERS, spaceId);
         }
         if (spaces.remove(spaceId) == null) {
-            throw DomainException.withMessage(BindingResCode.SPACE_BINDING_NOT_FOUND, spaceId);
+            throw new DomainException(BindingResCode.SPACE_BINDING_NOT_FOUND, spaceId);
         }
     }
 
     public Long requireParentId() {
         if (parentWorkingSetId == null) {
-            throw DomainException.withMessage(BindingResCode.WORKING_SET_NOT_WRITABLE, "default Working Set cannot bind upstream Trackers");
+            throw new DomainException(BindingResCode.WORKING_SET_NOT_WRITABLE, "default Working Set cannot bind upstream Trackers");
         }
         return parentWorkingSetId;
     }
@@ -294,7 +294,7 @@ public final class WorkingSet {
 
     public void requireSpaceBinding(String spaceId) {
         if (!hasSpaceBinding(spaceId)) {
-            throw DomainException.withMessage(BindingResCode.MISSING_SPACE_BINDING, spaceId);
+            throw new DomainException(BindingResCode.MISSING_SPACE_BINDING, spaceId);
         }
     }
 
@@ -304,7 +304,7 @@ public final class WorkingSet {
         // 默认根的原生 Tracker 直接来自平台投影。子工作集的有效范围由绑定定义。
         boolean inParentRange = DEFAULT_ID.equals(parentId) ? ownedByParent : boundInParent;
         if (!inParentRange || (source.sharingMode() == SharingMode.UNSHARED && !ownedByParent)) {
-            throw DomainException.withMessage(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(source.trackerId()));
+            throw new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, Long.toString(source.trackerId()));
         }
     }
 
@@ -312,10 +312,10 @@ public final class WorkingSet {
         requireSpaceBinding(tracker.productSpaceId().toString());
         if (!tracker.classificationId().equals(classification.id())
                 || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
-            throw DomainException.withMessage(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
         }
         if (trackers.containsKey(tracker.trackerId())) {
-            throw DomainException.withMessage(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
+            throw new DomainException(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
         }
         WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
         WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.numericId(),

@@ -66,7 +66,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
                 WHERE id = ?
                 """, encode(round), trackers[0], trackers[1], round.numericId());
         if (affected != 1) {
-            throw DomainException.withMessage(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
+            throw new DomainException(SharedKernelResultCode.PERSISTENCE_STATE_INVALID,
                     "Could not update merge round " + round.id());
         }
         saveConfirmations(round);
@@ -117,7 +117,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
                 "IGNORED".equals(entry.result().operation()) ? "IGNORED" : "ACCEPTED",
                 round.caller(), round.caller(), round.caller());
         if (inserted != 1) {
-            throw DomainException.withMessage(MergeResCode.CONFLICT, "checkpoint ID belongs to another confirmation");
+            throw new DomainException(MergeResCode.CONFLICT, "checkpoint ID belongs to another confirmation");
         }
     }
 

@@ -116,7 +116,6 @@ final class ReferenceMapper {
     /**
      * v3 页签版次可见性位图：在 {@code revision} 位翻 '1'（对齐 {@code RevisionAction.setRevisionFlag}）。
      *
-     * @param revision
      *            版次号（0 位=首版前共享位）
      * @return 全 0 位图（由仓储再翻位）
      */

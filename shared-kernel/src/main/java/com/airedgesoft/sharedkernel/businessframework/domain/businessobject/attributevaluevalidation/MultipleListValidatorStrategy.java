@@ -1,6 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevaluevalidation;
 
-import com.airedgesoft.plm.common.enums.list.AttributeTypeEnum;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.AttributeValue;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.MultipleListValue;
