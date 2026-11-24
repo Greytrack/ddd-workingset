@@ -13,6 +13,11 @@ public interface TrackerRepository {
 
     Optional<Tracker> findById(Long id);
 
+    /**
+     * 指定 Tracker ID 时直接按 ID 查询。未指定时按工作集、产品空间和子分类查询默认 Tracker。
+     */
+    Optional<Tracker> findTracker(Long workingsetId, Long workSpace, Long subClassId, Long trackerId);
+
     Optional<Tracker> lockTracker(Long id);
 
     Optional<Tracker> findDerivedTracker(Long target, Long source);
