@@ -12,8 +12,8 @@ import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.WorkingSetQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.Failure;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.Request;
@@ -219,9 +219,9 @@ public class WorkingSetCommandService {
             }
             Tracker tracker = mode == SharingMode.SHARED ? source : trackers.findDerivedTracker(target.id(), id)
                     .orElseThrow(() -> new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, sourceId));
-            Classification classification = classifications.requireClassification(tracker.classificationId());
-            if (tracker.sharingMode() != mode || !classification.allows(mode)) {
-                throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
+            ClassSnapshot classification = classifications.requireClassification(tracker.classificationId());
+            if (tracker.sharingMode() != mode || !mode.isAllowedBy(classification)) {
+                throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.getId().toString());
             }
             scope.add(new TrackerToBind(tracker, classification));
         } catch (DomainException failure) {
@@ -278,7 +278,7 @@ public class WorkingSetCommandService {
     record BindingResult(boolean changed, List<Failure> failures) {
     }
 
-    private record TrackerToBind(Tracker tracker, Classification classification) {
+    private record TrackerToBind(Tracker tracker, ClassSnapshot classification) {
     }
 
 }

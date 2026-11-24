@@ -2,8 +2,8 @@ package com.airedgesoft.sharedkernel.tracker.domain;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
@@ -40,40 +40,40 @@ public final class Tracker {
     private boolean deleted;
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
-                   Long productSpaceId, Classification classification, SharingMode sharingMode,
+                   Long productSpaceId, ClassSnapshot classification, SharingMode sharingMode,
                    Long parentId, boolean isDefault) {
         this(trackerId, trackerId, name, sourceId, workingSetId, productSpaceId,
                 classification, sharingMode, parentId, isDefault);
     }
 
     public Tracker(Long trackerId, String name, Long sourceId, Long workingSetId,
-                   Long productSpaceId, Classification classification, SharingMode sharingMode,
+                   Long productSpaceId, ClassSnapshot classification, SharingMode sharingMode,
                    Long parentId, boolean isDefault, Long actor) {
         this(trackerId, trackerId, name, sourceId, workingSetId, productSpaceId,
                 classification, sharingMode, parentId, isDefault, true, actor, actor);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long productSpaceId, Classification classification,
+                    Long workingSetId, Long productSpaceId, ClassSnapshot classification,
                     SharingMode sharingMode, Long parentId, boolean isDefault) {
         this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
                 classification, sharingMode, parentId, isDefault, true);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long productSpaceId, Classification classification,
+                    Long workingSetId, Long productSpaceId, ClassSnapshot classification,
                     SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate) {
         this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
-                classification.numericId(), classification.baseClassId(), classification.classId(),
+                classification.getId(), classification.getBaseClassId(), classification.getClassId(),
                 sharingMode, parentId, isDefault, newAggregate, null, null);
     }
 
     private Tracker(Long trackerId, Long commonId, String name, Long sourceId,
-                    Long workingSetId, Long productSpaceId, Classification classification,
+                    Long workingSetId, Long productSpaceId, ClassSnapshot classification,
                     SharingMode sharingMode, Long parentId, boolean isDefault, boolean newAggregate,
                     Long createdBy, Long updatedBy) {
         this(trackerId, commonId, name, sourceId, workingSetId, productSpaceId,
-                classification.numericId(), classification.baseClassId(), classification.classId(),
+                classification.getId(), classification.getBaseClassId(), classification.getClassId(),
                 sharingMode, parentId, isDefault, newAggregate, createdBy, updatedBy);
     }
 
@@ -134,34 +134,34 @@ public final class Tracker {
     /**
      * 业务原生 Tracker 只能创建在默认工作集；子工作集没有等价的创建入口。
      */
-    public static Tracker original(Long id, ProductSpace space, Classification classification, Long parentId) {
+    public static Tracker original(Long id, ProductSpace space, ClassSnapshot classification, Long parentId) {
         return original(id, space, classification, parentId, false);
     }
 
     /**
      * 业务原生 Tracker 只能创建在默认工作集；isDefault 仅对默认工作集内的槽位有意义。
      */
-    public static Tracker original(Long id, ProductSpace space, Classification classification, Long parentId,
+    public static Tracker original(Long id, ProductSpace space, ClassSnapshot classification, Long parentId,
                                    boolean isDefault) {
         return original(id, space, classification, parentId, isDefault, null);
     }
 
-    public static Tracker original(Long id, ProductSpace space, Classification classification, Long parentId,
+    public static Tracker original(Long id, ProductSpace space, ClassSnapshot classification, Long parentId,
                                    boolean isDefault, Long actor) {
-        return new Tracker(id, id, isDefault ? classification.name() : null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
-                classification.sharingMode(), parentId, isDefault, true, actor, actor);
+        return new Tracker(id, id, isDefault ? classification.getName() : null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
+                SharingMode.from(classification), parentId, isDefault, true, actor, actor);
     }
 
-    public static Tracker original(Long id, String name, ProductSpace space, Classification classification,
+    public static Tracker original(Long id, String name, ProductSpace space, ClassSnapshot classification,
                                    SharingMode sharingMode) {
         return original(id, name, space, classification, sharingMode, null);
     }
 
-    public static Tracker original(Long id, String name, ProductSpace space, Classification classification,
+    public static Tracker original(Long id, String name, ProductSpace space, ClassSnapshot classification,
                                    SharingMode sharingMode, Long actor) {
         String normalizedName = normalizeName(name);
-        if (!classification.allows(sharingMode)) {
-            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
+        if (!sharingMode.isAllowedBy(classification)) {
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.getId().toString());
         }
         return new Tracker(id, id, normalizedName, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
                 sharingMode, null, false, true, actor, actor);

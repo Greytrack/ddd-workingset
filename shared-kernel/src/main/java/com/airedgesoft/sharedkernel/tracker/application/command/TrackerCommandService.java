@@ -11,8 +11,8 @@ import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerCreatedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
@@ -47,7 +47,7 @@ public class TrackerCommandService {
         if (!WorkingSet.DEFAULT_ID.equals(id)) {
             throw new DomainException(BindingResCode.WORKING_SET_NOT_WRITABLE, "只允许在默认工作集新建跟踪分类");
         }
-        Classification classification = classifications.requireClassification(classificationId);
+        ClassSnapshot classification = classifications.requireClassification(classificationId);
         WorkingSet workingSet = workingSetRepository.findById(id)
                 .orElseThrow(() -> new DomainException(BindingResCode.WORKING_SET_NOT_EXISTS, Long.toString(id)));
         ProductSpace space = productSpaceRepository.findById(spaceId)
@@ -56,7 +56,7 @@ public class TrackerCommandService {
                 classification, sharingMode, AuthorizationScope.currentUserId());
         trackerRepository.save(tracker);
         events.publishEvent(new TrackerCreatedEvent(
-                tracker.trackerId(), workingSet.id(), space.id(), classification.id(), sharingMode));
+                tracker.trackerId(), workingSet.id(), space.id(), classification.getId().toString(), sharingMode));
         return tracker;
     }
 

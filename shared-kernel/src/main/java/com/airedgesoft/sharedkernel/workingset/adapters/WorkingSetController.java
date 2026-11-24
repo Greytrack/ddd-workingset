@@ -5,7 +5,7 @@ import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCom
 import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetDeletionService;
 import com.airedgesoft.sharedkernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharedkernel.workingset.application.query.model.*;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;

@@ -9,7 +9,7 @@ import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -48,8 +48,8 @@ public class DefaultTrackerInitCommandService {
         TransactionTemplate trackerTransaction = new TransactionTemplate(transactionManager);
         trackerTransaction.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
         List<Long> provisioned = new ArrayList<>();
-        for (Classification classification : classifications.findClassifications()) {
-            if (INSTANCE_CLASSIFICATIONS.contains(classification.numericId())) {
+        for (ClassSnapshot classification : classifications.findClassifications()) {
+            if (INSTANCE_CLASSIFICATIONS.contains(classification.getId())) {
                 continue;
             }
             Long trackerId = trackerTransaction.execute(status -> provisionDefault(spaceId, classification));
@@ -63,18 +63,18 @@ public class DefaultTrackerInitCommandService {
         return trackerIds;
     }
 
-    private Long provisionDefault(String spaceId, Classification classification) {
+    private Long provisionDefault(String spaceId, ClassSnapshot classification) {
         // 与空间删除竞争同一行。删除先提交时，迟到的创建事件无需继续初始化。
         ProductSpace space = spaces.findById(spaceId).orElse(null);
         if (space == null) {
             return null;
         }
-        return trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.numericId())
+        return trackers.findDefaultTracker(WorkingSet.DEFAULT_ID, spaceId, classification.getId())
                 .map(Tracker::trackerId)
                 .orElseGet(() -> saveDefault(space, classification));
     }
 
-    private Long saveDefault(ProductSpace space, Classification classification) {
+    private Long saveDefault(ProductSpace space, ClassSnapshot classification) {
         Tracker tracker = Tracker.original(Ids.nextId(),
                 space, classification, null, true, AuthorizationScope.currentUserId());
         trackers.save(tracker);

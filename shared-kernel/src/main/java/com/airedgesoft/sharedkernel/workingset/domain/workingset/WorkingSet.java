@@ -4,8 +4,8 @@ package com.airedgesoft.sharedkernel.workingset.domain.workingset;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetDeleted;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
@@ -308,17 +308,17 @@ public final class WorkingSet {
         }
     }
 
-    public TrackerBinding bindTracker(Tracker tracker, Classification classification, SharingMode requestedMode) {
+    public TrackerBinding bindTracker(Tracker tracker, ClassSnapshot classification, SharingMode requestedMode) {
         requireSpaceBinding(tracker.productSpaceId().toString());
-        if (!tracker.classificationId().equals(classification.id())
-                || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
-            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.id());
+        if (!tracker.classificationId().equals(classification.getId().toString())
+                || tracker.sharingMode() != requestedMode || !requestedMode.isAllowedBy(classification)) {
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.getId().toString());
         }
         if (trackers.containsKey(tracker.trackerId())) {
             throw new DomainException(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
         }
         WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
-        WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.numericId(),
+        WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.getId(),
                 requestedMode, origin);
         trackers.put(binding.trackerId(), binding);
         return binding;

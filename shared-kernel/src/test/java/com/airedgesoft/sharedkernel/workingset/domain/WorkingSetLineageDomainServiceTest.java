@@ -1,10 +1,12 @@
 package com.airedgesoft.sharedkernel.workingset.domain;
 
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet.*;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetLineageDomainService;
@@ -44,7 +46,7 @@ class WorkingSetLineageDomainServiceTest {
     @Test
     void directDerivationRequiresChildSourceIdToBeTheImmediateParent() {
         ProductSpace productSpace = new ProductSpace("259944010602432");
-        Classification classification = new Classification(266673196957632L, SharingMode.UNSHARED,
+        ClassSnapshot classification = ClassSnapshot.forTracker(266673196957632L, false,
                 "测试分类", 11L, 111L);
         Tracker parent = Tracker.original(Long.valueOf("260634912653248"), productSpace, classification, null);
         Tracker child = Tracker.derived(Long.valueOf("259712159403968"), parent, childId);

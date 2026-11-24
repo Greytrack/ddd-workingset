@@ -4,7 +4,7 @@ package com.airedgesoft.sharedkernel.tracker.adapters;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.tracker.application.command.TrackerCommandService;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -5,7 +5,7 @@ import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

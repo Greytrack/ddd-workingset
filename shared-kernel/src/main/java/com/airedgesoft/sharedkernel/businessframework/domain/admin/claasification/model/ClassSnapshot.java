@@ -21,6 +21,20 @@ import java.util.*;
 @Data
 public class ClassSnapshot implements ClassificationFacts {
 
+  /** Builds the classification metadata needed by the Tracker catalog. */
+  public static ClassSnapshot forTracker(Long id, boolean shared, String name, Long baseClassId, Long classId) {
+    if (id == null || id <= 0) {
+      throw new IllegalArgumentException("classificationId must be positive");
+    }
+    ClassSnapshot snapshot = new ClassSnapshot();
+    snapshot.setId(id);
+    snapshot.setName(name);
+    snapshot.setClassId(classId);
+    snapshot.setBaseClassId(baseClassId);
+    snapshot.setShared(shared);
+    return snapshot;
+  }
+
   /**
    * 分类节点 ID
    */
@@ -154,6 +168,11 @@ public class ClassSnapshot implements ClassificationFacts {
   private Boolean enabled;
 
   /**
+   * 是否是共享数据
+   */
+  private boolean shared;
+
+  /**
    * 子项页签是否启用（v3 {@code TableSubItems} 页签 enabled）
    */
   private boolean subItemsTabEnabled;
@@ -174,6 +193,10 @@ public class ClassSnapshot implements ClassificationFacts {
 
   public String getMainWsViewTableName() {
     return mainWsViewTableName;
+  }
+
+  public boolean isShared() {
+    return shared;
   }
 
   public boolean isClass() {

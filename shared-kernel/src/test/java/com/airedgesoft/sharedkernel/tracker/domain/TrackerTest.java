@@ -2,7 +2,7 @@ package com.airedgesoft.sharedkernel.tracker.domain;
 
 
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TrackerTest {
     @Test
     void descendantsKeepFamilyIdentityAndLinkToTheirImmediateSource() {
-        Classification classification = new Classification(301L, Classification.SharingMode.UNSHARED, "分类",
+        ClassSnapshot classification = ClassSnapshot.forTracker(301L, false, "分类",
                 11L, 111L);
         Tracker root = Tracker.original(Long.valueOf(101), new ProductSpace("201"),
                 classification, null);

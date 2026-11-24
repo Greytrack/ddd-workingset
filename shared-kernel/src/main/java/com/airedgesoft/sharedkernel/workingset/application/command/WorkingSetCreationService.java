@@ -8,7 +8,7 @@ import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetCreationSubmittedEvent;

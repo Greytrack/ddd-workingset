@@ -1,6 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.domain.event;
 
-import com.airedgesoft.sharedkernel.workingset.domain.Classification.SharingMode;
+import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Objects;
