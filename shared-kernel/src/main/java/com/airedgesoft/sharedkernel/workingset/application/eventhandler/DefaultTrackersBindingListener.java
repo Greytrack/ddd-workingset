@@ -8,7 +8,7 @@ import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceR
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
+import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class DefaultTrackersBindingListener {
     private final WorkingSetRepository workingSets;
     private final ProductSpaceRepository spaces;
     private final TrackerRepository trackers;
-    private final ClassificationCatalog classifications;
+    private final ClassificationQueryProvider classifications;
 
     @ApplicationModuleListener(id = "bootstrap.DefaultTrackersBindingListener.on(sk.tracker.domain.event.DefaultTrackersProvisionedEvent)")
     public void on(DefaultTrackersProvisionedEvent event) {

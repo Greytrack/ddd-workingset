@@ -6,7 +6,7 @@ import com.airedgesoft.sharedkernel.SharedKernelResultCode;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
+import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerCreatedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetRepository;
@@ -25,7 +25,7 @@ public class TrackerCreatedBindingListener {
     private final WorkingSetRepository workingSets;
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
-    private final ClassificationCatalog classifications;
+    private final ClassificationQueryProvider classifications;
 
     @ApplicationModuleListener(id = "bootstrap.TrackerCreatedBindingListener.on(sk.workingset.domain.event.TrackerCreatedEvent)")
     public void on(TrackerCreatedEvent event) {

@@ -109,7 +109,7 @@ com.airedgesoft.alm.requirement.application.query
 - 查询模型 ID 使用 `Long`；Controller 继续输出字符串 ID，保持现有 JSON 契约。
 - 事件定义已迁移到 `domain/event`；事件监听器仍在 `application/eventhandler`。
 - 查询端口改为 `application/query/provider`；`TrackerItemCatalogQueryProvider`、`TrackerItemQueryProvider`、
-  `TrackerQueryProvider`、`LightTrackerItemQueryProvider`、`ClassificationCatalog`、`CowFailureLogQueryProvider`、
+  `TrackerQueryProvider`、`LightTrackerItemQueryProvider`、`ClassificationQueryProvider`、`CowFailureLogQueryProvider`、
   `RelationSourceQueryProvider` 等负责应用读取。
 - 查询 Provider 实现位于 `infrastructure/providers` 与 `infrastructure/providers/mybatis`。
 - Provider 实现可以复用聚合 Repository、写自定义 SQL，或使用 MyBatis-Plus Lambda；查询模型不受聚合装载方式限制。

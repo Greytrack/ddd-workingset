@@ -8,7 +8,7 @@ import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceR
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.event.DefaultTrackersProvisionedEvent;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
+import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.Classification;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class DefaultTrackerInitCommandService {
 
     private final TrackerRepository trackers;
     private final ProductSpaceRepository spaces;
-    private final ClassificationCatalog classifications;
+    private final ClassificationQueryProvider classifications;
         private final ApplicationEventPublisher events;
     private final PlatformTransactionManager transactionManager;
 

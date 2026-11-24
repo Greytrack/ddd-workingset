@@ -17,7 +17,7 @@
 
 - 最近提交：`543cc07`、`2aee3c8`、`f19b59a`、`28e6ff7`、`6d226a4`、`26ab8b4`、`5d74dc3`、`2c50900`。
 - 当前工作区：`sk.businessframework`、`sk.tracker`、`sk.productspace` 包拆分；`WorkingSetRepository`/
-  `LightTrackerItemRepository` 命令侧收敛；`TrackerQueryProvider`、`LightTrackerItemQueryProvider`、`ClassificationCatalog`
+  `LightTrackerItemRepository` 命令侧收敛；`TrackerQueryProvider`、`LightTrackerItemQueryProvider`、`ClassificationQueryProvider`
   等查询 Provider；`RequestThreadHolder` 等未完成文件。
 - 相关对话：移除 `TrackerItemLifecyclePort`、`Caller`、LightTrackerItem 缓存；首次继承编辑改为 `BusinessObjectUpdateEvent`
   异步切换；COW 改为 `TrackerItemMaterializationRequestedEvent`/`TrackerItemMaterializationCompletedEvent`；TC-002

@@ -9,7 +9,7 @@ import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceR
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
+import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.Classification;
@@ -41,7 +41,7 @@ public class WorkingSetCommandService {
     private final ProductSpaceRepository spaces;
     private final WorkingSetQueryProvider queries;
     private final TrackerQueryProvider trackerQueries;
-    private final ClassificationCatalog classifications;
+    private final ClassificationQueryProvider classifications;
 
     private static void requireUnshared(Tracker source) {
         if (source.sharingMode() != SharingMode.UNSHARED) {

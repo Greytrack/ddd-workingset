@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.airedgesoft</groupId>
+    <artifactId>bridge-v3</artifactId>
+    <version>${revision}</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>bridge-v3</artifactId>
+  <name>bridge-v3</name>
+  <description>v3 ↔ v4 勾连模块：shared-kernel 端口的 v3 直读封装（迁移期防腐，不属任何 BC）</description>
+  <dependencies>
+    <!-- 领域异常基类 -->
+    <dependency>
+      <groupId>com.airedgesoft</groupId>
+      <artifactId>lib-exception</artifactId>
+      <version>${revision}</version>
+    </dependency>
+        <!-- 端口与值对象契约（SimpleBusinessObjectPort / TrackerResolver / AttributeSchemaSource / numbering 四件套） -->
+    <dependency>
+      <groupId>com.airedgesoft</groupId>
+      <artifactId>shared-kernel</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <!-- @Component 装配（v3 封装实现由 deploy-full 组件扫描装配） -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <!-- v3 sdk 层：AdminCache / IInnerAirClass / SubClassNode / tracker / workingset / ISessionLoader / AutoNumber 谓词与引擎接口
+         （只依赖 sdk 层，不依赖 sdkImpl——v4-alm 依赖本模块不会拉进 sdkImpl，模块依赖方向红线不变） -->
+    <dependency>
+      <groupId>com.airedgesoft</groupId>
+      <artifactId>infrastructure-sdkImpl</artifactId>
+      <version>${revision}</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- v3 工具：SpringContextUtils / CommonResultCode（infrastructure-sdk 不传递 tools，显式声明） -->
+    <dependency>
+      <groupId>com.airedgesoft</groupId>
+      <artifactId>infrastructure-tools</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <!-- 编号临界区分布式锁（NumberService.withNumberLock 封装 v3 executeInsertSql 分类级 redis 锁口径）：
+         RedissonClient bean 由 v3 RedissonConfiguration（infrastructure-tools，随 deploy-full 组件扫描装配，读 RedisProperties）提供；
+         starter 自动配置遇既有 bean 条件退让；版本由 lib-deps BOM 管理 -->
+    <dependency>
+      <groupId>org.redisson</groupId>
+      <artifactId>redisson-spring-boot-starter</artifactId>
+    </dependency>
+
+    <!-- v3 公共 API：IWorkingset.DEFAULT_WORKINGSET_ID 等（sdk 已传递，显式声明便于依赖可见） -->
+    <dependency>
+      <groupId>com.airedgesoft</groupId>
+      <artifactId>AirAPI</artifactId>
+      <version>3.2.0-SNAPSHOT</version>
+    </dependency>
+    <!-- 单测（版本由 lib-deps BOM 管理） -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+  </dependencies>
+</project>

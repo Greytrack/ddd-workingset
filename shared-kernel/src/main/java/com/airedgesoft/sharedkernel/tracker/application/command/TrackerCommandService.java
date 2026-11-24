@@ -8,7 +8,7 @@ import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
+import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.LightTrackerItemQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.Classification;
@@ -34,7 +34,7 @@ public class TrackerCommandService {
     private final WorkingSetRepository workingSetRepository;
     private final TrackerRepository trackerRepository;
     private final ProductSpaceRepository productSpaceRepository;
-    private final ClassificationCatalog classifications;
+    private final ClassificationQueryProvider classifications;
     private final TrackerQueryProvider trackerQueries;
         private final ApplicationEventPublisher events;
 

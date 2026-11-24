@@ -16,6 +16,7 @@
         <module>deploys</module>
         <module>lib-jdbc</module>
         <module>lib-id</module>
+        <module>bridge-v3</module>
     </modules>
 
     <properties>

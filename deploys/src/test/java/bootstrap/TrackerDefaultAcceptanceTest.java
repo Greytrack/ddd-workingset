@@ -16,7 +16,7 @@ import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.Cla
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.TrackerView;
 import com.airedgesoft.sharedkernel.workingset.application.query.WorkingSetQueryService;
 import com.airedgesoft.sharedkernel.workingset.application.query.model.TrackerBindingSummary;
-import com.airedgesoft.sharedkernel.workingset.application.query.provider.ClassificationCatalog;
+import com.airedgesoft.sharedkernel.businessframework.application.query.ClassificationQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.Classification;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation;
 import org.junit.jupiter.api.AfterEach;
@@ -57,7 +57,7 @@ class TrackerDefaultAcceptanceTest {
     @Autowired
     private TrackerRepository trackerRepository;
     @Autowired
-    private ClassificationCatalog classifications;
+    private ClassificationQueryProvider classifications;
     @Autowired
     private LiteBusinessObjectProvider instanceSummaries;
     @Autowired
