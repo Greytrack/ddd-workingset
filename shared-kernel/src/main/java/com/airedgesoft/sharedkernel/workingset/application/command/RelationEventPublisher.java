@@ -23,7 +23,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public final class RelationEventPublisher {
+public class RelationEventPublisher {
     private final ApplicationEventPublisher events;
     
 

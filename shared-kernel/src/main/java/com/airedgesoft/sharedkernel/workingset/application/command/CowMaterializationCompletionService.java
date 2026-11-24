@@ -19,7 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public final class CowMaterializationCompletionService {
+public class CowMaterializationCompletionService {
     private final CowRequestPublications requests;
     private final LightTrackerItemRepository items;
     private final TransactionTemplate transaction;

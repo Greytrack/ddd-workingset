@@ -1,6 +1,8 @@
 package bootstrap.configuration;
 
 import com.airedgesoft.sharedkernel.workingset.application.command.SourceSerialCowCoordinator;
+import org.redisson.config.SingleServerConfig;
+import org.redisson.spring.starter.RedissonAutoConfigurationCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +21,19 @@ import java.time.Duration;
  */
 @Configuration
 public class ApplicationConfiguration {
+
+    @Bean
+    public RedissonAutoConfigurationCustomizer optionalRedisPassword() {
+        return config -> {
+            if (config.isSingleConfig()) {
+                SingleServerConfig server = config.useSingleServer();
+                // Redisson 会对空字符串发送 AUTH。未配置密码时使用 null。
+                if ("".equals(server.getPassword())) {
+                    server.setPassword(null);
+                }
+            }
+        };
+    }
 
     @Bean
     public TransactionTemplate newTransactionTemplate(PlatformTransactionManager transactionManager) {

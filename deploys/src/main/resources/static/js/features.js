@@ -516,6 +516,7 @@ function openWorksetEdit() {
     </form>`);
     const form = $('#editWorksetForm');
     form.dataset.workingSetId = id;
+    form.dataset.lockedVersion = ws.lockedVersion;
     wireWorksetColor(form, 'edit');
     form.querySelector('#editName').focus();
 }
@@ -540,7 +541,7 @@ async function submitWorksetEdit(form) {
     submit.disabled = true;
     submit.textContent = '保存中…';
     try {
-        const lockedVersion = findNode(state.worksets, workingSetId)?.ws?.lockedVersion;
+        const lockedVersion = Number(form.dataset.lockedVersion);
         const updated = await api('/v1/workingsets/' + encodeURIComponent(workingSetId), {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
@@ -754,23 +755,29 @@ async function submitTracker(form) {
     form.classification.disabled = true;
     form.sharing.disabled = true;
     try {
-        const created = await api('/api/worksets/' + encodeURIComponent(workingSetId) + '/trackers', {
+        const created = await api('/v1/trackers', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                productSpaceId,
-                name,
-                classificationId: form.classification.value,
-                sharingMode: form.sharing.value
+                workSpaceId: productSpaceId,
+                workingsetId: workingSetId,
+                displayName: name,
+                trackerClassId: form.classification.value
             })
         });
         if (form.isConnected) closeModal();
         if (state.selectedWs === workingSetId) {
-            if (!state.trackers.some((tracker) => tracker.trackerId === created.trackerId)) state.trackers.push(created);
-            if (!state.bindings.trackers.some((binding) => binding.trackerId === created.trackerId)) {
-                state.bindings.trackers.push({trackerId: created.trackerId});
+            if (!state.trackers.some((tracker) => tracker.trackerId === created.id)) {
+                state.trackers.push({
+                    trackerId: created.id, name: created.displayName, parentId: created.parentId,
+                    productSpaceId: created.workSpaceId, classificationId: created.trackerClassId,
+                    sharingMode: form.sharing.value
+                });
             }
-            if (state.selectedSpace === productSpaceId) await selectTracker(created.trackerId);
+            if (!state.bindings.trackers.some((binding) => binding.trackerId === created.id)) {
+                state.bindings.trackers.push({trackerId: created.id});
+            }
+            if (state.selectedSpace === productSpaceId) await selectTracker(created.id);
             else renderSpaces();
         }
         setStatus('跟踪分类已创建', 'ok');

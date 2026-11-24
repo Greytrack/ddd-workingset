@@ -102,17 +102,17 @@ SpaceBinding／TrackerBinding 的领域行为，以及四类操作的区别与�
 **WorkingSet 删除边界（2026-11-21 用户确认）**：存在绑定时拒绝。未绑定的归属 Tracker 仍引用 WorkingSet，须先独立删除。
 删除写入仅作用于 WorkingSet，保留物理记录；删除完成后普通查询和重复删除均返回 `404`。
 
-**产品空间删除入口**为 `DELETE /api/worksets/1/product-spaces/{spaceId}`。2026-11-23 用户确认有效 Tracker 阻止删除，替代逐个清理空 Tracker 的流程。命令在一个事务中读取 ProductSpace、校验、标记删除、保存和发布 `ProductSpaceDeleted`，提交后返回 `204 No Content`。已软删 Tracker 的历史行可以保留。当前删除没有恢复入口。
+**产品空间删除入口**为 `DELETE /v1/productSpaces/{spaceId}`。2026-11-23 用户确认有效 Tracker 阻止删除，替代逐个清理空 Tracker 的流程。命令在一个事务中读取 ProductSpace、校验、标记删除、保存和发布 `ProductSpaceDeleted`，提交后返回 `204 No Content`。已软删 Tracker 的历史行可以保留。当前删除没有恢复入口。
 
 ### 4.4 新建原生跟踪分类（Tracker）
 
 - `GET /api/worksets/metadata/classifications` 返回可选的 `classificationId` 及元数据的 `sharingMode`
   ，供创建表单按 [POL-003](../03-rules.md) 显示可选共享方式。
-- `POST /api/worksets/{workingSetId}/trackers` 仍只允许在默认工作集创建业务原生 Tracker，产品空间必须已绑定。Tracker
+- `POST /v1/trackers` 仍只允许在默认工作集创建业务原生 Tracker，产品空间必须已绑定。Tracker
   独立提交后发布 `TrackerCreatedEvent`，监听器另行保存 WorkingSet 绑定；`201`
   不保证绑定已收敛，绑定失败的公开语义待评审。产品空间独立创建/删除入口见 [实现边界](../07-implementation.md)。
 - Tracker 绑定来自产品空间创建后的异步初始化、工作集创建或扩展任务，以及空间内新建 Tracker 后发布的事件。
-- `PATCH /api/worksets/{workingSetId}/product-spaces/{spaceId}/trackers/{trackerId}/visibility` 使用 `shown` 修改指定空间内的
+- `PATCH /v1/productSpaces/{spaceId}/trackers/{trackerId}/visibility?workingSetId={workingSetId}` 使用 `shown` 修改指定空间内的
   Tracker 绑定可见性。Tracker 在所选空间中无绑定时返回 `TrackerBindingNotFound`。
 - 名称必填，去除首尾空白后最多 255 个字符，同一产品空间及所属分类内重名返回 `409`。在子工作集请求原生创建返回 `409`
   ，不相容的共享方式返回 `422`。手动新建不设置默认标记。

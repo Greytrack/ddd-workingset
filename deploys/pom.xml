@@ -34,6 +34,11 @@
             <artifactId>bridge-v3</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.airedgesoft</groupId>
+            <artifactId>lib-restful</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- Swagger UI 和 Knife4j 共用 Spring Boot 3.3 对应的 Springdoc。 -->
         <dependency>
             <groupId>org.springdoc</groupId>

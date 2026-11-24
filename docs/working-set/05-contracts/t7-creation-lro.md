@@ -146,7 +146,7 @@ Requirement 是业务 BC 参考实现。
 - `GET /api/working-set-creations/{id}` 返回 `creationId`、`targetWorkingSetId`、`mode`、状态、步骤、进度、明细和时间；不存在返回
   HTTP 404。
 - `GET /api/working-set-creations/{id}/working-set` 任务专用只读：按任务 id 读取创建中的目标工作集；普通
-  `/api/worksets/{id}` 仍返回 `Preparing`。任务不存在或目标尚未创建 → 404。
+  `/v1/workingsets/{id}` 仍返回 `Preparing`。任务不存在或目标尚未创建 → 404。
 - `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason`
   使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。
 - 轮询由前端按状态终止（`Succeeded/PartiallySucceeded/Failed`）。

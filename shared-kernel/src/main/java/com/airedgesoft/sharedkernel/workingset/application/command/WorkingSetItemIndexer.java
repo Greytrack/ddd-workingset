@@ -38,7 +38,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public final class WorkingSetItemIndexer {
+public class WorkingSetItemIndexer {
 
 
     private final WorkingSetRepository workingSets;

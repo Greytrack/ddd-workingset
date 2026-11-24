@@ -42,7 +42,7 @@ public class WorkingSetCreationController {
     }
 
     /**
-     * 任务上下文读取创建中的目标工作集；普通 /api/worksets/{id} 仍返回 Preparing。
+     * 任务上下文读取创建中的目标工作集；普通 /v1/workingsets/{id} 仍返回 Preparing。
      */
     @GetMapping("/{id}/working-set")
     public WorkingSetController.WorkingSetView findTarget(@PathVariable Long id) {

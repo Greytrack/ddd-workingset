@@ -23,7 +23,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public final class RelationEventStep {
+public class RelationEventStep {
     private final TrackerRepository trackers;
     private final WorkingSetRepository workingSets;
     private final LightTrackerItemQueryProvider itemQueries;

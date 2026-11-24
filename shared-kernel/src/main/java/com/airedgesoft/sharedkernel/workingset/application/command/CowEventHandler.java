@@ -19,7 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 @RequiredArgsConstructor
-public final class CowEventHandler {
+public class CowEventHandler {
     private final LightTrackerItemRepository items;
     private final TransactionTemplate transactionTemplate;
     private final CowRequestPublications requests;

@@ -1,5 +1,6 @@
 package bootstrap;
 
+import com.airedgesoft.sharedkernel.businessframework.application.query.QWorkingset;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
@@ -63,9 +64,9 @@ class WorkingSetLineageAcceptanceTest {
 
     @Test
     void createsEmptyDescendantsAndQueriesDirectChildrenAndOrderedAncestors() {
-        WorkingSetView root = rest.getForObject(path("1"), WorkingSetView.class);
-        assertTrue(root.defaultWorkingSet());
-        assertNull(root.parentWorkingSetId());
+        QWorkingset root = rest.getForObject("/v1/workingsets/1", QWorkingset.class);
+        assertEquals("1", root.id());
+        assertNull(root.parentId());
         assertEquals("#FFFF", root.color());
 
         String child = create("1", "child");
@@ -74,7 +75,7 @@ class WorkingSetLineageAcceptanceTest {
                 SELECT count(*) FROM air_inst_common WHERE id = ? AND parent_id = ?
                   AND common_id = id AND workingset_id = id AND tracker = 584190236948832 AND revision = 1
                 """, Integer.class, Long.valueOf(grandchild), Long.valueOf(child)));
-        assertEquals("#2468AC", rest.getForObject(path(grandchild), WorkingSetView.class).color());
+        assertEquals("#2468AC", rest.getForObject("/v1/workingsets/" + grandchild, QWorkingset.class).color());
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*) FROM air_inst_workingset
                 WHERE id = ? AND parent_id = ? AND id = instance_id AND id = common_id AND id = workingset_id
@@ -102,7 +103,7 @@ class WorkingSetLineageAcceptanceTest {
         assertCreateFailure(child, grandchild, "WorkingSetAlreadyExists");
         assertCreateFailure(sibling, grandchild, "WorkingSetParentImmutable");
         assertCreateFailure("258520000000090", "258520000000091", "WorkingSetNotFound");
-        assertEquals(child, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
+        assertEquals(child, rest.getForObject("/v1/workingsets/" + grandchild, QWorkingset.class).parentId());
     }
 
     @Test

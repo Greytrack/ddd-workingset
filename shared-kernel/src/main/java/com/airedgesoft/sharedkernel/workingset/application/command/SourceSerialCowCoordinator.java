@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
  * 按来源串行执行 COW：同一来源的事件按顺序处理，避免旧事件覆盖新快照。
  */
 @Slf4j
-public final class SourceSerialCowCoordinator {
+public class SourceSerialCowCoordinator {
 
     private static final int RECENT_SOURCE_LIMIT = 1024;
 

@@ -1,10 +1,10 @@
 package bootstrap;
 
+import com.airedgesoft.sharedkernel.businessframework.application.query.QWorkingset;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.BindingsView;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.TrackerView;
-import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController.WorkingSetView;
 import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetCreationController.CreationView;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation.Status;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
@@ -111,7 +111,7 @@ class BindingAcceptanceTest {
 
     @Test
     void extensionReusesSharedTrackersAndMountsTheirSpace() {
-        assertTrue(rest.getForObject(path("1"), WorkingSetView.class).defaultWorkingSet());
+        assertEquals("1", rest.getForObject("/v1/workingsets/1", QWorkingset.class).id());
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity(sharedPath(ws, shared), null, Map.class).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, rest.postForEntity(spacePath(ws), null, Map.class).getStatusCode());
         jdbc.update("""
@@ -317,7 +317,7 @@ class BindingAcceptanceTest {
 
     @Test
     void deletesOnlyAnUnboundEmptyProductSpaceFromTheDefaultWorkset() {
-        String endpoint = path("1") + "/product-spaces/" + space;
+        String endpoint = "/v1/productSpaces/" + space;
         assertEquals(HttpStatus.NOT_FOUND, delete("/api/product-spaces/" + space).getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, delete(path(ws) + "/product-spaces/" + space).getStatusCode());
         jdbc.update("UPDATE air_inst_requirement_rev SET delete_flag = 1 WHERE instance_id = ?", sourceItem);
@@ -362,7 +362,7 @@ class BindingAcceptanceTest {
 
     @Test
     void worksetDeletionRejectsBindingsAndOwnedTrackersBeforeDeletingTheWorkset() {
-        assertFailure(delete(path("1")), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
+        assertFailure(delete("/v1/workingsets/" + "1"), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
         String owned = fixtureId("owned-" + suffix);
         jdbc.update("""
                 INSERT INTO trackers (tracker_id, source_id, working_set_id, product_space_id, classification_id, sharing_mode)
@@ -373,17 +373,17 @@ class BindingAcceptanceTest {
                 VALUES (?, ?, ?, ?, 'UNSHARED', 'UNSHARED_DERIVATION')
                 """, ws, owned, space, unsharedClass);
 
-        assertFailure(delete(path(ws)), HttpStatus.CONFLICT, "WorkingSetStillBound");
+        assertFailure(delete("/v1/workingsets/" + ws), HttpStatus.CONFLICT, "WorkingSetStillBound");
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
 
         jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
-        assertFailure(delete(path(ws)), HttpStatus.CONFLICT, "WorkingSetHasTrackers");
+        assertFailure(delete("/v1/workingsets/" + ws), HttpStatus.CONFLICT, "WorkingSetHasTrackers");
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", owned));
         jdbc.update("DELETE FROM trackers WHERE tracker_id = ?", owned);
-        assertEquals(HttpStatus.NO_CONTENT, delete(path(ws)).getStatusCode());
-        assertFailure(rest.getForEntity(path(ws), Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
-        assertFailure(delete(path(ws)), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+        assertEquals(HttpStatus.NO_CONTENT, delete("/v1/workingsets/" + ws).getStatusCode());
+        assertFailure(rest.getForEntity("/v1/workingsets/" + ws, Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+        assertFailure(delete("/v1/workingsets/" + ws), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
         assertEquals(1, count("SELECT count(*) FROM air_inst_workingset WHERE id = ? AND delete_flag = 1", ws));
         assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", owned));
         assertEquals(0, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
@@ -399,21 +399,21 @@ class BindingAcceptanceTest {
         String grandchild = fixtureId("GRAND-" + suffix);
         createChild(ws, grandchild);
 
-        ResponseEntity<Map> blocked = delete(path(ws));
+        ResponseEntity<Map> blocked = delete("/v1/workingsets/" + ws);
         assertFailure(blocked, HttpStatus.CONFLICT, "WorkingSetHasChildren");
         assertEquals(List.of(grandchild), blocked.getBody().get("childWorkingSetIds"));
 
-        assertEquals(ws, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
+        assertEquals(ws, rest.getForObject("/v1/workingsets/" + grandchild, QWorkingset.class).parentId());
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
         assertEquals(space, bindings.spaces().get(0).productSpaceId());
 
-        assertEquals(HttpStatus.NO_CONTENT, delete(path(grandchild)).getStatusCode());
-        assertFailure(delete(path(ws)), HttpStatus.CONFLICT, "WorkingSetStillBound");
+        assertEquals(HttpStatus.NO_CONTENT, delete("/v1/workingsets/" + grandchild).getStatusCode());
+        assertFailure(delete("/v1/workingsets/" + ws), HttpStatus.CONFLICT, "WorkingSetStillBound");
         assertEquals(1, count("SELECT count(*) FROM space_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM tracker_bindings WHERE working_set_id = ?", ws));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
-        assertFailure(delete(path("1")), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
+        assertFailure(delete("/v1/workingsets/" + "1"), HttpStatus.CONFLICT, "DefaultWorkingSetUndeletable");
     }
 
     @Test
@@ -427,7 +427,7 @@ class BindingAcceptanceTest {
             });
             Future<ResponseEntity<Map>> remove = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
-                return delete(path(ws));
+                return delete("/v1/workingsets/" + ws);
             });
 
             ResponseEntity<Map> createResult = create.get(10, TimeUnit.SECONDS);
@@ -435,11 +435,11 @@ class BindingAcceptanceTest {
                 String createdChild = (String) createResult.getBody().get("workingSetId");
                 worksets.add(createdChild);
                 assertFailure(remove.get(10, TimeUnit.SECONDS), HttpStatus.CONFLICT, "WorkingSetHasChildren");
-                assertEquals(ws, rest.getForObject(path(createdChild), WorkingSetView.class).parentWorkingSetId());
+                assertEquals(ws, rest.getForObject("/v1/workingsets/" + createdChild, QWorkingset.class).parentId());
             } else {
                 assertFailure(createResult, HttpStatus.NOT_FOUND, "WorkingSetNotFound");
                 assertEquals(HttpStatus.NO_CONTENT, remove.get(10, TimeUnit.SECONDS).getStatusCode());
-                assertFailure(rest.getForEntity(path(ws), Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
+                assertFailure(rest.getForEntity("/v1/workingsets/" + ws, Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
                 assertEquals(0, count("SELECT count(*) FROM air_inst_workingset WHERE parent_id = ? AND delete_flag = 0", ws));
             }
         } finally {

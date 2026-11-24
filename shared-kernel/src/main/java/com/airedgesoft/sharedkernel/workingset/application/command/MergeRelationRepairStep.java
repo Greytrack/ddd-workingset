@@ -21,7 +21,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public final class MergeRelationRepairStep {
+public class MergeRelationRepairStep {
 
     private final RelationSourceQueryProvider source;
     private final RelationEventPublisher publisher;
