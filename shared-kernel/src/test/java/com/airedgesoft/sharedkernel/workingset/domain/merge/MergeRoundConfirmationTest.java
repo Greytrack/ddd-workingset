@@ -39,23 +39,23 @@ class MergeRoundConfirmationTest {
     @Test
     void confirmedEntryOwnsCommittedRevisionEvidenceBeforeRoundCloses() {
         MergeRound running = round(true);
-        MergeRound.Entry entry = running.entries().getFirst();
+        MergeRound.Entry entry = running.entries().get(0);
         assertThrows(DomainException.class, () -> running.finishEntry(entry,
                 new MergeRound.ItemResult(entry.id(), MergeRound.Outcome.Applied, "UPDATE", null, null, null)));
 
         MergeRound finished = running.finishApplied(entry.id(), "UPDATE", receipt()).complete(System.currentTimeMillis());
         assertEquals(MergeRound.State.Succeeded, finished.state());
-        assertEquals(new MergeRound.Confirmation(BEFORE, COMMITTED), finished.entries().getFirst().confirmation());
-        assertEquals(MergeRound.Outcome.Confirmed, finished.result().itemResults().getFirst().outcome());
+        assertEquals(new MergeRound.Confirmation(BEFORE, COMMITTED), finished.entries().get(0).confirmation());
+        assertEquals(MergeRound.Outcome.Confirmed, finished.result().itemResults().get(0).outcome());
         assertThrows(DomainException.class, () -> finished.finishApplied(entry.id(), "UPDATE", receipt()));
     }
 
     @Test
     void successfulEntryWithoutMarkAsMergedHasNoConfirmation() {
         MergeRound running = round(false);
-        MergeRound outcome = running.finishApplied(running.entries().getFirst().id(), "UPDATE", receipt());
-        assertNull(outcome.entries().getFirst().confirmation());
-        assertEquals(MergeRound.Outcome.Applied, outcome.complete(System.currentTimeMillis()).result().itemResults().getFirst().outcome());
+        MergeRound outcome = running.finishApplied(running.entries().get(0).id(), "UPDATE", receipt());
+        assertNull(outcome.entries().get(0).confirmation());
+        assertEquals(MergeRound.Outcome.Applied, outcome.complete(System.currentTimeMillis()).result().itemResults().get(0).outcome());
     }
 
     @Test
@@ -81,7 +81,7 @@ class MergeRoundConfirmationTest {
 
     @Test
     void missingFieldIsNotAnImplicitIgnore() {
-        Difference existing = round(false).entries().getFirst().evidence();
+        Difference existing = round(false).entries().get(0).evidence();
         Difference twoFields = new Difference(existing.family(), existing.trackers(), existing.source(),
                 existing.target(), List.of("title", "description"));
         assertThrows(DomainException.class, () ->

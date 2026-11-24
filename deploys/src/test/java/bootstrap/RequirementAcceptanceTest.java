@@ -203,8 +203,8 @@ class RequirementAcceptanceTest {
                 JOIN air_inst_requirement_rev r ON r.instance_id = i.local_id AND r.revision = i.revision
                 WHERE i.local_id = ? AND i.effective_flags = r.flags AND i.flags = 0
                 """, String.class, instanceId));
-        assertEquals(originalRow, checkedOutRows.getFirst());
-        assertNotEquals(instanceId, checkedOutRows.getLast());
+        assertEquals(originalRow, checkedOutRows.get(0));
+        assertNotEquals(instanceId, checkedOutRows.get(checkedOutRows.size() - 1));
 
         requirements.changeTitle(instanceId, "Edited draft", 1L);
         assertEquals("Edited draft", requirementQueries.find(instanceId).orElseThrow().title());
@@ -218,7 +218,7 @@ class RequirementAcceptanceTest {
         requirements.upgradeRevision(instanceId, 3L);
         await().atMost(Duration.ofSeconds(8)).until(() -> items.findById(instanceId).orElseThrow().revision() == 4);
         List<Long> beforeCheckin = jdbc.queryForList(rows, Long.class, instanceId);
-        assertNotEquals(checkedOutRows.getLast(), beforeCheckin.getLast());
+        assertNotEquals(checkedOutRows.get(checkedOutRows.size() - 1), beforeCheckin.get(beforeCheckin.size() - 1));
         requirements.checkIn(instanceId, 4L);
         assertEquals(0, jdbc.queryForObject("SELECT checked_out FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Integer.class, instanceId));
         Long checkinTime = jdbc.queryForObject("SELECT checkin_time FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1", Long.class, instanceId);

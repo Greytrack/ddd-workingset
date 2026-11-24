@@ -109,7 +109,7 @@ public class WorkingSetCommandService {
                 throw conflict;
             }
             List<Long> existing = queries.findAncestors(newId).stream().toList();
-            boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.getFirst());
+            boolean differentParent = !existing.isEmpty() && !parentId.equals(existing.get(0));
             BindingResCode reason = differentParent ? BindingResCode.WORKING_SET_PARENT_IMMUTABLE : BindingResCode.WORKING_SET_ALREADY_EXISTS;
             throw new DomainException(reason, Long.toString(newId));
         }

@@ -90,7 +90,7 @@ final class DeriveFixture {
         if (rows.isEmpty()) {
             throw new DomainException(BindingResCode.SOURCE_TRACKER_NOT_FOUND, trackerId);
         }
-        return rows.getFirst();
+        return rows.get(0);
     }
 
     private static Content content(JdbcTemplate jdbc, String sourceTrackerId, String sourceLocalId,
@@ -106,7 +106,7 @@ final class DeriveFixture {
             if (rows.isEmpty()) {
                 throw new DomainException(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
             }
-            Map<String, Object> row = rows.getFirst();
+            Map<String, Object> row = rows.get(0);
             if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                     || !Long.toString(commonId).equals(row.get("common_id").toString())
                     || revision != ((Number) row.get("revision")).intValue()) {
@@ -123,7 +123,7 @@ final class DeriveFixture {
         if (rows.isEmpty()) {
             throw new DomainException(BindingResCode.SOURCE_ITEM_NOT_FOUND, sourceLocalId);
         }
-        Map<String, Object> row = rows.getFirst();
+        Map<String, Object> row = rows.get(0);
         if (!sourceTrackerId.equals(row.get("tracker_id").toString())
                 || !Long.toString(commonId).equals(row.get("common_id").toString())) {
             throw new DomainException(BindingResCode.SOURCE_ITEM_MISMATCH, sourceLocalId);

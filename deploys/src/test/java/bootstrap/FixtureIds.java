@@ -46,7 +46,7 @@ public final class FixtureIds {
                 WHERE working_set_id = ? AND product_space_id = ? AND classification_id = 10070101 AND is_default
                 """, Long.class, Long.valueOf(workingSet), Long.valueOf(space));
         if (!existing.isEmpty()) {
-            return existing.getFirst().toString();
+            return existing.get(0).toString();
         }
         String id = fixtureId("default-tracker-" + workingSet + "-" + space);
         Long parent = jdbc.queryForObject("SELECT parent_working_set_id FROM working_sets WHERE working_set_id = ?",

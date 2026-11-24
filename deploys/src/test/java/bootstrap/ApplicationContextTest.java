@@ -78,7 +78,7 @@ class ApplicationContextTest {
         service.changeTitle(localId, "B", Long.valueOf(0));
 
         assertEquals(1, received.size(), "来源事件应在发布线程内对同步监听器可见");
-        BusinessObjectUpdateEvent event = received.getFirst();
+        BusinessObjectUpdateEvent event = received.get(0);
         assertEquals(localId, event.requirementId());
         assertEquals(localId, event.sourceLocalId());
         assertEquals(R3, event.beforeRevision());

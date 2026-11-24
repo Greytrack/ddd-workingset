@@ -82,10 +82,10 @@ class T7RelationEventAcceptanceTest {
         assertEquals(1, relationEvents.references().size());
         assertEquals(1, relationEvents.associations().size());
         assertEquals(1, relationEvents.repairs().size());
-        assertEquals(OriginType.EXTENSION, relationEvents.references().getFirst().metadata().originType());
-        assertEquals("reference-" + parentItem, relationEvents.references().getFirst().metadata().originalRelationId());
-        assertEquals("association-" + parentItem, relationEvents.associations().getFirst().metadata().originalRelationId());
-        assertNotNull(relationEvents.repairs().getFirst().target().localId());
+        assertEquals(OriginType.EXTENSION, relationEvents.references().get(0).metadata().originType());
+        assertEquals("reference-" + parentItem, relationEvents.references().get(0).metadata().originalRelationId());
+        assertEquals("association-" + parentItem, relationEvents.associations().get(0).metadata().originalRelationId());
+        assertNotNull(relationEvents.repairs().get(0).target().localId());
     }
 
     private void seedParentRange() {

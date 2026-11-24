@@ -94,7 +94,8 @@ class BindingAcceptanceTest {
         jdbc.update("DELETE FROM air_ws_items_index WHERE work_space_id = ?", space);
         jdbc.update("DELETE FROM air_inst_common WHERE work_space = ? AND base_class = 1401", space);
         jdbc.update("DELETE FROM air_inst_requirement_rev WHERE tracker IN (?, ?)", shared, unshared);
-        for (String id : worksets.reversed()) {
+        for (int index = worksets.size() - 1; index >= 0; index--) {
+            String id = worksets.get(index);
             jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", id);
             jdbc.update("DELETE FROM air_ws_workingset_branch_relation WHERE workingset_id = ?", id);
             jdbc.update("DELETE FROM air_ws_tracker WHERE id IN (SELECT id FROM air_inst_tracker_rev WHERE workingset_id = ?)", id);
@@ -126,7 +127,7 @@ class BindingAcceptanceTest {
         extendShared(ws, anotherShared);
 
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
-        assertEquals(space, bindings.spaces().getFirst().productSpaceId());
+        assertEquals(space, bindings.spaces().get(0).productSpaceId());
         assertTrue(bindings.trackers().stream().anyMatch(binding -> binding.trackerId().equals(shared)));
         assertEquals(0, jdbc.queryForObject("""
                 SELECT count(*) FROM trackers WHERE working_set_id = ? AND classification_id <> 10070101
@@ -261,7 +262,7 @@ class BindingAcceptanceTest {
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
-        assertEquals(space, bindings.spaces().getFirst().productSpaceId());
+        assertEquals(space, bindings.spaces().get(0).productSpaceId());
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasItems");
     }
 
@@ -405,7 +406,7 @@ class BindingAcceptanceTest {
         assertEquals(ws, rest.getForObject(path(grandchild), WorkingSetView.class).parentWorkingSetId());
         BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
-        assertEquals(space, bindings.spaces().getFirst().productSpaceId());
+        assertEquals(space, bindings.spaces().get(0).productSpaceId());
 
         assertEquals(HttpStatus.NO_CONTENT, delete(path(grandchild)).getStatusCode());
         assertFailure(delete(path(ws)), HttpStatus.CONFLICT, "WorkingSetStillBound");
@@ -418,7 +419,8 @@ class BindingAcceptanceTest {
     @Test
     void concurrentChildCreationAndParentDeletionCannotLeaveADanglingParent() throws Exception {
         CyclicBarrier start = new CyclicBarrier(2);
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
             Future<ResponseEntity<Map>> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity(path(ws) + "/children", Map.of("name", "并发创建"), Map.class);
@@ -440,13 +442,15 @@ class BindingAcceptanceTest {
                 assertFailure(rest.getForEntity(path(ws), Map.class), HttpStatus.NOT_FOUND, "WorkingSetNotFound");
                 assertEquals(0, count("SELECT count(*) FROM air_inst_workingset WHERE parent_id = ? AND delete_flag = 0", ws));
             }
+        } finally {
+            executor.shutdownNow();
         }
     }
 
     @Test
     void requirementCreationDoesNotWaitForAnotherTrackerReference() throws Exception {
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-             Connection connection = jdbc.getDataSource().getConnection()) {
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        try (Connection connection = jdbc.getDataSource().getConnection()) {
             connection.setAutoCommit(false);
             try (PreparedStatement reference = connection.prepareStatement(
                     "SELECT id FROM air_inst_tracker_rev WHERE id = ? FOR KEY SHARE")) {
@@ -460,13 +464,16 @@ class BindingAcceptanceTest {
             } finally {
                 connection.rollback();
             }
+        } finally {
+            executor.shutdownNow();
         }
     }
 
     @Test
     void concurrentItemCreationAndTrackerDeletionCannotLeaveAnOrphan() throws Exception {
         CyclicBarrier start = new CyclicBarrier(2);
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
             Future<HttpStatusCode> create = executor.submit(() -> {
                 start.await(5, TimeUnit.SECONDS);
                 return rest.postForEntity("/api/requirements", Map.of("trackerId", shared,
@@ -488,6 +495,8 @@ class BindingAcceptanceTest {
                 assertEquals(0, count("SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev WHERE tracker = ?", shared));
                 assertEquals(0, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
             }
+        } finally {
+            executor.shutdownNow();
         }
     }
 

@@ -103,10 +103,11 @@ public class JdbcWorkingSetRepository implements WorkingSetRepository {
                 rs.getLong("product_space_id"), rs.getLong("classification_id"),
                 SharingMode.valueOf(rs.getString("sharing_mode")),
                 WorkingSet.TrackerOrigin.valueOf(rs.getString("origin")), rs.getBoolean("shown")), id);
-        String parent = (String) rows.getFirst()[0];
-        String name = (String) rows.getFirst()[1];
+        Object[] header = rows.get(0);
+        String parent = (String) header[0];
+        String name = (String) header[1];
         return Optional.of(new WorkingSet(id, parent == null ? null : Long.valueOf(parent), name,
-                (String) rows.getFirst()[2], spaces, trackers, (Long) rows.getFirst()[3], (String) rows.getFirst()[4]));
+                (String) header[2], spaces, trackers, (Long) header[3], (String) header[4]));
     }
 
     private void requireReady(Long id) {

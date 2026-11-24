@@ -27,7 +27,7 @@ class SourceSerialCowCoordinatorTest {
         CountDownLatch firstStarted = new CountDownLatch(1);
         CountDownLatch releaseFirst = new CountDownLatch(1);
 
-        Thread first = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 1, () -> {
+        Thread first = startThread(() -> coordinator.runSerial(source, 1, () -> {
             order.add(1);
             firstStarted.countDown();
             try {
@@ -39,16 +39,19 @@ class SourceSerialCowCoordinatorTest {
         }));
         try {
             assertTrue(firstStarted.await(5, TimeUnit.SECONDS));
-            Thread third = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 3, () -> order.add(3)));
+            Thread third = startThread(() -> coordinator.runSerial(source, 3, () -> order.add(3)));
             await().atMost(Duration.ofSeconds(3)).until(() -> third.getState() == Thread.State.WAITING);
-            Thread second = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
+            Thread second = startThread(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
             await().atMost(Duration.ofSeconds(3)).until(() -> second.getState() == Thread.State.WAITING);
             coordinator.runSerial(Long.valueOf("265987761440704"), 1, () -> order.add(0));
             assertEquals(List.of(1, 0), order);
             releaseFirst.countDown();
-            assertTrue(first.join(Duration.ofSeconds(3)));
-            assertTrue(second.join(Duration.ofSeconds(3)));
-            assertTrue(third.join(Duration.ofSeconds(3)));
+            first.join(3000L);
+            second.join(3000L);
+            third.join(3000L);
+            assertFalse(first.isAlive());
+            assertFalse(second.isAlive());
+            assertFalse(third.isAlive());
             assertEquals(List.of(1, 0, 2, 3), order);
         } finally {
             releaseFirst.countDown();
@@ -60,13 +63,20 @@ class SourceSerialCowCoordinatorTest {
         SourceSerialCowCoordinator coordinator = new SourceSerialCowCoordinator(Duration.ofSeconds(3));
         Long source = Long.valueOf("262840182583232");
         CopyOnWriteArrayList<Integer> order = new CopyOnWriteArrayList<Integer>();
-        Thread second = Thread.ofVirtual().start(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
+        Thread second = startThread(() -> coordinator.runSerial(source, 2, () -> order.add(2)));
         await().atMost(Duration.ofSeconds(2)).until(() -> second.getState() == Thread.State.TIMED_WAITING);
         coordinator.runSerial(Long.valueOf("261969732607936"), 1, () -> order.add(0));
         assertEquals(List.of(0), order);
         coordinator.runSerial(source, 1, () -> order.add(1));
-        assertTrue(second.join(Duration.ofSeconds(2)));
+        second.join(2000L);
+        assertFalse(second.isAlive());
         assertEquals(List.of(0, 1, 2), order);
+    }
+
+    private static Thread startThread(Runnable task) {
+        Thread thread = new Thread(task);
+        thread.start();
+        return thread;
     }
 
     @Test

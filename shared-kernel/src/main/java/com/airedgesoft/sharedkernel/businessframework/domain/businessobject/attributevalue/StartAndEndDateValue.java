@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue;
 
+import com.airedgesoft.lib.exception.AttributeValueFormatException;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 
 /**

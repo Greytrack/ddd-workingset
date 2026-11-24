@@ -54,7 +54,7 @@ public class MergeExecutionService {
     private final MergeRelationRepairStep relationRepair;
 
     private static TrackerPair trackerPair(List<EntryRequest> decisions) {
-        Difference evidence = decisions.getFirst().evidence();
+        Difference evidence = decisions.get(0).evidence();
         if (evidence == null) {
             throw new DomainException(MergeResCode.INVALID_DECISION, "evidence is required");
         }

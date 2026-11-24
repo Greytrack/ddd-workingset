@@ -108,7 +108,12 @@ public final class SourceSerialCowCoordinator {
                 synchronized (queues) {
                     lastExecuted.put(source, Math.max(previous, task.sequence()));
                     if (lastExecuted.size() > RECENT_SOURCE_LIMIT) {
-                        lastExecuted.pollFirstEntry();
+                        // Java 17 无 SequencedMap.pollFirstEntry：移出访问序最旧的条目
+                        Iterator<Long> eldest = lastExecuted.keySet().iterator();
+                        if (eldest.hasNext()) {
+                            eldest.next();
+                            eldest.remove();
+                        }
                     }
                 }
             }

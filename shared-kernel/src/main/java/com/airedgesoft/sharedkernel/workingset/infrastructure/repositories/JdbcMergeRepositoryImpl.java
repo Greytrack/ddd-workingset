@@ -33,7 +33,7 @@ public class JdbcMergeRepositoryImpl implements MergeRepository {
      * 活动轮次唯一索引按数值升序记录 Tracker 对；聚合内证据已保证整轮同属一对。
      */
     private static Long[] trackerPair(MergeRound round) {
-        MergeRound.Entry first = round.entries().isEmpty() ? null : round.entries().getFirst();
+        MergeRound.Entry first = round.entries().isEmpty() ? null : round.entries().get(0);
         if (first == null || first.evidence() == null) {
             return new Long[]{null, null};
         }

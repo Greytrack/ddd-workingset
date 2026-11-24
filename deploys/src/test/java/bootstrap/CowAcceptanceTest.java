@@ -66,7 +66,8 @@ class CowAcceptanceTest {
             jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", target);
         }
         jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", source);
-        for (String ws : worksets.reversed()) {
+        for (int index = worksets.size() - 1; index >= 0; index--) {
+            String ws = worksets.get(index);
             jdbc.update("DELETE FROM air_ws_items_index WHERE workingset_id = ?", ws);
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", ws);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", ws);
@@ -251,7 +252,7 @@ class CowAcceptanceTest {
         requirements.changeTitle(Long.valueOf(source), "B", 0L);
 
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() ->
-                assertEquals("MATERIALIZE", failures.findBySource(Long.valueOf(source)).getFirst().stage()));
+                assertEquals("MATERIALIZE", failures.findBySource(Long.valueOf(source)).get(0).stage()));
         assertFalse(read(invalid).materialized());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_inst_requirement_rev WHERE instance_id = ?",
                 Integer.class, invalid.id()));

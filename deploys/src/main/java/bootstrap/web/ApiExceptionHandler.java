@@ -49,13 +49,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<?> handleDomainFailure(DomainException failure) {
         ResCode resultCode = failure.getResCode();
-        String reason = switch (resultCode) {
-            case BindingResCode binding -> binding.reason();
-            case MergeResCode merge -> merge.reason();
-            case Enum<?> value -> value.name();
-            default -> failure.getType().name();
-        };
-        Map<String, Object> body = new LinkedHashMap<>(failure.getContext());
+        String reason;
+        if (resultCode instanceof BindingResCode binding) {
+            reason = binding.reason();
+        } else if (resultCode instanceof MergeResCode merge) {
+            reason = merge.reason();
+        } else if (resultCode instanceof Enum<?> value) {
+            reason = value.name();
+        } else {
+            reason = failure.getType().name();
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
         body.put("code", failure.getCode());
         body.put("reason", reason);
         String fallbackMessage = resultCode instanceof MergeResCode ? reason : "Unexpected error";
@@ -81,12 +85,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(APIException.class)
     public ResponseEntity<Map<String, Object>> handleCodedFailure(APIException failure) {
         ResCode resultCode = failure instanceof AppException app ? app.getResCode() : null;
-        int status = switch (resultCode) {
-            case WorkingsetResultCode.BAD_REQUEST -> 400;
-            case BindingResCode.WORKING_SET_NOT_EXISTS -> 404;
-            case WorkingsetResultCode.MATERIALIZATION_REJECTED -> 409;
-            case null, default -> 500;
-        };
+        int status;
+        if (resultCode == WorkingsetResultCode.BAD_REQUEST) {
+            status = 400;
+        } else if (resultCode == BindingResCode.WORKING_SET_NOT_EXISTS) {
+            status = 404;
+        } else if (resultCode == WorkingsetResultCode.MATERIALIZATION_REJECTED) {
+            status = 409;
+        } else {
+            status = 500;
+        }
         String reason = resultCode instanceof Enum<?> value ? value.name() : "API_ERROR";
         String message = status == 500 || failure.getMessage() == null
                 ? "Unexpected error" : failure.getMessage();

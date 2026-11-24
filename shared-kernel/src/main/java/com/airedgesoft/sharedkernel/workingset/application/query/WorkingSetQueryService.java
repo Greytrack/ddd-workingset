@@ -43,7 +43,7 @@ public class WorkingSetQueryService {
     public List<Long> findAncestors(Long id) {
         find(id);
         List<Long> ancestors = query.findAncestors(id);
-        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.equals(ancestors.getLast())) {
+        if (!ancestors.isEmpty() && !WorkingSet.DEFAULT_ID.equals(ancestors.get(ancestors.size() - 1))) {
             throw new DomainException(BindingResCode.WORKING_SET_CYCLE, Long.toString(id));
         }
         return ancestors;

@@ -182,7 +182,7 @@ class WorkingSetCreationAcceptanceTest {
         child = accepted.getBody().targetWorkingSetId();
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                 assertEquals(Status.Failed, task(id).status()));
-        WorkingSetCreation.Failure failure = task(id).failures().getFirst();
+        WorkingSetCreation.Failure failure = task(id).failures().get(0);
         assertEquals("CREATE_WORKING_SET", failure.stage().name());
         assertEquals("WorkingSetNotFound", failure.reason());
         assertEquals(HttpStatus.NOT_FOUND, rest.getForEntity("/api/worksets/" + child, Map.class).getStatusCode());
@@ -237,7 +237,7 @@ class WorkingSetCreationAcceptanceTest {
         String id = submit(new Request("1", child, "partial", List.of(space), List.of(shared),
                 List.of(outsideTracker, unshared)));
         CreationView completed = awaitStatus(id, Status.PartiallySucceeded);
-        WorkingSetCreation.Failure failure = completed.failures().getFirst();
+        WorkingSetCreation.Failure failure = completed.failures().get(0);
         assertEquals(1, completed.failures().size());
         assertEquals(Stage.COPY_UNSHARED_TRACKERS, failure.stage());
         assertEquals(outsideTracker, failure.trackerId());
@@ -585,8 +585,8 @@ class WorkingSetCreationAcceptanceTest {
     void keepsPreparingBetweenCommittedBatchesAndSerializesEventRedelivery() throws Exception {
         seedRange();
         List<String> families = orderedFamilies();
-        String first = families.getFirst();
-        String last = families.getLast();
+        String first = families.get(0);
+        String last = families.get(families.size() - 1);
         for (String family : families) {
             seedItem(unshared, family, family, false);
         }
@@ -758,7 +758,7 @@ class WorkingSetCreationAcceptanceTest {
         String id = extension(List.of(unshared, fixtureId("missing-" + child)));
         CreationView completed = awaitStatus(id, Status.PartiallySucceeded);
         assertEquals(1, completed.failures().size());
-        assertEquals("SourceTrackerNotFound", completed.failures().getFirst().reason());
+        assertEquals("SourceTrackerNotFound", completed.failures().get(0).reason());
         assertEquals(2, rest.getForObject("/api/worksets/" + child + "/trackers", TrackerView[].class).length);
     }
 
@@ -783,8 +783,8 @@ class WorkingSetCreationAcceptanceTest {
                 || otherTarget.equals(creation.request().newWorkingSetId()))));
 
         String acceptedId;
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-             Connection connection = dataSource.getConnection()) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
             try (PreparedStatement lock = connection.prepareStatement(
                     "SELECT id FROM air_inst_workingset WHERE id IN (?, ?) ORDER BY id FOR UPDATE")) {
@@ -798,9 +798,9 @@ class WorkingSetCreationAcceptanceTest {
                 List<ResponseEntity<Map>> accepted = responses.stream()
                         .filter(response -> response.getStatusCode() == HttpStatus.ACCEPTED).toList();
                 assertEquals(sameTarget && sameRequest ? 2 : 1, accepted.size(), responses::toString);
-                acceptedId = String.valueOf(accepted.getFirst().getBody().get("creationId"));
+                acceptedId = String.valueOf(accepted.get(0).getBody().get("creationId"));
                 if (accepted.size() == 2) {
-                    assertEquals(acceptedId, accepted.getLast().getBody().get("creationId"));
+                    assertEquals(acceptedId, accepted.get(accepted.size() - 1).getBody().get("creationId"));
                 } else {
                     ResponseEntity<Map> rejected = responses.stream()
                             .filter(response -> response.getStatusCode() != HttpStatus.ACCEPTED).findFirst().orElseThrow();
@@ -813,6 +813,8 @@ class WorkingSetCreationAcceptanceTest {
             } finally {
                 connection.rollback();
             }
+        } finally {
+            executor.shutdownNow();
         }
         awaitStatus(acceptedId, Status.Succeeded);
     }

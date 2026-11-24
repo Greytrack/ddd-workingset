@@ -174,7 +174,8 @@ class MergeAcceptanceTest {
             jdbc.update("DELETE FROM air_ws_items_index WHERE local_id = ?", local);
             jdbc.update("DELETE FROM air_inst_requirement_rev WHERE instance_id = ?", local);
         }
-        for (String workset : worksets.reversed()) {
+        for (int index = worksets.size() - 1; index >= 0; index--) {
+            String workset = worksets.get(index);
             jdbc.update("DELETE FROM tracker_bindings WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM trackers WHERE working_set_id = ?", workset);
             jdbc.update("DELETE FROM space_bindings WHERE working_set_id = ?", workset);
@@ -237,7 +238,7 @@ class MergeAcceptanceTest {
         assertEquals(Presence.DELETED, recoverable.target().presence());
         assertStatus(HttpStatus.GONE, rest.getForEntity("/api/requirements/" + removedId, Map.class));
         String restoreRound = submit(target, afterDelete, existence(recoverable, "ACCEPT"));
-        MergeRound.ItemResult restored = awaitResult(restoreRound).itemResults().getFirst();
+        MergeRound.ItemResult restored = awaitResult(restoreRound).itemResults().get(0);
         assertEquals(Outcome.Confirmed, restored.outcome());
         assertEquals(removedId, restored.businessRef());
         assertEquals("present again", requirement(removedId).title());
@@ -272,7 +273,7 @@ class MergeAcceptanceTest {
         assertNotNull(diff(next, deleted));
         assertEquals(List.of("description"), diff(next, edited).fields());
         String confirmed = submit(child, next, field(diff(next, edited), "IGNORED", true));
-        assertEquals(Outcome.Confirmed, awaitResult(confirmed).itemResults().getFirst().outcome());
+        assertEquals(Outcome.Confirmed, awaitResult(confirmed).itemResults().get(0).outcome());
         assertEquals(1, confirmations(confirmed, edited));
         assertFalse(compare("1", child).differences().stream().anyMatch(item -> edited.equals(Long.toString(item.family()))));
     }
@@ -350,7 +351,8 @@ class MergeAcceptanceTest {
         Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(existence(difference, "ACCEPT")));
         CountDownLatch start = new CountDownLatch(1);
-        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
             Future<ResponseEntity<Map>> one = executor.submit(() -> {
                 start.await();
                 return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
@@ -367,6 +369,8 @@ class MergeAcceptanceTest {
             assertEquals(first.getBody().get("id"), second.getBody().get("id"));
             rounds.add((String) first.getBody().get("id"));
             tokens.add((String) first.getBody().get("token"));
+        } finally {
+            executor.shutdownNow();
         }
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM air_ws_merge_rounds WHERE request_id = ?",
                 Integer.class, requestId));
@@ -435,7 +439,7 @@ class MergeAcceptanceTest {
         String round = submit(parent, comparison, existence(difference, "ACCEPT"));
         MergeRound.ApplyResult created = awaitResult(round);
         assertEquals(State.Succeeded, created.state());
-        String parentLocal = created.itemResults().getFirst().businessRef();
+        String parentLocal = created.itemResults().get(0).businessRef();
         RequirementView target = requirement(parentLocal);
         assertEquals(parentTracker, target.trackerId());
         assertEquals(source.commonId(), target.commonId());
@@ -462,9 +466,9 @@ class MergeAcceptanceTest {
         String restoreRound = submit(parent, fresh, existence(diff(fresh, source.commonId()), "ACCEPT"));
         MergeRound.ApplyResult restored = awaitResult(restoreRound);
         assertEquals(State.Succeeded, restored.state(), restored::toString);
-        assertEquals(parentLocal, restored.itemResults().getFirst().businessRef());
-        assertEquals(Outcome.Confirmed, restored.itemResults().getFirst().outcome());
-        assertEquals("RESTORE", restored.itemResults().getFirst().operation());
+        assertEquals(parentLocal, restored.itemResults().get(0).businessRef());
+        assertEquals(Outcome.Confirmed, restored.itemResults().get(0).outcome());
+        assertEquals("RESTORE", restored.itemResults().get(0).operation());
         assertEquals(1, confirmations(restoreRound, source.commonId()));
         assertEquals("updated child", requirement(parentLocal).title());
         assertEquals(target.revision(), requirement(parentLocal).revision());
@@ -480,7 +484,7 @@ class MergeAcceptanceTest {
         ComparisonPage first = compare(child, "1");
         ComparisonPage stale = compare(child, "1");
         String firstRound = submit("1", first, existence(diff(first, source.commonId()), "ACCEPT"));
-        assertEquals(Outcome.Confirmed, awaitResult(firstRound).itemResults().getFirst().outcome());
+        assertEquals(Outcome.Confirmed, awaitResult(firstRound).itemResults().get(0).outcome());
         assertEquals("StaleEvidence", submitFailure("1", stale, existence(diff(stale, source.commonId()), "ACCEPT")));
         assertEquals(source.title(), requirement(source.commonId()).title());
     }
@@ -539,7 +543,7 @@ class MergeAcceptanceTest {
         rounds.add(round);
 
         ApplyResult result = awaitResult(round);
-        assertEquals(editTarget ? Outcome.Conflict : Outcome.Confirmed, result.itemResults().getFirst().outcome());
+        assertEquals(editTarget ? Outcome.Conflict : Outcome.Confirmed, result.itemResults().get(0).outcome());
         assertEquals(editTarget ? "edited after approval" : "approved source", requirement(target).title());
     }
 
@@ -604,8 +608,8 @@ class MergeAcceptanceTest {
         MergeRound.ApplyResult result = apply(round);
 
         assertEquals(State.Succeeded, result.state());
-        assertEquals(Outcome.Confirmed, result.itemResults().getFirst().outcome());
-        assertEquals(target, result.itemResults().getFirst().businessRef());
+        assertEquals(Outcome.Confirmed, result.itemResults().get(0).outcome());
+        assertEquals(target, result.itemResults().get(0).businessRef());
         assertEquals("accepted", requirement(target).title());
         assertEquals("later accepted", requirement(laterTarget).title());
 
@@ -676,7 +680,7 @@ class MergeAcceptanceTest {
         assertEquals(3, item.target().contentRevision());
         assertEquals("same", item.target().fields().get("title"));
         String round = submit(grandchild, compared, field(item, "ACCEPT", true));
-        assertEquals(Outcome.Confirmed, awaitResult(round).itemResults().getFirst().outcome());
+        assertEquals(Outcome.Confirmed, awaitResult(round).itemResults().get(0).outcome());
         assertEquals("parent local", requirement(Long.toString(grand.item().localId())).title());
         MergeCheckpoint.Key key = new MergeCheckpoint.Key(Long.valueOf(childTracker), Long.valueOf(grand.trackerId()), Long.valueOf(anchor));
         MergeCheckpoint checkpoint = checkpoints.findLatest(key).orElseThrow();
@@ -864,11 +868,11 @@ class MergeAcceptanceTest {
             await().atMost(Duration.ofSeconds(8)).until(() -> "source".equals(requirement(target).title()));
             MergeRound snapshot = roundState(firstRound);
             replay = new MergeEntryResolvedEvent(firstRound,
-                    snapshot.entries().getFirst().id(), MergeEntryResolvedEvent.Outcome.APPLIED,
+                    snapshot.entries().get(0).id(), MergeEntryResolvedEvent.Outcome.APPLIED,
                     Long.valueOf(target), 3, 3, false, false, null);
             assertThrows(DomainException.class, () -> mergeExecution.recordResult(replay));
             assertEquals(State.Running, roundState(firstRound).state());
-            Assertions.assertNull(roundState(firstRound).entries().getFirst().result());
+            Assertions.assertNull(roundState(firstRound).entries().get(0).result());
             assertTrue(checkpoints.findLatest(key).isEmpty());
             ComparisonPage competing = compare("1", child);
             assertEquals("PairMergeInProgress", submitFailure(child, competing,

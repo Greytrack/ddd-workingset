@@ -48,12 +48,12 @@ class RelationEventPublisherTest {
         assertEquals(2, published.size());
         assertTrue(published.get(0) instanceof ReferenceCreationRequestedEvent);
         assertTrue(published.get(1) instanceof DanglingReferenceRepairRequestedEvent);
-        assertEquals("reference-42", creation.getFirst().metadata().originalRelationId());
-        assertEquals("task-1", creation.getFirst().metadata().originId());
-        assertEquals(OriginType.CREATION, creation.getFirst().metadata().originType());
-        assertTrue(Long.parseLong(creation.getFirst().metadata().eventId()) > 0);
-        assertEquals("reference-42", repair.getFirst().metadata().originalRelationId());
-        assertEquals("round-1", repair.getFirst().metadata().originId());
+        assertEquals("reference-42", creation.get(0).metadata().originalRelationId());
+        assertEquals("task-1", creation.get(0).metadata().originId());
+        assertEquals(OriginType.CREATION, creation.get(0).metadata().originType());
+        assertTrue(Long.parseLong(creation.get(0).metadata().eventId()) > 0);
+        assertEquals("reference-42", repair.get(0).metadata().originalRelationId());
+        assertEquals("round-1", repair.get(0).metadata().originId());
     }
 
     @Test
@@ -63,9 +63,9 @@ class RelationEventPublisherTest {
         List<AssociationCreationRequestedEvent> created = publisher.publishAssociationCreations("task-1", OriginType.EXTENSION, List.of(fact));
 
         assertEquals(1, published.size());
-        assertTrue(published.getFirst() instanceof AssociationCreationRequestedEvent);
-        assertEquals("association-7", created.getFirst().metadata().originalRelationId());
-        assertEquals("265625955250112", Long.toString(created.getFirst().source().trackerId()));
-        assertEquals("261538396602304", Long.toString(created.getFirst().target().trackerId()));
+        assertTrue(published.get(0) instanceof AssociationCreationRequestedEvent);
+        assertEquals("association-7", created.get(0).metadata().originalRelationId());
+        assertEquals("265625955250112", Long.toString(created.get(0).source().trackerId()));
+        assertEquals("261538396602304", Long.toString(created.get(0).target().trackerId()));
     }
 }

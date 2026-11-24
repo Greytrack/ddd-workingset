@@ -36,7 +36,8 @@ class WorkingSetPresentationAcceptanceTest {
 
     @AfterEach
     void removeCreated() {
-        for (String id : created.reversed()) {
+        for (int index = created.size() - 1; index >= 0; index--) {
+            String id = created.get(index);
             jdbc.update("DELETE FROM working_sets WHERE working_set_id = ?", id);
         }
     }

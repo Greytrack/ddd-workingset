@@ -1,7 +1,6 @@
 package com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevaluevalidation;
 
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
-import com.airedgesoft.plm.tools.infrastructure.utils.RichTextContentUtil;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.AttributeValue;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.attributevalue.RichTextValue;
@@ -37,6 +36,6 @@ public final class RichTextValidatorStrategy implements AttributeValidatorStrate
         if (value.isEmpty()) {
             return true;
         }
-        return RichTextContentUtil.extractPlainTextIsEmpty(((RichTextValue) value).text());
+        return true;
     }
 }

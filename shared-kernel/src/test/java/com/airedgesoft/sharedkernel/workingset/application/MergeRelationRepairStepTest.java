@@ -79,7 +79,7 @@ class MergeRelationRepairStepTest {
         MergeDecision decision = new MergeDecision(Map.of("title", FieldAction.ACCEPT), null, false);
         MergeRound round = MergeRound.prepare("265523938635712", "request-1", WorkingSet.DEFAULT_ID, targetWorkingSet, "u")
                 .register(new Entry("263525235173312", difference, decision, null)).start();
-        MergeRound.Entry entry = round.entries().getFirst();
+        MergeRound.Entry entry = round.entries().get(0);
         round = round.finishEntry(entry, new ItemResult("263525235173312", Outcome.Applied, "ACCEPT", "265864557082560", null, null))
                 .complete(System.currentTimeMillis());
 

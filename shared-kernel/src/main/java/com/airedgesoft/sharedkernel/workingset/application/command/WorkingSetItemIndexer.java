@@ -129,7 +129,8 @@ public final class WorkingSetItemIndexer {
             }
         }
         boolean finished = page.size() < batchSize;
-        String cursor = page.isEmpty() ? progress.afterLocalId() : Long.toString(page.getLast().localId());
+        String cursor = page.isEmpty() ? progress.afterLocalId()
+                : Long.toString(page.get(page.size() - 1).localId());
         return creation.recordIndexBatch(new IndexProgress(cursor, succeeded, failed, skipped,
                 finished ? Long.toString(child.trackerId()) : null), failures, finished, System.currentTimeMillis());
     }

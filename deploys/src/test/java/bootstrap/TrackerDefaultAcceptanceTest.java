@@ -225,8 +225,8 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(0, rest.getForObject(path + "/trackers", TrackerView[].class).length);
         BindingsView hidden = rest.getForObject(path + "/bindings", BindingsView.class);
         assertEquals(1, hidden.spaces().size());
-        assertEquals("10070101", hidden.trackers().getFirst().classificationId());
-        assertFalse(hidden.trackers().getFirst().shown());
+        assertEquals("10070101", hidden.trackers().get(0).classificationId());
+        assertFalse(hidden.trackers().get(0).shown());
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
         assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
