@@ -21,20 +21,6 @@ import java.util.*;
 @Data
 public class ClassSnapshot implements ClassificationFacts {
 
-  /** Builds the classification metadata needed by the Tracker catalog. */
-  public static ClassSnapshot forTracker(Long id, boolean shared, String name, Long baseClassId, Long classId) {
-    if (id == null || id <= 0) {
-      throw new IllegalArgumentException("classificationId must be positive");
-    }
-    ClassSnapshot snapshot = new ClassSnapshot();
-    snapshot.setId(id);
-    snapshot.setName(name);
-    snapshot.setClassId(classId);
-    snapshot.setBaseClassId(baseClassId);
-    snapshot.setShared(shared);
-    return snapshot;
-  }
-
   /**
    * 分类节点 ID
    */
@@ -146,6 +132,11 @@ public class ClassSnapshot implements ClassificationFacts {
   private boolean subclass;
 
   /**
+   * 是否共享（v3 {@code classifications.sharing_mode}）：Tracker / 工作集绑定的分类侧判据
+   */
+  private boolean shared;
+
+  /**
    * 是否启用变更控制
    */
   private boolean changeControl;
@@ -166,11 +157,6 @@ public class ClassSnapshot implements ClassificationFacts {
    * 分类是否启用（v3 {@code SubClass#getEnabled} 口径：未置位视为启用）
    */
   private Boolean enabled;
-
-  /**
-   * 是否是共享数据
-   */
-  private boolean shared;
 
   /**
    * 子项页签是否启用（v3 {@code TableSubItems} 页签 enabled）
@@ -195,12 +181,26 @@ public class ClassSnapshot implements ClassificationFacts {
     return mainWsViewTableName;
   }
 
+  public boolean isClass() {
+    return classNode;
+  }
+
   public boolean isShared() {
     return shared;
   }
 
-  public boolean isClass() {
-    return classNode;
+  /**
+   * 共享策略的模式表达（Tracker / 工作集绑定创作用）：{@link #shared} 布尔位还原为模式。
+   */
+  public SharingMode sharingMode() {
+    return shared ? SharingMode.SHARED : SharingMode.UNSHARED;
+  }
+
+  /**
+   * 分类是否接受所需共享模式：请求 SHARED 恒相容；请求 UNSHARED 仅当分类未置共享位时相容。
+   */
+  public boolean allows(SharingMode requested) {
+    return sharingMode().allows(requested);
   }
 
   public boolean isSubclass() {

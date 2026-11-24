@@ -85,7 +85,7 @@ public final class WorkingSetItemIndexer {
             return creation.advance(ItemOutcome.Skipped, null, System.currentTimeMillis());
         }
         long baselineAt = creation.baselineAt(Long.toString(parent));
-        WorkingSetCreation.IndexProgress progress = creation.indexProgress().getOrDefault(Long.toString(parent), IndexProgress.initial());
+        IndexProgress progress = creation.indexProgress().getOrDefault(Long.toString(parent), IndexProgress.initial());
         Object savepoint = transaction.createSavepoint();
         List<LightTrackerItemSummary> page;
         try {
@@ -104,7 +104,7 @@ public final class WorkingSetItemIndexer {
             transaction.releaseSavepoint(savepoint);
         }
 
-        ArrayList<WorkingSetCreation.Failure> failures = new ArrayList<Failure>();
+        ArrayList<Failure> failures = new ArrayList<Failure>();
         int succeeded = progress.succeeded();
         int skipped = progress.skipped();
         int failed = progress.failed();
@@ -129,8 +129,7 @@ public final class WorkingSetItemIndexer {
             }
         }
         boolean finished = page.size() < batchSize;
-        String cursor = page.isEmpty() ? progress.afterLocalId()
-                : Long.toString(page.get(page.size() - 1).localId());
+        String cursor = page.isEmpty() ? progress.afterLocalId() : Long.toString(page.get(page.size() - 1).localId());
         return creation.recordIndexBatch(new IndexProgress(cursor, succeeded, failed, skipped,
                 finished ? Long.toString(child.trackerId()) : null), failures, finished, System.currentTimeMillis());
     }

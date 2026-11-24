@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.domain.tracker;
+package com.airedgesoft.sharedkernel.tracker.application;
 
 /**
  * Tracker 默认链端口（Shared Kernel 契约）：业务对象创建期解析最终跟踪分类（Tracker id）。

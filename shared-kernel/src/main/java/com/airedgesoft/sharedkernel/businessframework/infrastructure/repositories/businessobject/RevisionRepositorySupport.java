@@ -1,35 +1,12 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
-
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
 import com.airedgesoft.lib.id.Ids;
-import com.airedgesoft.lib.jdbc.AggregateMapping;
-import com.airedgesoft.lib.jdbc.AggregateRows;
-import com.airedgesoft.lib.jdbc.AggregateMapping.Create;
-import com.airedgesoft.lib.jdbc.AggregateMapping.Row;
-import com.airedgesoft.lib.jdbc.AggregateMapping.Plan;
-import com.airedgesoft.lib.jdbc.AggregateMapping.Projection;
-import com.airedgesoft.lib.jdbc.AggregateMapping.TableMapping;
-import com.airedgesoft.lib.jdbc.JdbcAggregateStore;
+import com.airedgesoft.lib.jdbc.*;
+import com.airedgesoft.lib.jdbc.AggregateMapping.*;
 import com.airedgesoft.lib.jdbc.JdbcWritePlan.Value;
-import com.airedgesoft.lib.jdbc.JdbcWritePlanner;
 import com.airedgesoft.lib.jdbc.JdbcWritePlanner.Changes;
-import com.airedgesoft.lib.jdbc.StoredRow;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.enums.AttributeTypeEnum;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.AttributeFacts;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.BusinessObject;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.ClassificationFacts;
@@ -38,6 +15,13 @@ import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revi
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionItem;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionNumber;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.Revisionable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * 多版次对象的写侧仓储支撑（v3 共表「指针版次」模型）：在 {@link BusinessObjectRepositorySupport} 的根级骨架上，
@@ -177,7 +161,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
          * <p>
          * common 业务列（name/status/owner）与 {@code max_revision} 不在其中——它们由 common 行 upsert 收口，避免两处写同一列。
          */
-        public static final java.util.Set<String> ROOT_WRITE_COLUMNS = java.util.Set.of(ID, BASE_CLASS, CLASS, TYPE,
+        public static final Set<String> ROOT_WRITE_COLUMNS = Set.of(ID, BASE_CLASS, CLASS, TYPE,
                 WORK_SPACE, VERSION, WORKINGSET_ID, CREATED_BY, UPDATED_BY, COMMON_ID, LOCK_VERSION, CREATED_TIME,
                 UPDATED_TIME, REVISION, DELETE_FLAG, CHECKED_OUT, PARENT_ID, TRACKER, NUMBER);
 
@@ -624,7 +608,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
      *            调用期上下文（创建路径的审计列取聚合创建人，此处仅透传兼容 SAM）
      * @return 根行到版次行的有序插入计划
      */
-    protected final Create planCreate(A aggregate, AggregateMapping.HookContext context) {
+    protected final Create planCreate(A aggregate, HookContext context) {
         Map<String, Long> richTextIds = allocateRichTextIds(aggregate);
         if (!richTextIds.isEmpty()) {
             pendingRichTextIds.put(aggregateIdOf(aggregate), richTextIds);
@@ -644,7 +628,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
      *            调用期上下文（操作人经此进入审计列）
      * @return 更新计划或无变化结果
      */
-    protected final Plan planUpdate(A aggregate, Long loadedVersion, AggregateMapping.HookContext context) {
+    protected final Plan planUpdate(A aggregate, Long loadedVersion, HookContext context) {
         AggregateRows current = loadRows(List.of(asIdentity(aggregateIdOf(aggregate)))).stream().findFirst()
                 .orElseThrow(() -> versionConflict(aggregate, loadedVersion));
         assertLoadedVersion(aggregate, current, loadedVersion);
@@ -720,7 +704,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
                 currentRevisionValues(aggregate, aggregate.getCurrentRevisionItem(), richTexts.plannedIdsByColumn()),
                 baselineValuesOf(aggregate));
         Changes<ID> changes = JdbcWritePlanner.between(beforeProjection, afterProjection,
-                java.util.Set.of(Protocol.UPDATED_BY, Protocol.UPDATED_TIME));
+                Set.of(Protocol.UPDATED_BY, Protocol.UPDATED_TIME));
         contributeRevisionChanges(aggregate, stored, changes);
         return changes.finish(() -> auditValues(operatorId));
     }
@@ -752,7 +736,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
         RevisionItem working = aggregate.getCurrentRevisionItem();
         Long workingId = revisionRowId(aggregate, working);
         StoredRow source = physical.values().stream()
-                .max(java.util.Comparator.comparingInt(row -> revisionValueOf(row)))
+                .max(Comparator.comparingInt(row -> revisionValueOf(row)))
                 .orElseThrow(() -> new IllegalStateException("签出必须有库内指针行作为复制源"));
         if (physical.containsKey(workingId)) {
             return;
@@ -895,7 +879,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
      *            仓储声明的列名集合
      */
     public static void requireDeclaredColumns(Map<String, FieldValue> fieldsByColumn,
-            java.util.Set<String> declaredColumns) {
+            Set<String> declaredColumns) {
         declaredColumns.forEach(column -> {
             FieldValue field = fieldsByColumn.get(column);
             if (field != null && !Objects.equals(field.column(), column)) {
@@ -920,7 +904,7 @@ public abstract class RevisionRepositorySupport<A extends BusinessObject & Revis
      *            仓储声明的列名集合
      */
     public static void requireNoImplicitClear(RevisionItem revision, Map<String, FieldValue> sharedFields,
-            StoredRow original, java.util.Set<String> declaredColumns) {
+            StoredRow original, Set<String> declaredColumns) {
         if (revision == null || original == null) {
             return;
         }

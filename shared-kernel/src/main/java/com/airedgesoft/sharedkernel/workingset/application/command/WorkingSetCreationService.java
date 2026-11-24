@@ -8,7 +8,7 @@ import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.RelationEventMetadataEvent.OriginType;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerItemsIndexedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetCreationSubmittedEvent;
@@ -77,7 +77,7 @@ public class WorkingSetCreationService {
      * 按 requestId 幂等受理创建请求；同键返回既有任务。
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public WorkingSetCreation submitNew(String requestId, Function<Long, WorkingSetCreation.Request> request) {
+    public WorkingSetCreation submitNew(String requestId, Function<Long, Request> request) {
         Optional<WorkingSetCreation> existing = workingSetCreationRepository.findByRequest(requestId);
         if (existing.isPresent()) {
             WorkingSetCreation task = existing.get();
@@ -90,7 +90,7 @@ public class WorkingSetCreationService {
      * 受理创建请求；目标须非默认工作集且未被占用。
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public WorkingSetCreation submit(WorkingSetCreation.Request request) {
+    public WorkingSetCreation submit(Request request) {
         if (request.mode() != Mode.CREATE) {
             throw new IllegalArgumentException("Use submitExtension for an existing target");
         }
@@ -170,7 +170,7 @@ public class WorkingSetCreationService {
         if (shared.isEmpty() && unshared.isEmpty() && spaces.isEmpty()) {
             throw new DomainException(BindingResCode.NO_DERIVABLE_TRACKER, Long.toString(target));
         }
-        WorkingSetCreation.Request request = new WorkingSetCreation.Request(parentId, target, requestId,
+        Request request = new Request(parentId, target, requestId,
                 spaces.stream().map(Long::valueOf).toList(), shared, unshared, targetSet.name(), Mode.EXTEND,
                 null, baselineOverrides, List.of(), submittedIds);
         request = withDefaultTrackers(request, targetSet);
@@ -190,7 +190,7 @@ public class WorkingSetCreationService {
      * 任务受理前补齐默认 Tracker 选择。当前默认项为 Folder Tracker，未来可扩展其他默认 Tracker；
      * 它们与用户选中的非共享 Tracker 一起由 COPY_UNSHARED_TRACKERS 创建。
      */
-    private WorkingSetCreation.Request withDefaultTrackers(WorkingSetCreation.Request request, WorkingSet existingTarget) {
+    private Request withDefaultTrackers(Request request, WorkingSet existingTarget) {
         TreeSet<Long> unshared = new TreeSet<>(request.numericUnsharedTrackerIds());
         TreeSet<Long> shared = new TreeSet<>(request.numericSharedTrackerIds());
         List<Long> automatic = new ArrayList<>();
@@ -209,7 +209,7 @@ public class WorkingSetCreationService {
                         });
             }
         }
-        return new WorkingSetCreation.Request(request.numericParentWorkingSetId(),
+        return new Request(request.numericParentWorkingSetId(),
                 request.numericTargetWorkingSetId(), request.requestId(), request.numericProductSpaceIds(),
                 List.copyOf(shared), List.copyOf(unshared), request.name(), request.mode(), request.color(),
                 request.baselineOverrides(), automatic, request.submittedExtensionTrackerIds());
@@ -386,7 +386,7 @@ public class WorkingSetCreationService {
     }
 
     private WorkingSetCreation recordFailure(WorkingSetCreation creation, String item, String reason) {
-        WorkingSetCreation.Stage stage = creation.stage();
+        Stage stage = creation.stage();
         String trackerId = switch (stage) {
             case COPY_UNSHARED_TRACKERS, PUBLISH_RELATION_EVENTS -> item;
             default -> null;

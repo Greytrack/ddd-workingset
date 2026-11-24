@@ -2,7 +2,7 @@ package com.airedgesoft.sharedkernel.workingset.domain.workingset;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet.TrackerBinding;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import org.jmolecules.ddd.annotation.Service;

@@ -25,7 +25,7 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
     }
 
     public static WorkingSetCreation submit(String id, Request request, String caller, long now) {
-        WorkingSetCreation.Stage initial = firstStage(request);
+        Stage initial = firstStage(request);
         if (initial == null) {
             throw new DomainException(WorkingsetResultCode.BAD_REQUEST, "working set request has no work");
         }
@@ -105,13 +105,13 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
         if (stage != Stage.INDEX_UNSHARED_TRACKERS) {
             throw new DomainException(WorkingsetResultCode.INVALID_DOMAIN_STATE, "Not indexing");
         }
-        HashMap<String, WorkingSetCreation.IndexProgress> updatedIndex = new HashMap<>(indexProgress);
+        HashMap<String, IndexProgress> updatedIndex = new HashMap<>(indexProgress);
         updatedIndex.put(currentItem(), batch);
         if (finished) {
             return advance(batch.failed() == 0 ? ItemOutcome.Succeeded : ItemOutcome.Failed,
                     batchFailures, now, updatedIndex);
         }
-        ArrayList<WorkingSetCreation.Failure> updatedFailures = new ArrayList<>(failures);
+        ArrayList<Failure> updatedFailures = new ArrayList<>(failures);
         updatedFailures.addAll(batchFailures);
         return new WorkingSetCreation(numericId, request, requestedBy, status, stage, progress, updatedFailures,
                 createdAt, startedAt, completedAt, stageProgress, updatedIndex);
@@ -123,16 +123,16 @@ public record WorkingSetCreation(@JsonProperty("id") @JsonFormat(shape = JsonFor
 
     private WorkingSetCreation advance(ItemOutcome outcome, List<Failure> newFailures, long now,
                                        Map<String, IndexProgress> updatedIndex) {
-        EnumMap<WorkingSetCreation.Stage, WorkingSetCreation.Progress> updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
+        EnumMap<Stage, Progress> updatedProgress = new EnumMap<Stage, Progress>(Stage.class);
         updatedProgress.putAll(stageProgress);
-        WorkingSetCreation.Progress current = updatedProgress.get(stage).record(outcome);
+        Progress current = updatedProgress.get(stage).record(outcome);
         updatedProgress.put(stage, current);
-        ArrayList<WorkingSetCreation.Failure> updatedFailures = new ArrayList<>(failures);
+        ArrayList<Failure> updatedFailures = new ArrayList<>(failures);
         updatedFailures.addAll(newFailures);
-        WorkingSetCreation.Progress totals = new Progress(progress.succeeded(), progress.failed(), progress.skipped(), total(request))
+        Progress totals = new Progress(progress.succeeded(), progress.failed(), progress.skipped(), total(request))
                 .record(outcome);
         Stage next = stage;
-        WorkingSetCreation.Status nextStatus = Status.Running;
+        Status nextStatus = Status.Running;
         if (stage == Stage.CREATE_WORKING_SET && outcome == ItemOutcome.Failed) {
             nextStatus = Status.Failed;
         } else if (current.processed() == current.total()) {

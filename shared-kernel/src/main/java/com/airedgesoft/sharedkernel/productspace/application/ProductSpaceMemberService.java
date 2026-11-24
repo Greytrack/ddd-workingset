@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.domain;
+package com.airedgesoft.sharedkernel.productspace.application;
 
 import com.airedgesoft.lib.exception.DomainException;
 

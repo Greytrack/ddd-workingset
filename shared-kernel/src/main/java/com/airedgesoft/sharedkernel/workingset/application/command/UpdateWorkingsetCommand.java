@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.application.command;
+package com.airedgesoft.sharedkernel.workingset.application.command;
 
 /**
  * 更新工作集命令（编辑基本信息；掩码白名单 = displayName / owner / description / color，规范 §3）。

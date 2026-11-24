@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.workingset.adapters;
+package com.airedgesoft.sharedkernel.workingset.adapters.self;
 
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation;
 
@@ -10,7 +10,7 @@ public record CreateWorkingSetRequest(Long parentWorkingSetId, String requestId,
                                       List<Long> unsharedParentTrackerIds, String name,
                                       WorkingSetCreation.Mode mode, String color,
                                       Map<Long, Long> baselineAtByTracker) {
-    WorkingSetCreation.Request toDomainRequest(Long newWorkingSetId) {
+    public WorkingSetCreation.Request toDomainRequest(Long newWorkingSetId) {
         WorkingSetCreation.Mode creationMode = mode == null ? WorkingSetCreation.Mode.CREATE : mode;
         return new WorkingSetCreation.Request(parentWorkingSetId, newWorkingSetId, requestId, productSpaceIds,
                 sharedTrackerIds, unsharedParentTrackerIds, name, creationMode, color, baselineAtByTracker,

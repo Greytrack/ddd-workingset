@@ -148,14 +148,14 @@ public class MergeExecutionService {
      * 一页决策要么整页登记成功，要么整轮回滚。
      */
     private MergeRound registerDecisions(MergeRound round, List<EntryRequest> requests) {
-        List<Comparison.TrackerPair> candidates = evidence.candidates(round.source(), round.target());
+        List<TrackerPair> candidates = evidence.candidates(round.source(), round.target());
         MergeRound updated = round;
         for (EntryRequest request : requests) {
             Difference frozen = request.evidence();
             if (frozen == null) {
                 throw new DomainException(MergeResCode.INVALID_DECISION, "evidence is required");
             }
-            Comparison.TrackerPair pair = frozen.trackers();
+            TrackerPair pair = frozen.trackers();
             if (!pair.sourceWorkingSetId().equals(round.source())
                     || !pair.targetWorkingSetId().equals(round.target())) {
                 throw new DomainException(MergeResCode.STALE_EVIDENCE, Long.toString(frozen.family()));

@@ -1,20 +1,16 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.reference;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.airedgesoft.lib.jdbc.StoredRow;
+import com.airedgesoft.sharedkernel.businessframework.domain.reference.Reference;
+import com.airedgesoft.sharedkernel.businessframework.domain.reference.ReferenceRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.airedgesoft.sharedkernel.businessframework.domain.reference.Reference;
-import com.airedgesoft.sharedkernel.businessframework.domain.reference.ReferenceRepository;
-import com.airedgesoft.lib.jdbc.StoredRow;
+import java.util.*;
 
 import static com.airedgesoft.sharedkernel.businessframework.infrastructure.reference.ReferenceStorage.TABLE;
+
 /**
  * 引用聚合仓储实现（Spring JDBC 直读直写现表 {@code air_inst_tab_reference}；继承传播怀疑父仓储——触发口径 8）。
  *
@@ -73,7 +69,7 @@ public class ReferenceRepositoryImpl implements ReferenceRepository {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
-        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
         Object[] args = ids.toArray();
         List<StoredRow> rows = query(SELECT_COLUMNS + " WHERE id IN (" + placeholders + ")", args);
         return rows.stream().map(ReferenceMapper::reconstitute).toList();
@@ -162,7 +158,7 @@ public class ReferenceRepositoryImpl implements ReferenceRepository {
         if (referenceIds == null || referenceIds.isEmpty()) {
             return;
         }
-        String placeholders = String.join(",", java.util.Collections.nCopies(referenceIds.size(), "?"));
+        String placeholders = String.join(",", Collections.nCopies(referenceIds.size(), "?"));
         jdbcTemplate.update("DELETE FROM " + TABLE + " WHERE id IN (" + placeholders + ")", referenceIds.toArray());
     }
 

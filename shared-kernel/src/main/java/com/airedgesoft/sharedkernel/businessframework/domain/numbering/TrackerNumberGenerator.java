@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.tracker.infrastructure.repositories;
+package com.airedgesoft.sharedkernel.businessframework.domain.numbering;
 
 
 @FunctionalInterface

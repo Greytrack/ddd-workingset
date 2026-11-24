@@ -1,7 +1,7 @@
-package com.airedgesoft.sharedkernel.businessframework.adapters;
+package com.airedgesoft.sharedkernel.workingset.adapters;
 
 import com.airedgesoft.lib.restful.etag.LockedCommand;
-import com.airedgesoft.sharedkernel.businessframework.application.command.ReplaceWorkingsetContentCommand;
+import com.airedgesoft.sharedkernel.workingset.application.command.ReplaceWorkingsetContentCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**

@@ -1,5 +1,6 @@
 package com.airedgesoft.sharedkernel.workingset.adapters;
 
+import com.airedgesoft.sharedkernel.workingset.adapters.self.CreateWorkingSetRequest;
 import com.airedgesoft.sharedkernel.workingset.application.command.WorkingSetCreationService;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSetCreation;
 import org.springframework.http.ResponseEntity;

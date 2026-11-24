@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.application.command;
+package com.airedgesoft.sharedkernel.tracker.application.command;
 
 import java.util.List;
 

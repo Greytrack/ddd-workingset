@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.application.command;
+package com.airedgesoft.sharedkernel.tracker.application.command;
 
 /**
  * Tracker 拖拽排序命令（左树拖拽；position = 目标锚点相对位置）。

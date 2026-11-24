@@ -50,7 +50,7 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         if (entries.stream().anyMatch(existing -> existing.evidence().family().equals(entry.evidence().family()))) {
             throw new DomainException(MergeResCode.INVALID_DECISION, "duplicate item family in one round");
         }
-        ArrayList<MergeRound.Entry> updated = new ArrayList<>(entries);
+        ArrayList<Entry> updated = new ArrayList<>(entries);
         updated.add(entry);
         return new MergeRound(numericId, token, requestId, source, target, caller, state, updated, null);
     }
@@ -100,11 +100,11 @@ public record MergeRound(@JsonProperty("id") @JsonFormat(shape = JsonFormat.Shap
         if (state != State.Running || awaitingResults()) {
             throw new DomainException(MergeResCode.ROUND_CLOSED, id());
         }
-        List<MergeRound.ItemResult> results = entries.stream().map(Entry::result).toList();
+        List<ItemResult> results = entries.stream().map(Entry::result).toList();
         long successful = results.stream().filter(ItemResult::succeeded).count();
         State terminal = successful == 0 ? State.Failed
                 : successful == results.size() ? State.Succeeded : State.PartiallySucceeded;
-        MergeRound.Summary summary = new Summary(count(results, Outcome.Applied), count(results, Outcome.Confirmed),
+        Summary summary = new Summary(count(results, Outcome.Applied), count(results, Outcome.Confirmed),
                 count(results, Outcome.Rejected),
                 count(results, Outcome.Conflict), count(results, Outcome.StaleEvidence),
                 count(results, Outcome.Unknown));

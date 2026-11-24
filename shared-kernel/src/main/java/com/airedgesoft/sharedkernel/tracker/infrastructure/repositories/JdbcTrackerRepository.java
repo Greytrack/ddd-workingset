@@ -5,7 +5,8 @@ import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.numbering.TrackerNumberGenerator;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -115,15 +116,14 @@ public class JdbcTrackerRepository implements TrackerRepository {
 
     @Override
     public Optional<Tracker> findTracker(Long workingsetId, Long workSpace, Long subClassId, Long trackerId) {
-        if (trackerId != null) {
-            return findById(trackerId);
-        }
-        if (workingsetId == null || workSpace == null || subClassId == null) {
-            return Optional.empty();
-        }
-        return findDefaultTracker(workingsetId, workSpace.toString(), subClassId);
+      if (trackerId != null) {
+        return findById(trackerId);
+      }
+      if (workingsetId == null || workSpace == null || subClassId == null) {
+        return Optional.empty();
+      }
+      return findDefaultTracker(workingsetId, workSpace.toString(), subClassId);
     }
-
     @Override
     public Optional<Tracker> lockTracker(Long id) {
         return load(id, " FOR NO KEY UPDATE OF t");

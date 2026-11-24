@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.workingset.adapters;
+package com.airedgesoft.sharedkernel.tracker.adapters;
 
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.sharedkernel.workingset.application.command.MergeExecutionService;

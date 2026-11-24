@@ -22,7 +22,7 @@ public interface TrackerQueryProvider {
 
     boolean hasExternalTrackerReferences(String spaceId);
 
-    boolean existsDefaultTracker(Long workingSetId, String spaceId, String classificationId);
+    boolean existsDefaultTracker(Long workingSetId, String spaceId, Long classificationId);
 
     Optional<Long> findDefaultTrackerId(Long workingSetId, long spaceId, long classificationId);
 }

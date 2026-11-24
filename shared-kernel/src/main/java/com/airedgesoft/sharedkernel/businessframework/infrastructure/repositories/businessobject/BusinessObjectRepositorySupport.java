@@ -1,15 +1,5 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
-
 import com.airedgesoft.lib.exception.CommonResCode;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.id.Ids;
@@ -17,19 +7,17 @@ import com.airedgesoft.lib.jdbc.AggregateMapping;
 import com.airedgesoft.lib.jdbc.AggregateMapping.TableMapping;
 import com.airedgesoft.lib.jdbc.AggregateRows;
 import com.airedgesoft.lib.jdbc.JdbcAggregateStore;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Change;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Clone;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Delete;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Insert;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Operation;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Target;
-import com.airedgesoft.lib.jdbc.JdbcWritePlan.Value;
-import com.airedgesoft.lib.jdbc.JdbcWritePlanner.Changes;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.BusinessObject;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 业务对象写侧仓储支撑（v3 共表存储骨架）：把「与具体 BC 无关」的根级写侧机制收在一处——机制在 {@code lib-jdbc}，编排在基类，

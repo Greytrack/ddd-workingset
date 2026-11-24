@@ -72,7 +72,7 @@ public final class SourceSerialCowCoordinator {
             Task task;
             long previous;
             synchronized (queues) {
-                PriorityQueue<SourceSerialCowCoordinator.Task> queue = queues.get(source);
+                PriorityQueue<Task> queue = queues.get(source);
                 task = queue.peek();
                 if (task == null) {
                     queues.remove(source);
@@ -108,15 +108,24 @@ public final class SourceSerialCowCoordinator {
                 synchronized (queues) {
                     lastExecuted.put(source, Math.max(previous, task.sequence()));
                     if (lastExecuted.size() > RECENT_SOURCE_LIMIT) {
-                        // Java 17 无 SequencedMap.pollFirstEntry：移出访问序最旧的条目
-                        Iterator<Long> eldest = lastExecuted.keySet().iterator();
-                        if (eldest.hasNext()) {
-                            eldest.next();
-                            eldest.remove();
-                        }
+                        evictEldest(lastExecuted);
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * 逐出最久未使用的一条（accessOrder=true 时首个 entry 即最久未用）。
+     *
+     * <p>
+     * Java 17 口径：JDK 21 的 {@code LinkedHashMap#pollFirstEntry()} 在 17 不可用，改用 entrySet 迭代器定位并删除首个 entry。
+     */
+    private static void evictEldest(LinkedHashMap<Long, Long> cache) {
+        Iterator<Map.Entry<Long, Long>> eldest = cache.entrySet().iterator();
+        if (eldest.hasNext()) {
+            eldest.next();
+            eldest.remove();
         }
     }
 

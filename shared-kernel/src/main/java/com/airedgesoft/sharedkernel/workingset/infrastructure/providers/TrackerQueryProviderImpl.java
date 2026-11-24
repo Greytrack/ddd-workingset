@@ -66,9 +66,9 @@ public class TrackerQueryProviderImpl implements TrackerQueryProvider {
     }
 
     @Override
-    public boolean existsDefaultTracker(Long workingSetId, String spaceId, String classificationId) {
+    public boolean existsDefaultTracker(Long workingSetId, String spaceId, Long classificationId) {
         return exists("workingset_id = ? AND work_space = ? AND tracker_class = ? AND is_default = 1",
-                workingSetId, Long.valueOf(spaceId), Long.valueOf(classificationId));
+                workingSetId, Long.valueOf(spaceId), classificationId);
     }
 
     @Override

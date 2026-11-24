@@ -1,7 +1,7 @@
-package com.airedgesoft.sharedkernel.businessframework.adapters;
+package com.airedgesoft.sharedkernel.tracker.adapters;
 
 import com.airedgesoft.lib.restful.etag.LockedCommand;
-import com.airedgesoft.sharedkernel.businessframework.application.command.UpdateTrackerCommand;
+import com.airedgesoft.sharedkernel.tracker.application.command.UpdateTrackerCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**

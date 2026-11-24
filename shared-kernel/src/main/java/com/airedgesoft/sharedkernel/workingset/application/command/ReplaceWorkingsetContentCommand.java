@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.application.command;
+package com.airedgesoft.sharedkernel.workingset.application.command;
 
 /**
  * 工作集内容替换命令（GateFlow 回滚场景，legacy createRollbackWorkingset 异步 Job 实证；LRO 承载）。

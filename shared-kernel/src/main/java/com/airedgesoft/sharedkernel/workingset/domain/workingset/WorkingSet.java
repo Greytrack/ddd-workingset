@@ -2,10 +2,10 @@ package com.airedgesoft.sharedkernel.workingset.domain.workingset;
 
 
 import com.airedgesoft.lib.exception.DomainException;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
-import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetDeleted;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
@@ -248,7 +248,7 @@ public final class WorkingSet {
     }
 
     public SpaceBinding bindSpace(ProductSpace space, SpaceOrigin origin) {
-        WorkingSet.SpaceBinding binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
+        SpaceBinding binding = new SpaceBinding(id, space.id(), space.name(), origin, SpaceState.ACTIVE);
         if (spaces.putIfAbsent(space.id(), binding) != null) {
             throw new DomainException(BindingResCode.ALREADY_BOUND, space.id());
         }
@@ -256,7 +256,7 @@ public final class WorkingSet {
     }
 
     public TrackerBinding trackerBinding(Long trackerId) {
-        WorkingSet.TrackerBinding binding = trackers.get(trackerId);
+        TrackerBinding binding = trackers.get(trackerId);
         if (binding == null) {
             throw new DomainException(BindingResCode.TRACKER_BINDING_NOT_FOUND, Long.toString(trackerId));
         }
@@ -310,15 +310,15 @@ public final class WorkingSet {
 
     public TrackerBinding bindTracker(Tracker tracker, ClassSnapshot classification, SharingMode requestedMode) {
         requireSpaceBinding(tracker.productSpaceId().toString());
-        if (!tracker.classificationId().equals(classification.getId().toString())
-                || tracker.sharingMode() != requestedMode || !requestedMode.isAllowedBy(classification)) {
-            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.getId().toString());
+        if (!tracker.classificationId().equals(String.valueOf(classification.getId()))
+                || tracker.sharingMode() != requestedMode || !classification.allows(requestedMode)) {
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, String.valueOf(classification.getId()));
         }
         if (trackers.containsKey(tracker.trackerId())) {
             throw new DomainException(BindingResCode.TRACKER_ALREADY_BOUND, Long.toString(tracker.trackerId()));
         }
-        WorkingSet.TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
-        WorkingSet.TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.getId(),
+        TrackerOrigin origin = requestedMode == SharingMode.SHARED ? TrackerOrigin.SHARED_REUSE : TrackerOrigin.UNSHARED_DERIVATION;
+        TrackerBinding binding = new TrackerBinding(id, tracker.trackerId(), tracker.productSpaceId(), classification.getId(),
                 requestedMode, origin);
         trackers.put(binding.trackerId(), binding);
         return binding;

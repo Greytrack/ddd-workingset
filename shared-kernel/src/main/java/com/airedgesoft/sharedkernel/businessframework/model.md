@@ -38,7 +38,7 @@
 | `AttributeTypeFactory` | 工厂（`final class`） | 按 `AttributeTypeEnum` 调度「串→值」与「值校验」，唯一入口 |
 | `*ValidatorStrategy`（Text / RichText / Number / Numerical / SingleList / MultipleList / CascadeSingleList / CascadeMultiList / Date / StartAndEndDate / CompositeText / CompositeNumeric / Images / NoOp） | 策略实现 | 逐类型校验规则；组合类复用前段策略 |
 | `AttributeValueValidationContext` | 上下文 | 一次校验的输入（schema / 值 / 主属性值） |
-| `AttributeValidationSupport` | **平台能力收口点**（包级私有静态） | v3 取数（`SpringContextUtils` / `GstoreHelper` / `IListObjFactory` / `ISessionLoader` / `AdminCache`）集中于此 |
+| `AttributeValueMetadataPort`（＋静态持有者 `AttributeValueMetadataPorts`） | **平台取数端口**：v3 取数 1:1 镜像（`AdminCache` / `IListObjFactory` / `ISessionLoader` / `GstoreHelper` / `GlobalValidatorTool` / `AttributeInheritHelper`） | 实现落 `v4-bridge-v3`（`V3AttributeValueMetadataAdapter` + 装配安装） |
 | `Violation` | 违例承载 | 违例记录（`CommonResCode` + 参数） |
 | `AttributeObjectState` | 值对象 | 同对象属性值状态（级联跨字段判定口径） |
 | `CascadeValueRangeChecker` | 判定器 | 级联允许范围计算（跨字段） |
@@ -59,5 +59,5 @@
 ## 3. 落地状态
 
 - 属性值校验策略族与构造器：**已实现**（策略族经 `AttributeTypeFactory` 调度；`Revisionable#validateFieldValues` 批量收集违例）。
-- 平台能力：**仍直连 v3**（仅 `AttributeValidationSupport` 一处收口），待改为 domain 端口 + `v4-bridge-v3` 适配（同 `V3AttributeSchemaSource` 模式）；该点已作为 ArchUnit 规则 3b/3c 的**唯一登记豁免**。
-- 已知欠账：领域仍引用 v3 的 `AttributeNode` / `AttributeTypeEnum` / `CommonResultCode` / `AdminCache`，属迁移期登记项（见 `.lattice/standards/architecture.md` Deviation Registry）。
+- 平台能力：v3 取数已收敛为 domain 端口 `AttributeValueMetadataPort` + `v4-bridge-v3` 适配（`V3AttributeValueMetadataAdapter`，1:1 镜像 v3 取数语句；`AttributeValueMetadataPorts` 装配期安装，同 `AuthorizationPorts` 约定）；ArchUnit 规则 4 / 6 的 `AttributeValidationSupport` 豁免已移除（2026-11-24）。
+- 已知欠账：领域仍引用 v3 的 `AttributeNode` / `AttributeTypeEnum` / `AdminCache`，属迁移期登记项（见 `.lattice/standards/architecture.md` Deviation Registry）；属性值校验错误码已迁入 `SharedKernelResultCode`（2026-11-24，v3 `CommonResultCode` 同名语义平移）。

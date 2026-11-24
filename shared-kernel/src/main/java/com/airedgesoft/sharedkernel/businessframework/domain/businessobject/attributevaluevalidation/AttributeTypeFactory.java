@@ -54,7 +54,7 @@ public final class AttributeTypeFactory {
                 .validate();
         if (!violations.isEmpty()) {
             Violation first = violations.get(0);
-            throw new DomainException(DomainErrorType.INVALID_ARGUMENT, first.code(), first.args());
+            throw new DomainException(DomainErrorType.INVALID_ARGUMENT, null, null);
         }
         return value;
     }

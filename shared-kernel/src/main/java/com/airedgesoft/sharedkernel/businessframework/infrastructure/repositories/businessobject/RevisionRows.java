@@ -1,10 +1,5 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.airedgesoft.lib.jdbc.AggregateMapping.Row;
 import com.airedgesoft.lib.jdbc.AggregateMapping.TableMapping;
 import com.airedgesoft.lib.jdbc.JdbcWritePlan.Value;
@@ -12,6 +7,11 @@ import com.airedgesoft.lib.jdbc.StoredRow;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.FieldValue;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionItem;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionNumber;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * v3 共表「指针版次」的<b>行定位与行组装</b>公共机制：版次行身份、指针行、历史基线行、比较投影的行壳。

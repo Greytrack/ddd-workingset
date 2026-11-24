@@ -1,4 +1,4 @@
-package com.airedgesoft.sharedkernel.businessframework.application.command;
+package com.airedgesoft.sharedkernel.tracker.application.command;
 
 /**
  * 更新 Tracker 命令（配置编辑；掩码白名单 = displayName / instanceTreeShowContent，规范 §3）。

@@ -1,9 +1,9 @@
 package com.airedgesoft.sharedkernel.tracker.domain;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.ClassSnapshot;
-import com.airedgesoft.sharedkernel.workingset.domain.SharingMode;
+import com.airedgesoft.sharedkernel.businessframework.domain.admin.claasification.model.SharingMode;
+import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.workingset.domain.event.TrackerDeletedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.workingset.WorkingSet;
 import com.airedgesoft.sharedkernel.workingset.error.BindingResCode;
@@ -149,7 +149,7 @@ public final class Tracker {
     public static Tracker original(Long id, ProductSpace space, ClassSnapshot classification, Long parentId,
                                    boolean isDefault, Long actor) {
         return new Tracker(id, id, isDefault ? classification.getName() : null, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
-                SharingMode.from(classification), parentId, isDefault, true, actor, actor);
+                classification.sharingMode(), parentId, isDefault, true, actor, actor);
     }
 
     public static Tracker original(Long id, String name, ProductSpace space, ClassSnapshot classification,
@@ -160,8 +160,8 @@ public final class Tracker {
     public static Tracker original(Long id, String name, ProductSpace space, ClassSnapshot classification,
                                    SharingMode sharingMode, Long actor) {
         String normalizedName = normalizeName(name);
-        if (!sharingMode.isAllowedBy(classification)) {
-            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, classification.getId().toString());
+        if (!classification.allows(sharingMode)) {
+            throw new DomainException(BindingResCode.SHARING_MODE_MISMATCH, String.valueOf(classification.getId()));
         }
         return new Tracker(id, id, normalizedName, null, WorkingSet.DEFAULT_ID, space.numericId(), classification,
                 sharingMode, null, false, true, actor, actor);
@@ -284,8 +284,8 @@ public final class Tracker {
         return true;
     }
 
-    public String classificationId() {
-        return Long.toString(classificationId);
+    public Long classificationId() {
+        return classificationId;
     }
 
     public void requireDeletable(boolean hasItems, boolean hasOrgChildren, boolean hasDerivedChildren) {

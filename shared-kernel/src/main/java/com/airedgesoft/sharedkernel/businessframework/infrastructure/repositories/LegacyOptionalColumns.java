@@ -1,15 +1,15 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories;
 
-import java.math.BigDecimal;
-import java.lang.reflect.RecordComponent;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import com.airedgesoft.lib.jdbc.JdbcRowMapping;
 import com.airedgesoft.sharedkernel.businessframework.application.command.OptionalFields;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.revison.RevisionItem;
 import com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject.ColumnValueConverter;
+
+import java.lang.reflect.RecordComponent;
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * v3 共表「可选属性列」的列绑定机制：按 {@link OptionalFields} 的组件清单生成 {@link JdbcRowMapping.Binding}。

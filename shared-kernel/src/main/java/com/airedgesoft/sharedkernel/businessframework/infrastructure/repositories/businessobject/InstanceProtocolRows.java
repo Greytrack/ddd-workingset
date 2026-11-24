@@ -1,17 +1,17 @@
 package com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import com.airedgesoft.lib.jdbc.AggregateMapping;
 import com.airedgesoft.lib.jdbc.AggregateMapping.TableMapping;
 import com.airedgesoft.lib.jdbc.JdbcWritePlan.Value;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.sharedkernel.businessframework.domain.businessobject.order.OrderIndex;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import static com.airedgesoft.lib.jdbc.JdbcWritePlan.bigint;
 import static com.airedgesoft.lib.jdbc.JdbcWritePlan.text;
 import static com.airedgesoft.sharedkernel.businessframework.infrastructure.repositories.businessobject.RevisionRepositorySupport.Protocol;
+
 /**
  * v3 共表「实例级」协议行的公共装配（创建协议列 / 首版次协议列 / common 行 / rank 列值）：创建期的实例协议列与 {@code air_inst_common} 冗余行。
  *
@@ -120,7 +120,7 @@ public final class InstanceProtocolRows {
      *            富文本列名 → 内容行 id（已由基类按元数据/协议解析好；空＝无富文本）
      * @return 列名 → 值
      */
-    public static Map<String, Value> firstRevisionProtocolValues(AggregateMapping.TableMapping revisionTable,
+    public static Map<String, Value> firstRevisionProtocolValues(TableMapping revisionTable,
                                                                  FirstRevisionFacts facts, Map<String, Long> richTextIdsByColumn) {
         TableMapping table = revisionTable;
         Map<String, Value> values = new LinkedHashMap<>(facts.instanceProtocolValues());
