@@ -13,7 +13,7 @@ const mergeView = {
     targetTracker: null,
     target: null,
     source: null,
-    offset: 0,
+    pageToken: null,
     page: null,
     rows: [],
     round: null,
@@ -56,7 +56,7 @@ async function openMerge() {
     const parent = node.ws.parentWorkingSetId;
     const adjacent = parent && selected.sourceId ? [parent] : [];
     const ranges = await Promise.all(adjacent.map(async (id) => {
-        const base = '/api/worksets/' + encodeURIComponent(id);
+        const base = '/v1/workingsets/' + encodeURIComponent(id);
         const [trackers, bindings] = await Promise.all([
             api(base + '/trackers'),
             id === '1' ? null : api(base + '/bindings')
@@ -156,7 +156,7 @@ async function mergeStartComparison() {
     mergeView.target = target.workingSetId;
     mergeView.sourceTracker = source.trackerId;
     mergeView.targetTracker = target.trackerId;
-    mergeView.offset = 0;
+    mergeView.pageToken = null;
     mergeView.round = null;
     await loadMergePage();
 }
@@ -176,19 +176,21 @@ async function loadMergePage() {
     const query = new URLSearchParams({
         sourceTrackerId: mergeView.sourceTracker,
         targetTrackerId: mergeView.targetTracker,
-        offset: mergeView.offset,
-        limit: 50
+        sourceWorkingSetId: mergeView.source,
+        pageSize: 50
     });
+    if (mergeView.pageToken) query.set('pageToken', mergeView.pageToken);
     try {
-        const page = await api('/api/worksets/' + encodeURIComponent(mergeView.target)
-            + '/compare/' + encodeURIComponent(mergeView.source) + '?' + query, {method: 'POST'});
+        const comparison = await api('/v1/workingsets/' + encodeURIComponent(mergeView.target)
+            + ':compare?' + query, {method: 'POST'});
+        const page = comparison.page;
         if (body !== $('#mergeBody')) return;
         mergeView.page = page;
-        mergeView.rows = page.differences.map((difference) => ({
+        mergeView.rows = page.items.map((difference) => ({
             difference, action: 'IGNORED', mark: true,
             fields: Object.fromEntries((difference.fields || []).map((field) => [field, 'IGNORED']))
         }));
-        $('#mergeSubtitle').textContent = `本页 ${page.differences.length} 条差异`;
+        $('#mergeSubtitle').textContent = `本页 ${page.items.length} 条差异`;
         renderMergeRows();
     } catch (error) {
         body.innerHTML = `<div class="empty">比较失败：${escapeHtml(error.message)}</div>`;
@@ -208,7 +210,7 @@ function renderMergeRows() {
         $('#mergeHint').textContent = '';
         return;
     }
-    const next = mergeView.page && mergeView.page.nextOffset !== null
+    const next = mergeView.page && mergeView.page.nextPageToken
         ? `<button type="button" class="btn" onclick="nextMergePage()">下一页</button>` : '';
     body.innerHTML = `
     <table class="merge-table merge-comparison-table">
@@ -309,7 +311,7 @@ function setMergeMark(index, mark) {
 }
 
 async function nextMergePage() {
-    mergeView.offset = mergeView.page.nextOffset;
+    mergeView.pageToken = mergeView.page.nextPageToken;
     mergeView.rows = [];
     await loadMergePage();
 }
@@ -331,12 +333,11 @@ async function submitMerge() {
     submit.disabled = true;
     setMergePickerDisabled(true);
     try {
-        const round = await api('/api/worksets/' + encodeURIComponent(mergeView.target) + '/merge-rounds', {
+        const round = await api('/v1/workingsets/' + encodeURIComponent(mergeView.target) + '/mergeRounds', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'Idempotency-Key': newRequestId()},
             body: JSON.stringify({
                 sourceWorkingSetId: mergeView.source,
-                requestId: newRequestId(),
                 decisions: mergeDecisions()
             })
         });
@@ -367,7 +368,7 @@ function pollMergeRound(roundId) {
     const body = $('#mergeBody');
     const poller = setInterval(async () => {
         try {
-            const round = await api('/api/merge-rounds/' + encodeURIComponent(roundId));
+            const round = await api('/v1/mergeRounds/' + encodeURIComponent(roundId));
             if (body !== $('#mergeBody') || mergeView.poller !== poller) return;
             mergeView.round = round;
             renderMergeRound(round);

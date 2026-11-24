@@ -83,10 +83,10 @@ class WorkingSetLineageAcceptanceTest {
                   AND tracker = 584190236948832 AND revision = 1 AND version_type = 10001
                   AND color = '#2468AC'
                 """, Integer.class, Long.valueOf(grandchild), Long.valueOf(child)));
-        BindingsView range = rest.getForObject(path(grandchild) + "/bindings", BindingsView.class);
+        BindingsView range = rest.getForObject("/v1/workingsets/" + grandchild + "/bindings", BindingsView.class);
         assertTrue(range.spaces().isEmpty());
         assertTrue(range.trackers().isEmpty());
-        assertEquals(List.of(grandchild), rest.getForObject(path(child) + "/children", List.class));
+        assertEquals(List.of(grandchild), rest.getForObject("/v1/workingsets/" + child + "/children", List.class));
         assertEquals(List.of(child, "1"), rest.getForObject(path(grandchild) + "/ancestors", List.class));
         assertEquals(List.of(), rest.getForObject(path("1") + "/ancestors", List.class));
     }

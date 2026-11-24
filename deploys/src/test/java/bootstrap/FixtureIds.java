@@ -70,10 +70,10 @@ public final class FixtureIds {
     }
 
     static CreationView extendScope(TestRestTemplate rest, String target, Status expected, String... trackerIds) {
-        ResponseEntity<CreationView> response = rest.postForEntity("/api/worksets/" + target + "/extensions",
+        ResponseEntity<CreationView> response = rest.postForEntity("/v1/workingsets/" + target + ":extend",
                 extensionRequest(trackerIds), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
-        String task = "/api/working-set-creations/" + response.getBody().creationId();
+        String task = "/v1/workingsetCreations/" + response.getBody().creationId();
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() ->
                 assertEquals(expected, rest.getForObject(task, CreationView.class).status()));
         return rest.getForObject(task, CreationView.class);

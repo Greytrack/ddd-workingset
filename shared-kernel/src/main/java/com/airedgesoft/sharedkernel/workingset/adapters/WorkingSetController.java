@@ -45,7 +45,7 @@ import java.util.List;
  * 向导树投影落在 {@code ProductSpaceController}；比较/合并已迁 trackers 族（{@code TrackerController}）。
  *
  * <p>
- * 文末保留原 {@code /api/worksets} 实现的方法体与读模型（已去除映射注解、不作为端点暴露），供契约核对；确认后删除。
+ * 子工作集、绑定及 Tracker 查询复用现有工作集读模型。其余未映射的旧方法供契约核对。
  */
 @RestController
 @RequiredArgsConstructor
@@ -177,7 +177,7 @@ public class WorkingSetController {
         return operation;
     }
 
-    // ==================== 原 /api/worksets 实现（保留供核对；已去除映射注解，不作为端点暴露） ====================
+    // ==================== 工作集范围查询及保留供核对的旧方法 ====================
 
     /**
      * 原 {@code GET /api/worksets/{workingSetId}}：按 id 查询工作集；创建中的目标工作集返回 Preparing。
@@ -210,9 +210,10 @@ public class WorkingSetController {
     }
 
     /**
-     * 原 {@code GET /api/worksets/{workingSetId}/children}：查询直接子工作集的 id 列表。
+     * {@code GET /v1/workingsets/{workingSetId}/children}：查询直接子工作集的 id 列表。
      */
-    public List<String> findChildren(Long workingSetId) {
+    @GetMapping("/{workingSetId}/children")
+    public List<String> findChildren(@PathVariable("workingSetId") Long workingSetId) {
         return queries.findChildren(workingSetId).stream().map(String::valueOf).toList();
     }
 
@@ -224,9 +225,10 @@ public class WorkingSetController {
     }
 
     /**
-     * 原 {@code GET /api/worksets/{workingSetId}/trackers}：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。
+     * {@code GET /v1/workingsets/{workingSetId}/trackers}：工作集内的 Tracker（含 parentId/sourceId，用于构建 Tracker 树）。
      */
-    public List<TrackerView> findTrackers(Long workingSetId) {
+    @GetMapping("/{workingSetId}/trackers")
+    public List<TrackerView> findTrackers(@PathVariable("workingSetId") Long workingSetId) {
         return queries.findTrackers(workingSetId).stream().map(TrackerView::from).toList();
     }
 
@@ -238,9 +240,10 @@ public class WorkingSetController {
     }
 
     /**
-     * 原 {@code GET /api/worksets/{workingSetId}/bindings}：工作集的空间绑定与 Tracker 绑定。
+     * {@code GET /v1/workingsets/{workingSetId}/bindings}：工作集的空间绑定与 Tracker 绑定。
      */
-    public BindingsView listBindings(Long workingSetId) {
+    @GetMapping("/{workingSetId}/bindings")
+    public BindingsView listBindings(@PathVariable("workingSetId") Long workingSetId) {
         return BindingsView.from(queries.findBindings(workingSetId));
     }
 
@@ -253,7 +256,7 @@ public class WorkingSetController {
     }
 
     /** v1 读模型：由工作集聚合映射（编辑出参）。 */
-    private static QWorkingset toView(WorkingSet workingSet) {
+    static QWorkingset toView(WorkingSet workingSet) {
         Long parentId = workingSet.parentWorkingSetId();
         return new QWorkingset("workingsets/" + workingSet.id(), String.valueOf(workingSet.id()), workingSet.name(),
                 workingSet.owner() == null ? null : String.valueOf(workingSet.owner()), null, null, workingSet.color(),

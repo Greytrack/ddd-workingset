@@ -70,7 +70,7 @@ class T7RelationEventAcceptanceTest {
     void extensionPublishesReferenceAssociationAndDanglingRepairEvents() {
         seedParentRange();
         FixtureIds.insertWorkingSet(jdbc, "1", child);
-        ResponseEntity<CreationView> accepted = rest.postForEntity("/api/worksets/" + child + "/extensions",
+        ResponseEntity<CreationView> accepted = rest.postForEntity("/v1/workingsets/" + child + ":extend",
                 Map.of("requestId", "extension-" + suffix, "trackerIds", List.of(parentTracker)), CreationView.class);
         assertEquals(HttpStatus.ACCEPTED, accepted.getStatusCode());
 
@@ -110,7 +110,7 @@ class T7RelationEventAcceptanceTest {
     }
 
     private CreationView creation(String id) {
-        return rest.getForObject("/api/working-set-creations/" + id, CreationView.class);
+        return rest.getForObject("/v1/workingsetCreations/" + id, CreationView.class);
     }
 
     @TestConfiguration

@@ -1035,7 +1035,7 @@ Language + 能力协商）为推荐候选，非当前有效契约。验收表述
 - 任务在终态前允许轮询，现有入口访问目标工作集时返回 `Preparing`。
 - 目标 ID 已存在 → 受理直接 409 `WorkingSetAlreadyExists`，不改变该 WS 的普通可见性。
 - 父 WS 正在被其他任务创建（Pending/Running）→ 以它为父的受理返回 409 `Preparing`；普通子级/祖先查询不包含创建中的 WS。
-- 任务上下文可通过 `GET /api/working-set-creations/{id}/working-set` 读取目标 WS；普通 `GET /api/worksets/{id}` 仍返回
+- 任务上下文可通过 `GET /v1/workingsetCreations/{id}/workingset` 读取目标工作集；普通 `GET /v1/workingsets/{id}` 仍返回
   `Preparing`。
 - 若处理进程在索引批次提交后中断，事件重投依据已提交进度继续。成功批次不重复生成 LTI。
 - 各 Tracker 按任务保存的基线时间扫描，创建时间超过上界的 Item

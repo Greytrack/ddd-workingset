@@ -1,5 +1,7 @@
 package bootstrap;
 
+import com.airedgesoft.sharedkernel.businessframework.application.query.QWorkingset;
+
 import com.airedgesoft.alm.requirement.application.eventhandler.RequirementMergeApprovedListener;
 import com.airedgesoft.sharedkernel.tracker.adapters.MergeController;
 import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryApprovedEvent;
@@ -13,7 +15,6 @@ import com.airedgesoft.alm.requirement.application.command.RequirementCommandSer
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.infrastructure.repositories.JdbcRequirementRepository;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.workingset.adapters.WorkingSetController;
 import com.airedgesoft.sharedkernel.workingset.application.command.MergeExecutionService;
 import com.airedgesoft.sharedkernel.workingset.application.command.MergeExecutionService.EntryRequest;
 import com.airedgesoft.sharedkernel.workingset.application.query.MergeCheckpoint;
@@ -119,11 +120,11 @@ class MergeAcceptanceTest {
     }
 
     private static String ws(String id) {
-        return "/api/worksets/" + id;
+        return "/v1/workingsets/" + id;
     }
 
     private static String roundPath(String id) {
-        return "/api/merge-rounds/" + id;
+        return "/v1/mergeRounds/" + id;
     }
 
     private static void assertStatus(HttpStatus status, ResponseEntity<?> response) {
@@ -285,7 +286,7 @@ class MergeAcceptanceTest {
         String target = seed(childTracker, family, "target");
         MergeController.ComparisonPage compared = compare("1", child);
         Difference difference = diff(compared, family);
-        ResponseEntity<MergeRound> response = rest.postForEntity(ws(child) + "/merge-rounds",
+        ResponseEntity<MergeRound> response = rest.postForEntity(ws(child) + "/mergeRounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", "async-" + family,
                         "decisions", List.of(field(difference, "ACCEPT", false))), MergeRound.class);
         assertStatus(HttpStatus.CREATED, response);
@@ -309,9 +310,9 @@ class MergeAcceptanceTest {
         String requestId = id("request");
         Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(field(difference, "ACCEPT", false)));
-        ResponseEntity<MergeRound> first = rest.postForEntity(ws(child) + "/merge-rounds", body, MergeRound.class);
+        ResponseEntity<MergeRound> first = rest.postForEntity(ws(child) + "/mergeRounds", body, MergeRound.class);
         assertStatus(HttpStatus.CREATED, first);
-        ResponseEntity<MergeRound> second = rest.postForEntity(ws(child) + "/merge-rounds", body, MergeRound.class);
+        ResponseEntity<MergeRound> second = rest.postForEntity(ws(child) + "/mergeRounds", body, MergeRound.class);
         assertStatus(HttpStatus.CREATED, second);
         assertEquals(first.getBody().id(), second.getBody().id());
         String round = first.getBody().id();
@@ -332,13 +333,13 @@ class MergeAcceptanceTest {
         String family = id("limits");
         seed(rootTracker, family, "limit probe");
         Difference difference = diff(compare("1", child), family);
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/mergeRounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", id("empty")), Map.class));
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/mergeRounds",
                 Map.of("sourceWorkingSetId", "1", "decisions", List.of(field(difference, "ACCEPT", false))), Map.class));
         List<Map<String, Object>> oversized = IntStream.range(0, 51)
                 .mapToObj(index -> field(difference, "ACCEPT", false)).toList();
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/mergeRounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", id("oversized"), "decisions", oversized), Map.class));
     }
 
@@ -355,11 +356,11 @@ class MergeAcceptanceTest {
         try {
             Future<ResponseEntity<Map>> one = executor.submit(() -> {
                 start.await();
-                return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
+                return rest.postForEntity(ws(child) + "/mergeRounds", body, Map.class);
             });
             Future<ResponseEntity<Map>> two = executor.submit(() -> {
                 start.await();
-                return rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class);
+                return rest.postForEntity(ws(child) + "/mergeRounds", body, Map.class);
             });
             start.countDown();
             ResponseEntity<Map> first = one.get(20, TimeUnit.SECONDS);
@@ -385,7 +386,7 @@ class MergeAcceptanceTest {
         String requestId = id("failed-submit-request");
         Map<String, Object> body = Map.of("sourceWorkingSetId", "1", "requestId", requestId,
                 "decisions", List.of(field(diff(frozen, family), "ACCEPT", false)));
-        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/merge-rounds", body, Map.class));
+        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/mergeRounds", body, Map.class));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM air_ws_merge_rounds WHERE request_id = ?",
                 Integer.class, requestId));
     }
@@ -395,7 +396,7 @@ class MergeAcceptanceTest {
         String family = id("long-request");
         seed(rootTracker, family, "long request id probe");
         Difference difference = diff(compare("1", child), family);
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds",
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/mergeRounds",
                 Map.of("sourceWorkingSetId", "1", "requestId", "x".repeat(129),
                         "decisions", List.of(field(difference, "ACCEPT", false))), Map.class));
     }
@@ -406,12 +407,12 @@ class MergeAcceptanceTest {
         seed(rootTracker, family, "conflict probe");
         Difference difference = diff(compare("1", child), family);
         String requestId = id("same-request");
-        ResponseEntity<MergeRound> accepted = rest.postForEntity(ws(child) + "/merge-rounds", Map.of("sourceWorkingSetId", "1",
+        ResponseEntity<MergeRound> accepted = rest.postForEntity(ws(child) + "/mergeRounds", Map.of("sourceWorkingSetId", "1",
                 "requestId", requestId, "decisions", List.of(existence(difference, "ACCEPT"))), MergeRound.class);
         assertStatus(HttpStatus.CREATED, accepted);
         rounds.add(accepted.getBody().id());
         tokens.add(accepted.getBody().token());
-        ResponseEntity<Map> conflict = rest.postForEntity(ws("1") + "/merge-rounds", Map.of("sourceWorkingSetId", child,
+        ResponseEntity<Map> conflict = rest.postForEntity(ws("1") + "/mergeRounds", Map.of("sourceWorkingSetId", child,
                 "requestId", requestId, "decisions", List.of(existence(difference, "ACCEPT"))), Map.class);
         assertStatus(HttpStatus.CONFLICT, conflict);
         assertEquals("Conflict", conflict.getBody().get("reason"));
@@ -473,8 +474,8 @@ class MergeAcceptanceTest {
         assertEquals("updated child", requirement(parentLocal).title());
         assertEquals(target.revision(), requirement(parentLocal).revision());
         assertEquals(source.commonId(), requirement(source.localId()).commonId());
-        assertEquals(sourceWs, rest.getForObject(ws(sourceWs), WorkingSetController.WorkingSetView.class).workingSetId());
-        assertEquals(parent, rest.getForObject(ws(sourceWs), WorkingSetController.WorkingSetView.class).parentWorkingSetId());
+        assertEquals(sourceWs, rest.getForObject(ws(sourceWs), QWorkingset.class).id());
+        assertEquals(parent, rest.getForObject(ws(sourceWs), QWorkingset.class).parentId());
         assertEquals(restored, apply(restoreRound));
     }
 
@@ -727,9 +728,9 @@ class MergeAcceptanceTest {
 
     @Test
     void compareRequiresBothTrackerIds() {
-        String path = ws(child) + "/compare/1";
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(path + "?sourceTrackerId=" + rootTracker, null, Map.class));
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(path + "?targetTrackerId=" + childTracker, null, Map.class));
+        String path = ws(child) + ":compare?sourceWorkingSetId=1";
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(path + "&sourceTrackerId=" + rootTracker, null, Map.class));
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(path + "&targetTrackerId=" + childTracker, null, Map.class));
     }
 
     @Test
@@ -756,7 +757,7 @@ class MergeAcceptanceTest {
                 VALUES (?, ?, ?, CAST('{"state":"Running"}' AS jsonb), ?, ?)
                 """, id("busy-round"), id("busy-token"), id("busy-request"), low, high);
         rounds.add(id("busy-round"));
-        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+        assertStatus(HttpStatus.CONFLICT, rest.postForEntity(ws(child) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("pair-request"),
                 "decisions", List.of(existence(difference, "ACCEPT"))), Map.class));
     }
@@ -774,7 +775,7 @@ class MergeAcceptanceTest {
         jdbc.update("UPDATE air_inst_requirement_rev SET revision = revision + 1, name = ? WHERE id = (SELECT id FROM air_inst_requirement_rev WHERE instance_id = ? ORDER BY revision DESC LIMIT 1)",
                 "changed after first round", sourceLocal);
         Difference second = diff(compare("1", child), family);
-        ResponseEntity<MergeRound> secondRound = rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+        ResponseEntity<MergeRound> secondRound = rest.postForEntity(ws(child) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("pair-again-request"),
                 "decisions", List.of(field(second, "ACCEPT", false))), MergeRound.class);
         assertStatus(HttpStatus.CREATED, secondRound);
@@ -790,7 +791,7 @@ class MergeAcceptanceTest {
                 new Comparison.TrackerPair(Long.valueOf("1"),
                         Long.valueOf("265564874633152"), Long.valueOf(child), Long.valueOf("264912685293504")),
                 difference.source(), difference.target(), difference.fields());
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-request"),
                 "decisions", List.of(existence(difference, "ACCEPT"), existence(other, "ACCEPT"))), Map.class));
     }
@@ -842,7 +843,7 @@ class MergeAcceptanceTest {
                 new Comparison.TrackerPair(Long.valueOf(child),
                         difference.trackers().source(), Long.valueOf("1"), difference.trackers().target()),
                 difference.source(), difference.target(), difference.fields());
-        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/merge-rounds", Map.of(
+        assertStatus(HttpStatus.BAD_REQUEST, rest.postForEntity(ws(child) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", "1", "requestId", id("mixed-ws-request"),
                 "decisions", List.of(existence(difference, "ACCEPT"), existence(other, "ACCEPT"))), Map.class));
     }
@@ -996,7 +997,7 @@ class MergeAcceptanceTest {
     }
 
     private String comparePath(String source, String target, String sourceTracker, String targetTracker) {
-        return ws(target) + "/compare/" + source + "?sourceTrackerId=" + sourceTracker
+        return ws(target) + ":compare?sourceWorkingSetId=" + source + "&sourceTrackerId=" + sourceTracker
                 + "&targetTrackerId=" + targetTracker;
     }
 
@@ -1008,7 +1009,7 @@ class MergeAcceptanceTest {
 
     @SafeVarargs
     private final String submit(String target, MergeController.ComparisonPage compared, Map<String, Object>... entries) {
-        ResponseEntity<MergeRound> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
+        ResponseEntity<MergeRound> response = rest.postForEntity(ws(target) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
                 "decisions", List.of(entries)), MergeRound.class);
@@ -1030,7 +1031,7 @@ class MergeAcceptanceTest {
 
     @SafeVarargs
     private final boolean submitFails(String target, MergeController.ComparisonPage compared, Map<String, Object>... entries) {
-        ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
+        ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
                 "decisions", List.of(entries)), Map.class);
@@ -1039,7 +1040,7 @@ class MergeAcceptanceTest {
 
     @SafeVarargs
     private final String submitFailure(String target, MergeController.ComparisonPage compared, Map<String, Object>... entries) {
-        ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/merge-rounds", Map.of(
+        ResponseEntity<Map> response = rest.postForEntity(ws(target) + "/mergeRounds", Map.of(
                 "sourceWorkingSetId", Long.toString(compared.source()),
                 "requestId", UUID.randomUUID().toString(),
                 "decisions", List.of(entries)), Map.class);
@@ -1048,7 +1049,7 @@ class MergeAcceptanceTest {
     }
 
     private ApplyResult apply(String round) {
-        ResponseEntity<MergeRound> response = rest.postForEntity(roundPath(round) + "/apply", null, MergeRound.class);
+        ResponseEntity<MergeRound> response = rest.postForEntity(roundPath(round) + ":apply", null, MergeRound.class);
         assertTrue(response.getStatusCode() == HttpStatus.ACCEPTED || response.getStatusCode() == HttpStatus.OK,
                 String.valueOf(response.getBody()));
         return awaitResult(round);

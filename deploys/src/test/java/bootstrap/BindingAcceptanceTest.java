@@ -119,14 +119,14 @@ class BindingAcceptanceTest {
                 VALUES (?, 1, ?, '文件夹', 10070101, 'UNSHARED', TRUE)
                 """, fixtureId("root-folder-" + space), space);
         extendShared(ws, shared);
-        assertFailure(rest.postForEntity(path(ws) + "/extensions", FixtureIds.extensionRequest(shared), Map.class),
+        assertFailure(rest.postForEntity("/v1/workingsets/" + ws + ":extend", FixtureIds.extensionRequest(shared), Map.class),
                 HttpStatus.CONFLICT, "NoDerivableTracker");
 
         String anotherShared = fixtureId("ALT-" + suffix);
         original(anotherShared, sharedClass, "SHARED", null);
         extendShared(ws, anotherShared);
 
-        BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject("/v1/workingsets/" + ws + "/bindings", BindingsView.class);
         assertEquals(space, bindings.spaces().get(0).productSpaceId());
         assertTrue(bindings.trackers().stream().anyMatch(binding -> binding.trackerId().equals(shared)));
         assertEquals(0, jdbc.queryForObject("""
@@ -138,12 +138,12 @@ class BindingAcceptanceTest {
     void trackerListIncludesOwnedAndBoundSharedTrackersExactlyOnce() {
         bindSpace(ws);
         String owned = derive(ws, unshared, sourceItem).trackerId();
-        String listPath = path(ws) + "/trackers";
+        String listPath = "/v1/workingsets/" + ws + "/trackers";
         assertEquals(List.of(owned), trackerIds(listPath));
 
         extendShared(ws, shared);
         assertEquals(List.of(owned, shared).stream().sorted().toList(), trackerIds(listPath));
-        assertEquals(List.of(), trackerIds(path(other) + "/trackers"));
+        assertEquals(List.of(), trackerIds("/v1/workingsets/" + other + "/trackers"));
 
         assertEquals(HttpStatus.NOT_FOUND, delete(unbindPath(ws, shared)).getStatusCode());
         assertEquals(List.of(owned, shared).stream().sorted().toList(), trackerIds(listPath));
@@ -205,7 +205,7 @@ class BindingAcceptanceTest {
     }
 
     private Map<String, Boolean> trackerDefaults(String id) {
-        return List.of(rest.getForObject(path(id) + "/trackers", TrackerView[].class)).stream()
+        return List.of(rest.getForObject("/v1/workingsets/" + id + "/trackers", TrackerView[].class)).stream()
                 .filter(tracker -> !"10070101".equals(tracker.classificationId()))
                 .collect(Collectors.toMap(TrackerView::trackerId, TrackerView::isDefault));
     }
@@ -235,7 +235,7 @@ class BindingAcceptanceTest {
         extendShared(ws, shared);
         extendShared(grandchild, shared);
 
-        assertEquals(shared, rest.getForObject(path(grandchild) + "/bindings", BindingsView.class)
+        assertEquals(shared, rest.getForObject("/v1/workingsets/" + grandchild + "/bindings", BindingsView.class)
                 .trackers().stream().filter(binding -> "SHARED".equals(binding.sharingMode()))
                 .findFirst().orElseThrow().trackerId());
     }
@@ -260,7 +260,7 @@ class BindingAcceptanceTest {
                 Long.valueOf(ws), Long.valueOf(space), Long.valueOf(shared)));
         assertEquals(1, count("SELECT count(DISTINCT instance_id) FROM air_inst_requirement_rev WHERE tracker = ?", shared));
         assertEquals(1, count("SELECT count(*) FROM trackers WHERE tracker_id = ?", shared));
-        BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject("/v1/workingsets/" + ws + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
         assertEquals(space, bindings.spaces().get(0).productSpaceId());
         assertFailure(delete(trackerPath(shared)), HttpStatus.CONFLICT, "TrackerHasItems");
@@ -404,7 +404,7 @@ class BindingAcceptanceTest {
         assertEquals(List.of(grandchild), blocked.getBody().get("childWorkingSetIds"));
 
         assertEquals(ws, rest.getForObject("/v1/workingsets/" + grandchild, QWorkingset.class).parentId());
-        BindingsView bindings = rest.getForObject(path(ws) + "/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject("/v1/workingsets/" + ws + "/bindings", BindingsView.class);
         assertTrue(bindings.trackers().stream().anyMatch(binding -> shared.equals(binding.trackerId())));
         assertEquals(space, bindings.spaces().get(0).productSpaceId());
 

@@ -141,7 +141,7 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(classifications, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE product_space_id = ? AND working_set_id = '1'",
                 Integer.class, spaceId));
-        List<TrackerView> trackers = Arrays.stream(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class))
+        List<TrackerView> trackers = Arrays.stream(rest.getForObject("/v1/workingsets/1/trackers", TrackerView[].class))
                 .filter(tracker -> spaceId.equals(tracker.productSpaceId())).toList();
         assertEquals(classifications, trackers.size());
         assertEquals(classifications, jdbc.queryForObject("""
@@ -173,7 +173,7 @@ class TrackerDefaultAcceptanceTest {
             assertEquals("[]", items.getBody());
         }
 
-        BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+        BindingsView bindings = rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class);
         WorkingSetController.SpaceBindingView projectedSpace = bindings.spaces().stream()
                 .filter(binding -> spaceId.equals(binding.productSpaceId())).findFirst().orElseThrow();
         assertEquals("RELATION", projectedSpace.origin());
@@ -221,21 +221,21 @@ class TrackerDefaultAcceptanceTest {
         HttpStatusCode oldRoute = client.patch().uri(path + "/trackers/" + childFolder + "/visibility")
                 .body(Map.of("shown", false)).exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND, oldRoute);
-        assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
+        assertEquals(1, rest.getForObject("/v1/workingsets/" + child + "/trackers", TrackerView[].class).length);
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", false))
                 .retrieve().toBodilessEntity().getStatusCode());
-        assertEquals(0, rest.getForObject(path + "/trackers", TrackerView[].class).length);
-        BindingsView hidden = rest.getForObject(path + "/bindings", BindingsView.class);
+        assertEquals(0, rest.getForObject("/v1/workingsets/" + child + "/trackers", TrackerView[].class).length);
+        BindingsView hidden = rest.getForObject("/v1/workingsets/" + child + "/bindings", BindingsView.class);
         assertEquals(1, hidden.spaces().size());
         assertEquals("10070101", hidden.trackers().get(0).classificationId());
         assertFalse(hidden.trackers().get(0).shown());
         assertEquals(HttpStatus.NO_CONTENT, client.patch().uri(visibility).body(Map.of("shown", true))
                 .retrieve().toBodilessEntity().getStatusCode());
-        assertEquals(1, rest.getForObject(path + "/trackers", TrackerView[].class).length);
+        assertEquals(1, rest.getForObject("/v1/workingsets/" + child + "/trackers", TrackerView[].class).length);
         HttpStatusCode deletion = client.delete().uri("/v1/productSpaces/" + space)
                 .exchange((request, response) -> response.getStatusCode());
         assertEquals(HttpStatus.CONFLICT, deletion);
-        assertEquals(1, rest.getForObject(path + "/bindings", BindingsView.class).spaces().size());
+        assertEquals(1, rest.getForObject("/v1/workingsets/" + child + "/bindings", BindingsView.class).spaces().size());
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM air_inst_tracker_rev WHERE id = ?",
                 Integer.class, childFolder));
     }
@@ -321,7 +321,7 @@ class TrackerDefaultAcceptanceTest {
         TrackerView tracker = response.getBody();
         assertFalse(tracker.isDefault());
         await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-            BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+            BindingsView bindings = rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class);
             assertTrue(bindings.trackers().stream().anyMatch(binding -> tracker.trackerId().equals(binding.trackerId())));
         });
         rest.delete("/api/trackers/" + tracker.trackerId());
@@ -349,7 +349,7 @@ class TrackerDefaultAcceptanceTest {
             assertEquals("项目-" + mode, tracker.name());
             assertFalse(tracker.isDefault());
             await().atMost(Duration.ofSeconds(8)).untilAsserted(() -> {
-                BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
+                BindingsView bindings = rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class);
                 assertTrue(bindings.trackers().stream().anyMatch(binding -> tracker.trackerId().equals(binding.trackerId())));
             });
             assertEquals(HttpStatus.OK, rest.getForEntity(
@@ -376,7 +376,7 @@ class TrackerDefaultAcceptanceTest {
         ResponseEntity<TrackerView> allowedResponse = rest.postForEntity(url, allowed, TrackerView.class);
         assertEquals(HttpStatus.CREATED, allowedResponse.getStatusCode());
         String allowedTrackerId = allowedResponse.getBody().trackerId();
-        await().atMost(Duration.ofSeconds(8)).until(() -> rest.getForObject("/api/worksets/1/bindings", BindingsView.class)
+        await().atMost(Duration.ofSeconds(8)).until(() -> rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class)
                 .trackers().stream().anyMatch(binding -> allowedTrackerId.equals(binding.trackerId())));
         Map<String, String> rejected = Map.of("productSpaceId", spaceId, "name", "禁止非共享", "classificationId",
                 sharedClassification, "sharingMode", "UNSHARED");
@@ -483,8 +483,8 @@ class TrackerDefaultAcceptanceTest {
         assertEquals(2, jdbc.queryForObject(
                 "SELECT count(*) FROM trackers WHERE name = ? AND working_set_id = '1'",
                 Integer.class, name));
-        BindingsView bindings = rest.getForObject("/api/worksets/1/bindings", BindingsView.class);
-        List<TrackerView> trackers = Arrays.asList(rest.getForObject("/api/worksets/1/trackers", TrackerView[].class));
+        BindingsView bindings = rest.getForObject("/v1/workingsets/1/bindings", BindingsView.class);
+        List<TrackerView> trackers = Arrays.asList(rest.getForObject("/v1/workingsets/1/trackers", TrackerView[].class));
         for (String spaceId : List.of(firstSpace, secondSpace)) {
             String trackerId = fixtureId("T-NAME-" + spaceId);
             assertEquals(Long.valueOf(spaceId), trackerRepository.findById(Long.valueOf(trackerId)).orElseThrow().productSpaceId());

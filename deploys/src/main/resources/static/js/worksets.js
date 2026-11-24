@@ -97,7 +97,7 @@ async function loadWorksetTree() {
         }
         let childIds = [];
         try {
-            childIds = await api('/api/worksets/' + encodeURIComponent(id) + '/children') || [];
+            childIds = await api('/v1/workingsets/' + encodeURIComponent(id) + '/children') || [];
         } catch {
             childIds = [];
         }
@@ -165,7 +165,7 @@ async function selectWorkset(id, {autoSelect = true} = {}) {
     setStatus('加载 ' + shortId(id) + ' 的绑定范围…');
 
     try {
-        const base = '/api/worksets/' + encodeURIComponent(id);
+        const base = '/v1/workingsets/' + encodeURIComponent(id);
         const [bindings, trackers] = await Promise.all([api(base + '/bindings'), api(base + '/trackers')]);
         if (request !== worksetRequest) return;
         state.bindings = bindings || {spaces: [], trackers: []};

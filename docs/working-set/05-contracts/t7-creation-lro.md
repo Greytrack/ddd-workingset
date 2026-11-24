@@ -139,13 +139,13 @@ Requirement 是业务 BC 参考实现。
 
 ### 7.3 REST
 
-- `POST /api/working-set-creations` 接收 `parentWorkingSetId`、`requestId`、`name`、`productSpaceIds`、`sharedTrackerIds`、
+- `POST /v1/workingsetCreations` 以 `Idempotency-Key` 标识请求，接收 `parentWorkingSetId`、`displayName`、`productSpaceIds`、`sharedTrackerIds`、
   `unsharedParentTrackerIds`。范围按集合比较，空范围合法；服务端分配目标 ID，返回 HTTP 202、任务视图和轮询 `Location`。
 - 创建和扩展均接收可选 `baselineAtByTracker`，形如 `{"123":1738368000000}`，值为 epoch 毫秒。未指定的 Tracker 使用
   HEAD，即首次受理时间。只允许所选 Tracker，拒绝未来时间。任务视图返回各 Tracker 的解析结果。
-- `GET /api/working-set-creations/{id}` 返回 `creationId`、`targetWorkingSetId`、`mode`、状态、步骤、进度、明细和时间；不存在返回
+- `GET /v1/workingsetCreations/{id}` 返回 `creationId`、`targetWorkingSetId`、`mode`、状态、步骤、进度、明细和 RFC 3339 时间（`createTime`、`startTime`、`completionTime`）；不存在返回
   HTTP 404。
-- `GET /api/working-set-creations/{id}/working-set` 任务专用只读：按任务 id 读取创建中的目标工作集；普通
+- `GET /v1/workingsetCreations/{id}/workingset` 任务专用只读：按任务 id 读取创建中的目标工作集；普通
   `/v1/workingsets/{id}` 仍返回 `Preparing`。任务不存在或目标尚未创建 → 404。
 - `failures` 项使用 `stage`、`productSpaceId`、`trackerId`、`localId`、`reason`、`occurredAt`。位置字段按适用性填写。`reason`
   使用对应 T2 或 T4 失败语义，未分类内部错误不暴露异常文本。
@@ -182,8 +182,8 @@ Requirement 是业务 BC 参考实现。
 
 ## 12A. T7-G 扩展已有工作集（Implemented，2026-11-17）
 
-- 入口：`POST /api/worksets/{target}/extensions`，请求 `{requestId, trackerIds, baselineAtByTracker?}`；返回 202，任务复用
-  `GET /api/working-set-creations/{id}` 轮询。
+- 入口：`POST /v1/workingsets/{target}:extend`，使用 `Idempotency-Key`，请求 `{trackerIds, baselineAtByTracker?}`；返回 202，任务复用
+  `GET /v1/workingsetCreations/{id}` 轮询。
 - 目标：对已有子工作集扩展范围。约定保留已有范围的可见性；当前查询门禁偏差见 [开放问题](../08-plan.md)。
 - 选择：按直接父工作集的 Tracker 选择一批 Tracker；只允许直属父级来源。
 - 重复过滤：共享 Tracker 按目标的绑定 ID 判断；非共享 Tracker 按已绑定副本的 `sourceId` 匹配父 TrackerId。同一分类下其他

@@ -47,6 +47,21 @@ class WorkingSetPresentationAcceptanceTest {
     }
 
     @Test
+    void readsTheDefaultWorksetScopeUsedByThePage() {
+        ResponseEntity<List> children = rest.getForEntity(path("1") + "/children", List.class);
+        ResponseEntity<Map> bindings = rest.getForEntity(path("1") + "/bindings", Map.class);
+        ResponseEntity<List> trackers = rest.getForEntity(path("1") + "/trackers", List.class);
+
+        assertEquals(HttpStatus.OK, children.getStatusCode());
+        assertEquals(HttpStatus.OK, bindings.getStatusCode());
+        assertEquals(HttpStatus.OK, trackers.getStatusCode());
+        assertNotNull(children.getBody());
+        assertNotNull(bindings.getBody().get("spaces"));
+        assertNotNull(bindings.getBody().get("trackers"));
+        assertNotNull(trackers.getBody());
+    }
+
+    @Test
     void editsDisplayNameAndColorWithoutChangingLineage() {
         String id = create("1", "原名称", "#2468AC");
 

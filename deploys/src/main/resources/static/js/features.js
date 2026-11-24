@@ -109,10 +109,10 @@ function addMergeTask(round) {
 
 async function queryTask(task) {
     if (taskType(task) === 'MERGE') {
-        const round = await api('/api/merge-rounds/' + encodeURIComponent(task.id));
+        const round = await api('/v1/mergeRounds/' + encodeURIComponent(task.id));
         return {status: round.result?.state || round.state, round};
     }
-    return api('/api/working-set-creations/' + encodeURIComponent(task.id));
+    return api('/v1/workingsetCreations/' + encodeURIComponent(task.id));
 }
 
 async function selectTaskCenterTab(mode) {
@@ -160,7 +160,7 @@ async function pollTasks() {
                 task.stageProgress = view.stageProgress;
                 task.indexProgress = view.indexProgress;
                 task.failures = view.failures;
-                task.completedAt = view.completedAt;
+                task.completedAt = view.completionTime;
                 task.lastError = null;
                 task.lastUpdated = Date.now();
                 if (!wasTerminal && isTerminal(view.status)) completed.push(task);
@@ -369,7 +369,7 @@ async function loadCreateScope(parentId) {
     if (!target) return;
     target.innerHTML = '<div class="empty small">加载父工作集范围…</div>';
     try {
-        const base = '/api/worksets/' + encodeURIComponent(parentId);
+        const base = '/v1/workingsets/' + encodeURIComponent(parentId);
         const [bindings, trackers] = await Promise.all([api(base + '/bindings'), api(base + '/trackers')]);
         const trackerById = new Map((trackers || []).map((tracker) => [tracker.trackerId, tracker]));
         const bySpace = new Map();
@@ -466,14 +466,13 @@ async function submitCreateWorkset(form) {
         .filter((input) => selectedSpaces.has(input.dataset.spaceId))
         .map((input) => input.value);
     try {
-        const creation = await api('/api/working-set-creations', {
+        const creation = await api('/v1/workingsetCreations', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'Idempotency-Key': requestId},
             body: JSON.stringify({
                 parentWorkingSetId: parentId,
                 mode: 'CREATE',
-                requestId,
-                name: workspaceName,
+                displayName: workspaceName,
                 color: color.hex,
                 productSpaceIds,
                 sharedTrackerIds: trackerValues('sharedTrackerIds'),
@@ -601,10 +600,10 @@ async function openExtendWorkset() {
             input.disabled = true;
         });
         try {
-            const task = await api('/api/worksets/' + encodeURIComponent(targetId) + '/extensions', {
+            const task = await api('/v1/workingsets/' + encodeURIComponent(targetId) + ':extend', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({requestId, trackerIds, mode: 'EXTEND'})
+                headers: {'Content-Type': 'application/json', 'Idempotency-Key': requestId},
+                body: JSON.stringify({trackerIds})
             });
             addTask(task, {mode: 'EXTEND', targetId, targetName, parentId, parentName});
             if (form.isConnected) {
@@ -626,8 +625,8 @@ async function openExtendWorkset() {
         }
     });
     try {
-        const parent = '/api/worksets/' + encodeURIComponent(parentId);
-        const target = '/api/worksets/' + encodeURIComponent(targetId);
+        const parent = '/v1/workingsets/' + encodeURIComponent(parentId);
+        const target = '/v1/workingsets/' + encodeURIComponent(targetId);
         const [parentBindings, parentTrackers, targetBindings, targetTrackers] = await Promise.all([
             api(parent + '/bindings'), api(parent + '/trackers'), api(target + '/bindings'), api(target + '/trackers')
         ]);

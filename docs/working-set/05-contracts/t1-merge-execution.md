@@ -79,8 +79,10 @@ Tracker）、家族、双侧证据和字段；轮次内条目身份由服务端�
 **异步 LRO（2026-11-16 收敛）**：`startRound` 即「提交一页决策」：`decisions` 必填 1–50 条、`requestId` 必填且不超过 128
 字符，空决策、缺键或超限直接拒绝；**不再提供空轮次与分批登记入口**，一页决策要么整页登记成功、要么整轮回滚。服务端以
 `requestId` 幂等键创建 MergeRound 后发布 `MergeRoundSubmittedEvent`，由异步消费者逐条执行。同一 requestId 返回原轮次，不同
-source/target 返回 `Conflict`。`GET /api/merge-rounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整
-entries/result，不做条目分页。`apply` 是幂等触发器，重复调用返回原 `ApplyResult`。
+source/target 返回 `Conflict`。HTTP 通过 `POST /v1/workingsets/{target}/mergeRounds` 提交，使用 `Idempotency-Key`，返回 201 和轮询 `Location`。
+比较入口为 `POST /v1/workingsets/{target}:compare`，用 `sourceWorkingSetId`、`sourceTrackerId`、`targetTrackerId` 指定比较对，
+通过 `pageSize`、`pageToken` 分页，响应的 `page` 使用通用 `Page` 结构。`GET /v1/mergeRounds/{id}` 轮询状态与结果；一轮对应一页约 20–50 条决策，GET 返回完整
+entries/result，不做条目分页。`POST /v1/mergeRounds/{id}:apply` 是幂等触发器，返回 202、轮询 `Location` 和当前轮次状态。
 
 `executeEntry` 的内部步骤（一次执行的完整行为契约）：
 
