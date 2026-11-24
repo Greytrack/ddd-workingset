@@ -4,7 +4,7 @@ import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.alm.requirement.domain.RequirementSnapshotStore;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.workingset.application.command.dto.MaterializeRequest;
 import com.airedgesoft.sharedkernel.workingset.application.common.TargetIdentity;
 import com.airedgesoft.sharedkernel.workingset.error.WorkingsetResultCode;
@@ -71,7 +71,7 @@ public final class RequirementMaterializationService {
         } else {
             repository.save(Requirement.create(request.targetLocalId(), request.commonId(),
                     request.targetTrackerId(), snapshot.title(), snapshot.description(),
-                    request.targetRevision(), snapshot.version(), RequestThreadHolder.getUserId()));
+                    request.targetRevision(), snapshot.version(), Long.toString(AuthorizationScope.currentUserId())));
         }
     }
 

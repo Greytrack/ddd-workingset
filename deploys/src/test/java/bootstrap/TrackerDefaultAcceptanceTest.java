@@ -3,7 +3,7 @@ package bootstrap;
 
 import com.airedgesoft.alm.requirement.adapters.RequirementView;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObject;
 import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
 import com.airedgesoft.sharedkernel.productspace.adapters.ProductSpaceController.ProductSpaceView;
@@ -155,7 +155,7 @@ class TrackerDefaultAcceptanceTest {
                   AND r.owner = ? AND r.number = c.number AND r.tracker_class = c.sub_class_id
                   AND r.share = c.shared AND r.is_default = 1 AND c.is_default = 1
                   AND r.created_time = c.created_time AND r.created_by = c.created_by
-                """, Integer.class, Long.valueOf(spaceId), RequestThreadHolder.getLongUserId()));
+                """, Integer.class, Long.valueOf(spaceId), AuthorizationScope.currentUserId()));
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*)
                 FROM air_inst_tracker_rev r JOIN air_ws_tracker c ON c.id = r.id

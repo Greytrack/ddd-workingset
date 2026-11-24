@@ -2,7 +2,7 @@ package com.airedgesoft.sharedkernel.tracker.application.command;
 
 import com.airedgesoft.lib.id.Ids;
 
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
@@ -76,7 +76,7 @@ public class DefaultTrackerInitCommandService {
 
     private Long saveDefault(ProductSpace space, Classification classification) {
         Tracker tracker = Tracker.original(Ids.nextId(),
-                space, classification, null, true, RequestThreadHolder.getLongUserId());
+                space, classification, null, true, AuthorizationScope.currentUserId());
         trackers.save(tracker);
         return tracker.trackerId();
     }

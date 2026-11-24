@@ -3,7 +3,7 @@ package com.airedgesoft.sharedkernel.workingset.application.command;
 import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -157,7 +157,7 @@ public final class WorkingSetItemIndexer {
         } while (Long.toString(id).equals(Long.toString(candidate.commonId())) || id.equals(sourceId));
         LightTrackerItem item = LightTrackerItem.derive(id, candidate.commonId(), child.trackerId(), child.workingSetId(),
                 candidate.revision(), sourceId, sourceRevision, child.productSpaceId(), child.numericClassificationId(), child.classId(),
-                RequestThreadHolder.getUserId());
+                Long.toString(AuthorizationScope.currentUserId()));
         if (!items.claimFamily(item)) {
             return new Outcome(IndexResult.Existing, null);
         }

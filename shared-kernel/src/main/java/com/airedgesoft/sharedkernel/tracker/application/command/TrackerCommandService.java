@@ -3,7 +3,7 @@ package com.airedgesoft.sharedkernel.tracker.application.command;
 import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
@@ -53,7 +53,7 @@ public class TrackerCommandService {
         ProductSpace space = productSpaceRepository.findById(spaceId)
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.PRODUCT_SPACE_NOT_FOUND, spaceId));
         Tracker tracker = Tracker.original(Ids.nextId(), name, space,
-                classification, sharingMode, RequestThreadHolder.getLongUserId());
+                classification, sharingMode, AuthorizationScope.currentUserId());
         trackerRepository.save(tracker);
         events.publishEvent(new TrackerCreatedEvent(
                 tracker.trackerId(), workingSet.id(), space.id(), classification.id(), sharingMode));
@@ -69,7 +69,7 @@ public class TrackerCommandService {
                 .orElseThrow(() -> DomainException.withMessage(BindingResCode.TRACKER_NOT_FOUND, Long.toString(id)));
         requireOwningWorkingSet(tracker.workingSetId());
         if (tracker.rename(name)) {
-            tracker.touch(RequestThreadHolder.getLongUserId());
+            tracker.touch(AuthorizationScope.currentUserId());
             trackerRepository.save(tracker);
         }
         return tracker;
@@ -88,7 +88,7 @@ public class TrackerCommandService {
                 trackerQueries.hasOrgChildren(id),
                 trackerQueries.hasDerivedChildren(id)
         );
-        TrackerDeletedEvent deletedEvent = tracker.delete(RequestThreadHolder.getLongUserId());
+        TrackerDeletedEvent deletedEvent = tracker.delete(AuthorizationScope.currentUserId());
         trackerRepository.save(tracker);
         events.publishEvent(deletedEvent);
     }

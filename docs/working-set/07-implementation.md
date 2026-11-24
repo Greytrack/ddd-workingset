@@ -161,8 +161,7 @@ com.airedgesoft.alm.requirement.application.query
 
 ## 8. 未验证与阻塞
 
-- `RequestThreadHolder` 已在写侧仓储中移除：审计事实由 WorkingSet/`LightTrackerItem`/Requirement/Tracker
-  聚合携带，应用层在构造或修改时注入；`sharedkernel` 部分文件仍未完成全量验收，本页不将其字段、方法或依赖视为已交付事实。
+- 操作者 ID 统一从 `AuthorizationScope.currentUserId()` 获取。Working Set 和 ProductSpace 范围仍由显式输入、绑定或对象归属确定。
 - T7-F 规模、失败明细保留和关系消费仍待专题验证，见 [后续计划](08-plan.md)。
 
 ## 9. 追溯

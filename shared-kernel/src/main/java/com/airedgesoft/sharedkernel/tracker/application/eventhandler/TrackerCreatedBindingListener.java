@@ -1,7 +1,7 @@
 package com.airedgesoft.sharedkernel.tracker.application.eventhandler;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.SharedKernelResultCode;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
@@ -42,7 +42,7 @@ public class TrackerCreatedBindingListener {
                 .orElseThrow(() -> DomainException.withMessage(SharedKernelResultCode.EVENT_TARGET_NOT_FOUND,
                         "tracker disappeared: " + event.trackerId()));
         workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), event.sharingMode());
-        workingSet.audit(RequestThreadHolder.getUserId());
+        workingSet.audit(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(workingSet);
     }
 }

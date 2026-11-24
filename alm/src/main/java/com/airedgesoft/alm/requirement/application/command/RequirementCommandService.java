@@ -6,7 +6,7 @@ import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.alm.requirement.domain.RequirementRepository;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -99,7 +99,7 @@ public class RequirementCommandService {
         long common = defaultWorkingSet ? local : nextDistinct(local);
         Requirement requirement = Requirement.create(
                 Long.valueOf(String.valueOf(local)), Long.valueOf(String.valueOf(common)),
-                trackerId, title, description, revision, null, RequestThreadHolder.getUserId());
+                trackerId, title, description, revision, null, Long.toString(AuthorizationScope.currentUserId()));
         repository.save(requirement);
         tracker.ifPresent(current -> eventPublisher.publishEvent(new TrackerItemCreatedEvent(
                 requirement.localId(), requirement.commonId(), trackerId,
@@ -178,7 +178,7 @@ public class RequirementCommandService {
             throw DomainException.withMessage(FailureReason.HISTORY_UNAVAILABLE, Long.toString(target.sourceLocalId()));
         }
         return Requirement.create(target.localId(), target.commonId(), target.trackerId(),
-                source.title(), source.description(), target.revision(), source.version(), RequestThreadHolder.getUserId());
+                source.title(), source.description(), target.revision(), source.version(), Long.toString(AuthorizationScope.currentUserId()));
     }
 
     /**

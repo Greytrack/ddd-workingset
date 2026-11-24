@@ -3,7 +3,7 @@ package com.airedgesoft.sharedkernel.workingset.application.command;
 import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
@@ -87,7 +87,7 @@ public class WorkingSetCommandService {
     @Transactional
     public WorkingSet createChildWorkingSet(Long parentId, String name, String color) {
         return createChildForTask(parentId, Ids.nextId(), name, color,
-                RequestThreadHolder.getLongUserId());
+                AuthorizationScope.currentUserId());
     }
 
     // Called by the creation runner with the user-supplied display name.
@@ -100,7 +100,7 @@ public class WorkingSetCommandService {
         if (queries.findAncestors(parentId).contains(newId)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_CYCLE, Long.toString(newId));
         }
-        Long owner = actor == null ? RequestThreadHolder.getLongUserId() : actor;
+        Long owner = actor == null ? AuthorizationScope.currentUserId() : actor;
         WorkingSet child = WorkingSet.child(newId, parentId, name, color, owner, String.valueOf(owner));
         try {
             workingSets.save(child);
@@ -131,7 +131,7 @@ public class WorkingSetCommandService {
         if (color != null) {
             target.recolor(color);
         }
-        target.audit(RequestThreadHolder.getUserId());
+        target.audit(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(target);
         return target;
     }
@@ -152,7 +152,7 @@ public class WorkingSetCommandService {
     public void setTrackerShown(Long workingSet, long spaceId, Long tracker, boolean shown) {
         WorkingSet target = writable(workingSet);
         target.setTrackerShown(spaceId, tracker, shown);
-        target.audit(RequestThreadHolder.getUserId());
+        target.audit(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(target);
     }
 
@@ -200,7 +200,7 @@ public class WorkingSetCommandService {
         }
 
         if (changed) {
-            target.audit(RequestThreadHolder.getUserId());
+            target.audit(Long.toString(AuthorizationScope.currentUserId()));
             workingSets.save(target);
         }
         return new BindingResult(changed, failures);

@@ -1,7 +1,7 @@
 package com.airedgesoft.sharedkernel.workingset.application.eventhandler;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.SharedKernelResultCode;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
@@ -48,7 +48,7 @@ public class DefaultTrackersBindingListener {
                             "tracker disappeared: " + Long.toString(trackerId)));
             workingSet.bindTracker(tracker, classifications.requireClassification(tracker.classificationId()), tracker.sharingMode());
         }
-        workingSet.audit(RequestThreadHolder.getUserId());
+        workingSet.audit(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(workingSet);
     }
 }

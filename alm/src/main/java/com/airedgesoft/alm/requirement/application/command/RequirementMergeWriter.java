@@ -5,7 +5,7 @@ import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectDeleteEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryApprovedEvent;
 import com.airedgesoft.sharedkernel.workingset.domain.event.MergeEntryResolvedEvent;
@@ -42,7 +42,7 @@ public final class RequirementMergeWriter {
                 text(command.acceptedFields(), "title", text(command.baseFields(), "title", null)),
                 text(command.acceptedFields(), "description", text(command.baseFields(), "description", null)),
                 command.targetRevision(), command.version(),
-                RequestThreadHolder.getUserId());
+                Long.toString(AuthorizationScope.currentUserId()));
     }
 
     private static String text(Map<String, Object> values, String field, String fallback) {

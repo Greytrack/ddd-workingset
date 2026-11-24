@@ -3,7 +3,7 @@ package com.airedgesoft.sharedkernel.workingset.application.command;
 import com.airedgesoft.lib.id.Ids;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
 import com.airedgesoft.sharedkernel.workingset.application.FailureReason;
@@ -110,7 +110,7 @@ public class WorkingSetCreationService {
         long acceptedAt = workingSetCreationRepository.acceptanceTime();
         validateBaselines(request.selectedTrackerIds(), request.baselineOverrides(), acceptedAt);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(Ids.nextId()),
-                withDefaultTrackers(request, null), RequestThreadHolder.getUserId(), acceptedAt);
+                withDefaultTrackers(request, null), Long.toString(AuthorizationScope.currentUserId()), acceptedAt);
         if (workingSetCreationRepository.save(creation)) {
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;
@@ -175,7 +175,7 @@ public class WorkingSetCreationService {
                 null, baselineOverrides, List.of(), submittedIds);
         request = withDefaultTrackers(request, targetSet);
         WorkingSetCreation creation = WorkingSetCreation.submit(Long.toString(Ids.nextId()),
-                request, RequestThreadHolder.getUserId(), acceptedAt);
+                request, Long.toString(AuthorizationScope.currentUserId()), acceptedAt);
         if (workingSetCreationRepository.save(creation)) {
             events.publishEvent(new WorkingSetCreationSubmittedEvent(creation.id()));
             return creation;

@@ -2,7 +2,7 @@ package com.airedgesoft.sharedkernel.workingset.application.command;
 
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.TrackerQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.application.query.provider.WorkingSetQueryProvider;
 import com.airedgesoft.sharedkernel.workingset.domain.event.WorkingSetDeleted;
@@ -43,7 +43,7 @@ public class WorkingSetDeletionService {
         if (trackerQueries.hasOwnedTrackers(id)) {
             throw DomainException.withMessage(BindingResCode.WORKING_SET_HAS_TRACKERS, Long.toString(id));
         }
-        WorkingSetDeleted deletedEvent = workingSet.delete(RequestThreadHolder.getUserId());
+        WorkingSetDeleted deletedEvent = workingSet.delete(Long.toString(AuthorizationScope.currentUserId()));
         workingSets.save(workingSet);
         events.publishEvent(deletedEvent);
     }

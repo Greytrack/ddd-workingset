@@ -2,7 +2,7 @@ package com.airedgesoft.sharedkernel.productspace.infrastructure.repositories;
 
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
 import com.airedgesoft.lib.jdbc.common.JdbcCommonInstanceStore;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.productspace.domain.ProductSpace;
 import com.airedgesoft.sharedkernel.productspace.domain.repository.ProductSpaceRepository;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +49,7 @@ public class JdbcProductSpaceRepository implements ProductSpaceRepository {
     @Override
     public void save(ProductSpace space) {
         long id = space.numericId();
-        String actor = RequestThreadHolder.getUserId();
+        String actor = Long.toString(AuthorizationScope.currentUserId());
         long now = System.currentTimeMillis();
         if (space.deleted()) {
             jdbc.update("""

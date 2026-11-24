@@ -5,7 +5,7 @@ import com.airedgesoft.lib.id.Ids;
 import com.airedgesoft.alm.requirement.application.port.RequirementMutationStore;
 import com.airedgesoft.alm.requirement.domain.LockVersionConflictException;
 import com.airedgesoft.alm.requirement.domain.Requirement;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.workingset.domain.event.BusinessObjectUpdateEvent;
 import com.airedgesoft.lib.exception.DomainException;
 import com.airedgesoft.lib.jdbc.common.AirInstCommonPo;
@@ -84,7 +84,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
             } else if (!requirement.revision().equals(current.revision()) || jdbc.update(UPDATE,
                     requirement.title(), requirement.description(), requirement.version(), requirement.deleted() ? 1 : 0,
                     lockVersion, requirement.flags(), requirement.checkedOut() ? 1 : 0,
-                    RequestThreadHolder.getUserId(), System.currentTimeMillis(),
+                    Long.toString(AuthorizationScope.currentUserId()), System.currentTimeMillis(),
                     requirement.localId(), requirement.revision(), expected) != 1) {
                 throw new LockVersionConflictException(expected, current.lockVersion());
             }
@@ -97,7 +97,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                         UPDATE air_inst_requirement_rev
                         SET checkin_user = ?, checkin_time = ?, checked_out = 0
                         WHERE instance_id = ? AND revision = ?
-                        """, RequestThreadHolder.getLongUserId(), System.currentTimeMillis(),
+                        """, AuthorizationScope.currentUserId(), System.currentTimeMillis(),
                         requirement.localId(), requirement.revision());
             }
         }
@@ -123,7 +123,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
                     UPDATE air_inst_requirement_rev
                     SET checkout_user = ?, checkout_time = ?, checked_out = 1
                     WHERE instance_id = ? AND revision = ?
-                    """, RequestThreadHolder.getLongUserId(), now, requirement.localId(), requirement.revision());
+                    """, AuthorizationScope.currentUserId(), now, requirement.localId(), requirement.revision());
         }
     }
 
@@ -171,7 +171,7 @@ public class JdbcRequirementRepository implements RequirementMutationStore {
         if (jdbc.update("""
                 UPDATE air_inst_requirement_rev SET lock_version = ?, checked_out = 0, flags = overlay(flags placing '1' from 3 for 1), updated_by = ?, updated_time = ?
                 WHERE instance_id = ? AND revision = ?
-                """, Math.incrementExact(current.lockVersion()), RequestThreadHolder.getUserId(), System.currentTimeMillis(), instanceId, previousRevision) != 1
+                """, Math.incrementExact(current.lockVersion()), Long.toString(AuthorizationScope.currentUserId()), System.currentTimeMillis(), instanceId, previousRevision) != 1
                 || jdbc.update("""
                 DELETE FROM air_inst_requirement_rev WHERE instance_id = ? AND revision = ? AND lock_version = ?
                 """, instanceId, current.revision(), current.lockVersion()) != 1) {

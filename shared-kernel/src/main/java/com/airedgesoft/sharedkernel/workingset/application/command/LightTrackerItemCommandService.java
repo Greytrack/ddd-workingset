@@ -1,7 +1,7 @@
 package com.airedgesoft.sharedkernel.workingset.application.command;
 
 import com.airedgesoft.lib.exception.DomainException;
-import com.airedgesoft.sharedkernel.RequestThreadHolder;
+import com.airedgesoft.sharedkernel.businessframework.application.context.AuthorizationScope;
 import com.airedgesoft.sharedkernel.businessframework.domain.litebusinessobject.LiteBusinessObjectProvider;
 import com.airedgesoft.sharedkernel.tracker.domain.Tracker;
 import com.airedgesoft.sharedkernel.tracker.domain.repository.TrackerRepository;
@@ -129,7 +129,7 @@ public class LightTrackerItemCommandService {
         Tracker tracker = trackerRepository.findById(trackerId)
                 .orElseThrow(() -> DomainException.withMessage(FailureReason.NOT_FOUND, Long.toString(trackerId)));
         LightTrackerItem item = LightTrackerItem.local(id, commonId, trackerId, workingSetId, revision,
-                tracker.productSpaceId(), tracker.numericClassificationId(), tracker.classId(), RequestThreadHolder.getUserId());
+                tracker.productSpaceId(), tracker.numericClassificationId(), tracker.classId(), Long.toString(AuthorizationScope.currentUserId()));
         if (effectiveFlags != null) {
             item.initializeEffectiveFlags(effectiveFlags);
         }
